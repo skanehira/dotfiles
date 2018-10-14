@@ -56,3 +56,6 @@ repo = 'cohama/lexima.vim'
 [[plugins]]
 repo = 'SirVer/ultisnips'
 on_ft = 'go'
+
+[[plugins]]
+repo = 'simeji/winresizer'

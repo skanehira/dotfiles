@@ -111,7 +111,7 @@ au FileType go :match goErr /\<err\>/
 
 " ====================================== nerdtree settings ======================================
 let NERDTreeShowBookmarks=1
-nnoremap <silent><C-e> :NERDTreeToggle<CR>
+nnoremap <silent><C-n> :NERDTreeToggle<CR>
 
 " ====================================== vim-gitgutter settings ======================================
 set signcolumn=yes
