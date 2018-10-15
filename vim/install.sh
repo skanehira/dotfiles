@@ -1,9 +1,10 @@
 #!/bin/bash
-path=~/.config/nvim
+path=~/.vim
 
 if [ ! -e $path ]; then
 	echo "create directory $path"
     mkdir -p $path
 fi
 
-cp -Rp `ls | grep -v *.sh` $path/
+cp -p *.toml $path/
+cp -p vimrc ~/.vimrc

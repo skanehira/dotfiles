@@ -17,7 +17,7 @@ if dein#load_state(s:dein_dir)
  call dein#begin(s:dein_dir)
  
  " .toml file
- let g:rc_dir = expand('~/.config/nvim')
+ let g:rc_dir = expand('~/.vim')
  let s:toml = g:rc_dir . '/dein.toml'
  let s:lazy_toml = g:rc_dir . '/dein_lazy.toml'
  
@@ -37,6 +37,7 @@ endif
 
 " ====================================== general customizations ======================================
 let mapleader = "\<Space>"
+syntax on
 set backspace=2
 set smartindent
 set number
@@ -48,7 +49,7 @@ set hlsearch
 set undolevels=100
 set clipboard+=unnamed
 set scrolloff=999
-set relativenumber
+set lazyredraw
 
 nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>
@@ -65,12 +66,12 @@ nmap <C-L> <C-W>l
 autocmd QuickFixCmdPost *grep* cwindow
 
 " 最後のカーソル位置を復元する
-if has("autocmd")
-    autocmd BufReadPost *
-    \ if line("'\"") > 0 && line ("'\"") <= line("$") |
-    \   exe "normal! g'\"" |
-    \ endif
-endif
+"if has("autocmd")
+"    autocmd BufReadPost *
+"    \ if line("'\"") > 0 && line ("'\"") <= line("$") |
+"    \   exe "normal! g'\"" |
+"    \ endif
+"endif
 
 " presistent undo
 if has('persistent_undo')
@@ -86,12 +87,12 @@ let g:go_play_open_browser = 0
 let g:go_fmt_command = "goimports"
 let g:go_metalinter_autosave = 1
 let g:go_metalinter_autosave_enabled = ['vet']
-let g:go_highlight_types = 1
-let g:go_highlight_fields = 1
-let g:go_highlight_functions = 1
-let g:go_highlight_methods = 1
-let g:go_highlight_structs = 1
-let g:go_highlight_function_calls = 1
+"let g:go_highlight_types = 1
+"let g:go_highlight_fields = 1
+"let g:go_highlight_functions = 1
+"let g:go_highlight_methods = 1
+"let g:go_highlight_structs = 1
+"let g:go_highlight_function_calls = 1
 let g:go_term_mode = 'split'
 
 "au FileType go nmap <leader>r <Plug>(go-run)

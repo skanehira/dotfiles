@@ -1,10 +1,11 @@
 #!/bin/bash
-nvim_files=`ls -ld ~/.config/nvim/* | awk '{print $9}'`
+vim_files=`ls -ld ~/.vim/*.toml | awk '{print $9}'`
 tmux_file=~/.tmux.conf
 fish_functions='c.fish cm.fish cs.fish fd.fish fssh.fish ftmux.fish push.fish rec.fish vim.fish'
 
 # update nvim files
-cp -p $nvim_files nvim/
+cp -p $vim_files vim/
+cp -p ~/.vimrc vim/vimrc
 
 # update tmux file
 cp -p $tmux_file tmux/tmux.conf
