@@ -1,4 +1,7 @@
 " ====================================== deni.vim settings ======================================
+if &compatible
+ set nocompatible
+endif
 
 " install dir 
 let s:dein_dir = expand('~/.cache/dein') 
@@ -24,7 +27,7 @@ if dein#load_state(s:dein_dir)
  " read toml and cache
  call dein#load_toml(s:toml, {'lazy': 0})
  call dein#load_toml(s:lazy_toml, {'lazy': 1})
- 
+
  " end settings
  call dein#end()
  call dein#save_state()
@@ -37,6 +40,7 @@ endif
 
 " ====================================== general customizations ======================================
 let mapleader = "\<Space>"
+filetype plugin indent on
 syntax on
 set backspace=2
 set smartindent
@@ -79,6 +83,7 @@ if has('persistent_undo')
   set undofile
 endif
 
+
 " ====================================== vim-go settings ======================================
 let g:go_bin_path = $GOPATH.'/bin'
 " disable open browser after posting snippet
@@ -111,8 +116,6 @@ au FileType go nmap <silent> <leader>dd :GoDeclsDir<CR>
 au FileType go nmap <silent> <leader>dl :GoDecls<CR>
 au FileType go nmap <silent> <leader>ip :GoImpl<CR>
 au FileType go nmap <silent> <leader>rn :GoRename<CR>
-au FileType go :highlight goErr cterm=bold ctermfg=214
-au FileType go :match goErr /\<err\>/
 
 " ====================================== nerdtree settings ======================================
 let NERDTreeShowBookmarks=1

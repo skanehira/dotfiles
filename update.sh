@@ -1,7 +1,7 @@
 #!/bin/bash
 vim_files=`ls -ld ~/.vim/*.toml | awk '{print $9}'`
 tmux_file=~/.tmux.conf
-fish_functions='c.fish cm.fish cs.fish fd.fish fssh.fish ftmux.fish push.fish rec.fish vim.fish'
+fish_functions='c.fish cm.fish cs.fish fd.fish fssh.fish ftmux.fish push.fish rec.fish fvim.fish'
 
 # update nvim files
 cp -p $vim_files vim/

@@ -62,3 +62,6 @@ repo = 'simeji/winresizer'
 
 [[plugins]]
 repo = 'glidenote/memolist.vim'
+
+[[plugins]]
+repo = 'maralla/completor.vim.git'
