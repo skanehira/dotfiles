@@ -59,3 +59,6 @@ on_ft = 'go'
 
 [[plugins]]
 repo = 'simeji/winresizer'
+
+[[plugins]]
+repo = 'glidenote/memolist.vim'

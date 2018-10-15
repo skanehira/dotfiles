@@ -57,6 +57,10 @@ nmap <S-Tab>    gT
 nmap <C-G><C-G> :vimgrep /<C-R><C-W>/j **/*
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
 nmap <Leader>p :%s;<C-R><C-W>;
+nmap <C-H> <C-W>h
+nmap <C-J> <C-W>j
+nmap <C-K> <C-W>k
+nmap <C-L> <C-W>l
 
 autocmd QuickFixCmdPost *grep* cwindow
 
@@ -156,11 +160,20 @@ let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal 
 let g:vim_markdown_folding_disabled = 1
 
 " ====================================== vim-surround settings ======================================
-nmap <Leader>7 ysiw'<CR>
-nmap <Leader>2 ysiw"<CR>
-nmap <Leader>8 ysiw(<CR>
-nmap <Leader>[ ysiw[<CR>
+nmap <Leader>7 ysiw'
+nmap <Leader>2 ysiw"
+nmap <Leader>8 ysiw)
+nmap <Leader>[ ysiw]
 
 " ====================================== ultisnips settings ======================================
 let g:UltiSnipsExpandTrigger="<c-f>"
 let g:UltiSnipsJumpForwardTrigger="<c-f>"
+
+" ====================================== memolist settings ======================================
+let g:memolist_path="~/.memo"
+let g:memolist_memo_suffix="md"
+let g:memolist_fzf = 1
+nnoremap <Leader>mn  :MemoNew<CR>
+nnoremap <Leader>ml  :MemoList<CR>
+nnoremap <Leader>mg  :MemoGrep<CR>
+

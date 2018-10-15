@@ -3,6 +3,7 @@ set -x GOPATH $HOME/dev/go
 set -x GOBIN $GOPATH/bin
 set -x PATH $PATH $GOBIN $HOME/.cargo/bin /usr/local/bin
 set -x XDG_CONFIG_HOME $HOME/.config
+set -x LANG "ja_JP.UTF-8"
 
 # alias
 alias lg="lazygit"

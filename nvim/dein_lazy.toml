@@ -4,3 +4,4 @@ on_ft = 'go'
 
 [[plugins]]
 repo = 'scrooloose/nerdtree'
+
