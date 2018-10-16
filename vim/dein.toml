@@ -1,14 +1,14 @@
 [[plugins]]
 repo = 'Xuyuanp/nerdtree-git-plugin'
 
-[[plugins]]
-repo = 'airblade/vim-gitgutter'
+#[[plugins]]
+#repo = 'airblade/vim-gitgutter'
 
-[[plugins]]
-repo = 'prabirshrestha/async.vim'
-
-[[plugins]]
-repo = 'prabirshrestha/vim-lsp'
+#[[plugins]]
+#repo = 'prabirshrestha/async.vim'
+#
+#[[plugins]]
+#repo = 'prabirshrestha/vim-lsp'
 
 [[plugins]]
 repo = 'tpope/vim-fugitive'
@@ -23,11 +23,11 @@ on_ft = 'md'
 [[plugins]]
 repo = 'tpope/vim-surround'
 
-[[plugins]]
-repo = 'vim-airline/vim-airline'
-
-[[plugins]]
-repo = 'vim-airline/vim-airline-themes'
+#[[plugins]]
+#repo = 'vim-airline/vim-airline'
+#
+#[[plugins]]
+#repo = 'vim-airline/vim-airline-themes'
 
 [[plugins]]
 repo = 'cespare/vim-toml'
@@ -65,3 +65,6 @@ repo = 'glidenote/memolist.vim'
 
 [[plugins]]
 repo = 'maralla/completor.vim.git'
+
+#[[plugins]]
+#repo = 'itchyny/vim-parenmatch'

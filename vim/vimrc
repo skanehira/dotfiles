@@ -38,10 +38,11 @@ if dein#check_install()
  call dein#install()
 endif
 
-" ====================================== general customizations ======================================
+" ====================================== general settings ======================================
 let mapleader = "\<Space>"
 filetype plugin indent on
 syntax on
+let g:loaded_matchparen = 1 "括弧ハイライト無効
 set backspace=2
 set smartindent
 set number
@@ -53,7 +54,12 @@ set hlsearch
 set undolevels=100
 set clipboard+=unnamed
 set scrolloff=999
+set updatetime=450
+
 set lazyredraw
+set ttyfast
+set synmaxcol=256
+syntax sync minlines=256
 
 nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>
@@ -70,19 +76,18 @@ nmap <C-L> <C-W>l
 autocmd QuickFixCmdPost *grep* cwindow
 
 " 最後のカーソル位置を復元する
-"if has("autocmd")
-"    autocmd BufReadPost *
-"    \ if line("'\"") > 0 && line ("'\"") <= line("$") |
-"    \   exe "normal! g'\"" |
-"    \ endif
-"endif
+if has("autocmd")
+    autocmd BufReadPost *
+    \ if line("'\"") > 0 && line ("'\"") <= line("$") |
+    \   exe "normal! g'\"" |
+    \ endif
+endif
 
 " presistent undo
 if has('persistent_undo')
   set undodir=~/.vim/undo
   set undofile
 endif
-
 
 " ====================================== vim-go settings ======================================
 let g:go_bin_path = $GOPATH.'/bin'
@@ -100,11 +105,12 @@ let g:go_metalinter_autosave_enabled = ['vet']
 "let g:go_highlight_function_calls = 1
 let g:go_term_mode = 'split'
 
-"au FileType go nmap <leader>r <Plug>(go-run)
-"au FileType go nmap <Leader>s <Plug>(go-def-split)
-"au FileType go nmap <Leader>v <Plug>(go-def-vertical)
-"au FileType go nmap <leader>s <Plug>(go-def-split)
-"au FileType go nmap <leader>v <Plug>(go-def-vertical)
+au FileType go nmap <leader>c <Plug>(go-coverage)
+au FileType go nmap <Leader>r <Plug>(go-run)
+au FileType go nmap <Leader>s <Plug>(go-def-split)
+au FileType go nmap <Leader>v <Plug>(go-def-vertical)
+au FileType go nmap <leader>s <Plug>(go-def-split)
+au FileType go nmap <leader>v <Plug>(go-def-vertical)
 au FileType go nmap <silent> <leader>t <Plug>(go-test)
 au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
 au FileType go nmap <silent> <leader>at :GoAddTags<CR>
@@ -122,8 +128,8 @@ let NERDTreeShowBookmarks=1
 nnoremap <silent><C-n> :NERDTreeToggle<CR>
 
 " ====================================== vim-gitgutter settings ======================================
-set signcolumn=yes
-set updatetime=250
+"set signcolumn=yes
+"set updatetime=250
 "let g:gitgutter_highlight_lines = 1
 "highlight GitGutterAddLine ctermfg=darkblue ctermbg=black
 "highlight GitGutterChangeLine  ctermfg=darkblue ctermbg=black
@@ -133,32 +139,32 @@ set updatetime=250
 nmap <C-P> :Files<CR>
 
 " ====================================== airline settings ======================================
-let g:airline_powerline_fonts = 1
-let g:airline#extensions#tabline#enabled = 1
-let g:airline#extensions#tabline#show_splits = 0
-let g:airline#extensions#tabline#show_tab_type = 0
-let g:airline#extensions#tabline#show_close_button = 0
-
+"let g:airline_powerline_fonts = 1
+"let g:airline#extensions#tabline#enabled = 1
+"let g:airline#extensions#tabline#show_splits = 0
+"let g:airline#extensions#tabline#show_tab_type = 0
+"let g:airline#extensions#tabline#show_close_button = 0
+"
 " ====================================== lsp golang settings ======================================
-if executable('go-langserver')
-    au User lsp_setup call lsp#register_server({
-        \ 'name': 'go-langserver',
-        \ 'cmd': {server_info->['go-langserver', '-mode', 'stdio']},
-        \ 'whitelist': ['go'],
-        \ })
-endif
+"if executable('go-langserver')
+"    au User lsp_setup call lsp#register_server({
+"        \ 'name': 'go-langserver',
+"        \ 'cmd': {server_info->['go-langserver', '-mode', 'stdio']},
+"        \ 'whitelist': ['go'],
+"        \ })
+"endif
 
-au FileType go nmap <silent> <Leader>d :LspDefinition<CR>
-au FileType go nmap <silent> <Leader>p :LspHover<CR>
-au FileType go nmap <silent> <Leader>r :LspReferences<CR>
-au FileType go nmap <silent> <Leader>i :LspImplementation<CR>
-au FileType go nmap <silent> <Leader>s :split \| :LspDefinition <CR>
-au FileType go nmap <silent> <Leader>v :vsplit \| :LspDefinition <CR>
+"au FileType go nmap <silent> <Leader>d :LspDefinition<CR>
+"au FileType go nmap <silent> <Leader>p :LspHover<CR>
+"au FileType go nmap <silent> <Leader>r :LspReferences<CR>
+"au FileType go nmap <silent> <Leader>i :LspImplementation<CR>
+"au FileType go nmap <silent> <Leader>s :split \| :LspDefinition <CR>
+"au FileType go nmap <silent> <Leader>v :vsplit \| :LspDefinition <CR>
 
-let g:lsp_signs_error = {'text': '✗'}
-let g:lsp_signs_error = {'text': '!!'}
-let g:lsp_signs_enabled = 1         " enable signs
-let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal mode
+"let g:lsp_signs_error = {'text': '✗'}
+"let g:lsp_signs_error = {'text': '!!'}
+"let g:lsp_signs_enabled = 1         " enable signs
+"let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal mode
 
 " ====================================== vim-markdown settings ======================================
 let g:vim_markdown_folding_disabled = 1
@@ -170,8 +176,8 @@ nmap <Leader>8 ysiw)
 nmap <Leader>[ ysiw]
 
 " ====================================== ultisnips settings ======================================
-let g:UltiSnipsExpandTrigger="<c-f>"
-let g:UltiSnipsJumpForwardTrigger="<c-f>"
+"let g:UltiSnipsExpandTrigger="<c-f>"
+"let g:UltiSnipsJumpForwardTrigger="<c-f>"
 
 " ====================================== memolist settings ======================================
 let g:memolist_path="~/.memo"
@@ -181,3 +187,60 @@ nnoremap <Leader>mn  :MemoNew<CR>
 nnoremap <Leader>ml  :MemoList<CR>
 nnoremap <Leader>mg  :MemoGrep<CR>
 
+
+" ====================================== profiling ======================================
+" vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
+function! ProfileCursorMove() abort
+  let profile_file = expand('/tmp/vim-profile.log')
+  if filereadable(profile_file)
+    call delete(profile_file)
+  endif
+
+  normal! gg
+  normal! zR
+
+  execute 'profile start ' . profile_file
+  profile func *
+  profile file *
+
+  augroup ProfileCursorMove
+    autocmd!
+    autocmd CursorHold <buffer> profile pause | q
+  augroup END
+
+  for i in range(1000)
+    call feedkeys('j')
+  endfor
+endfunction
+
+" cursorline
+augroup vimrc-auto-cursorline
+  autocmd!
+  autocmd CursorMoved,CursorMovedI * call s:auto_cursorline('CursorMoved')
+  autocmd CursorHold,CursorHoldI * call s:auto_cursorline('CursorHold')
+  autocmd WinEnter * call s:auto_cursorline('WinEnter')
+  autocmd WinLeave * call s:auto_cursorline('WinLeave')
+
+
+  let s:cursorline_lock = 0
+  function! s:auto_cursorline(event)
+    if a:event ==# 'WinEnter'
+      setlocal cursorline
+      let s:cursorline_lock = 2
+    elseif a:event ==# 'WinLeave'
+      setlocal nocursorline
+    elseif a:event ==# 'CursorMoved'
+      if s:cursorline_lock
+        if 1 < s:cursorline_lock
+          let s:cursorline_lock = 1
+        else
+          setlocal nocursorline
+          let s:cursorline_lock = 0
+        endif
+      endif
+    elseif a:event ==# 'CursorHold'
+      setlocal cursorline
+      let s:cursorline_lock = 1
+    endif
+  endfunction
+augroup END
