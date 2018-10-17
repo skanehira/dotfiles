@@ -42,7 +42,9 @@ endif
 let mapleader = "\<Space>"
 filetype plugin indent on
 syntax on
-let g:loaded_matchparen = 1 "括弧ハイライト無効
+syntax sync minlines=256
+
+"let g:loaded_matchparen = 1 "括弧ハイライト無効
 set backspace=2
 set smartindent
 set number
@@ -55,11 +57,9 @@ set undolevels=100
 set clipboard+=unnamed
 set scrolloff=999
 set updatetime=450
-
 set lazyredraw
 set ttyfast
 set synmaxcol=256
-syntax sync minlines=256
 
 nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>
@@ -74,6 +74,52 @@ nmap <C-K> <C-W>k
 nmap <C-L> <C-W>l
 
 autocmd QuickFixCmdPost *grep* cwindow
+
+" text object key mapping
+" cut
+nmap c8 ci(
+nmap c2 ci"
+nmap c7 ci'
+nmap c@ ci`
+nmap c[ ci[
+nmap c{ ci{
+
+nmap ca8 ca(
+nmap ca2 ca"
+nmap ca7 ca'
+nmap ca@ ca`
+nmap ca[ ca[
+nmap ca{ ca{
+
+" delete
+nmap d8 di(
+nmap d2 di"
+nmap d7 di'
+nmap d@ di`
+nmap d[ di[
+nmap d{ di{
+
+nmap da8 da(
+nmap da2 da"
+nmap da7 da'
+nmap da@ da`
+nmap da[ da[
+nmap da{ da{
+
+" yank
+nmap y8 yi(
+nmap y2 yi"
+nmap y7 yi'
+nmap y@ yi`
+nmap y[ yi[
+nmap y{ yi{
+
+nmap ya8 ya(
+nmap ya2 ya"
+nmap ya7 ya'
+nmap ya@ ya`
+nmap ya[ ya[
+nmap ya{ ya{
 
 " 最後のカーソル位置を復元する
 if has("autocmd")
@@ -105,14 +151,17 @@ let g:go_metalinter_autosave_enabled = ['vet']
 "let g:go_highlight_function_calls = 1
 let g:go_term_mode = 'split'
 
-au FileType go nmap <leader>c <Plug>(go-coverage)
-au FileType go nmap <Leader>r <Plug>(go-run)
-au FileType go nmap <Leader>s <Plug>(go-def-split)
-au FileType go nmap <Leader>v <Plug>(go-def-vertical)
-au FileType go nmap <leader>s <Plug>(go-def-split)
-au FileType go nmap <leader>v <Plug>(go-def-vertical)
+au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
+au FileType go nmap <silent> <Leader>r <Plug>(go-run)
+au FileType go nmap <silent> <Leader>s <Plug>(go-def-split)
+au FileType go nmap <silent> <Leader>v <Plug>(go-def-vertical)
+au FileType go nmap <silent> <leader>s <Plug>(go-def-split)
+au FileType go nmap <silent> <leader>v <Plug>(go-def-vertical)
 au FileType go nmap <silent> <leader>t <Plug>(go-test)
 au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
+au FileType go nmap <silent> <leader>d <Plug>(go-def)
+au FileType go nmap <silent> <leader>dt <Plug>(go-def-tab)
+au FileType go nmap <silent> <leader>rf <Plug>(go-referrers)
 au FileType go nmap <silent> <leader>at :GoAddTags<CR>
 au FileType go nmap <silent> <leader>rt :GoRemoveTags<CR>
 au FileType go nmap <silent> <leader>fs :GoFillStruct<CR>
@@ -172,12 +221,19 @@ let g:vim_markdown_folding_disabled = 1
 " ====================================== vim-surround settings ======================================
 nmap <Leader>7 ysiw'
 nmap <Leader>2 ysiw"
+nmap <Leader>` ysiw`
 nmap <Leader>8 ysiw)
 nmap <Leader>[ ysiw]
+nmap <Leader>{ ysiw}
+nmap <Leader><Leader> cs
+nmap <Leader><Leader> cs
+nmap <Leader><Leader> cs
+nmap <Leader><Leader> cs
 
 " ====================================== ultisnips settings ======================================
-"let g:UltiSnipsExpandTrigger="<c-f>"
-"let g:UltiSnipsJumpForwardTrigger="<c-f>"
+let g:UltiSnipsExpandTrigger="<c-f>"
+"let g:UltiSnipsJumpBackwardTrigger="<c-k>"
+let g:UltiSnipsJumpForwardTrigger="<c-f>"
 
 " ====================================== memolist settings ======================================
 let g:memolist_path="~/.memo"
@@ -186,7 +242,6 @@ let g:memolist_fzf = 1
 nnoremap <Leader>mn  :MemoNew<CR>
 nnoremap <Leader>ml  :MemoList<CR>
 nnoremap <Leader>mg  :MemoGrep<CR>
-
 
 " ====================================== profiling ======================================
 " vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
@@ -213,7 +268,7 @@ function! ProfileCursorMove() abort
   endfor
 endfunction
 
-" cursorline
+" ====================================== cursorline ======================================
 augroup vimrc-auto-cursorline
   autocmd!
   autocmd CursorMoved,CursorMovedI * call s:auto_cursorline('CursorMoved')
