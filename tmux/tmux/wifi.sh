@@ -46,4 +46,4 @@ if [ "$rate" = 0 ]; then
 fi
 
 # Outputs wifi
-echo -e "#[bg=yellow,fg=black][${ssid} ${rate}Mbs ${signal}]#[default]"
+echo -e "#[bg=yellow,fg=black]WiFi:${ssid} ${rate}Mbs ${signal}#[default]"

@@ -14,3 +14,8 @@ alias 2gif='docker run --rm -v $PWD:/data asciinema/asciicast2gif'
 alias gs='git status'
 alias gd='git diff'
 alias gl='git log'
+
+# 初回シェル時のみ tmux実行
+if [ $SHLVL = 1 ]
+  tmux
+end

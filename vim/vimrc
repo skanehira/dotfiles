@@ -70,6 +70,8 @@ nmap <S-Tab>    gT
 nmap <C-G><C-G> :vimgrep /<C-R><C-W>/j **/*
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
 nmap <Leader>p :%s;<C-R><C-W>;
+
+" move window on hjkl
 nmap <C-H> <C-W>h
 nmap <C-J> <C-W>j
 nmap <C-K> <C-W>k
@@ -301,3 +303,7 @@ augroup vimrc-auto-cursorline
     endif
   endfunction
 augroup END
+
+" ====================================== dbext ======================================
+let g:dbext_default_profile_mockapi = 'type=SQLITE:dbname=~/.mockapi/mockapi.db'
+let g:dbext_default_profile = 'mockapi'

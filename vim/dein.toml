@@ -68,3 +68,6 @@ repo = 'maralla/completor.vim.git'
 
 #[[plugins]]
 #repo = 'itchyny/vim-parenmatch'
+
+[[plugins]]
+repo = 'vim-scripts/dbext.vim'
