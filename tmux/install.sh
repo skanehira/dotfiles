@@ -3,4 +3,4 @@
 file=~/.tmux.conf
 
 cp -p tmux.conf $file
-cp -Rp tmux ~/.tmux
+cp -Rp tmux/* ~/.tmux/
