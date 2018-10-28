@@ -235,9 +235,9 @@ nmap <Leader><Leader> cs
 nmap <Leader><Leader> cs
 
 " ====================================== ultisnips settings ======================================
-let g:UltiSnipsExpandTrigger="<c-f>"
+"let g:UltiSnipsExpandTrigger="<c-f>"
 "let g:UltiSnipsJumpBackwardTrigger="<c-k>"
-let g:UltiSnipsJumpForwardTrigger="<c-f>"
+"let g:UltiSnipsJumpForwardTrigger="<c-f>"
 
 " ====================================== memolist settings ======================================
 let g:memolist_path="~/.memo"
@@ -307,3 +307,9 @@ augroup END
 " ====================================== dbext ======================================
 let g:dbext_default_profile_mockapi = 'type=SQLITE:dbname=~/.mockapi/mockapi.db'
 let g:dbext_default_profile = 'mockapi'
+
+" ====================================== completor ======================================
+" select completion
+inoremap <expr> <C-J> pumvisible() ? "\<C-n>" : "\<Tab>"
+inoremap <expr> <C-K> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+inoremap <expr> <cr> pumvisible() ? "\<C-y>\<cr>" : "\<cr>"
