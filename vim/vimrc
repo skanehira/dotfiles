@@ -62,6 +62,7 @@ set updatetime=450
 set lazyredraw
 set ttyfast
 set synmaxcol=256
+set relativenumber
 
 nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>
