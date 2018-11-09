@@ -9,6 +9,7 @@ cp -p ~/.vimrc vim/vimrc
 
 # update tmux file
 cp -p $tmux_file tmux/tmux.conf
+cp -rp ~/.tmux/ tmux/tmux/
 
 # update fish
 cp -p ~/.config/fish/config.fish fish/
