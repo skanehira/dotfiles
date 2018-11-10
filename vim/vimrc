@@ -142,8 +142,6 @@ endif
 
 " ====================================== vim-go settings ======================================
 let g:go_bin_path = $GOPATH.'/bin'
-" disable open browser after posting snippet
-let g:go_play_open_browser = 0
 " enable goimports
 let g:go_fmt_command = "goimports"
 let g:go_metalinter_autosave = 1
