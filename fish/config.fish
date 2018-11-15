@@ -4,6 +4,7 @@ set -x GOBIN $GOPATH/bin
 set -x PATH $PATH $GOBIN $HOME/.cargo/bin /usr/local/bin
 set -x XDG_CONFIG_HOME $HOME/.config
 set -x LANG "ja_JP.UTF-8"
+set -x HOMEBREW_UPGRADE_CLEANUP 1
 
 # alias
 alias lg="lazygit"
