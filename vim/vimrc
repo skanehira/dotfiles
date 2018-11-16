@@ -43,6 +43,8 @@ let mapleader = "\<Space>"
 filetype plugin indent on
 syntax on
 syntax sync minlines=256
+noremap! ¥ \
+noremap! \ ¥
 
 "let g:loaded_matchparen = 1 "括弧ハイライト無効
 set backspace=2
