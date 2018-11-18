@@ -1,5 +1,5 @@
 function tm -d "attach or new tmux sessions"
-  [ (echo $TMUX) != "" ] ;and set change "switch-client" ;or set change "attach-session"
+  test -n "$TMUX" ;and set change "switch-client" ;or set change "attach-session"
   if count $argv > /dev/null
     tmux $change -t $argv[1] 2>/dev/null ;or tmux new-session -d -s $argv[1] ;and tmux $change -t $argv[1]; return
   end
