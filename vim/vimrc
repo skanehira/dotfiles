@@ -314,3 +314,8 @@ let g:dbext_default_profile = 'mockapi'
 inoremap <expr> <C-J> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <C-K> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 inoremap <expr> <cr> pumvisible() ? "\<C-y>\<cr>" : "\<cr>"
+
+" ====================================== emment ======================================
+let g:user_emmet_leader_key='<C-E>'
+let g:user_emmet_install_global = 0
+au FileType html,css EmmetInstall

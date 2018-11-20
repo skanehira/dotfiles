@@ -71,3 +71,10 @@ repo = 'maralla/completor.vim.git'
 
 [[plugins]]
 repo = 'vim-scripts/dbext.vim'
+
+[[plugins]]
+repo = 'posva/vim-vue'
+on_ft = 'vue'
+
+[[plugins]]
+repo = 'mattn/emmet-vim'
