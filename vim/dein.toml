@@ -81,3 +81,7 @@ repo = 'mattn/emmet-vim'
 
 [[plugins]]
 repo = 'nonylene/vim-keymaps'
+
+[[plugins]]
+repo = 'itchyny/lightline.vim'
+

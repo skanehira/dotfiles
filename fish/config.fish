@@ -7,6 +7,7 @@ set -x LANG "ja_JP.UTF-8"
 set -x HOMEBREW_UPGRADE_CLEANUP 1
 set -x FZF_DEFAULT_OPTS "--layout=reverse --inline-info --select-1 --exit-0 -m"
 set -g theme_display_date no
+set -x TERM xterm-256color
 
 # alias
 alias lg="lazygit"

@@ -65,6 +65,7 @@ set lazyredraw
 set ttyfast
 set synmaxcol=256
 set relativenumber
+set cursorline
 
 nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>
@@ -361,3 +362,11 @@ let g:keymaps =  [
       \    },
       \  },
       \]
+
+
+" ====================================== lightline  ======================================
+set laststatus=2
+if !has('gui_running')
+  set t_Co=256
+endif
+
