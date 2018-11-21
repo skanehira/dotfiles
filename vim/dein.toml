@@ -78,3 +78,6 @@ on_ft = 'vue'
 
 [[plugins]]
 repo = 'mattn/emmet-vim'
+
+[[plugins]]
+repo = 'nonylene/vim-keymaps'
