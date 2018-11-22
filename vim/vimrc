@@ -322,8 +322,7 @@ let g:user_emmet_install_global = 0
 au FileType html,css,vue EmmetInstall
 
 " ====================================== vim-keymaps ======================================
-map <leader>k  <Plug>KeyMapRotate
-imap <leader>k <Plug>KeyMapRotate
+imap <c-g> <Plug>KeyMapRotate
 let g:keymaps =  [
       \  {
       \    'name': 'coding',
@@ -347,8 +346,6 @@ let g:keymaps =  [
       \        '(': '8',
       \        '9': ')',
       \        ')': '9',
-      \        '-': '=',
-      \        '=': '-',
       \        '¥': '\',
       \        '\': '¥',
       \        '@': '`',
