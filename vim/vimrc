@@ -43,10 +43,7 @@ let mapleader = "\<Space>"
 filetype plugin indent on
 syntax on
 syntax sync minlines=256
-"noremap! ¥ \
-"noremap! \ ¥
 
-"let g:loaded_matchparen = 1 "括弧ハイライト無効
 set backspace=2
 set smartindent
 set number
@@ -161,8 +158,6 @@ au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
 au FileType go nmap <silent> <Leader>r <Plug>(go-run)
 au FileType go nmap <silent> <Leader>s <Plug>(go-def-split)
 au FileType go nmap <silent> <Leader>v <Plug>(go-def-vertical)
-au FileType go nmap <silent> <leader>s <Plug>(go-def-split)
-au FileType go nmap <silent> <leader>v <Plug>(go-def-vertical)
 au FileType go nmap <silent> <leader>t <Plug>(go-test)
 au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
 au FileType go nmap <silent> <leader>d <Plug>(go-def)
@@ -325,6 +320,11 @@ au FileType html,css,vue EmmetInstall
 imap <c-g> <Plug>KeyMapRotate
 let g:keymaps =  [
       \  {
+      \    'name': 'normal',
+      \    'keymap': {
+      \    },
+      \  },
+      \  {
       \    'name': 'coding',
       \    'keymap': {
       \      'inoremap': {
@@ -351,11 +351,6 @@ let g:keymaps =  [
       \        '@': '`',
       \        '`': '@',
       \      },
-      \    },
-      \  },
-      \  {
-      \    'name': 'normal',
-      \    'keymap': {
       \    },
       \  },
       \]

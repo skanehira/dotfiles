@@ -23,12 +23,6 @@ on_ft = 'md'
 [[plugins]]
 repo = 'tpope/vim-surround'
 
-#[[plugins]]
-#repo = 'vim-airline/vim-airline'
-#
-#[[plugins]]
-#repo = 'vim-airline/vim-airline-themes'
-
 [[plugins]]
 repo = 'cespare/vim-toml'
 on_ft = 'toml'
