@@ -226,10 +226,6 @@ nmap <Leader>` ysiw`
 nmap <Leader>8 ysiw)
 nmap <Leader>[ ysiw]
 nmap <Leader>{ ysiw}
-nmap <Leader><Leader> cs
-nmap <Leader><Leader> cs
-nmap <Leader><Leader> cs
-nmap <Leader><Leader> cs
 
 " ====================================== ultisnips settings ======================================
 "let g:UltiSnipsExpandTrigger="<c-f>"
@@ -350,6 +346,8 @@ let g:keymaps =  [
       \        '\': '¥',
       \        '@': '`',
       \        '`': '@',
+      \        '-': '=',
+      \        '=': '-',
       \      },
       \    },
       \  },
