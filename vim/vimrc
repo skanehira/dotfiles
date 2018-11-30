@@ -360,3 +360,5 @@ if !has('gui_running')
   set t_Co=256
 endif
 
+
+map <leader>l :!$GOBIN/gol -f<cr>
