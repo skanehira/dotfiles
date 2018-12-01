@@ -228,9 +228,9 @@ nmap <Leader>[ ysiw]
 nmap <Leader>{ ysiw}
 
 " ====================================== ultisnips settings ======================================
-"let g:UltiSnipsExpandTrigger="<c-f>"
-"let g:UltiSnipsJumpBackwardTrigger="<c-k>"
-"let g:UltiSnipsJumpForwardTrigger="<c-f>"
+let g:UltiSnipsExpandTrigger="<tab>"
+let g:UltiSnipsJumpForwardTrigger="<tab>"
+let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 
 " ====================================== memolist settings ======================================
 let g:memolist_path="~/.memo"

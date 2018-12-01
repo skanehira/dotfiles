@@ -2,9 +2,10 @@
 vim_files=`ls -ld ~/.vim/*.toml | awk '{print $9}'`
 tmux_file=~/.tmux.conf
 
-# update nvim files
+# update vim files
 cp -p $vim_files vim/
 cp -p ~/.vimrc vim/vimrc
+cp -p ~/.cache/dein/repos/github.com/fatih/vim-go/gosnippets/UltiSnips/go.snippets vim/go/go.snippets
 
 # update tmux file
 cp -p $tmux_file tmux/tmux.conf
