@@ -126,7 +126,7 @@ nmap ya@ ya`
 nmap ya[ ya[
 nmap ya{ ya{
 
-" 最後のカーソル位置を復元する
+" save cursorl line
 if has("autocmd")
     autocmd BufReadPost *
     \ if line("'\"") > 0 && line ("'\"") <= line("$") |
@@ -139,6 +139,19 @@ if has('persistent_undo')
   set undodir=~/.vim/undo
   set undofile
 endif
+
+" toggle number
+function! ToggleRelativenumber() abort
+  if &relativenumber == 1
+     setlocal norelativenumber
+  else
+     setlocal relativenumber
+  endif
+endfunction
+nnoremap <silent> <leader>n :call ToggleRelativenumber()<cr>
+
+" application launcher
+nnoremap <silent> <leader>l :belowright term ++close gol -f<cr>
 
 " ====================================== vim-go settings ======================================
 let g:go_bin_path = $GOPATH.'/bin'
@@ -160,7 +173,7 @@ au FileType go nmap <silent> <Leader>s <Plug>(go-def-split)
 au FileType go nmap <silent> <Leader>v <Plug>(go-def-vertical)
 au FileType go nmap <silent> <leader>t <Plug>(go-test)
 au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
-au FileType go nmap <silent> <leader>d <Plug>(go-def)
+"au FileType go nmap <silent> <leader>d <Plug>(go-def)
 au FileType go nmap <silent> <leader>dt <Plug>(go-def-tab)
 au FileType go nmap <silent> <leader>rf <Plug>(go-referrers)
 au FileType go nmap <silent> <leader>at :GoAddTags<CR>
@@ -360,5 +373,3 @@ if !has('gui_running')
   set t_Co=256
 endif
 
-
-map <leader>l :!$GOBIN/gol -f<cr>
