@@ -1,0 +1,375 @@
+" ====================================== deni.vim settings ======================================
+if &compatible
+ set nocompatible
+endif
+
+" install dir 
+let s:dein_dir = expand('~/.cache/dein') 
+let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
+ 
+" dein installation check
+if &runtimepath !~# '/dein.vim'
+ if !isdirectory(s:dein_repo_dir)
+ execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+ endif
+ execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')
+endif
+ 
+" begin settings
+if dein#load_state(s:dein_dir)
+ call dein#begin(s:dein_dir)
+ 
+ " .toml file
+ let g:rc_dir = expand('~/.vim')
+ let s:toml = g:rc_dir . '/dein.toml'
+ let s:lazy_toml = g:rc_dir . '/dein_lazy.toml'
+ 
+ " read toml and cache
+ call dein#load_toml(s:toml, {'lazy': 0})
+ call dein#load_toml(s:lazy_toml, {'lazy': 1})
+
+ " end settings
+ call dein#end()
+ call dein#save_state()
+endif
+ 
+" plugin installation check
+if dein#check_install()
+ call dein#install()
+endif
+
+" ====================================== general settings ======================================
+let mapleader = "\<Space>"
+filetype plugin indent on
+syntax on
+syntax sync minlines=256
+
+set backspace=2
+set smartindent
+set number
+set tabstop=4
+set shiftwidth=4
+set expandtab
+set incsearch
+set ignorecase
+set smartcase
+set hlsearch
+set undolevels=100
+set clipboard+=unnamed
+set scrolloff=999
+set updatetime=450
+set lazyredraw
+set ttyfast
+set synmaxcol=256
+set relativenumber
+set cursorline
+
+nmap <Leader>w :w<CR>
+nmap <Leader>q :q!<CR>
+nmap <Tab>      gt
+nmap <S-Tab>    gT
+nmap <C-G><C-G> :vimgrep /<C-R><C-W>/j **/*
+nmap <Esc><Esc> :nohlsearch<CR><Esc>
+nmap <Leader>p :%s;<C-R><C-W>;
+
+" move window on hjkl
+nmap <C-H> <C-W>h
+nmap <C-J> <C-W>j
+nmap <C-K> <C-W>k
+nmap <C-L> <C-W>l
+
+autocmd QuickFixCmdPost *grep* cwindow
+
+" text object key mapping
+" cut
+nmap c8 ci(
+nmap c2 ci"
+nmap c7 ci'
+nmap c@ ci`
+nmap c[ ci[
+nmap c{ ci{
+
+nmap ca8 ca(
+nmap ca2 ca"
+nmap ca7 ca'
+nmap ca@ ca`
+nmap ca[ ca[
+nmap ca{ ca{
+
+" delete
+nmap d8 di(
+nmap d2 di"
+nmap d7 di'
+nmap d@ di`
+nmap d[ di[
+nmap d{ di{
+
+nmap da8 da(
+nmap da2 da"
+nmap da7 da'
+nmap da@ da`
+nmap da[ da[
+nmap da{ da{
+
+" yank
+nmap y8 yi(
+nmap y2 yi"
+nmap y7 yi'
+nmap y@ yi`
+nmap y[ yi[
+nmap y{ yi{
+
+nmap ya8 ya(
+nmap ya2 ya"
+nmap ya7 ya'
+nmap ya@ ya`
+nmap ya[ ya[
+nmap ya{ ya{
+
+" save cursorl line
+if has("autocmd")
+    autocmd BufReadPost *
+    \ if line("'\"") > 0 && line ("'\"") <= line("$") |
+    \   exe "normal! g'\"" |
+    \ endif
+endif
+
+" presistent undo
+if has('persistent_undo')
+  set undodir=~/.vim/undo
+  set undofile
+endif
+
+" toggle number
+function! ToggleRelativenumber() abort
+  if &relativenumber == 1
+     setlocal norelativenumber
+  else
+     setlocal relativenumber
+  endif
+endfunction
+nnoremap <silent> <leader>n :call ToggleRelativenumber()<cr>
+
+" application launcher
+nnoremap <silent> <leader>l :belowright term ++close gol -f<cr>
+
+" ====================================== vim-go settings ======================================
+let g:go_bin_path = $GOPATH.'/bin'
+" enable goimports
+let g:go_fmt_command = "goimports"
+let g:go_metalinter_autosave = 1
+let g:go_metalinter_autosave_enabled = ['vet']
+"let g:go_highlight_types = 1
+"let g:go_highlight_fields = 1
+"let g:go_highlight_functions = 1
+"let g:go_highlight_methods = 1
+"let g:go_highlight_structs = 1
+"let g:go_highlight_function_calls = 1
+let g:go_term_mode = 'split'
+
+au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
+au FileType go nmap <silent> <Leader>r <Plug>(go-run)
+au FileType go nmap <silent> <Leader>s <Plug>(go-def-split)
+au FileType go nmap <silent> <Leader>v <Plug>(go-def-vertical)
+au FileType go nmap <silent> <leader>t <Plug>(go-test)
+au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
+"au FileType go nmap <silent> <leader>d <Plug>(go-def)
+au FileType go nmap <silent> <leader>dt <Plug>(go-def-tab)
+au FileType go nmap <silent> <leader>rf <Plug>(go-referrers)
+au FileType go nmap <silent> <leader>at :GoAddTags<CR>
+au FileType go nmap <silent> <leader>rt :GoRemoveTags<CR>
+au FileType go nmap <silent> <leader>fs :GoFillStruct<CR>
+au FileType go nmap <silent> <leader>ie :GoIfErr<CR>
+au FileType go nmap <silent> <leader>ki :GoKeyify<CR>
+au FileType go nmap <silent> <leader>dd :GoDeclsDir<CR>
+au FileType go nmap <silent> <leader>dl :GoDecls<CR>
+au FileType go nmap <silent> <leader>ip :GoImpl<CR>
+au FileType go nmap <silent> <leader>rn :GoRename<CR>
+
+" ====================================== nerdtree settings ======================================
+let NERDTreeShowBookmarks=1
+nnoremap <silent><C-n> :NERDTreeToggle<CR>
+
+" ====================================== vim-gitgutter settings ======================================
+"set signcolumn=yes
+"set updatetime=250
+"let g:gitgutter_highlight_lines = 1
+"highlight GitGutterAddLine ctermfg=darkblue ctermbg=black
+"highlight GitGutterChangeLine  ctermfg=darkblue ctermbg=black
+"highlight GitGutterDeleteLine   ctermfg=black ctermbg=darkred
+
+" ====================================== fzf settings ======================================
+nmap <C-P> :Files<CR>
+
+" ====================================== airline settings ======================================
+"let g:airline_powerline_fonts = 1
+"let g:airline#extensions#tabline#enabled = 1
+"let g:airline#extensions#tabline#show_splits = 0
+"let g:airline#extensions#tabline#show_tab_type = 0
+"let g:airline#extensions#tabline#show_close_button = 0
+"
+" ====================================== lsp golang settings ======================================
+"if executable('go-langserver')
+"    au User lsp_setup call lsp#register_server({
+"        \ 'name': 'go-langserver',
+"        \ 'cmd': {server_info->['go-langserver', '-mode', 'stdio']},
+"        \ 'whitelist': ['go'],
+"        \ })
+"endif
+
+"au FileType go nmap <silent> <Leader>d :LspDefinition<CR>
+"au FileType go nmap <silent> <Leader>p :LspHover<CR>
+"au FileType go nmap <silent> <Leader>r :LspReferences<CR>
+"au FileType go nmap <silent> <Leader>i :LspImplementation<CR>
+"au FileType go nmap <silent> <Leader>s :split \| :LspDefinition <CR>
+"au FileType go nmap <silent> <Leader>v :vsplit \| :LspDefinition <CR>
+
+"let g:lsp_signs_error = {'text': '✗'}
+"let g:lsp_signs_error = {'text': '!!'}
+"let g:lsp_signs_enabled = 1         " enable signs
+"let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal mode
+
+" ====================================== vim-markdown settings ======================================
+let g:vim_markdown_folding_disabled = 1
+
+" ====================================== vim-surround settings ======================================
+nmap <Leader>7 ysiw'
+nmap <Leader>2 ysiw"
+nmap <Leader>` ysiw`
+nmap <Leader>8 ysiw)
+nmap <Leader>[ ysiw]
+nmap <Leader>{ ysiw}
+
+" ====================================== ultisnips settings ======================================
+let g:UltiSnipsExpandTrigger="<tab>"
+let g:UltiSnipsJumpForwardTrigger="<tab>"
+let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
+
+" ====================================== memolist settings ======================================
+let g:memolist_path="~/.memo"
+let g:memolist_memo_suffix="md"
+let g:memolist_fzf = 1
+nnoremap <Leader>mn  :MemoNew<CR>
+nnoremap <Leader>ml  :MemoList<CR>
+nnoremap <Leader>mg  :MemoGrep<CR>
+
+" ====================================== profiling ======================================
+" vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
+function! ProfileCursorMove() abort
+  let profile_file = expand('/tmp/vim-profile.log')
+  if filereadable(profile_file)
+    call delete(profile_file)
+  endif
+
+  normal! gg
+  normal! zR
+
+  execute 'profile start ' . profile_file
+  profile func *
+  profile file *
+
+  augroup ProfileCursorMove
+    autocmd!
+    autocmd CursorHold <buffer> profile pause | q
+  augroup END
+
+  for i in range(1000)
+    call feedkeys('j')
+  endfor
+endfunction
+
+" ====================================== cursorline ======================================
+"augroup vimrc-auto-cursorline
+"  autocmd!
+"  autocmd CursorMoved,CursorMovedI * call s:auto_cursorline('CursorMoved')
+"  autocmd CursorHold,CursorHoldI * call s:auto_cursorline('CursorHold')
+"  autocmd WinEnter * call s:auto_cursorline('WinEnter')
+"  autocmd WinLeave * call s:auto_cursorline('WinLeave')
+"
+"
+"  let s:cursorline_lock = 0
+"  function! s:auto_cursorline(event)
+"    if a:event ==# 'WinEnter'
+"      setlocal cursorline
+"      let s:cursorline_lock = 2
+"    elseif a:event ==# 'WinLeave'
+"      setlocal nocursorline
+"    elseif a:event ==# 'CursorMoved'
+"      if s:cursorline_lock
+"        if 1 < s:cursorline_lock
+"          let s:cursorline_lock = 1
+"        else
+"          setlocal nocursorline
+"          let s:cursorline_lock = 0
+"        endif
+"      endif
+"    elseif a:event ==# 'CursorHold'
+"      setlocal cursorline
+"      let s:cursorline_lock = 1
+"    endif
+"  endfunction
+"augroup END
+
+" ====================================== dbext ======================================
+let g:dbext_default_profile_mockapi = 'type=SQLITE:dbname=~/.mockapi/mockapi.db'
+let g:dbext_default_profile = 'mockapi'
+
+" ====================================== completor ======================================
+" select completion
+inoremap <expr> <C-J> pumvisible() ? "\<C-n>" : "\<Tab>"
+inoremap <expr> <C-K> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+inoremap <expr> <cr> pumvisible() ? "\<C-y>\<cr>" : "\<cr>"
+
+" ====================================== emment ======================================
+let g:user_emmet_leader_key='<C-L>'
+let g:user_emmet_install_global = 0
+au FileType html,css,vue EmmetInstall
+
+" ====================================== vim-keymaps ======================================
+imap <c-g> <Plug>KeyMapRotate
+let g:keymaps =  [
+      \  {
+      \    'name': 'normal',
+      \    'keymap': {
+      \    },
+      \  },
+      \  {
+      \    'name': 'coding',
+      \    'keymap': {
+      \      'inoremap': {
+      \        '1': '!',
+      \        '!': '1',
+      \        '2': '"',
+      \        '"': '2',
+      \        '3': '#',
+      \        '#': '3',
+      \        '4': '$',
+      \        '$': '4',
+      \        '5': '%',
+      \        '%': '5',
+      \        '6': '&',
+      \        '&': '6',
+      \        '7': "'",
+      \        "'": '7',
+      \        '8': '(',
+      \        '(': '8',
+      \        '9': ')',
+      \        ')': '9',
+      \        '¥': '\',
+      \        '\': '¥',
+      \        '@': '`',
+      \        '`': '@',
+      \        '-': '=',
+      \        '=': '-',
+      \      },
+      \    },
+      \  },
+      \]
+
+
+" ====================================== lightline  ======================================
+set laststatus=2
+if !has('gui_running')
+  set t_Co=256
+endif
+
