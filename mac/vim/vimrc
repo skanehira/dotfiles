@@ -126,6 +126,21 @@ nmap ya@ ya`
 nmap ya[ ya[
 nmap ya{ ya{
 
+" select
+nmap v8 vi(
+nmap v2 vi"
+nmap v7 vi'
+nmap v@ vi`
+nmap v[ vi[
+nmap v{ vi{
+
+nmap va8 va(
+nmap va2 va"
+nmap va7 va'
+nmap va@ va`
+nmap va[ va[
+nmap va{ va{
+
 " save cursorl line
 if has("autocmd")
     autocmd BufReadPost *
@@ -152,6 +167,9 @@ nnoremap <silent> <leader>n :call ToggleRelativenumber()<cr>
 
 " application launcher
 nnoremap <silent> <leader>l :belowright term ++close gol -f<cr>
+
+" run term bottom
+nnoremap <silent> <leader>te :belowright term<cr>
 
 " ====================================== vim-go settings ======================================
 let g:go_bin_path = $GOPATH.'/bin'
@@ -331,6 +349,10 @@ let g:keymaps =  [
       \  {
       \    'name': 'normal',
       \    'keymap': {
+      \      'inoremap': {
+      \        '¥': '\',
+      \        '\': '¥',
+      \      },
       \    },
       \  },
       \  {

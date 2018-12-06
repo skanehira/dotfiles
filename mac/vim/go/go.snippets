@@ -470,6 +470,41 @@ if !reflect.DeepEqual(${1:expected}, ${2:actual}) {
 }
 endsnippet
 
+# read file
+snippet readf "read from file"
+file, err := os.OpenFile("${1:file}", ${2:os.O_RDONLY}, ${3:0666})
+if err != nil {
+	panic(err)
+}
+defer file.Close()
+
+var ${4:strs${VISUAL}} []string
+reader := bufio.NewReaderSize(file,4096)
+
+for {
+	line, _, err := reader.ReadLine()
+	if err == io.EOF {
+		break
+	} else if err != nil {
+		panic(err)
+	}
+	$4 = append($4, string(line))
+}
+
+fmt.Println($4)
+endsnippet
+
+# write file
+snippet writef "write to file"
+file, err := os.OpenFile("${1:file}", ${2:os.O_WRONLY|os.O_APPEND|os.O_CREATE}, ${3:0666})
+if err != nil {
+	panic(err)
+}
+defer file.Close()
+
+fmt.Fprintln(file, "${4:Hello World}")
+endsnippet
+
 global !p
 
 import re
