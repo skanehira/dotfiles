@@ -505,6 +505,11 @@ defer file.Close()
 fmt.Fprintln(file, "${4:Hello World}")
 endsnippet
 
+# serve static file
+snippet servf "serve static file"
+log.Fatal(http.ListenAndServe("${1:80}", http.FileServer(http.Dir("${2:./}"))))
+endsnippet
+
 global !p
 
 import re
