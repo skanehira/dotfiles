@@ -126,7 +126,7 @@ nmap ya@ ya`
 nmap ya[ ya[
 nmap ya{ ya{
 
-" select
+" visual
 nmap v8 vi(
 nmap v2 vi"
 nmap v7 vi'
@@ -163,10 +163,16 @@ function! ToggleRelativenumber() abort
      setlocal relativenumber
   endif
 endfunction
-nnoremap <silent> <leader>n :call ToggleRelativenumber()<cr>
+nnoremap <silent> <leader>n :call ToggleRelativenumber()<CR>
 
 " application launcher
-nnoremap <silent> <leader>l :belowright term ++close gol -f<cr>
+nnoremap <silent> <leader>l :belowright term ++close gol -f<CR>
+
+" run term
+nnoremap <silent> <leader>te :rightbelow term<CR>
+
+" visual yank
+vnoremap <silent> <C-p> "0p<CR>
 
 " run term bottom
 nnoremap <silent> <leader>te :belowright term<cr>
@@ -336,11 +342,16 @@ let g:dbext_default_profile = 'mockapi'
 " select completion
 inoremap <expr> <C-J> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <C-K> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-inoremap <expr> <cr> pumvisible() ? "\<C-y>\<cr>" : "\<cr>"
+inoremap <expr> <CR> pumvisible() ? "\<C-y>\<CR>" : "\<CR>"
 
 " ====================================== emment ======================================
 let g:user_emmet_leader_key='<C-L>'
 let g:user_emmet_install_global = 0
+let g:user_emmet_settings = {
+\ 'variables': {
+\   'lang' : 'ja'
+\ }
+\}
 au FileType html,css,vue EmmetInstall
 
 " ====================================== vim-keymaps ======================================

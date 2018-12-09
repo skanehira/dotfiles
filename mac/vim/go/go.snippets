@@ -507,7 +507,7 @@ endsnippet
 
 # serve static file
 snippet servf "serve static file"
-log.Fatal(http.ListenAndServe("${1:80}", http.FileServer(http.Dir("${2:./}"))))
+log.Fatal(http.ListenAndServe("${1::80}", http.FileServer(http.Dir("${2:./}"))))
 endsnippet
 
 global !p
