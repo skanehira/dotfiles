@@ -1,5 +1,5 @@
-[[plugins]]
-repo = 'Xuyuanp/nerdtree-git-plugin'
+#[[plugins]]
+#repo = 'Xuyuanp/nerdtree-git-plugin'
 
 #[[plugins]]
 #repo = 'airblade/vim-gitgutter'

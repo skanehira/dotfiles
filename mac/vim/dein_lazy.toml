@@ -2,8 +2,8 @@
 repo = 'fatih/vim-go'
 on_ft = 'go'
 
-[[plugins]]
-repo = 'scrooloose/nerdtree'
+#[[plugins]]
+#repo = 'scrooloose/nerdtree'
 
 [[plugins]]
 repo = 'mattn/vim-maketable'
