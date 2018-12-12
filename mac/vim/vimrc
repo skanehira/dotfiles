@@ -168,9 +168,6 @@ nnoremap <silent> <leader>n :call ToggleRelativenumber()<CR>
 " application launcher
 nnoremap <silent> <leader>l :belowright term ++close gol -f<CR>
 
-" run term
-nnoremap <silent> <leader>te :rightbelow term<CR>
-
 " visual yank
 vnoremap <silent> <C-p> "0p<CR>
 
