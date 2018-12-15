@@ -166,13 +166,54 @@ endfunction
 nnoremap <silent> <leader>n :call ToggleRelativenumber()<CR>
 
 " application launcher
-nnoremap <silent> <leader>l :belowright term ++close gol -f<CR>
+nnoremap <silent> <C-l> :belowright term ++close gol -f<CR>
 
 " visual yank
 vnoremap <silent> <C-p> "0p<CR>
 
 " run term bottom
 nnoremap <silent> <leader>te :belowright term<cr>
+
+" session path
+let s:session_path = expand('~/.vim/sessions')
+
+if !isdirectory(s:session_path)
+    call mkdir(s:session_path, "p")
+endif
+
+" save session
+command! -nargs=1 SaveSession call s:saveSession(<f-args>)
+function! s:saveSession(file)
+    execute 'silent mksession!' s:session_path . '/' . a:file
+endfunction
+
+" load session
+command! -nargs=1 LoadSession call s:loadSession(<f-args>)
+function! s:loadSession(file)
+    execute 'silent source' a:file
+endfunction
+
+" delete session
+command! -nargs=1 DeleteSession call s:deleteSession(<f-args>)
+function! s:deleteSession(file)
+    call delete(expand(a:file))
+endfunction
+
+" session use fzf
+command! FloadSession call fzf#run({
+\  'source': split(expand('~/.vim/sessions/*'), "\n"),
+\  'sink':    function('s:loadSession'),
+\  'options': '-m -x +s',
+\  'down':    '40%'})
+
+command! FdeleteSession call fzf#run({
+\  'source': split(expand('~/.vim/sessions/*'), "\n"),
+\  'sink':    function('s:deleteSession'),
+\  'options': '-m -x +s',
+\  'down':    '40%'})
+
+nnoremap <Leader>se :SaveSession 
+nnoremap <Leader>lse :FloadSession<CR>
 
 " ====================================== vim-go settings ======================================
 let g:go_bin_path = $GOPATH.'/bin'
