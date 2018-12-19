@@ -166,7 +166,7 @@ endfunction
 nnoremap <silent> <leader>n :call ToggleRelativenumber()<CR>
 
 " application launcher
-nnoremap <silent> <C-l> :belowright term ++close gol -f<CR>
+nnoremap <silent> <Leader>l :belowright term ++close gol -f<CR>
 
 " visual yank
 vnoremap <silent> <C-p> "0p<CR>
@@ -391,6 +391,7 @@ let g:user_emmet_settings = {
 \ }
 \}
 au FileType html,css,vue EmmetInstall
+au FileType html,css,vue imap <C-f> <C-L>,
 
 " ====================================== vim-keymaps ======================================
 imap <c-g> <Plug>KeyMapRotate
