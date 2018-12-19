@@ -214,6 +214,7 @@ command! FdeleteSession call fzf#run({
 
 nnoremap <Leader>se :SaveSession 
 nnoremap <Leader>lse :FloadSession<CR>
+nnoremap <Leader>dse :FdeleteSession<CR>
 
 " ====================================== vim-go settings ======================================
 let g:go_bin_path = $GOPATH.'/bin'

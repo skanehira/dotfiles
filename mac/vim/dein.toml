@@ -79,3 +79,8 @@ repo = 'nonylene/vim-keymaps'
 [[plugins]]
 repo = 'itchyny/lightline.vim'
 
+[[plugins]]
+repo = 'mattn/sonictemplate-vim'
+hook_add = '''
+let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
+'''
