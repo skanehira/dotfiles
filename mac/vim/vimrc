@@ -174,123 +174,107 @@ vnoremap <silent> <C-p> "0p<CR>
 " run term bottom
 nnoremap <silent> <leader>te :belowright term<cr>
 
-" session path
-let s:session_path = expand('~/.vim/sessions')
-
-if !isdirectory(s:session_path)
-    call mkdir(s:session_path, "p")
-endif
-
-" save session
-command! -nargs=1 SaveSession call s:saveSession(<f-args>)
-function! s:saveSession(file)
-    execute 'silent mksession!' s:session_path . '/' . a:file
-endfunction
-
-" load session
-command! -nargs=1 LoadSession call s:loadSession(<f-args>)
-function! s:loadSession(file)
-    execute 'silent source' a:file
-endfunction
-
-" delete session
-command! -nargs=1 DeleteSession call s:deleteSession(<f-args>)
-function! s:deleteSession(file)
-    call delete(expand(a:file))
-endfunction
-
-" session use fzf
-command! FloadSession call fzf#run({
-\  'source': split(expand('~/.vim/sessions/*'), "\n"),
-\  'sink':    function('s:loadSession'),
-\  'options': '-m -x +s',
-\  'down':    '40%'})
-
-command! FdeleteSession call fzf#run({
-\  'source': split(expand('~/.vim/sessions/*'), "\n"),
-\  'sink':    function('s:deleteSession'),
-\  'options': '-m -x +s',
-\  'down':    '40%'})
-
-nnoremap <Leader>se :SaveSession 
-nnoremap <Leader>lse :FloadSession<CR>
-nnoremap <Leader>dse :FdeleteSession<CR>
+"" session path
+"let s:session_path = expand('~/.vim/sessions')
+"
+"if !isdirectory(s:session_path)
+"    call mkdir(s:session_path, "p")
+"endif
+"
+"" save session
+"command! -nargs=1 SaveSession call s:saveSession(<f-args>)
+"function! s:saveSession(file)
+"    execute 'silent mksession!' s:session_path . '/' . a:file
+"endfunction
+"
+"" load session
+"command! -nargs=1 LoadSession call s:loadSession(<f-args>)
+"function! s:loadSession(file)
+"    execute 'silent source' a:file
+"endfunction
+"
+"" delete session
+"command! -nargs=1 DeleteSession call s:deleteSession(<f-args>)
+"function! s:deleteSession(file)
+"    call delete(expand(a:file))
+"endfunction
+"
+"" session use fzf
+"command! FloadSession call fzf#run({
+"\  'source': split(expand('~/.vim/sessions/*'), "\n"),
+"\  'sink':    function('s:loadSession'),
+"\  'options': '-m -x +s',
+"\  'down':    '40%'})
+"
+"command! FdeleteSession call fzf#run({
+"\  'source': split(expand('~/.vim/sessions/*'), "\n"),
+"\  'sink':    function('s:deleteSession'),
+"\  'options': '-m -x +s',
+"\  'down':    '40%'})
+"
+"nnoremap <Leader>se :SaveSession 
+"nnoremap <Leader>lse :FloadSession<CR>
+"nnoremap <Leader>dse :FdeleteSession<CR>
 
 " ====================================== vim-go settings ======================================
 let g:go_bin_path = $GOPATH.'/bin'
-" enable goimports
 let g:go_fmt_command = "goimports"
 let g:go_metalinter_autosave = 1
 let g:go_metalinter_autosave_enabled = ['vet']
-"let g:go_highlight_types = 1
-"let g:go_highlight_fields = 1
-"let g:go_highlight_functions = 1
-"let g:go_highlight_methods = 1
-"let g:go_highlight_structs = 1
-"let g:go_highlight_function_calls = 1
+let g:go_def_mapping_enabled = 0
 let g:go_term_mode = 'split'
 
 au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
 au FileType go nmap <silent> <Leader>r <Plug>(go-run)
-au FileType go nmap <silent> <Leader>s <Plug>(go-def-split)
-au FileType go nmap <silent> <Leader>v <Plug>(go-def-vertical)
 au FileType go nmap <silent> <leader>t <Plug>(go-test)
 au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
-"au FileType go nmap <silent> <leader>d <Plug>(go-def)
-au FileType go nmap <silent> <leader>dt <Plug>(go-def-tab)
-au FileType go nmap <silent> <leader>rf <Plug>(go-referrers)
 au FileType go nmap <silent> <leader>at :GoAddTags<CR>
 au FileType go nmap <silent> <leader>rt :GoRemoveTags<CR>
 au FileType go nmap <silent> <leader>fs :GoFillStruct<CR>
-au FileType go nmap <silent> <leader>ie :GoIfErr<CR>
 au FileType go nmap <silent> <leader>ki :GoKeyify<CR>
 au FileType go nmap <silent> <leader>dd :GoDeclsDir<CR>
 au FileType go nmap <silent> <leader>dl :GoDecls<CR>
 au FileType go nmap <silent> <leader>ip :GoImpl<CR>
 au FileType go nmap <silent> <leader>rn :GoRename<CR>
 
-" ====================================== nerdtree settings ======================================
-let NERDTreeShowBookmarks=1
-nnoremap <silent><C-n> :NERDTreeToggle<CR>
-
-" ====================================== vim-gitgutter settings ======================================
-"set signcolumn=yes
-"set updatetime=250
-"let g:gitgutter_highlight_lines = 1
-"highlight GitGutterAddLine ctermfg=darkblue ctermbg=black
-"highlight GitGutterChangeLine  ctermfg=darkblue ctermbg=black
-"highlight GitGutterDeleteLine   ctermfg=black ctermbg=darkred
-
 " ====================================== fzf settings ======================================
 nmap <C-P> :Files<CR>
 
-" ====================================== airline settings ======================================
-"let g:airline_powerline_fonts = 1
-"let g:airline#extensions#tabline#enabled = 1
-"let g:airline#extensions#tabline#show_splits = 0
-"let g:airline#extensions#tabline#show_tab_type = 0
-"let g:airline#extensions#tabline#show_close_button = 0
-"
 " ====================================== lsp golang settings ======================================
-"if executable('go-langserver')
-"    au User lsp_setup call lsp#register_server({
-"        \ 'name': 'go-langserver',
-"        \ 'cmd': {server_info->['go-langserver', '-mode', 'stdio']},
-"        \ 'whitelist': ['go'],
-"        \ })
-"endif
+if executable('go-langserver')
+    au User lsp_setup call lsp#register_server({
+        \ 'name': 'go-langserver',
+        \ 'cmd': {server_info->['go-langserver', '-gocodecompletion']},
+        \ 'whitelist': ['go'],
+        \ })
+endif
+if executable('golsp')
+    au User lsp_setup call lsp#register_server({
+        \ 'name': 'golsp',
+        \ 'cmd': {server_info->['golsp', '-mode', 'stdio']},
+        \ 'whitelist': ['go'],
+        \ })
+endif
+if executable('bingo')
+    au User lsp_setup call lsp#register_server({
+        \ 'name': 'bingo',
+        \ 'cmd': {server_info->['bingo', '-mode', 'stdio']},
+        \ 'whitelist': ['go'],
+        \ })
+endif
 
-"au FileType go nmap <silent> <Leader>d :LspDefinition<CR>
-"au FileType go nmap <silent> <Leader>p :LspHover<CR>
-"au FileType go nmap <silent> <Leader>r :LspReferences<CR>
-"au FileType go nmap <silent> <Leader>i :LspImplementation<CR>
-"au FileType go nmap <silent> <Leader>s :split \| :LspDefinition <CR>
-"au FileType go nmap <silent> <Leader>v :vsplit \| :LspDefinition <CR>
+nmap <silent> <C-]> :LspDefinition<CR>
+nmap <silent> df :LspDefinition<CR>
+nmap <silent> ds :split \| :LspDefinition <CR>
+nmap <silent> dv :vsplit \| :LspDefinition <CR>
+au FileType go nmap <silent> rf :LspReferences<CR>
+au FileType go nmap <silent> im :LspImplementation<CR>
 
-"let g:lsp_signs_error = {'text': '✗'}
-"let g:lsp_signs_error = {'text': '!!'}
-"let g:lsp_signs_enabled = 1         " enable signs
-"let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal mode
+let g:lsp_async_completion = 1
+let g:lsp_signs_error = {'text': '✗'}
+let g:lsp_signs_error = {'text': '!!'}
+let g:lsp_signs_enabled = 1         " enable signs
+let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal mode
 
 " ====================================== vim-markdown settings ======================================
 let g:vim_markdown_folding_disabled = 1
@@ -308,18 +292,10 @@ let g:UltiSnipsExpandTrigger="<tab>"
 let g:UltiSnipsJumpForwardTrigger="<tab>"
 let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 
-" ====================================== memolist settings ======================================
-let g:memolist_path="~/.memo"
-let g:memolist_memo_suffix="md"
-let g:memolist_fzf = 1
-nnoremap <Leader>mn  :MemoNew<CR>
-nnoremap <Leader>ml  :MemoList<CR>
-nnoremap <Leader>mg  :MemoGrep<CR>
-
 " ====================================== profiling ======================================
 " vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
 function! ProfileCursorMove() abort
-  let profile_file = expand('/tmp/vim-profile.log')
+  let profile_file = expand('./vim-profile.log')
   if filereadable(profile_file)
     call delete(profile_file)
   endif
@@ -340,48 +316,6 @@ function! ProfileCursorMove() abort
     call feedkeys('j')
   endfor
 endfunction
-
-" ====================================== cursorline ======================================
-"augroup vimrc-auto-cursorline
-"  autocmd!
-"  autocmd CursorMoved,CursorMovedI * call s:auto_cursorline('CursorMoved')
-"  autocmd CursorHold,CursorHoldI * call s:auto_cursorline('CursorHold')
-"  autocmd WinEnter * call s:auto_cursorline('WinEnter')
-"  autocmd WinLeave * call s:auto_cursorline('WinLeave')
-"
-"
-"  let s:cursorline_lock = 0
-"  function! s:auto_cursorline(event)
-"    if a:event ==# 'WinEnter'
-"      setlocal cursorline
-"      let s:cursorline_lock = 2
-"    elseif a:event ==# 'WinLeave'
-"      setlocal nocursorline
-"    elseif a:event ==# 'CursorMoved'
-"      if s:cursorline_lock
-"        if 1 < s:cursorline_lock
-"          let s:cursorline_lock = 1
-"        else
-"          setlocal nocursorline
-"          let s:cursorline_lock = 0
-"        endif
-"      endif
-"    elseif a:event ==# 'CursorHold'
-"      setlocal cursorline
-"      let s:cursorline_lock = 1
-"    endif
-"  endfunction
-"augroup END
-
-" ====================================== dbext ======================================
-let g:dbext_default_profile_mockapi = 'type=SQLITE:dbname=~/.mockapi/mockapi.db'
-let g:dbext_default_profile = 'mockapi'
-
-" ====================================== completor ======================================
-" select completion
-inoremap <expr> <C-J> pumvisible() ? "\<C-n>" : "\<Tab>"
-inoremap <expr> <C-K> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-inoremap <expr> <CR> pumvisible() ? "\<C-y>\<CR>" : "\<CR>"
 
 " ====================================== emment ======================================
 let g:user_emmet_leader_key='<C-L>'
@@ -445,4 +379,3 @@ set laststatus=2
 if !has('gui_running')
   set t_Co=256
 endif
-

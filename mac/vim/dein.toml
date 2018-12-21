@@ -1,17 +1,24 @@
-#[[plugins]]
-#repo = 'Xuyuanp/nerdtree-git-plugin'
-
-#[[plugins]]
-#repo = 'airblade/vim-gitgutter'
-
-#[[plugins]]
-#repo = 'prabirshrestha/async.vim'
-#
-#[[plugins]]
-#repo = 'prabirshrestha/vim-lsp'
+[[plugins]]
+repo = 'prabirshrestha/async.vim'
 
 [[plugins]]
-repo = 'tpope/vim-fugitive'
+repo = 'prabirshrestha/vim-lsp'
+on_ft = 'go'
+
+[[plugins]]
+repo = 'prabirshrestha/async.vim'
+
+[[plugins]]
+repo = 'prabirshrestha/vim-lsp'
+
+[[plugins]]
+repo = 'prabirshrestha/asyncomplete.vim'
+
+[[plugins]]
+repo = 'prabirshrestha/asyncomplete-lsp.vim'
+
+[[plugins]]
+repo = 'natebosch/vim-lsc'
 
 [[plugins]]
 repo = 'godlygeek/tabular'
@@ -57,14 +64,8 @@ repo = 'simeji/winresizer'
 [[plugins]]
 repo = 'glidenote/memolist.vim'
 
-[[plugins]]
-repo = 'maralla/completor.vim.git'
-
 #[[plugins]]
-#repo = 'itchyny/vim-parenmatch'
-
-[[plugins]]
-repo = 'vim-scripts/dbext.vim'
+#repo = 'maralla/completor.vim.git'
 
 [[plugins]]
 repo = 'posva/vim-vue'
@@ -84,3 +85,6 @@ repo = 'mattn/sonictemplate-vim'
 hook_add = '''
 let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
 '''
+
+[[plugins]]
+repo = 'skanehira/vsession'
