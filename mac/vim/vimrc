@@ -222,9 +222,8 @@ if executable('bingo')
 endif
 
 nmap <silent> <C-]> :LspDefinition<CR>
-nmap <silent> df :LspDefinition<CR>
-nmap <silent> ds :split \| :LspDefinition <CR>
-nmap <silent> dv :vsplit \| :LspDefinition <CR>
+nmap <silent> s<C-]> :split \| :LspDefinition <CR>
+nmap <silent> v<C-]> :vsplit \| :LspDefinition <CR>
 au FileType go nmap <silent> rf :LspReferences<CR>
 au FileType go nmap <silent> im :LspImplementation<CR>
 
