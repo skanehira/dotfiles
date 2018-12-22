@@ -195,6 +195,9 @@ au FileType go nmap <silent> <leader>dl :GoDecls<CR>
 au FileType go nmap <silent> <leader>ip :GoImpl<CR>
 au FileType go nmap <silent> <leader>rn :GoRename<CR>
 
+au FileType go nmap <silent> <F12> :GoDebugStart<CR>
+au FileType go nmap <silent> <F12><F12> :GoDebugStop<CR>
+
 " ====================================== fzf settings ======================================
 nmap <C-P> :Files<CR>
 
