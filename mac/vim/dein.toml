@@ -1,21 +1,23 @@
 [[plugins]]
-repo = 'prabirshrestha/async.vim'
-
-[[plugins]]
 repo = 'prabirshrestha/vim-lsp'
-on_ft = 'go'
 
 [[plugins]]
 repo = 'prabirshrestha/async.vim'
-
-[[plugins]]
-repo = 'prabirshrestha/vim-lsp'
 
 [[plugins]]
 repo = 'prabirshrestha/asyncomplete.vim'
 
 [[plugins]]
 repo = 'prabirshrestha/asyncomplete-lsp.vim'
+
+[[plugins]]
+repo = 'prabirshrestha/asyncomplete-ultisnips.vim'
+
+[[plugins]]
+repo = 'honza/vim-snippets'
+
+[[plugins]]
+repo = 'SirVer/ultisnips'
 
 [[plugins]]
 repo = 'natebosch/vim-lsc'
@@ -55,10 +57,6 @@ repo = 'iamcco/markdown-preview.vim'
 repo = 'cohama/lexima.vim'
 
 [[plugins]]
-repo = 'SirVer/ultisnips'
-on_ft = 'go'
-
-[[plugins]]
 repo = 'simeji/winresizer'
 
 [[plugins]]
@@ -88,3 +86,4 @@ let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
 
 [[plugins]]
 repo = 'skanehira/vsession'
+

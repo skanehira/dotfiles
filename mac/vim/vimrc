@@ -66,8 +66,8 @@ set cursorline
 
 nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>
-nmap <Tab>      gt
-nmap <S-Tab>    gT
+"nmap <Tab>      gt
+"nmap <S-Tab>    gT
 nmap <C-G><C-G> :vimgrep /<C-R><C-W>/j **/*
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
 nmap <Leader>p :%s;<C-R><C-W>;
@@ -201,6 +201,19 @@ au FileType go nmap <silent> <F12><F12> :GoDebugStop<CR>
 " ====================================== fzf settings ======================================
 nmap <C-P> :Files<CR>
 
+" ====================================== lsp settings ======================================
+nmap <silent> <C-]> :LspDefinition<CR>
+nmap <silent> s<C-]> :split \| :LspDefinition <CR>
+nmap <silent> v<C-]> :vsplit \| :LspDefinition <CR>
+nmap <silent> rf :LspReferences<CR>
+nmap <silent> im :LspImplementation<CR>
+
+let g:lsp_async_completion = 1
+"let g:lsp_signs_enabled = 1         " enable signs
+"let g:lsp_signs_error = {'text': '✗'}
+"let g:lsp_signs_error = {'text': '!!'}
+"let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal mode
+
 " ====================================== lsp golang settings ======================================
 if executable('go-langserver')
     au User lsp_setup call lsp#register_server({
@@ -209,32 +222,55 @@ if executable('go-langserver')
         \ 'whitelist': ['go'],
         \ })
 endif
-if executable('golsp')
+"if executable('golsp')
+"    au User lsp_setup call lsp#register_server({
+"        \ 'name': 'golsp',
+"        \ 'cmd': {server_info->['golsp', '-mode', 'stdio']},
+"        \ 'whitelist': ['go'],
+"        \ })
+"endif
+"if executable('bingo')
+"    au User lsp_setup call lsp#register_server({
+"        \ 'name': 'bingo',
+"        \ 'cmd': {server_info->['bingo', '-mode', 'stdio']},
+"        \ 'whitelist': ['go'],
+"        \ })
+"endif
+
+" ====================================== lsp php settings ======================================
+au User lsp_setup call lsp#register_server({
+            \ 'name': 'php-language-server',
+            \ 'cmd': {server_info->['php', expand('~/.cache/dein/repos/github.com/felixfbecker/php-language-server/bin/php-language-server.php')]},
+            \ 'whitelist': ['php'],
+            \ })
+
+" ====================================== lsp js settings ======================================
+if executable('flow-language-server')
     au User lsp_setup call lsp#register_server({
-        \ 'name': 'golsp',
-        \ 'cmd': {server_info->['golsp', '-mode', 'stdio']},
-        \ 'whitelist': ['go'],
-        \ })
-endif
-if executable('bingo')
-    au User lsp_setup call lsp#register_server({
-        \ 'name': 'bingo',
-        \ 'cmd': {server_info->['bingo', '-mode', 'stdio']},
-        \ 'whitelist': ['go'],
+        \ 'name': 'flow-language-server',
+        \ 'cmd': {server_info->[&shell, &shellcmdflag, 'flow-language-server --stdio']},
+        \ 'root_uri':{server_info->lsp#utils#path_to_uri(lsp#utils#find_nearest_parent_file_directory(lsp#utils#get_buffer_path(), '.flowconfig'))},
+        \ 'whitelist': ['javascript', 'javascript.jsx'],
         \ })
 endif
 
-nmap <silent> <C-]> :LspDefinition<CR>
-nmap <silent> s<C-]> :split \| :LspDefinition <CR>
-nmap <silent> v<C-]> :vsplit \| :LspDefinition <CR>
-au FileType go nmap <silent> rf :LspReferences<CR>
-au FileType go nmap <silent> im :LspImplementation<CR>
+" ====================================== lsp docker settings ======================================
+if executable('docker-langserver')
+    au User lsp_setup call lsp#register_server({
+        \ 'name': 'docker-langserver',
+        \ 'cmd': {server_info->[&shell, &shellcmdflag, 'docker-langserver --stdio']},
+        \ 'whitelist': ['dockerfile'],
+        \ })
+endif
 
-let g:lsp_async_completion = 1
-let g:lsp_signs_error = {'text': '✗'}
-let g:lsp_signs_error = {'text': '!!'}
-let g:lsp_signs_enabled = 1         " enable signs
-let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal mode
+" ====================================== lsp css settings ======================================
+if executable('css-languageserver')
+    au User lsp_setup call lsp#register_server({
+        \ 'name': 'css-languageserver',
+        \ 'cmd': {server_info->[&shell, &shellcmdflag, 'css-languageserver --stdio']},
+        \ 'whitelist': ['css', 'less', 'sass'],
+        \ })
+endif
 
 " ====================================== asyncomplete settings ======================================
 inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
@@ -256,6 +292,14 @@ nmap <Leader>{ ysiw}
 let g:UltiSnipsExpandTrigger="<tab>"
 let g:UltiSnipsJumpForwardTrigger="<tab>"
 let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
+
+if has('python3')
+    call asyncomplete#register_source(asyncomplete#sources#ultisnips#get_source_options({
+        \ 'name': 'ultisnips',
+        \ 'whitelist': ['*'],
+        \ 'completor': function('asyncomplete#sources#ultisnips#completor'),
+        \ }))
+endif
 
 " ====================================== profiling ======================================
 " vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
