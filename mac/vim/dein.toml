@@ -88,8 +88,10 @@ let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
 repo = 'skanehira/vsession'
 
 [[plugins]]
-repo = "airblade/vim-gitgutter"
+repo = 'airblade/vim-gitgutter'
 
 [[plugins]]
-repo = "tpope/vim-fugitive"
+repo = 'tpope/vim-fugitive'
 
+[[plugins]]
+repo = 'w0rp/ale'
