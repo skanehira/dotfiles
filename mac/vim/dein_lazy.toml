@@ -5,6 +5,3 @@ on_ft = 'go'
 [[plugins]]
 repo = 'mattn/vim-maketable'
 
-[[plugins]]
-repo = 'felixfbecker/php-language-server'
-on_ft = 'php'
