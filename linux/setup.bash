@@ -27,7 +27,7 @@ source ~/.bashrc
 
 cat <<EOS
 ###############################################################
-# instal fzf
+# install fzf
 ###############################################################
 EOS
 git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
@@ -35,7 +35,7 @@ git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 
 cat <<EOS
 ###############################################################
-# instal tmux
+# install tmux
 ###############################################################
 EOS
 sudo yum -y install gcc libevent-devel ncurses-devel
@@ -51,7 +51,7 @@ source ~/.bashrc
 
 cat <<EOS
 ###############################################################
-# instal fish shell
+# install fish shell
 ###############################################################
 EOS
 
@@ -61,7 +61,7 @@ sudo yum -y install fish
 
 cat <<EOS
 ###############################################################
-# instal fish plugin manager fisherman
+# install fish plugin manager fisherman
 ###############################################################
 EOS
 
@@ -70,7 +70,7 @@ fish -C 'fisher add oh-my-fish/theme-bobthefish;and fisher add fisher add jethro
 
 cat <<EOS
 ###############################################################
-# instal docker
+# install docker
 ###############################################################
 EOS
 
