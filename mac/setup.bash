@@ -12,6 +12,14 @@ mkdir -p ~/dev/go/bin
 echo "# mkdir vim plugin dir ~/.cache/dein"
 mkdir -p ~/.cache/dein
 
+echo "# install xcode"
+open "https://itunes.apple.com/jp/app/xcode/id497799835?mt=12&ign-mpt=uo%3D4"
+read -p "continue?"
+
+echo "# install xcode tool"
+xcode-select --install
+read -p "continue?"
+
 cat <<EOS
 ###############################################################
 # brew
