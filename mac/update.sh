@@ -17,3 +17,6 @@ cp -p ~/.config/fish/functions/* fish/functions/
 
 # update bashrc
 cp -p ~/.bashrc ./bash/bashrc
+
+# update alacritty
+cp -p ~/.config/alacritty/alacritty.yml ./alacritty/alacritty.yml
