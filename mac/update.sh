@@ -14,3 +14,6 @@ cp -rp ~/.tmux/ tmux/tmux/
 # update fish
 cp -p ~/.config/fish/config.fish fish/
 cp -p ~/.config/fish/functions/* fish/functions/
+
+# update bashrc
+cp -p ~/.bashrc ./bash/bashrc

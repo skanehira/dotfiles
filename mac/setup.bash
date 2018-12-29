@@ -12,6 +12,9 @@ mkdir -p ~/dev/go/bin
 echo "# mkdir vim plugin dir ~/.cache/dein"
 mkdir -p ~/.cache/dein
 
+echo "# mkdir ~/.tmux"
+mkdir -p ~/.tmux
+
 echo "# install xcode"
 open "https://itunes.apple.com/jp/app/xcode/id497799835?mt=12&ign-mpt=uo%3D4"
 read -p "continue?"
@@ -36,8 +39,13 @@ brew doctor
 
 read -p "continue?"
 
-echo "# install brew-cask"
-brew install caskroom/cask/brew-cask
+cat <<EOS
+###############################################################
+# fzf
+###############################################################
+EOS
+echo "# install"
+brew install fzf
 
 cat <<EOS
 ###############################################################
@@ -58,7 +66,7 @@ cat <<EOS
 ###############################################################
 EOS
 echo "# get dotfiles"
-git clone git@github.com:skanehira/dotfiles.git ~/dev/go/src/github.com/skanehira/
+git clone git@github.com:skanehira/dotfiles.git ~/dev/go/src/github.com/skanehira/dotfiles
 
 dotfiles=~/dev/go/src/github.com/skanehira/dotfiles/mac
 
@@ -168,31 +176,5 @@ echo "# setup"
 cd $dotfiles/vim
 bash install.sh
 
-read -p "continue?"
-
-cat <<EOS
-###############################################################
-# Tools
-###############################################################
-EOS
-echo "# install VSCode"
-brew cask install visual-studio-code
-echo "# install Vivaldi"
-brew cask install vivaldi
-echo "# install Clipy"
-brew cask install clipy
-echo "# install SpacceLauncher"
-brew cask install spacelauncher
-echo "# install docker"
-wget https://download.docker.com/mac/stable/Docker.dmg -o ~/Downloads/ 
-open ~/Downloads/Docker.dmg
-read -p "continue?"
-echo "# install Spectacle"
-open https://www.spectacleapp.com/
-read -p "continue?"
-echo "# install Google IME"
-open https://www.google.co.jp/ime/
-read -p "continue?"
-echo "# insatll Macs Fan Control"
-open https://www.crystalidea.com/macs-fan-control
-read -p "continue?"
+echo "# run vim"
+vim
