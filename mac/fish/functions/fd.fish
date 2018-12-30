@@ -6,6 +6,6 @@ function fd -d 'selected directory'
   end
 
   set dir (find $dir -path '*/\.*' -prune \
-                  -o -type d -print 2> /dev/null | fzf +m); and cd "$dir"
+                  -o -type d -print 2> /dev/null | fzf +m) && cd "$dir"
 end
 
