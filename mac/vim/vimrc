@@ -199,7 +199,7 @@ au FileType go nmap <silent> <F12> :GoDebugStart<CR>
 au FileType go nmap <silent> <F12><F12> :GoDebugStop<CR>
 
 " ====================================== fzf settings ======================================
-nmap <C-P> :Files<CR>
+nmap <C-P> :GFiles<CR>
 
 " ====================================== lsp settings ======================================
 nmap <silent> <C-]> :LspDefinition<CR>
