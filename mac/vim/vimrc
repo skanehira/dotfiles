@@ -311,7 +311,6 @@ function! ProfileCursorMove() abort
 endfunction
 
 " ====================================== emment ======================================
-let g:user_emmet_leader_key='<C-L>'
 let g:user_emmet_install_global = 0
 let g:user_emmet_settings = {
 \ 'variables': {
@@ -319,7 +318,7 @@ let g:user_emmet_settings = {
 \ }
 \}
 au FileType html,css,vue EmmetInstall
-au FileType html,css,vue imap <C-f> <C-L>,
+au FileType html,css,vue imap <C-f> <C-y>,
 
 " ====================================== vim-keymaps ======================================
 imap <c-g> <Plug>KeyMapRotate
