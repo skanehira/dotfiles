@@ -63,6 +63,7 @@ set ttyfast
 set synmaxcol=256
 set relativenumber
 set cursorline
+let g:netrw_liststyle = 3
 
 nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>
