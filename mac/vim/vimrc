@@ -65,6 +65,15 @@ set relativenumber
 set cursorline
 let g:netrw_liststyle = 3
 
+" indent for each filetype
+augroup fileTypeIndent
+    autocmd!
+    autocmd BufNewFile,BufRead *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
+    autocmd BufNewFile,BufRead *.js setlocal tabstop=2 softtabstop=2 shiftwidth=2
+    autocmd BufNewFile,BufRead *.vue setlocal tabstop=2 softtabstop=2 shiftwidth=2
+augroup END
+
+
 nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>
 "nmap <Tab>      gt
