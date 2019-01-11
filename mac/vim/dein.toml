@@ -98,6 +98,9 @@ repo = 'tpope/vim-fugitive'
 [[plugins]]
 repo = 'w0rp/ale'
 
+[[plugins]]
+repo = 'kkvh/vim-docker-tools'
+
 # syntax file type vue
 [[plugins]]
 repo = 'posva/vim-vue'
