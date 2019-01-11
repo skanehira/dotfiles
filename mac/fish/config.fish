@@ -4,7 +4,7 @@ set -x GOBIN $GOPATH/bin
 set -x PATH $PATH $GOBIN $HOME/.cargo/bin /usr/local/bin
 set -x XDG_CONFIG_HOME $HOME/.config
 set -x LANG "ja_JP.UTF-8"
-set -x HOMEBREW_UPGRADE_CLEANUP 1
+set -x HOMEBREW_INSTALL_CLEANUP 1
 set -x FZF_DEFAULT_OPTS "--layout=reverse --inline-info --select-1 --exit-0 -m"
 set -g theme_display_date no
 set -x TERM xterm-256color
@@ -21,5 +21,4 @@ alias gd='git diff'
 alias gl='git log'
 alias gc='git checkout .'
 alias gf='gol -f'
-alias docker='god'
 alias repo='cd ( ls -ld $GOPATH/src/*/*/* | awk \'{print $9}\' | fzf )'

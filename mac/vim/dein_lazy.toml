@@ -1,7 +1,9 @@
+# Go
 [[plugins]]
 repo = 'fatih/vim-go'
 on_ft = 'go'
 
+# make table
 [[plugins]]
 repo = 'mattn/vim-maketable'
 

@@ -1,97 +1,120 @@
+# language server protocol
 [[plugins]]
 repo = 'prabirshrestha/vim-lsp'
 
+# async auto complete
 [[plugins]]
 repo = 'prabirshrestha/async.vim'
 
+# auto complete plugin
 [[plugins]]
 repo = 'prabirshrestha/asyncomplete.vim'
 
+# auto complete for lsp
 [[plugins]]
 repo = 'prabirshrestha/asyncomplete-lsp.vim'
 
+# auto complete for ultisnips
 [[plugins]]
 repo = 'prabirshrestha/asyncomplete-ultisnips.vim'
 
-[[plugins]]
-repo = 'honza/vim-snippets'
-
+# snippets
 [[plugins]]
 repo = 'SirVer/ultisnips'
 
+# snippets collection
 [[plugins]]
-repo = 'natebosch/vim-lsc'
+repo = 'honza/vim-snippets'
 
+# format text
 [[plugins]]
 repo = 'godlygeek/tabular'
 
-[[plugins]]
-repo = 'plasticboy/vim-markdown'
-on_ft = 'md'
-
+# surroundings quotes, tags, and more.
 [[plugins]]
 repo = 'tpope/vim-surround'
 
-[[plugins]]
-repo = 'cespare/vim-toml'
-on_ft = 'toml'
-
-[[plugins]]
-repo = 'dag/vim-fish'
-on_ft = 'fish'
-
+# for repeat surroundings
 [[plugins]]
 repo = 'tpope/vim-repeat'
 on_idle = 1
 
+# fuzzy finder
 [[plugins]]
 repo = '/usr/local/opt/fzf'
 
+# fzf for vim
 [[plugins]]
 repo = 'junegunn/fzf.vim'
 
+# preview markdown on browser
 [[plugins]]
 repo = 'iamcco/markdown-preview.vim'
 
+# auto close parentheses
 [[plugins]]
 repo = 'cohama/lexima.vim'
 
+# resize window size on vim
 [[plugins]]
 repo = 'simeji/winresizer'
 
+# memo
 [[plugins]]
 repo = 'glidenote/memolist.vim'
 
-#[[plugins]]
-#repo = 'maralla/completor.vim.git'
-
-[[plugins]]
-repo = 'posva/vim-vue'
-on_ft = 'vue'
-
+# emmet for vim
 [[plugins]]
 repo = 'mattn/emmet-vim'
 
+# vim key maps
 [[plugins]]
 repo = 'nonylene/vim-keymaps'
 
+# status line
 [[plugins]]
 repo = 'itchyny/lightline.vim'
 
+# template
 [[plugins]]
 repo = 'mattn/sonictemplate-vim'
 hook_add = '''
 let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
 '''
 
+# manage session
 [[plugins]]
 repo = 'skanehira/vsession'
 
+# show git diff
 [[plugins]]
 repo = 'airblade/vim-gitgutter'
 
+# git wrapper
 [[plugins]]
 repo = 'tpope/vim-fugitive'
 
+# async Lint
 [[plugins]]
 repo = 'w0rp/ale'
+
+# syntax file type vue
+[[plugins]]
+repo = 'posva/vim-vue'
+on_ft = 'vue'
+
+# syntax file type markdown
+[[plugins]]
+repo = 'plasticboy/vim-markdown'
+on_ft = 'md'
+
+# syntax file type toml
+[[plugins]]
+repo = 'cespare/vim-toml'
+on_ft = 'toml'
+
+# syntax file type fish
+[[plugins]]
+repo = 'dag/vim-fish'
+on_ft = 'fish'
+
