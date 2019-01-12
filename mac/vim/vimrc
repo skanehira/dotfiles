@@ -73,6 +73,9 @@ augroup fileTypeIndent
     autocmd BufNewFile,BufRead *.vue setlocal tabstop=2 softtabstop=2 shiftwidth=2
 augroup END
 
+" wildmenu setup
+set wildmenu
+set wildmode=full
 
 nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>

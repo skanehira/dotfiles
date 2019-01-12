@@ -98,8 +98,13 @@ repo = 'tpope/vim-fugitive'
 [[plugins]]
 repo = 'w0rp/ale'
 
+# docker container
 [[plugins]]
 repo = 'kkvh/vim-docker-tools'
+
+# preview for the following Ex commands
+[[plugins]]
+repo = 'markonm/traces.vim'
 
 # syntax file type vue
 [[plugins]]
