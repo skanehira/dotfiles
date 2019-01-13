@@ -39,33 +39,81 @@ if dein#check_install()
 endif
 
 " ====================================== general settings ======================================
+" https://vim-jp.org/vimdoc-ja/map.html#mapleader
+" leaderキーをスペースに設定
 let mapleader = "\<Space>"
-filetype plugin indent on
-syntax on
-syntax sync minlines=256
 
+" シンタックスを有効にする
+syntax on
+
+" https://vim-jp.org/vimdoc-ja/filetype.html#:filetype-plugin-on
+" https://vim-jp.org/vimdoc-ja/filetype.html#:filetype-indent-on
+" ファイル形式別プラグインとインデントを有効にする
+" これがないとvim-goなどが動作しない
+filetype plugin indent on
+
+" https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
+" vueファイルのシンタックスが効かなくなる問題対応
+au FileType vue syntax sync fromstart
+
+" バックスペースとCtrl+hで削除を有効にする
 set backspace=2
+
+" 改行時自動インデント
 set smartindent
+
+" 行番号を表示
 set number
+
+" カーソルから相対的な行数を表示する
+set relativenumber
+
+" https://vim-jp.org/vimdoc-ja/options.html#'tabstop'
+" タブでも常に空白を挿入
 set tabstop=4
 set shiftwidth=4
 set expandtab
+
+" インクリメントサーチを有効にする
 set incsearch
+
+" https://vim-jp.org/vimdoc-ja/options.html#'ignorecase'
+" 検索時大文字小文字を区別しない
 set ignorecase
+
+" https://vim-jp.org/vimdoc-ja/options.html#'smartcase'
+" 検索時に大文字を入力した場合ignorecaseが無効になる
 set smartcase
+
+" ハイライトサーチを有効にする
 set hlsearch
-set undolevels=100
+
+" undoできる最大数
+set undolevels=1000
+
+" mac os のクリップボードを共有
 set clipboard+=unnamed
-set scrolloff=999
+
+" カーソルが常に中央に来るようにする
+set scrolloff=100
+
+" スワップファイルに書き込まれる時間(ミリ秒単位)
 set updatetime=450
+
 set lazyredraw
 set ttyfast
+
+" 一行が長いファイルをsyntaxを制御することで軽くする
 set synmaxcol=256
-set relativenumber
+
+" カーソルラインを表示する
 set cursorline
+
+" https://vim-jp.org/vimdoc-ja/pi_netrw.html#g:netrw_liststyle
+" netrwツリー表示を有効にする
 let g:netrw_liststyle = 3
 
-" indent for each filetype
+" 拡張子ごとのインデントを指定する
 augroup fileTypeIndent
     autocmd!
     autocmd BufNewFile,BufRead *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
@@ -73,25 +121,37 @@ augroup fileTypeIndent
     autocmd BufNewFile,BufRead *.vue setlocal tabstop=2 softtabstop=2 shiftwidth=2
 augroup END
 
-" wildmenu setup
+" https://vim-jp.org/vimdoc-ja/options.html#'wildmode'
+" wildmenuを有効にする
 set wildmenu
 set wildmode=full
 
+" grepした結果をquickfixに表示する
+au QuickFixCmdPost *grep* cwindow
+
+
+" ====================================== key mappings ======================================
+" ファイル保存と終了
 nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>
-"nmap <Tab>      gt
-"nmap <S-Tab>    gT
+
+" 検索
 nmap <C-G><C-G> :vimgrep /<C-R><C-W>/j **/*
-nmap <Esc><Esc> :nohlsearch<CR><Esc>
+
+" 置換
 nmap <Leader>p :%s;<C-R><C-W>;
 
-" move window on hjkl
+" ハイライトを削除する
+nmap <Esc><Esc> :nohlsearch<CR><Esc>
+
+" 画面移動
 nmap <C-H> <C-W>h
 nmap <C-J> <C-W>j
 nmap <C-K> <C-W>k
 nmap <C-L> <C-W>l
 
-autocmd QuickFixCmdPost *grep* cwindow
+" vimrcを開く
+nmap <leader>v :e ~/.vimrc<CR>
 
 " text object key mapping
 " cut
@@ -154,7 +214,7 @@ nmap va@ va`
 nmap va[ va[
 nmap va{ va{
 
-" save cursorl line
+" カーソルラインのいちを保存する
 if has("autocmd")
     autocmd BufReadPost *
     \ if line("'\"") > 0 && line ("'\"") <= line("$") |
@@ -162,13 +222,13 @@ if has("autocmd")
     \ endif
 endif
 
-" presistent undo
+" undoの保存先
 if has('persistent_undo')
   set undodir=~/.vim/undo
   set undofile
 endif
 
-" toggle number
+" numberとrelativenumberの切り替え
 function! ToggleRelativenumber() abort
   if &relativenumber == 1
      setlocal norelativenumber
@@ -178,23 +238,32 @@ function! ToggleRelativenumber() abort
 endfunction
 nnoremap <silent> <leader>n :call ToggleRelativenumber()<CR>
 
-" application launcher
+" 自作アプリケーションランチャー
 nnoremap <silent> <Leader>l :belowright term ++close gol -f<CR>
 
 " visual yank
 vnoremap <silent> <C-p> "0p<CR>
 
-" run term bottom
+" ターミナルを下部で開く
 nnoremap <silent> <leader>te :belowright term<cr>
 
 " ====================================== vim-go settings ======================================
-let g:go_bin_path = $GOPATH.'/bin'
+" ファイル保存時go importを実行する
 let g:go_fmt_command = "goimports"
+
+" ファイル保存時、linterを実行する
 let g:go_metalinter_autosave = 1
+
+" linter実行時、go vetのみを実行する
 let g:go_metalinter_autosave_enabled = ['vet']
+
+" vim-lspをしようするので、vim-goの`Ctrl+]`を無効にする
 let g:go_def_mapping_enabled = 0
+
+" GoRunやGoTest時の画面分割方法変更
 let g:go_term_mode = 'split'
 
+" key mapping
 au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
 au FileType go nmap <silent> <Leader>r <Plug>(go-run)
 au FileType go nmap <silent> <leader>t <Plug>(go-test)
@@ -207,7 +276,6 @@ au FileType go nmap <silent> <leader>dd :GoDeclsDir<CR>
 au FileType go nmap <silent> <leader>dl :GoDecls<CR>
 au FileType go nmap <silent> <leader>ip :GoImpl<CR>
 au FileType go nmap <silent> <leader>rn :GoRename<CR>
-
 au FileType go nmap <silent> <F12> :GoDebugStart<CR>
 au FileType go nmap <silent> <F12><F12> :GoDebugStop<CR>
 
@@ -219,11 +287,8 @@ nmap <silent> <C-]> :LspDefinition<CR>
 nmap <silent> <Leader>rf :LspReferences<CR>
 nmap <silent> <Leader>im :LspImplementation<CR>
 
+" 非同期補完を有効にする
 let g:lsp_async_completion = 1
-"let g:lsp_signs_enabled = 1         " enable signs
-"let g:lsp_signs_error = {'text': '✗'}
-"let g:lsp_signs_error = {'text': '!!'}
-"let g:lsp_diagnostics_echo_cursor = 1 " enable echo under cursor when in normal mode
 
 " ====================================== lsp golang settings ======================================
 if executable('go-langserver')
@@ -275,6 +340,7 @@ inoremap <expr> <C-k> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
 
 " ====================================== vim-markdown settings ======================================
+" mdを開くときの折りたたみを無効にする
 let g:vim_markdown_folding_disabled = 1
 
 " ====================================== vim-surround settings ======================================
@@ -290,6 +356,7 @@ let g:UltiSnipsExpandTrigger="<tab>"
 let g:UltiSnipsJumpForwardTrigger="<tab>"
 let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 
+" ultisnipes自動補完
 if has('python3')
     call asyncomplete#register_source(asyncomplete#sources#ultisnips#get_source_options({
         \ 'name': 'ultisnips',
