@@ -136,10 +136,10 @@ nmap <Leader>w :w<CR>
 nmap <Leader>q :q!<CR>
 
 " 検索
-nmap <C-G><C-G> :vimgrep /<C-R><C-W>/j **/*
+nmap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
 
 " 置換
-nmap <Leader>p :%s;<C-R><C-W>;
+nmap <Leader>re :%s;<C-R><C-W>;g<Left><Left>;
 
 " ハイライトを削除する
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
@@ -241,7 +241,7 @@ nnoremap <silent> <leader>n :call ToggleRelativenumber()<CR>
 " 自作アプリケーションランチャー
 nnoremap <silent> <Leader>l :belowright term ++close gol -f<CR>
 
-" visual yank
+" visual paste
 vnoremap <silent> <C-p> "0p<CR>
 
 " ターミナルを下部で開く
