@@ -40,7 +40,7 @@ endif
 
 " ====================================== general settings ======================================
 " https://vim-jp.org/vimdoc-ja/map.html#mapleader
-" leaderキーをスペースに設定
+" Leaderキーをスペースに設定
 let mapleader = "\<Space>"
 
 " シンタックスを有効にする
@@ -129,7 +129,6 @@ set wildmode=full
 " grepした結果をquickfixに表示する
 au QuickFixCmdPost *grep* cwindow
 
-
 " ====================================== key mappings ======================================
 " ファイル保存と終了
 nmap <Leader>w :w<CR>
@@ -141,8 +140,11 @@ nmap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
 " 置換
 nmap <Leader>re :%s;<C-R><C-W>;g<Left><Left>;
 
+" visualで選択したテキストを置換する
+vnoremap <Leader>re y:%s/<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>//g<Left><Left>
+
 " ハイライトを削除する
-nmap <Esc><Esc> :nohlsearch<CR><Esc>
+nmap <C-c><C-c> :nohlsearch<CR>
 
 " 画面移動
 nmap <C-H> <C-W>h
@@ -151,7 +153,10 @@ nmap <C-K> <C-W>k
 nmap <C-L> <C-W>l
 
 " vimrcを開く
-nmap <leader>v :e ~/.vimrc<CR>
+nmap <Leader>. :e ~/.vimrc<CR>
+
+" Ctrl+cでnormalモード
+nmap <C-c> <Esc>
 
 " text object key mapping
 " cut
@@ -214,7 +219,7 @@ nmap va@ va`
 nmap va[ va[
 nmap va{ va{
 
-" カーソルラインのいちを保存する
+" カーソルラインの位置を保存する
 if has("autocmd")
     autocmd BufReadPost *
     \ if line("'\"") > 0 && line ("'\"") <= line("$") |
@@ -236,7 +241,7 @@ function! ToggleRelativenumber() abort
      setlocal relativenumber
   endif
 endfunction
-nnoremap <silent> <leader>n :call ToggleRelativenumber()<CR>
+nnoremap <silent> <Leader>n :call ToggleRelativenumber()<CR>
 
 " 自作アプリケーションランチャー
 nnoremap <silent> <Leader>l :belowright term ++close gol -f<CR>
@@ -245,7 +250,7 @@ nnoremap <silent> <Leader>l :belowright term ++close gol -f<CR>
 vnoremap <silent> <C-p> "0p<CR>
 
 " ターミナルを下部で開く
-nnoremap <silent> <leader>te :belowright term<cr>
+nnoremap <silent> <Leader>te :belowright term<cr>
 
 " ====================================== vim-go settings ======================================
 " ファイル保存時go importを実行する
@@ -264,18 +269,18 @@ let g:go_def_mapping_enabled = 0
 let g:go_term_mode = 'split'
 
 " key mapping
-au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
+au FileType go nmap <silent> <Leader>c <Plug>(go-coverage)
 au FileType go nmap <silent> <Leader>r <Plug>(go-run)
-au FileType go nmap <silent> <leader>t <Plug>(go-test)
-au FileType go nmap <silent> <leader>c <Plug>(go-coverage)
-au FileType go nmap <silent> <leader>at :GoAddTags<CR>
-au FileType go nmap <silent> <leader>rt :GoRemoveTags<CR>
-au FileType go nmap <silent> <leader>fs :GoFillStruct<CR>
-au FileType go nmap <silent> <leader>ki :GoKeyify<CR>
-au FileType go nmap <silent> <leader>dd :GoDeclsDir<CR>
-au FileType go nmap <silent> <leader>dl :GoDecls<CR>
-au FileType go nmap <silent> <leader>ip :GoImpl<CR>
-au FileType go nmap <silent> <leader>rn :GoRename<CR>
+au FileType go nmap <silent> <Leader>t <Plug>(go-test)
+au FileType go nmap <silent> <Leader>c <Plug>(go-coverage)
+au FileType go nmap <silent> <Leader>at :GoAddTags<CR>
+au FileType go nmap <silent> <Leader>rt :GoRemoveTags<CR>
+au FileType go nmap <silent> <Leader>fs :GoFillStruct<CR>
+au FileType go nmap <silent> <Leader>ki :GoKeyify<CR>
+au FileType go nmap <silent> <Leader>dd :GoDeclsDir<CR>
+au FileType go nmap <silent> <Leader>dl :GoDecls<CR>
+au FileType go nmap <silent> <Leader>ip :GoImpl<CR>
+au FileType go nmap <silent> <Leader>rn :GoRename<CR>
 au FileType go nmap <silent> <F12> :GoDebugStart<CR>
 au FileType go nmap <silent> <F12><F12> :GoDebugStop<CR>
 
@@ -405,20 +410,6 @@ imap <c-g> <Plug>KeyMapRotate
 let g:keymaps =  [
       \  {
       \    'name': 'normal',
-      \    'keymap': {
-      \      'inoremap': {
-      \        '¥': '\',
-      \        '\': '¥',
-      \      },
-      \      'nnoremap': {
-      \        '¥': '\',
-      \        '\': '¥',
-      \      },
-      \      'cnoremap': {
-      \        '¥': '\',
-      \        '\': '¥',
-      \      },
-      \    },
       \  },
       \  {
       \    'name': 'coding',
@@ -442,8 +433,6 @@ let g:keymaps =  [
       \        '(': '8',
       \        '9': ')',
       \        ')': '9',
-      \        '¥': '\',
-      \        '\': '¥',
       \        '@': '`',
       \        '`': '@',
       \        '-': '=',
@@ -467,4 +456,5 @@ let g:ale_echo_msg_error_str = 'E'
 let g:ale_echo_msg_warning_str = 'W'
 let g:ale_echo_msg_format = '[%linter%] %s [%severity%]'
 let g:ale_set_highlights = 0
+
 
