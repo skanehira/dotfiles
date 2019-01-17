@@ -144,7 +144,7 @@ nmap <Leader>re :%s;<C-R><C-W>;g<Left><Left>;
 vnoremap <Leader>re y:%s/<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>//g<Left><Left>
 
 " ハイライトを削除する
-nmap <C-c><C-c> :nohlsearch<CR>
+nmap <Esc><Esc> :nohlsearch<CR>
 
 " 画面移動
 nmap <C-H> <C-W>h
