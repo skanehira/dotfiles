@@ -1,10 +1,18 @@
-" ====================================== deni.vim settings ======================================
+" vim scriptでマルチバイト文字を使用しているため設定
+scriptencoding utf-8
+
+" ミュートにする。
+set t_vb=
+set visualbell
+set noerrorbells
+
+" ====================================== dein.vim settings ======================================
 if &compatible
  set nocompatible
 endif
 
-" install dir 
-let s:dein_dir = expand('~/.cache/dein') 
+" install dir
+let s:dein_dir = expand('~/.cache/dein')
 let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
  
 " dein installation check
@@ -41,7 +49,7 @@ endif
 " ====================================== general settings ======================================
 " https://vim-jp.org/vimdoc-ja/map.html#mapleader
 " Leaderキーをスペースに設定
-let mapleader = "\<Space>"
+let g:mapleader = "\<Space>"
 
 " シンタックスを有効にする
 syntax on
@@ -51,10 +59,6 @@ syntax on
 " ファイル形式別プラグインとインデントを有効にする
 " これがないとvim-goなどが動作しない
 filetype plugin indent on
-
-" https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
-" vueファイルのシンタックスが効かなくなる問題対応
-au FileType vue syntax sync fromstart
 
 " バックスペースとCtrl+hで削除を有効にする
 set backspace=2
@@ -100,6 +104,7 @@ set scrolloff=100
 " スワップファイルに書き込まれる時間(ミリ秒単位)
 set updatetime=450
 
+" マクロで効果発揮
 set lazyredraw
 set ttyfast
 
@@ -116,9 +121,9 @@ let g:netrw_liststyle = 3
 " 拡張子ごとのインデントを指定する
 augroup fileTypeIndent
     autocmd!
-    autocmd BufNewFile,BufRead *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
-    autocmd BufNewFile,BufRead *.js setlocal tabstop=2 softtabstop=2 shiftwidth=2
-    autocmd BufNewFile,BufRead *.vue setlocal tabstop=2 softtabstop=2 shiftwidth=2
+    au BufRead,BufNewFile *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
+    au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2
+    au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2
 augroup END
 
 " https://vim-jp.org/vimdoc-ja/options.html#'wildmode'
@@ -127,97 +132,100 @@ set wildmenu
 set wildmode=full
 
 " grepした結果をquickfixに表示する
-au QuickFixCmdPost *grep* cwindow
+augroup grepwindow
+    autocmd!
+    au QuickFixCmdPost *grep* cwindow
+augroup END
 
 " ====================================== key mappings ======================================
 " ファイル保存と終了
-nmap <Leader>w :w<CR>
-nmap <Leader>q :q!<CR>
+nnoremap <Leader>w :w<CR>
+nnoremap <Leader>q :q!<CR>
 
 " 検索
-nmap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
+nnoremap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
 
 " 置換
-nmap <Leader>re :%s;<C-R><C-W>;g<Left><Left>;
+nnoremap <Leader>re :%s;<C-R><C-W>;g<Left><Left>;
 
 " visualで選択したテキストを置換する
-vnoremap <Leader>re y:%s/<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>//g<Left><Left>
+vnoremap <Leader>re y:%s;<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>;;g<Left><Left>
 
 " ハイライトを削除する
-nmap <Esc><Esc> :nohlsearch<CR>
+nnoremap <Esc><Esc> :nohlsearch<CR>
 
 " 画面移動
-nmap <C-H> <C-W>h
-nmap <C-J> <C-W>j
-nmap <C-K> <C-W>k
-nmap <C-L> <C-W>l
+nnoremap <C-H> <C-W>h
+nnoremap <C-J> <C-W>j
+nnoremap <C-K> <C-W>k
+nnoremap <C-L> <C-W>l
 
 " vimrcを開く
-nmap <Leader>. :e ~/.vimrc<CR>
+nnoremap <Leader>. :e ~/.vimrc<CR>
 
 " Ctrl+cでnormalモード
-nmap <C-c> <Esc>
+nnoremap <C-c> <Esc>
 
 " text object key mapping
 " cut
-nmap c8 ci(
-nmap c2 ci"
-nmap c7 ci'
-nmap c@ ci`
-nmap c[ ci[
-nmap c{ ci{
+nnoremap c8 ci(
+nnoremap c2 ci"
+nnoremap c7 ci'
+nnoremap c@ ci`
+nnoremap c[ ci[
+nnoremap c{ ci{
 
-nmap ca8 ca(
-nmap ca2 ca"
-nmap ca7 ca'
-nmap ca@ ca`
-nmap ca[ ca[
-nmap ca{ ca{
+nnoremap ca8 ca(
+nnoremap ca2 ca"
+nnoremap ca7 ca'
+nnoremap ca@ ca`
+nnoremap ca[ ca[
+nnoremap ca{ ca{
 
 " delete
-nmap d8 di(
-nmap d2 di"
-nmap d7 di'
-nmap d@ di`
-nmap d[ di[
-nmap d{ di{
+nnoremap d8 di(
+nnoremap d2 di"
+nnoremap d7 di'
+nnoremap d@ di`
+nnoremap d[ di[
+nnoremap d{ di{
 
-nmap da8 da(
-nmap da2 da"
-nmap da7 da'
-nmap da@ da`
-nmap da[ da[
-nmap da{ da{
+nnoremap da8 da(
+nnoremap da2 da"
+nnoremap da7 da'
+nnoremap da@ da`
+nnoremap da[ da[
+nnoremap da{ da{
 
 " yank
-nmap y8 yi(
-nmap y2 yi"
-nmap y7 yi'
-nmap y@ yi`
-nmap y[ yi[
-nmap y{ yi{
+nnoremap y8 yi(
+nnoremap y2 yi"
+nnoremap y7 yi'
+nnoremap y@ yi`
+nnoremap y[ yi[
+nnoremap y{ yi{
 
-nmap ya8 ya(
-nmap ya2 ya"
-nmap ya7 ya'
-nmap ya@ ya`
-nmap ya[ ya[
-nmap ya{ ya{
+nnoremap ya8 ya(
+nnoremap ya2 ya"
+nnoremap ya7 ya'
+nnoremap ya@ ya`
+nnoremap ya[ ya[
+nnoremap ya{ ya{
 
 " visual
-nmap v8 vi(
-nmap v2 vi"
-nmap v7 vi'
-nmap v@ vi`
-nmap v[ vi[
-nmap v{ vi{
+nnoremap v8 vi(
+nnoremap v2 vi"
+nnoremap v7 vi'
+nnoremap v@ vi`
+nnoremap v[ vi[
+nnoremap v{ vi{
 
-nmap va8 va(
-nmap va2 va"
-nmap va7 va'
-nmap va@ va`
-nmap va[ va[
-nmap va{ va{
+nnoremap va8 va(
+nnoremap va2 va"
+nnoremap va7 va'
+nnoremap va@ va`
+nnoremap va[ va[
+nnoremap va{ va{
 
 " カーソルラインの位置を保存する
 if has("autocmd")
@@ -234,14 +242,7 @@ if has('persistent_undo')
 endif
 
 " numberとrelativenumberの切り替え
-function! ToggleRelativenumber() abort
-  if &relativenumber == 1
-     setlocal norelativenumber
-  else
-     setlocal relativenumber
-  endif
-endfunction
-nnoremap <silent> <Leader>n :call ToggleRelativenumber()<CR>
+nnoremap <silent> <Leader>n :set relativenumber!<CR>
 
 " 自作アプリケーションランチャー
 nnoremap <silent> <Leader>l :belowright term ++close gol -f<CR>
@@ -269,96 +270,104 @@ let g:go_def_mapping_enabled = 0
 let g:go_term_mode = 'split'
 
 " key mapping
-au FileType go nmap <silent> <Leader>c <Plug>(go-coverage)
-au FileType go nmap <silent> <Leader>r <Plug>(go-run)
-au FileType go nmap <silent> <Leader>t <Plug>(go-test)
-au FileType go nmap <silent> <Leader>c <Plug>(go-coverage)
-au FileType go nmap <silent> <Leader>at :GoAddTags<CR>
-au FileType go nmap <silent> <Leader>rt :GoRemoveTags<CR>
-au FileType go nmap <silent> <Leader>fs :GoFillStruct<CR>
-au FileType go nmap <silent> <Leader>ki :GoKeyify<CR>
-au FileType go nmap <silent> <Leader>dd :GoDeclsDir<CR>
-au FileType go nmap <silent> <Leader>dl :GoDecls<CR>
-au FileType go nmap <silent> <Leader>ip :GoImpl<CR>
-au FileType go nmap <silent> <Leader>rn :GoRename<CR>
-au FileType go nmap <silent> <F12> :GoDebugStart<CR>
-au FileType go nmap <silent> <F12><F12> :GoDebugStop<CR>
+augroup GoMapping
+    autocmd!
+    au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
+    au FileType go nnoremap <silent> <Leader>r <Plug>(go-run)
+    au FileType go nnoremap <silent> <Leader>t <Plug>(go-test)
+    au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
+    au FileType go nnoremap <silent> <Leader>at :GoAddTags<CR>
+    au FileType go nnoremap <silent> <Leader>rt :GoRemoveTags<CR>
+    au FileType go nnoremap <silent> <Leader>fs :GoFillStruct<CR>
+    au FileType go nnoremap <silent> <Leader>ki :GoKeyify<CR>
+    au FileType go nnoremap <silent> <Leader>dd :GoDeclsDir<CR>
+    au FileType go nnoremap <silent> <Leader>dl :GoDecls<CR>
+    au FileType go nnoremap <silent> <Leader>ip :GoImpl<CR>
+    au FileType go nnoremap <silent> <Leader>rn :GoRename<CR>
+    au FileType go nnoremap <silent> <F12> :GoDebugStart<CR>
+    au FileType go nnoremap <silent> <F12><F12> :GoDebugStop<CR>
+augroup END
 
 " ====================================== fzf settings ======================================
-nmap <C-P> :GFiles<CR>
+nnoremap <C-P> :GFiles<CR>
 
 " ====================================== lsp settings ======================================
-nmap <silent> <C-]> :LspDefinition<CR>
-nmap <silent> <Leader>rf :LspReferences<CR>
-nmap <silent> <Leader>im :LspImplementation<CR>
+nnoremap <silent> <C-]> :LspDefinition<CR>
+nnoremap <silent> <Leader>rf :LspReferences<CR>
+nnoremap <silent> <Leader>im :LspImplementation<CR>
 
 " 非同期補完を有効にする
 let g:lsp_async_completion = 1
 
-" ====================================== lsp golang settings ======================================
-" https://github.com/saibing/bingo/wiki/Install
-if executable('bingo')
+" lsp log
+"let g:lsp_log_verbose = 1
+"let g:lsp_log_file = expand('~/vim-lsp.log')
+
+augroup LspSetting
+    autocmd!
+
+    " Go
+    " https://github.com/saibing/bingo/wiki/Install
+    if executable('bingo')
+        au User lsp_setup call lsp#register_server({
+                    \ 'name': 'bingo',
+                    \ 'cmd': {server_info->['bingo', '-mode', 'stdio']},
+                    \ 'whitelist': ['go'],
+                    \ })
+    endif
+
+    " php
     au User lsp_setup call lsp#register_server({
-        \ 'name': 'bingo',
-        \ 'cmd': {server_info->['bingo', '-mode', 'stdio', '-logfile', '/Users/skanehira/bingo.log']},
-        \ 'whitelist': ['go'],
-        \ })
-endif
+                \ 'name': 'php-language-server',
+                \ 'cmd': {server_info->['php', expand('~/.cache/dein/repos/github.com/felixfbecker/php-language-server/bin/php-language-server.php')]},
+                \ 'whitelist': ['php'],
+                \ })
 
-let g:lsp_log_verbose = 1
-let g:lsp_log_file = expand('~/vim-lsp.log')
+    " js
+    if executable('flow-language-server')
+        au User lsp_setup call lsp#register_server({
+                    \ 'name': 'flow-language-server',
+                    \ 'cmd': {server_info->[&shell, &shellcmdflag, 'flow-language-server --stdio']},
+                    \ 'root_uri':{server_info->lsp#utils#path_to_uri(lsp#utils#find_nearest_parent_file_directory(lsp#utils#get_buffer_path(), '.flowconfig'))},
+                    \ 'whitelist': ['javascript', 'javascript.jsx'],
+                    \ })
+    endif
 
-" ====================================== lsp php settings ======================================
-au User lsp_setup call lsp#register_server({
-            \ 'name': 'php-language-server',
-            \ 'cmd': {server_info->['php', expand('~/.cache/dein/repos/github.com/felixfbecker/php-language-server/bin/php-language-server.php')]},
-            \ 'whitelist': ['php'],
-            \ })
+    " docker
+    if executable('docker-langserver')
+        au User lsp_setup call lsp#register_server({
+                    \ 'name': 'docker-langserver',
+                    \ 'cmd': {server_info->[&shell, &shellcmdflag, 'docker-langserver --stdio']},
+                    \ 'whitelist': ['dockerfile'],
+                    \ })
+    endif
 
-" ====================================== lsp js settings ======================================
-if executable('flow-language-server')
-    au User lsp_setup call lsp#register_server({
-        \ 'name': 'flow-language-server',
-        \ 'cmd': {server_info->[&shell, &shellcmdflag, 'flow-language-server --stdio']},
-        \ 'root_uri':{server_info->lsp#utils#path_to_uri(lsp#utils#find_nearest_parent_file_directory(lsp#utils#get_buffer_path(), '.flowconfig'))},
-        \ 'whitelist': ['javascript', 'javascript.jsx'],
-        \ })
-endif
-
-" ====================================== lsp docker settings ======================================
-if executable('docker-langserver')
-    au User lsp_setup call lsp#register_server({
-        \ 'name': 'docker-langserver',
-        \ 'cmd': {server_info->[&shell, &shellcmdflag, 'docker-langserver --stdio']},
-        \ 'whitelist': ['dockerfile'],
-        \ })
-endif
-
-" ====================================== lsp css settings ======================================
-if executable('css-languageserver')
-    au User lsp_setup call lsp#register_server({
-        \ 'name': 'css-languageserver',
-        \ 'cmd': {server_info->[&shell, &shellcmdflag, 'css-languageserver --stdio']},
-        \ 'whitelist': ['css', 'less', 'sass'],
-        \ })
-endif
+    " css
+    if executable('css-languageserver')
+        au User lsp_setup call lsp#register_server({
+                    \ 'name': 'css-languageserver',
+                    \ 'cmd': {server_info->[&shell, &shellcmdflag, 'css-languageserver --stdio']},
+                    \ 'whitelist': ['css', 'less', 'sass'],
+                    \ })
+    endif
+augroup END
 
 " ====================================== asyncomplete settings ======================================
 inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <C-k> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<cr>"
+inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<cr>"
 
 " ====================================== vim-markdown settings ======================================
 " mdを開くときの折りたたみを無効にする
 let g:vim_markdown_folding_disabled = 1
 
 " ====================================== vim-surround settings ======================================
-nmap <Leader>7 ysiw'
-nmap <Leader>2 ysiw"
-nmap <Leader>` ysiw`
-nmap <Leader>8 ysiw)
-nmap <Leader>[ ysiw]
-nmap <Leader>{ ysiw}
+nnoremap <Leader>7 ysiw'
+nnoremap <Leader>2 ysiw"
+nnoremap <Leader>` ysiw`
+nnoremap <Leader>8 ysiw)
+nnoremap <Leader>[ ysiw]
+nnoremap <Leader>{ ysiw}
 
 " ====================================== ultisnips settings ======================================
 let g:UltiSnipsExpandTrigger="<tab>"
@@ -382,8 +391,7 @@ function! ProfileCursorMove() abort
     call delete(profile_file)
   endif
 
-  normal! gg
-  normal! zR
+  normal! ggzR
 
   execute 'profile start ' . profile_file
   profile func *
@@ -406,11 +414,15 @@ let g:user_emmet_settings = {
 \   'lang' : 'ja'
 \ }
 \}
-au FileType html,css,vue EmmetInstall
-au FileType html,css,vue imap <C-f> <C-y>,
+
+augroup emmet
+    autocmd!
+    au FileType html,css,vue EmmetInstall
+    au FileType html,css,vue inoremap <C-f> <C-y>,
+augroup END
 
 " ====================================== vim-keymaps ======================================
-imap <c-g> <Plug>KeyMapRotate
+inoremap <c-g> <Plug>KeyMapRotate
 let g:keymaps =  [
       \  {
       \    'name': 'normal',
@@ -461,4 +473,10 @@ let g:ale_echo_msg_warning_str = 'W'
 let g:ale_echo_msg_format = '[%linter%] %s [%severity%]'
 let g:ale_set_highlights = 0
 
-
+" ====================================== vim-vue ======================================
+" https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
+" vueファイルのシンタックスが効かなくなる問題対応
+augroup VueSyntax
+    autocmd!
+    au FileType vue syntax sync fromstart
+augroup END
