@@ -418,7 +418,7 @@ let g:user_emmet_settings = {
 augroup emmet
     autocmd!
     au FileType html,css,vue EmmetInstall
-    au FileType html,css,vue inoremap <C-f> <C-y>,
+    au FileType html,css,vue imap <C-f> <C-y>,
 augroup END
 
 " ====================================== vim-keymaps ======================================
