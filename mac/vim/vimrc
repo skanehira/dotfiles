@@ -1,11 +1,3 @@
-" vim scriptでマルチバイト文字を使用しているため設定
-scriptencoding utf-8
-
-" ミュートにする。
-set t_vb=
-set visualbell
-set noerrorbells
-
 " ====================================== dein.vim settings ======================================
 if &compatible
  set nocompatible
@@ -47,6 +39,19 @@ if dein#check_install()
 endif
 
 " ====================================== general settings ======================================
+" vim scriptでマルチバイト文字を使用しているため設定
+scriptencoding utf-8
+
+" ミュートにする。
+set t_vb=
+set visualbell
+set noerrorbells
+
+" 文字コード
+set encoding=utf-8
+set fileencodings=iso-2022-jp,euc-jp,sjis,utf-8
+set fileformats=unix,dos,mac
+
 " https://vim-jp.org/vimdoc-ja/map.html#mapleader
 " Leaderキーをスペースに設定
 let g:mapleader = "\<Space>"
@@ -300,8 +305,8 @@ nnoremap <silent> <Leader>im :LspImplementation<CR>
 let g:lsp_async_completion = 1
 
 " lsp log
-"let g:lsp_log_verbose = 1
-"let g:lsp_log_file = expand('~/vim-lsp.log')
+let g:lsp_log_verbose = 1
+let g:lsp_log_file = expand('~/vim-lsp.log')
 
 augroup LspSetting
     autocmd!
@@ -480,3 +485,4 @@ augroup VueSyntax
     autocmd!
     au FileType vue syntax sync fromstart
 augroup END
+
