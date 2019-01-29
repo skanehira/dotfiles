@@ -118,6 +118,10 @@ set synmaxcol=256
 
 " カーソルラインを表示する
 set cursorline
+highlight CursorLine ctermbg=Black
+
+" *でカーソルを移動しないようにする
+noremap * *N
 
 " https://vim-jp.org/vimdoc-ja/pi_netrw.html#g:netrw_liststyle
 " netrwツリー表示を有効にする
@@ -266,7 +270,7 @@ let g:go_fmt_command = "goimports"
 let g:go_metalinter_autosave = 1
 
 " linter実行時、go vetのみを実行する
-let g:go_metalinter_autosave_enabled = ['vet']
+let g:go_metalinter_autosave_enabled = ['vet', 'golint']
 
 " vim-lspをしようするので、vim-goの`Ctrl+]`を無効にする
 let g:go_def_mapping_enabled = 0
