@@ -9,7 +9,6 @@ set -x FZF_DEFAULT_OPTS "--layout=reverse --inline-info --select-1 --exit-0 -m"
 set -g theme_display_date no
 set -x TERM xterm-256color
 set -x LSCOLORS gxfxcxdxbxegedabagacad
-set -x GO111MODULE on
 
 # alias
 alias lg="lazygit"

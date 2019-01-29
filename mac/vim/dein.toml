@@ -130,4 +130,3 @@ on_ft = 'toml'
 [[plugins]]
 repo = 'dag/vim-fish'
 on_ft = 'fish'
-

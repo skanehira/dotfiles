@@ -118,7 +118,7 @@ set synmaxcol=256
 
 " カーソルラインを表示する
 set cursorline
-highlight CursorLine ctermbg=Black
+"highlight CursorLine ctermbg=Black
 
 " *でカーソルを移動しないようにする
 noremap * *N
@@ -489,4 +489,3 @@ augroup VueSyntax
     autocmd!
     au FileType vue syntax sync fromstart
 augroup END
-
