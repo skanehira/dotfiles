@@ -57,7 +57,7 @@ set fileformats=unix,dos,mac
 let g:mapleader = "\<Space>"
 
 " シンタックスを有効にする
-syntax on
+syntax enable
 
 " https://vim-jp.org/vimdoc-ja/filetype.html#:filetype-plugin-on
 " https://vim-jp.org/vimdoc-ja/filetype.html#:filetype-indent-on
@@ -118,7 +118,6 @@ set synmaxcol=256
 
 " カーソルラインを表示する
 set cursorline
-"highlight CursorLine ctermbg=Black
 
 " *でカーソルを移動しないようにする
 noremap * *N
@@ -145,6 +144,20 @@ augroup grepwindow
     autocmd!
     au QuickFixCmdPost *grep* cwindow
 augroup END
+
+" カーソルラインの位置を保存する
+if has("autocmd")
+    autocmd BufReadPost *
+    \ if line("'\"") > 0 && line ("'\"") <= line("$") |
+    \   exe "normal! g'\"" |
+    \ endif
+endif
+
+" undoの保存先
+if has('persistent_undo')
+  set undodir=~/.vim/undo
+  set undofile
+endif
 
 " ====================================== key mappings ======================================
 " ファイル保存と終了
@@ -236,19 +249,17 @@ nnoremap va@ va`
 nnoremap va[ va[
 nnoremap va{ va{
 
-" カーソルラインの位置を保存する
-if has("autocmd")
-    autocmd BufReadPost *
-    \ if line("'\"") > 0 && line ("'\"") <= line("$") |
-    \   exe "normal! g'\"" |
-    \ endif
-endif
+" 数値の+-
+nnoremap + <C-a>
+nnoremap - <C-x>
 
-" undoの保存先
-if has('persistent_undo')
-  set undodir=~/.vim/undo
-  set undofile
-endif
+" 行先頭と行末
+map H ^
+map L $
+
+" visual時に選択行を移動
+vnoremap <C-j> :m '>+1<CR>gv=gv
+vnoremap <C-k> :m '<-2<CR>gv=gv
 
 " numberとrelativenumberの切り替え
 nnoremap <silent> <Leader>n :set relativenumber!<CR>
@@ -270,7 +281,7 @@ let g:go_fmt_command = "goimports"
 let g:go_metalinter_autosave = 1
 
 " linter実行時、go vetのみを実行する
-let g:go_metalinter_autosave_enabled = ['vet', 'golint']
+let g:go_metalinter_autosave_enabled = ['vet']
 
 " vim-lspをしようするので、vim-goの`Ctrl+]`を無効にする
 let g:go_def_mapping_enabled = 0
