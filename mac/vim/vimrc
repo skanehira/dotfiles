@@ -309,7 +309,7 @@ augroup GoMapping
 augroup END
 
 " ====================================== fzf settings ======================================
-nnoremap <C-P> :GFiles<CR>
+nnoremap <C-P> :Files<CR>
 
 " ====================================== lsp settings ======================================
 nnoremap <silent> <C-]> :LspDefinition<CR>
@@ -320,13 +320,18 @@ nnoremap <silent> <Leader>im :LspImplementation<CR>
 let g:lsp_async_completion = 1
 
 " lsp log
-let g:lsp_log_verbose = 1
-let g:lsp_log_file = expand('~/vim-lsp.log')
+"let g:lsp_log_verbose = 0
+"let g:lsp_log_file = expand('~/vim-lsp.log')
 
-augroup LspSetting
-    autocmd!
+" enable signs
+let g:lsp_signs_error = {'text': '✗'}
+let g:lsp_signs_warning = {'text': '‼'}
+let g:lsp_signs_enabled = 1
+let g:lsp_diagnostics_echo_cursor = 1
 
-    " Go
+" Go
+augroup LspGo
+    au!
     " https://github.com/saibing/bingo/wiki/Install
     if executable('bingo')
         au User lsp_setup call lsp#register_server({
@@ -335,15 +340,21 @@ augroup LspSetting
                     \ 'whitelist': ['go'],
                     \ })
     endif
+augroup END
 
-    " php
+" PHP
+augroup LspPHP
+    au!
     au User lsp_setup call lsp#register_server({
                 \ 'name': 'php-language-server',
                 \ 'cmd': {server_info->['php', expand('~/.cache/dein/repos/github.com/felixfbecker/php-language-server/bin/php-language-server.php')]},
                 \ 'whitelist': ['php'],
                 \ })
+augroup END
 
-    " js
+" JavaScript
+augroup LspJavaScript
+    au!
     if executable('flow-language-server')
         au User lsp_setup call lsp#register_server({
                     \ 'name': 'flow-language-server',
@@ -352,8 +363,11 @@ augroup LspSetting
                     \ 'whitelist': ['javascript', 'javascript.jsx'],
                     \ })
     endif
+augroup END
 
-    " docker
+" Docker
+augroup LspDocker
+    au!
     if executable('docker-langserver')
         au User lsp_setup call lsp#register_server({
                     \ 'name': 'docker-langserver',
@@ -361,8 +375,11 @@ augroup LspSetting
                     \ 'whitelist': ['dockerfile'],
                     \ })
     endif
+augroup END
 
-    " css
+" CSS
+augroup LspCSS
+    au!
     if executable('css-languageserver')
         au User lsp_setup call lsp#register_server({
                     \ 'name': 'css-languageserver',
@@ -371,6 +388,16 @@ augroup LspSetting
                     \ })
     endif
 augroup END
+
+" Markdown
+"augroup LspMarkdowon
+"    au!
+"    autocmd User lsp_setup call lsp#register_server({
+"                \ 'name': 'efm-langserver-markdown',
+"                \ 'cmd': {server_info->['efm-langserver', '-efm=%f: %l: %m', '-stdin', &shell, &shellcmdflag, 'markdownlint -s']},
+"                \ 'whitelist': ['markdown'],
+"                \ })
+"augroup END
 
 " ====================================== asyncomplete settings ======================================
 inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
@@ -500,3 +527,12 @@ augroup VueSyntax
     autocmd!
     au FileType vue syntax sync fromstart
 augroup END
+
+" ====================================== gitgutter ======================================
+" ハイライトを無効にする
+highlight default link GitGutterAdd          NONE
+highlight default link GitGutterChange       NONE
+highlight default link GitGutterDelete       NONE
+highlight default link GitGutterChangeDelete NONE
+
+
