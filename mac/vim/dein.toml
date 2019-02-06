@@ -72,10 +72,6 @@ repo = 'glidenote/memolist.vim'
 [[plugins]]
 repo = 'mattn/emmet-vim'
 
-# vim key maps
-[[plugins]]
-repo = 'nonylene/vim-keymaps'
-
 # status line
 [[plugins]]
 repo = 'itchyny/lightline.vim'

@@ -320,16 +320,27 @@ nnoremap <silent> <Leader>im :LspImplementation<CR>
 let g:lsp_async_completion = 1
 
 " lsp log
-"let g:lsp_log_verbose = 0
-"let g:lsp_log_file = expand('~/vim-lsp.log')
+let g:lsp_log_verbose = 0
+let g:lsp_log_file = expand('~/vim-lsp.log')
 
 " enable signs
-let g:lsp_signs_error = {'text': '✗'}
-let g:lsp_signs_warning = {'text': '‼'}
-let g:lsp_signs_enabled = 1
-let g:lsp_diagnostics_echo_cursor = 1
+"let g:lsp_signs_error = {'text': '✗'}
+"let g:lsp_signs_warning = {'text': '‼'}
+"let g:lsp_signs_enabled = 1
+"let g:lsp_diagnostics_echo_cursor = 1
 
 " Go
+"augroup LspGo
+"    au!
+"    if executable('gopls')
+"        au User lsp_setup call lsp#register_server({
+"                    \ 'name': 'gopls',
+"                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
+"                    \ 'whitelist': ['go'],
+"                    \ })
+"    endif
+"augroup END
+
 augroup LspGo
     au!
     " https://github.com/saibing/bingo/wiki/Install
@@ -468,44 +479,6 @@ augroup emmet
     au FileType html,css,vue imap <C-f> <C-y>,
 augroup END
 
-" ====================================== vim-keymaps ======================================
-inoremap <c-g> <Plug>KeyMapRotate
-let g:keymaps =  [
-      \  {
-      \    'name': 'normal',
-      \  },
-      \  {
-      \    'name': 'coding',
-      \    'keymap': {
-      \      'inoremap': {
-      \        '1': '!',
-      \        '!': '1',
-      \        '2': '"',
-      \        '"': '2',
-      \        '3': '#',
-      \        '#': '3',
-      \        '4': '$',
-      \        '$': '4',
-      \        '5': '%',
-      \        '%': '5',
-      \        '6': '&',
-      \        '&': '6',
-      \        '7': "'",
-      \        "'": '7',
-      \        '8': '(',
-      \        '(': '8',
-      \        '9': ')',
-      \        ')': '9',
-      \        '@': '`',
-      \        '`': '@',
-      \        '-': '=',
-      \        '=': '-',
-      \      },
-      \    },
-      \  },
-      \]
-
-
 " ====================================== lightline ======================================
 set laststatus=2
 if !has('gui_running')
@@ -534,5 +507,4 @@ highlight default link GitGutterAdd          NONE
 highlight default link GitGutterChange       NONE
 highlight default link GitGutterDelete       NONE
 highlight default link GitGutterChangeDelete NONE
-
 
