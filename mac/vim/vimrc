@@ -159,6 +159,9 @@ if has('persistent_undo')
   set undofile
 endif
 
+" visualモードのハイライトカラー
+hi Visual cterm=reverse ctermbg=NONE
+
 " ====================================== key mappings ======================================
 " ファイル保存と終了
 nnoremap <Leader>w :w<CR>
@@ -256,6 +259,10 @@ nnoremap - <C-x>
 " 行先頭と行末
 map H ^
 map L $
+
+" タブ切り替え
+nnoremap <Tab> gt
+nnoremap <S-Tab> gT
 
 " visual時に選択行を移動
 vnoremap <C-j> :m '>+1<CR>gv=gv
