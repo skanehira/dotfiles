@@ -1,12 +1,8 @@
 " ====================================== dein.vim settings ======================================
-if &compatible
- set nocompatible
-endif
-
 " install dir
 let s:dein_dir = expand('~/.cache/dein')
 let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
- 
+
 " dein installation check
 if &runtimepath !~# '/dein.vim'
  if !isdirectory(s:dein_repo_dir)
@@ -192,50 +188,19 @@ nnoremap <Leader>. :e ~/.vimrc<CR>
 nnoremap <C-c> <Esc>
 
 " text object key mapping
-" cut
-nnoremap c8 ci(
-nnoremap c2 ci"
-nnoremap c7 ci'
-nnoremap c@ ci`
-nnoremap c[ ci[
-nnoremap c{ ci{
+onoremap 8 i(
+onoremap 2 i"
+onoremap 7 i'
+onoremap @ i`
+onoremap [ i[
+onoremap { i{
 
-nnoremap ca8 ca(
-nnoremap ca2 ca"
-nnoremap ca7 ca'
-nnoremap ca@ ca`
-nnoremap ca[ ca[
-nnoremap ca{ ca{
-
-" delete
-nnoremap d8 di(
-nnoremap d2 di"
-nnoremap d7 di'
-nnoremap d@ di`
-nnoremap d[ di[
-nnoremap d{ di{
-
-nnoremap da8 da(
-nnoremap da2 da"
-nnoremap da7 da'
-nnoremap da@ da`
-nnoremap da[ da[
-nnoremap da{ da{
-
-" yank
-nnoremap y8 yi(
-nnoremap y2 yi"
-nnoremap y7 yi'
-nnoremap y@ yi`
-nnoremap y[ yi[
-nnoremap y{ yi{
-
-nnoremap ya8 ya(
-nnoremap ya2 ya"
-nnoremap ya7 ya'
-nnoremap ya@ ya`
-nnoremap ya[ ya[
-nnoremap ya{ ya{
+onoremap a8 a(
+onoremap a2 a"
+onoremap a7 a'
+onoremap a@ a`
+onoremap a[ a[
+onoremap a{ a{
 
 " visual
 nnoremap v8 vi(
