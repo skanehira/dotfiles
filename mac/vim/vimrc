@@ -12,7 +12,7 @@ if &runtimepath !~# '/dein.vim'
  if !isdirectory(s:dein_repo_dir)
  execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
  endif
- execute 'set runtimepath^=' . fnamemodify(s:dein_repo_dir, ':p')
+ execute 'set runtimepath^=' . s:dein_repo_dir
 endif
  
 " begin settings
@@ -20,9 +20,9 @@ if dein#load_state(s:dein_dir)
  call dein#begin(s:dein_dir)
  
  " .toml file
- let g:rc_dir = expand('~/.vim')
- let s:toml = g:rc_dir . '/dein.toml'
- let s:lazy_toml = g:rc_dir . '/dein_lazy.toml'
+ let s:rc_dir = expand('~/.vim')
+ let s:toml = s:rc_dir . '/dein.toml'
+ let s:lazy_toml = s:rc_dir . '/dein_lazy.toml'
  
  " read toml and cache
  call dein#load_toml(s:toml, {'lazy': 0})

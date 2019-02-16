@@ -110,19 +110,20 @@ repo = 'markonm/traces.vim'
 # syntax file type vue
 [[plugins]]
 repo = 'posva/vim-vue'
-on_ft = 'vue'
 
 # syntax file type markdown
 [[plugins]]
 repo = 'plasticboy/vim-markdown'
-on_ft = 'md'
 
 # syntax file type toml
 [[plugins]]
 repo = 'cespare/vim-toml'
-on_ft = 'toml'
 
 # syntax file type fish
 [[plugins]]
 repo = 'dag/vim-fish'
-on_ft = 'fish'
+
+# make table
+[[plugins]]
+repo = 'mattn/vim-maketable'
+

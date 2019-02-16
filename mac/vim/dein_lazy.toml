@@ -1,4 +1,0 @@
-# make table
-[[plugins]]
-repo = 'mattn/vim-maketable'
-
