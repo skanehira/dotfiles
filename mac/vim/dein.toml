@@ -127,3 +127,10 @@ repo = 'dag/vim-fish'
 [[plugins]]
 repo = 'mattn/vim-maketable'
 
+# presentation slide with markdown
+[[plugins]]
+repo = 'thinca/vim-showtime'
+
+# quickrun buffer source cod
+[[plugins]]
+repo = 'thinca/vim-quickrun'
