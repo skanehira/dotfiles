@@ -75,6 +75,30 @@ repo = 'mattn/emmet-vim'
 # status line
 [[plugins]]
 repo = 'itchyny/lightline.vim'
+hook_add = '''
+	let g:lightline = {
+		\ 'colorscheme': 'wombat',
+		\ 'active': {
+			\ 'left': [ ['mode', 'paste'], ['readonly', 'filepath', 'modified'] ]
+				\ },
+		\ 'component_function':{
+			\ 'filepath': 'FilePath'
+				\ }
+		\ }
+
+	function! FilePath()
+		if winwidth(0) > 90
+			return expand("%:s")
+		else
+			return expand("%:t")
+		endif
+	endfunction
+
+	" # show statusbar
+	set laststatus=2
+	" # hide --INSERT--
+	set noshowmode
+'''
 
 # template
 [[plugins]]
