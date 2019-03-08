@@ -392,12 +392,12 @@ inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<cr>"
 let g:vim_markdown_folding_disabled = 1
 
 " ====================================== vim-surround settings ======================================
-nnoremap <Leader>7 ysiw'
-nnoremap <Leader>2 ysiw"
-nnoremap <Leader>` ysiw`
-nnoremap <Leader>8 ysiw)
-nnoremap <Leader>[ ysiw]
-nnoremap <Leader>{ ysiw}
+nmap <Leader>7 ysiw'
+nmap <Leader>2 ysiw"
+nmap <Leader>` ysiw`
+nmap <Leader>8 ysiw)
+nmap <Leader>[ ysiw]
+nmap <Leader>{ ysiw}
 
 " ====================================== ultisnips settings ======================================
 let g:UltiSnipsExpandTrigger="<tab>"
@@ -447,8 +447,8 @@ let g:user_emmet_settings = {
 
 augroup emmet
     autocmd!
-    au FileType html,css,vue EmmetInstall
-    au FileType html,css,vue imap <C-f> <C-y>,
+    au FileType * EmmetInstall
+    au FileType * imap <C-f> <C-y>,
 augroup END
 
 " ====================================== lightline ======================================
