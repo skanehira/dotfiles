@@ -158,3 +158,9 @@ repo = 'thinca/vim-showtime'
 # quickrun buffer source cod
 [[plugins]]
 repo = 'thinca/vim-quickrun'
+
+[[plugins]]
+repo = 'cocopon/iceberg.vim'
+
+#[[plugins]]
+#repo = 'dhruvasagar/vim-table-mode'

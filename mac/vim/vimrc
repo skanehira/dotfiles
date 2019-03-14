@@ -55,6 +55,9 @@ let g:mapleader = "\<Space>"
 " シンタックスを有効にする
 syntax enable
 
+" カラースキームを使う
+colorscheme iceberg
+
 " https://vim-jp.org/vimdoc-ja/filetype.html#:filetype-plugin-on
 " https://vim-jp.org/vimdoc-ja/filetype.html#:filetype-indent-on
 " ファイル形式別プラグインとインデントを有効にする
@@ -260,6 +263,12 @@ let g:go_def_mapping_enabled = 0
 
 " GoRunやGoTest時の画面分割方法変更
 let g:go_term_mode = 'split'
+
+" テンプレート作成を無効化
+let g:go_template_autocreate = 0
+
+" すでに開いているバッファに定義ジャンプする
+let g:go_def_reuse_buffer = 1
 
 " key mapping
 augroup GoMapping
