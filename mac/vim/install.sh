@@ -8,4 +8,4 @@ fi
 
 cp -p *.toml $path/
 cp -p vimrc ~/.vimrc
-cp -p go/go.snippets ~/.cache/dein/repos/github.com/fatih/vim-go/gosnippets/UltiSnips/go.snippets
+cp -p go/go.snippets ~/.vim/UltiSnips/
