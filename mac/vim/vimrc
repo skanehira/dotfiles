@@ -261,8 +261,12 @@ nnoremap : :<C-f>i
 nnoremap <leader>s :vs<CR>
 nnoremap <leader>v :sp<CR>
 
+" 上下の空白に移動
 nnoremap <C-j> }
 nnoremap <C-k> {
+
+" 検索でvery magicを使用する
+nnoremap /  /\v
 
 " ====================================== vim-go settings ======================================
 " ファイル保存時go importを実行する
