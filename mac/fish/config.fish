@@ -10,6 +10,7 @@ set -g theme_display_date no
 set -x TERM xterm-256color
 set -x LSCOLORS gxfxcxdxbxegedabagacad
 set -x GO111MODULE on
+set -x EDITOR vim
 
 # alias
 alias lg="lazygit"
