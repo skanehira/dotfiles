@@ -123,7 +123,10 @@ noremap * *N
 
 " https://vim-jp.org/vimdoc-ja/pi_netrw.html#g:netrw_liststyle
 " netrwツリー表示を有効にする
-let g:netrw_liststyle = 3
+let g:netrw_liststyle=1
+let g:netrw_banner=0
+let g:netrw_sizestyle="H"
+let g:netrw_timefmt="%Y/%m/%d(%a) %H:%M:%S"
 
 " 拡張子ごとのインデントを指定する
 augroup fileTypeIndent
@@ -179,16 +182,18 @@ vnoremap <Leader>re y:%s;<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>;;g<
 nnoremap <Esc><Esc> :nohlsearch<CR>
 
 " 画面移動
-nnoremap <C-H> <C-W>h
-nnoremap <C-J> <C-W>j
-nnoremap <C-K> <C-W>k
-nnoremap <C-L> <C-W>l
+"nnoremap <C-H> <C-W>h
+"nnoremap <C-J> <C-W>j
+"nnoremap <C-K> <C-W>k
+"nnoremap <C-L> <C-W>l
 
 " vimrcを開く
 nnoremap <Leader>. :e ~/.vimrc<CR>
 
 " Ctrl+cでnormalモード
 nnoremap <C-c> <Esc>
+cnoremap <C-c> <Esc>
+vnoremap <C-c> <Esc>
 
 " text object key mapping
 onoremap 8 i(
@@ -247,6 +252,16 @@ vnoremap <silent> <C-p> "0p<CR>
 
 " ターミナルを下部で開く
 nnoremap <silent> <Leader>te :belowright term<cr>
+
+" コマンドウィンドウを開く
+nnoremap : :<C-f>i
+
+" 画面分割
+nnoremap <leader>s :vs<CR>
+nnoremap <leader>v :sp<CR>
+
+nnoremap <C-j> }
+nnoremap <C-k> {
 
 " ====================================== vim-go settings ======================================
 " ファイル保存時go importを実行する
@@ -311,28 +326,28 @@ let g:lsp_log_file = expand('~/vim-lsp.log')
 "let g:lsp_diagnostics_echo_cursor = 1
 
 " Go
-"augroup LspGo
-"    au!
-"    if executable('gopls')
-"        au User lsp_setup call lsp#register_server({
-"                    \ 'name': 'gopls',
-"                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
-"                    \ 'whitelist': ['go'],
-"                    \ })
-"    endif
-"augroup END
-
 augroup LspGo
     au!
-    " https://github.com/saibing/bingo/wiki/Install
-    if executable('bingo')
+    if executable('gopls')
         au User lsp_setup call lsp#register_server({
-                    \ 'name': 'bingo',
-                    \ 'cmd': {server_info->['bingo', '-mode', 'stdio', '-logfile', '/Users/skanehira/bingo.log']},
+                    \ 'name': 'gopls',
+                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
                     \ 'whitelist': ['go'],
                     \ })
     endif
 augroup END
+
+"augroup LspGo
+"    au!
+"    " https://github.com/saibing/bingo/wiki/Install
+"    if executable('bingo')
+"        au User lsp_setup call lsp#register_server({
+"                    \ 'name': 'bingo',
+"                    \ 'cmd': {server_info->['bingo', '-mode', 'stdio', '-logfile', '/Users/skanehira/bingo.log']},
+"                    \ 'whitelist': ['go'],
+"                    \ })
+"    endif
+"augroup END
 
 " PHP
 augroup LspPHP
