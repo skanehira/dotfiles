@@ -165,6 +165,9 @@ endif
 " visualモードのハイライトカラー
 hi Visual cterm=reverse ctermbg=NONE
 
+" 矩形選択時に文字の無いところまで選択範囲を広げる
+set virtualedit=block
+
 " ====================================== key mappings ======================================
 " ファイル保存と終了
 nnoremap <Leader>w :w<CR>
@@ -227,8 +230,8 @@ nnoremap va[ va[
 nnoremap va{ va{
 
 " 数値の+-
-nnoremap + <C-a>
-nnoremap - <C-x>
+"nnoremap + <C-a>
+"nnoremap - <C-x>
 
 " 行先頭と行末
 map H ^
@@ -255,7 +258,7 @@ vnoremap <silent> <C-p> "0p<CR>
 nnoremap <silent> <Leader>te :belowright term<cr>
 
 " コマンドウィンドウを開く
-nnoremap : :<C-f>i
+"nnoremap : :<C-f>i
 
 " 画面分割
 nnoremap <leader>s :vs<CR>
@@ -270,6 +273,9 @@ nnoremap /  /\v
 
 " netrwを開く
 nnoremap <leader>e :Ve<CR>
+
+" ペーストした文字の最語尾に移動
+nmap p pv`]v
 
 " ====================================== vim-go settings ======================================
 " ファイル保存時go importを実行する
@@ -334,28 +340,28 @@ let g:lsp_log_file = expand('~/vim-lsp.log')
 "let g:lsp_diagnostics_echo_cursor = 1
 
 " Go
-augroup LspGo
-    au!
-    if executable('gopls')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'gopls',
-                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
-                    \ 'whitelist': ['go'],
-                    \ })
-    endif
-augroup END
-
 "augroup LspGo
 "    au!
-"    " https://github.com/saibing/bingo/wiki/Install
-"    if executable('bingo')
+"    if executable('gopls')
 "        au User lsp_setup call lsp#register_server({
-"                    \ 'name': 'bingo',
-"                    \ 'cmd': {server_info->['bingo', '-mode', 'stdio', '-logfile', '/Users/skanehira/bingo.log']},
+"                    \ 'name': 'gopls',
+"                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
 "                    \ 'whitelist': ['go'],
 "                    \ })
 "    endif
 "augroup END
+
+augroup LspGo
+    au!
+    " https://github.com/saibing/bingo/wiki/Install
+    if executable('bingo')
+        au User lsp_setup call lsp#register_server({
+                    \ 'name': 'bingo',
+                    \ 'cmd': {server_info->['bingo', '-mode', 'stdio', '-logfile', '/Users/skanehira/bingo.log']},
+                    \ 'whitelist': ['go'],
+                    \ })
+    endif
+augroup END
 
 " PHP
 augroup LspPHP
