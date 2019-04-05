@@ -162,5 +162,5 @@ repo = 'thinca/vim-quickrun'
 [[plugins]]
 repo = 'cocopon/iceberg.vim'
 
-#[[plugins]]
-#repo = 'dhruvasagar/vim-table-mode'
+[[plugins]]
+repo = 'scrooloose/nerdcommenter'

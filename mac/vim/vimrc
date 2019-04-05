@@ -518,3 +518,7 @@ highlight default link GitGutterChange       NONE
 highlight default link GitGutterDelete       NONE
 highlight default link GitGutterChangeDelete NONE
 
+
+" ====================================== nerd commenter ======================================
+" コメントの後にスペースを装入
+let g:NERDSpaceDelims=1
