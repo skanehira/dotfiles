@@ -11,6 +11,7 @@ set -x TERM xterm-256color
 set -x LSCOLORS gxfxcxdxbxegedabagacad
 set -x GO111MODULE on
 set -x EDITOR vim
+set -x LC_CTYPE "en_US.UTF-8"
 
 # alias
 alias lg="lazygit"
