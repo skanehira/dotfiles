@@ -120,8 +120,8 @@ repo = 'airblade/vim-gitgutter'
 repo = 'tpope/vim-fugitive'
 
 # async Lint
-[[plugins]]
-repo = 'w0rp/ale'
+#[[plugins]]
+#repo = 'w0rp/ale'
 
 # docker container
 [[plugins]]
@@ -162,5 +162,13 @@ repo = 'thinca/vim-quickrun'
 [[plugins]]
 repo = 'cocopon/iceberg.vim'
 
+#[[plugins]]
+#repo = 'scrooloose/nerdcommenter'
+
+# vim help ja
 [[plugins]]
-repo = 'scrooloose/nerdcommenter'
+repo = 'vim-jp/vimdoc-ja'
+
+# undo tree
+[[plugins]]
+repo = 'mbbill/undotree'
