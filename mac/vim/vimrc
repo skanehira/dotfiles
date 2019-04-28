@@ -118,9 +118,6 @@ set synmaxcol=256
 " カーソルラインを表示する
 set cursorline
 
-" *でカーソルを移動しないようにする
-noremap * *N
-
 " https://vim-jp.org/vimdoc-ja/pi_netrw.html#g:netrw_liststyle
 " netrwツリー表示を有効にする
 let g:netrw_liststyle=1
@@ -168,7 +165,13 @@ hi Visual cterm=reverse ctermbg=NONE
 " 矩形選択時に文字の無いところまで選択範囲を広げる
 set virtualedit=block
 
+" ヘルプの言語を日本語優先にする
+set helplang=ja
+
 " ====================================== key mappings ======================================
+" *でカーソルを移動しないようにする
+noremap * *N
+
 " ファイル保存と終了
 nnoremap <Leader>w :w<CR>
 nnoremap <Leader>q :q!<CR>
@@ -195,9 +198,7 @@ nnoremap <Esc><Esc> :nohlsearch<CR>
 nnoremap <Leader>. :e ~/.vimrc<CR>
 
 " Ctrl+cでnormalモード
-nnoremap <C-c> <Esc>
-cnoremap <C-c> <Esc>
-vnoremap <C-c> <Esc>
+noremap <C-c> <Esc>
 
 " text object key mapping
 onoremap 8 i(
@@ -242,8 +243,8 @@ nnoremap <Tab> gt
 nnoremap <S-Tab> gT
 
 " visual時に選択行を移動
-vnoremap <C-j> :m '>+1<CR>gv=gv
-vnoremap <C-k> :m '<-2<CR>gv=gv
+vnoremap <C-j> :m '>+1<CR>gv
+vnoremap <C-k> :m '<-2<CR>gv
 
 " numberとrelativenumberの切り替え
 nnoremap <silent> <Leader>n :set relativenumber!<CR>
@@ -269,13 +270,21 @@ nnoremap <C-j> }
 nnoremap <C-k> {
 
 " 検索でvery magicを使用する
-nnoremap /  /\v
+"nnoremap /  /\v
 
 " netrwを開く
 nnoremap <leader>e :Ve<CR>
 
-" ペーストした文字の最語尾に移動
-nmap p pv`]v
+" コマンドラインで単語移動
+cnoremap <c-b> <S-Left>
+cnoremap <c-f> <S-Right>
+cnoremap <c-a> <Home>
+
+" インサートモードでのカーソル移動
+inoremap <c-e> <c-o>w
+inoremap <c-b> <c-o>b
+inoremap <c-g>l <c-o>l
+inoremap <c-g>h <c-o>h
 
 " ====================================== vim-go settings ======================================
 " ファイル保存時go importを実行する
@@ -288,7 +297,7 @@ let g:go_metalinter_autosave = 1
 let g:go_metalinter_autosave_enabled = ['vet']
 
 " vim-lspをしようするので、vim-goの`Ctrl+]`を無効にする
-let g:go_def_mapping_enabled = 0
+"let g:go_def_mapping_enabled = 0
 
 " GoRunやGoTest時の画面分割方法変更
 let g:go_term_mode = 'split'
@@ -298,6 +307,8 @@ let g:go_template_autocreate = 0
 
 " すでに開いているバッファに定義ジャンプする
 let g:go_def_reuse_buffer = 1
+
+let g:go_def_mode = 'gopls'
 
 " key mapping
 augroup GoMapping
@@ -322,7 +333,7 @@ augroup END
 nnoremap <C-P> :Files<CR>
 
 " ====================================== lsp settings ======================================
-nnoremap <silent> <C-]> :LspDefinition<CR>
+"nnoremap <silent> <C-]> :LspDefinition<CR>
 nnoremap <silent> <Leader>rf :LspReferences<CR>
 nnoremap <silent> <Leader>im :LspImplementation<CR>
 
@@ -340,24 +351,12 @@ let g:lsp_log_file = expand('~/vim-lsp.log')
 "let g:lsp_diagnostics_echo_cursor = 1
 
 " Go
-"augroup LspGo
-"    au!
-"    if executable('gopls')
-"        au User lsp_setup call lsp#register_server({
-"                    \ 'name': 'gopls',
-"                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
-"                    \ 'whitelist': ['go'],
-"                    \ })
-"    endif
-"augroup END
-
 augroup LspGo
     au!
-    " https://github.com/saibing/bingo/wiki/Install
-    if executable('bingo')
+    if executable('gopls')
         au User lsp_setup call lsp#register_server({
-                    \ 'name': 'bingo',
-                    \ 'cmd': {server_info->['bingo', '-mode', 'stdio', '-logfile', '/Users/skanehira/bingo.log']},
+                    \ 'name': 'gopls',
+                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
                     \ 'whitelist': ['go'],
                     \ })
     endif
@@ -496,12 +495,12 @@ if !has('gui_running')
 endif
 
 " ====================================== ale ======================================
-let g:ale_sign_error = 'xx'
-let g:ale_sign_warning = '!!'
-let g:ale_echo_msg_error_str = 'E'
-let g:ale_echo_msg_warning_str = 'W'
-let g:ale_echo_msg_format = '[%linter%] %s [%severity%]'
-let g:ale_set_highlights = 0
+"let g:ale_sign_error = 'xx'
+"let g:ale_sign_warning = '!!'
+"let g:ale_echo_msg_error_str = 'E'
+"let g:ale_echo_msg_warning_str = 'W'
+"let g:ale_echo_msg_format = '[%linter%] %s [%severity%]'
+"let g:ale_set_highlights = 0
 
 " ====================================== vim-vue ======================================
 " https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
