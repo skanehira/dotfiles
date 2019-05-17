@@ -5,33 +5,33 @@ let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
 " dein installation check
 if &runtimepath !~# '/dein.vim'
- if !isdirectory(s:dein_repo_dir)
- execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
- endif
- execute 'set runtimepath^=' . s:dein_repo_dir
+    if !isdirectory(s:dein_repo_dir)
+        execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+    endif
+    execute 'set runtimepath^=' . s:dein_repo_dir
 endif
- 
+
 " begin settings
 if dein#load_state(s:dein_dir)
- call dein#begin(s:dein_dir)
- 
- " .toml file
- let s:rc_dir = expand('~/.vim')
- let s:toml = s:rc_dir . '/dein.toml'
- let s:lazy_toml = s:rc_dir . '/dein_lazy.toml'
- 
- " read toml and cache
- call dein#load_toml(s:toml, {'lazy': 0})
- call dein#load_toml(s:lazy_toml, {'lazy': 1})
+    call dein#begin(s:dein_dir)
 
- " end settings
- call dein#end()
- call dein#save_state()
+    " .toml file
+    let s:rc_dir = expand('~/.vim')
+    let s:toml = s:rc_dir . '/dein.toml'
+    let s:lazy_toml = s:rc_dir . '/dein_lazy.toml'
+
+    " read toml and cache
+    call dein#load_toml(s:toml, {'lazy': 0})
+    call dein#load_toml(s:lazy_toml, {'lazy': 1})
+
+    " end settings
+    call dein#end()
+    call dein#save_state()
 endif
- 
+
 " plugin installation check
 if dein#check_install()
- call dein#install()
+    call dein#install()
 endif
 
 " ====================================== general settings ======================================
@@ -146,17 +146,18 @@ augroup grepwindow
 augroup END
 
 " カーソルラインの位置を保存する
-if has("autocmd")
+augroup cursorlineRestore
+    autocmd!
     autocmd BufReadPost *
-    \ if line("'\"") > 0 && line ("'\"") <= line("$") |
-    \   exe "normal! g'\"" |
-    \ endif
-endif
+                \ if line("'\"") > 0 && line ("'\"") <= line("$") |
+                \   exe "normal! g'\"" |
+                \ endif
+augroup END
 
 " undoの保存先
 if has('persistent_undo')
-  set undodir=~/.vim/undo
-  set undofile
+    set undodir=~/.vim/undo
+    set undofile
 endif
 
 " visualモードのハイライトカラー
@@ -167,6 +168,15 @@ set virtualedit=block
 
 " ヘルプの言語を日本語優先にする
 set helplang=ja
+
+" ファイル保存時に整形する
+augroup format
+    autocmd!
+    au BufWritePre * execute "let pos = getpos('.')" |
+                \ execute "% normal! v=" |
+                \ execute "normal" pos[1]."G".pos[2]."l"
+augroup END
+
 
 " ====================================== key mappings ======================================
 " *でカーソルを移動しないようにする
@@ -337,6 +347,10 @@ nnoremap <C-P> :Files<CR>
 nnoremap <silent> <Leader>rf :LspReferences<CR>
 nnoremap <silent> <Leader>im :LspImplementation<CR>
 
+augroup LspMapping
+    autocmd!
+    au FileType php nnoremap <C-]> :LspDefinition<CR>
+augroup END
 " 非同期補完を有効にする
 let g:lsp_async_completion = 1
 
@@ -444,43 +458,43 @@ let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 " ultisnipes自動補完
 if has('python3')
     call asyncomplete#register_source(asyncomplete#sources#ultisnips#get_source_options({
-        \ 'name': 'ultisnips',
-        \ 'whitelist': ['*'],
-        \ 'completor': function('asyncomplete#sources#ultisnips#completor'),
-        \ }))
+                \ 'name': 'ultisnips',
+                \ 'whitelist': ['*'],
+                \ 'completor': function('asyncomplete#sources#ultisnips#completor'),
+                \ }))
 endif
 
 " ====================================== profiling ======================================
 " vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
 function! ProfileCursorMove() abort
-  let profile_file = expand('./vim-profile.log')
-  if filereadable(profile_file)
-    call delete(profile_file)
-  endif
+    let profile_file = expand('./vim-profile.log')
+    if filereadable(profile_file)
+        call delete(profile_file)
+    endif
 
-  normal! ggzR
+    normal! ggzR
 
-  execute 'profile start ' . profile_file
-  profile func *
-  profile file *
+    execute 'profile start ' . profile_file
+    profile func *
+    profile file *
 
-  augroup ProfileCursorMove
-    autocmd!
-    autocmd CursorHold <buffer> profile pause | q
-  augroup END
+    augroup ProfileCursorMove
+        autocmd!
+        autocmd CursorHold <buffer> profile pause | q
+    augroup END
 
-  for i in range(1000)
-    call feedkeys('j')
-  endfor
+    for i in range(1000)
+        call feedkeys('j')
+    endfor
 endfunction
 
 " ====================================== emment ======================================
 let g:user_emmet_install_global = 0
 let g:user_emmet_settings = {
-\ 'variables': {
-\   'lang' : 'ja'
-\ }
-\}
+            \ 'variables': {
+            \   'lang' : 'ja'
+            \ }
+            \}
 
 augroup emmet
     autocmd!
@@ -491,7 +505,7 @@ augroup END
 " ====================================== lightline ======================================
 set laststatus=2
 if !has('gui_running')
-  set t_Co=256
+    set t_Co=256
 endif
 
 " ====================================== ale ======================================
