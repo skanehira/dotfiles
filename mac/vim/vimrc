@@ -217,13 +217,9 @@ endfunction
 
 augroup format 
   autocmd!
-  "au BufWriteCmd ^(?!*.go) call Format()
-  au BufWritePre *.php call Format()
-  au BufWritePre *.html call Format()
-  au BufWritePre *.js call Format()
-  au BufWritePre *.css call Format()
-  au BufWritePre *.vue call Format()
-  au BufWritePre *.vim call Format()
+  au BufWritePre * if &filetype !=# "go" |
+        \ call Format() |
+        \ endif
 augroup END
 " }}}
 
