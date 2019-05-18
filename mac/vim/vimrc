@@ -1,184 +1,235 @@
-" ====================================== dein.vim settings ======================================
-" install dir
+" dein.vim settings {{{
+" install dir {{{
 let s:dein_dir = expand('~/.cache/dein')
 let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
+" }}}
 
-" dein installation check
+" dein installation check {{{
 if &runtimepath !~# '/dein.vim'
-    if !isdirectory(s:dein_repo_dir)
-        execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
-    endif
-    execute 'set runtimepath^=' . s:dein_repo_dir
+  if !isdirectory(s:dein_repo_dir)
+    execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+  endif
+  execute 'set runtimepath^=' . s:dein_repo_dir
 endif
+" }}}
 
-" begin settings
+" begin settings {{{
 if dein#load_state(s:dein_dir)
-    call dein#begin(s:dein_dir)
+  call dein#begin(s:dein_dir)
 
-    " .toml file
-    let s:rc_dir = expand('~/.vim')
-    let s:toml = s:rc_dir . '/dein.toml'
-    let s:lazy_toml = s:rc_dir . '/dein_lazy.toml'
+  " .toml file
+  let s:rc_dir = expand('~/.vim')
+  let s:toml = s:rc_dir . '/dein.toml'
+  let s:lazy_toml = s:rc_dir . '/dein_lazy.toml'
 
-    " read toml and cache
-    call dein#load_toml(s:toml, {'lazy': 0})
-    call dein#load_toml(s:lazy_toml, {'lazy': 1})
+  " read toml and cache
+  call dein#load_toml(s:toml, {'lazy': 0})
+  call dein#load_toml(s:lazy_toml, {'lazy': 1})
 
-    " end settings
-    call dein#end()
-    call dein#save_state()
+  " end settings
+  call dein#end()
+  call dein#save_state()
 endif
+" }}}
 
-" plugin installation check
+" plugin installation check {{{
 if dein#check_install()
-    call dein#install()
+  call dein#install()
 endif
+" }}}
+"
+" }}}
 
-" ====================================== general settings ======================================
-" vim scriptでマルチバイト文字を使用しているため設定
+" general settings {{{
+
+" vim scriptでマルチバイト文字を使用しているため設定 {{{
 scriptencoding utf-8
+" }}}
 
-" ミュートにする。
+" ミュート {{{
 set t_vb=
 set visualbell
 set noerrorbells
+" }}}
 
-" 文字コード
+" 文字コード {{{
 set encoding=utf-8
 set fileencodings=utf-8,iso-2022-jp,euc-jp,sjis
 set fileformats=unix,dos,mac
+" }}}
 
 " https://vim-jp.org/vimdoc-ja/map.html#mapleader
-" Leaderキーをスペースに設定
+" Leaderキーをスペースに設定 {{{
 let g:mapleader = "\<Space>"
+" }}}
 
-" シンタックスを有効にする
+" シンタックスを有効にする {{{
 syntax enable
+" }}}
 
-" カラースキームを使う
+" カラースキームを使う {{{
 colorscheme iceberg
+" }}}
 
 " https://vim-jp.org/vimdoc-ja/filetype.html#:filetype-plugin-on
 " https://vim-jp.org/vimdoc-ja/filetype.html#:filetype-indent-on
-" ファイル形式別プラグインとインデントを有効にする
-" これがないとvim-goなどが動作しない
+" ファイル形式別プラグインとインデントを有効にする {{{
 filetype plugin indent on
+" }}}
 
-" バックスペースとCtrl+hで削除を有効にする
+" バックスペースとCtrl+hで削除を有効にする {{{
 set backspace=2
+" }}}
 
-" 改行時自動インデント
+" 改行時自動インデント {{{
 set smartindent
+" }}}
 
-" 行番号を表示
+" 行番号を表示 {{{
 set number
+" }}}
 
-" カーソルから相対的な行数を表示する
+" カーソルから相対的な行数を表示する {{{
 set relativenumber
+" }}}
 
 " https://vim-jp.org/vimdoc-ja/options.html#'tabstop'
-" タブでも常に空白を挿入
+" タブでも常に空白を挿入 {{{
 set tabstop=4
 set shiftwidth=4
 set expandtab
+" }}}
 
-" インクリメントサーチを有効にする
+" インクリメントサーチを有効にする {{{
 set incsearch
+" }}}
 
 " https://vim-jp.org/vimdoc-ja/options.html#'ignorecase'
-" 検索時大文字小文字を区別しない
+" 検索時大文字小文字を区別しない {{{
 set ignorecase
+" }}}
 
 " https://vim-jp.org/vimdoc-ja/options.html#'smartcase'
-" 検索時に大文字を入力した場合ignorecaseが無効になる
+" 検索時に大文字を入力した場合ignorecaseが無効になる {{{
 set smartcase
+" }}}
 
-" ハイライトサーチを有効にする
+" ハイライトサーチを有効にする {{{
 set hlsearch
+" }}}
 
-" undoできる最大数
+" undoできる最大数 {{{
 set undolevels=1000
+" }}}
 
-" mac os のクリップボードを共有
+" mac os のクリップボードを共有 {{{
 set clipboard+=unnamed
+" }}}
 
-" カーソルが常に中央に来るようにする
+" カーソルが常に中央に来るようにする {{{
 set scrolloff=100
+" }}}
 
-" スワップファイルに書き込まれる時間(ミリ秒単位)
+" スワップファイルに書き込まれる時間(ミリ秒単位) {{{
 set updatetime=450
+" }}}
 
-" マクロで効果発揮
+" マクロで効果発揮 {{{
 set lazyredraw
 set ttyfast
+" }}}
 
-" 一行が長いファイルをsyntaxを制御することで軽くする
+" 一行が長いファイルをsyntaxを制御することで軽くする {{{
 set synmaxcol=256
+" }}}
 
-" カーソルラインを表示する
+" カーソルラインを表示する {{{
 set cursorline
+" }}}
 
 " https://vim-jp.org/vimdoc-ja/pi_netrw.html#g:netrw_liststyle
-" netrwツリー表示を有効にする
+" netrwツリー表示を有効にする {{{
 let g:netrw_liststyle=1
 let g:netrw_banner=0
 let g:netrw_sizestyle="H"
 let g:netrw_timefmt="%Y/%m/%d(%a) %H:%M:%S"
 let g:netrw_preview=1
+" }}}
 
-" 拡張子ごとのインデントを指定する
+" 拡張子ごとのインデントを指定する {{{
 augroup fileTypeIndent
-    autocmd!
-    au BufRead,BufNewFile *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
-    au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2
-    au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2
+  autocmd!
+  au BufRead,BufNewFile *.php setlocal tabstop=4 softtabstop=4 shiftwidth=4
+  au BufRead,BufNewFile *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
+  au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2
+  au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2
 augroup END
+" }}}
 
 " https://vim-jp.org/vimdoc-ja/options.html#'wildmode'
-" wildmenuを有効にする
+" wildmenuを有効にする {{{
 set wildmenu
 set wildmode=full
+" }}}
 
-" grepした結果をquickfixに表示する
+" grepした結果をquickfixに表示する {{{
 augroup grepwindow
-    autocmd!
-    au QuickFixCmdPost *grep* cwindow
+  autocmd!
+  au QuickFixCmdPost *grep* cwindow
 augroup END
+" }}}
 
-" カーソルラインの位置を保存する
+" カーソルラインの位置を保存する {{{
 augroup cursorlineRestore
-    autocmd!
-    autocmd BufReadPost *
-                \ if line("'\"") > 0 && line ("'\"") <= line("$") |
-                \   exe "normal! g'\"" |
-                \ endif
+  autocmd!
+  autocmd BufReadPost *
+        \ if line("'\"") > 0 && line ("'\"") <= line("$") |
+        \   exe "normal! g'\"" |
+        \ endif
 augroup END
+" }}}
 
-" undoの保存先
+" undoの保存先 {{{
 if has('persistent_undo')
-    set undodir=~/.vim/undo
-    set undofile
+  set undodir=~/.vim/undo
+  set undofile
 endif
+" }}}
 
-" visualモードのハイライトカラー
+" visualモードのハイライトカラー {{{
 hi Visual cterm=reverse ctermbg=NONE
+" }}}
 
-" 矩形選択時に文字の無いところまで選択範囲を広げる
+" 矩形選択時に文字の無いところまで選択範囲を広げる {{{
 set virtualedit=block
+" }}}
 
-" ヘルプの言語を日本語優先にする
+" ヘルプの言語を日本語優先にする {{{
 set helplang=ja
+" }}}
 
-" ファイル保存時に整形する
-augroup format
-    autocmd!
-    au BufWritePre * execute "let pos = getpos('.')" |
-                \ execute "% normal! v=" |
-                \ execute "normal" pos[1]."G".pos[2]."l"
+" ファイル保存時に整形する {{{
+function! Format() abort
+  let pos = getcurpos()
+  execute "normal 1G=G"
+  call setpos(".", pos)
+endfunction
+
+augroup format 
+  autocmd!
+  "au BufWriteCmd ^(?!*.go) call Format()
+  au BufWritePre *.php call Format()
+  au BufWritePre *.html call Format()
+  au BufWritePre *.js call Format()
+  au BufWritePre *.css call Format()
+  au BufWritePre *.vue call Format()
+  au BufWritePre *.vim call Format()
 augroup END
+" }}}
 
+" }}}
 
-" ====================================== key mappings ======================================
+" key mappings {{{
 " *でカーソルを移動しないようにする
 noremap * *N
 
@@ -190,7 +241,7 @@ nnoremap <Leader>q :q!<CR>
 nnoremap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
 
 " 置換
-nnoremap <Leader>re :%s;<C-R><C-W>;g<Left><Left>;
+nnoremap <Leader>re :%s;\<<C-R><C-W>\>;g<Left><Left>;
 
 " visualで選択したテキストを置換する
 vnoremap <Leader>re y:%s;<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>;;g<Left><Left>
@@ -295,8 +346,9 @@ cnoremap <c-a> <Home>
 " インサートモードでのカーソル移動
 inoremap <c-e> <c-o>w
 inoremap <c-b> <c-o>b
+" }}}
 
-" ====================================== vim-go settings ======================================
+" vim-go settings {{{
 " ファイル保存時go importを実行する
 let g:go_fmt_command = "goimports"
 
@@ -322,35 +374,41 @@ let g:go_def_mode = 'gopls'
 
 " key mapping
 augroup GoMapping
-    autocmd!
-    au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
-    au FileType go nnoremap <silent> <Leader>r <Plug>(go-run)
-    au FileType go nnoremap <silent> <Leader>t <Plug>(go-test)
-    au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
-    au FileType go nnoremap <silent> <Leader>at :GoAddTags<CR>
-    au FileType go nnoremap <silent> <Leader>rt :GoRemoveTags<CR>
-    au FileType go nnoremap <silent> <Leader>fs :GoFillStruct<CR>
-    au FileType go nnoremap <silent> <Leader>ki :GoKeyify<CR>
-    au FileType go nnoremap <silent> <Leader>dd :GoDeclsDir<CR>
-    au FileType go nnoremap <silent> <Leader>dl :GoDecls<CR>
-    au FileType go nnoremap <silent> <Leader>ip :GoImpl<CR>
-    au FileType go nnoremap <silent> <Leader>rn :GoRename<CR>
-    au FileType go nnoremap <silent> <F12> :GoDebugStart<CR>
-    au FileType go nnoremap <silent> <F12><F12> :GoDebugStop<CR>
+  autocmd!
+  au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
+  au FileType go nnoremap <silent> <Leader>r <Plug>(go-run)
+  au FileType go nnoremap <silent> <Leader>t <Plug>(go-test)
+  au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
+  au FileType go nnoremap <silent> <Leader>at :GoAddTags<CR>
+  au FileType go nnoremap <silent> <Leader>rt :GoRemoveTags<CR>
+  au FileType go nnoremap <silent> <Leader>fs :GoFillStruct<CR>
+  au FileType go nnoremap <silent> <Leader>ki :GoKeyify<CR>
+  au FileType go nnoremap <silent> <Leader>dd :GoDeclsDir<CR>
+  au FileType go nnoremap <silent> <Leader>dl :GoDecls<CR>
+  au FileType go nnoremap <silent> <Leader>ip :GoImpl<CR>
+  au FileType go nnoremap <silent> <Leader>rn :GoRename<CR>
+  au FileType go nnoremap <silent> <F12> :GoDebugStart<CR>
+  au FileType go nnoremap <silent> <F12><F12> :GoDebugStop<CR>
 augroup END
+" }}}
 
-" ====================================== fzf settings ======================================
+" fzf settings {{{
+" ファイル一覧を出すときにプレビュー表示
+command! -bang -nargs=? -complete=dir Files
+      \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
 nnoremap <C-P> :Files<CR>
+" }}}
 
-" ====================================== lsp settings ======================================
+" lsp settings {{{
 "nnoremap <silent> <C-]> :LspDefinition<CR>
 nnoremap <silent> <Leader>rf :LspReferences<CR>
 nnoremap <silent> <Leader>im :LspImplementation<CR>
 
 augroup LspMapping
-    autocmd!
-    au FileType php nnoremap <C-]> :LspDefinition<CR>
+  autocmd!
+  au FileType php nnoremap <C-]> :LspDefinition<CR>
 augroup END
+
 " 非同期補完を有効にする
 let g:lsp_async_completion = 1
 
@@ -366,61 +424,61 @@ let g:lsp_log_file = expand('~/vim-lsp.log')
 
 " Go
 augroup LspGo
-    au!
-    if executable('gopls')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'gopls',
-                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
-                    \ 'whitelist': ['go'],
-                    \ })
-    endif
+  au!
+  if executable('gopls')
+    au User lsp_setup call lsp#register_server({
+          \ 'name': 'gopls',
+          \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
+          \ 'whitelist': ['go'],
+          \ })
+  endif
 augroup END
 
 " PHP
 augroup LspPHP
-    au!
-    au User lsp_setup call lsp#register_server({
-                \ 'name': 'php-language-server',
-                \ 'cmd': {server_info->['php', expand('~/.cache/dein/repos/github.com/felixfbecker/php-language-server/bin/php-language-server.php')]},
-                \ 'whitelist': ['php'],
-                \ })
+  au!
+  au User lsp_setup call lsp#register_server({
+        \ 'name': 'php-language-server',
+        \ 'cmd': {server_info->['php', expand('~/.cache/dein/repos/github.com/felixfbecker/php-language-server/bin/php-language-server.php')]},
+        \ 'whitelist': ['php'],
+        \ })
 augroup END
 
 " JavaScript
 augroup LspJavaScript
-    au!
-    if executable('flow-language-server')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'flow-language-server',
-                    \ 'cmd': {server_info->[&shell, &shellcmdflag, 'flow-language-server --stdio']},
-                    \ 'root_uri':{server_info->lsp#utils#path_to_uri(lsp#utils#find_nearest_parent_file_directory(lsp#utils#get_buffer_path(), '.flowconfig'))},
-                    \ 'whitelist': ['javascript', 'javascript.jsx'],
-                    \ })
-    endif
+  au!
+  if executable('flow-language-server')
+    au User lsp_setup call lsp#register_server({
+          \ 'name': 'flow-language-server',
+          \ 'cmd': {server_info->[&shell, &shellcmdflag, 'flow-language-server --stdio']},
+          \ 'root_uri':{server_info->lsp#utils#path_to_uri(lsp#utils#find_nearest_parent_file_directory(lsp#utils#get_buffer_path(), '.flowconfig'))},
+          \ 'whitelist': ['javascript', 'javascript.jsx'],
+          \ })
+  endif
 augroup END
 
 " Docker
 augroup LspDocker
-    au!
-    if executable('docker-langserver')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'docker-langserver',
-                    \ 'cmd': {server_info->[&shell, &shellcmdflag, 'docker-langserver --stdio']},
-                    \ 'whitelist': ['dockerfile'],
-                    \ })
-    endif
+  au!
+  if executable('docker-langserver')
+    au User lsp_setup call lsp#register_server({
+          \ 'name': 'docker-langserver',
+          \ 'cmd': {server_info->[&shell, &shellcmdflag, 'docker-langserver --stdio']},
+          \ 'whitelist': ['dockerfile'],
+          \ })
+  endif
 augroup END
 
 " CSS
 augroup LspCSS
-    au!
-    if executable('css-languageserver')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'css-languageserver',
-                    \ 'cmd': {server_info->[&shell, &shellcmdflag, 'css-languageserver --stdio']},
-                    \ 'whitelist': ['css', 'less', 'sass'],
-                    \ })
-    endif
+  au!
+  if executable('css-languageserver')
+    au User lsp_setup call lsp#register_server({
+          \ 'name': 'css-languageserver',
+          \ 'cmd': {server_info->[&shell, &shellcmdflag, 'css-languageserver --stdio']},
+          \ 'whitelist': ['css', 'less', 'sass'],
+          \ })
+  endif
 augroup END
 
 " Markdown
@@ -432,106 +490,124 @@ augroup END
 "                \ 'whitelist': ['markdown'],
 "                \ })
 "augroup END
+" }}}
 
-" ====================================== asyncomplete settings ======================================
+" asyncomplete settings {{{
 inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <C-k> pumvisible() ? "\<C-p>" : "\<S-Tab>"
 inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<cr>"
+" }}}
 
-" ====================================== vim-markdown settings ======================================
+" vim-markdown settings {{{
 " mdを開くときの折りたたみを無効にする
 let g:vim_markdown_folding_disabled = 1
+" }}}
 
-" ====================================== vim-surround settings ======================================
+" vim-surround settings {{{
 nmap <Leader>7 ysiw'
 nmap <Leader>2 ysiw"
 nmap <Leader>` ysiw`
 nmap <Leader>8 ysiw)
 nmap <Leader>[ ysiw]
 nmap <Leader>{ ysiw}
+" }}}
 
-" ====================================== ultisnips settings ======================================
+" ultisnips settings {{{
 let g:UltiSnipsExpandTrigger="<tab>"
 let g:UltiSnipsJumpForwardTrigger="<tab>"
 let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 
 " ultisnipes自動補完
 if has('python3')
-    call asyncomplete#register_source(asyncomplete#sources#ultisnips#get_source_options({
-                \ 'name': 'ultisnips',
-                \ 'whitelist': ['*'],
-                \ 'completor': function('asyncomplete#sources#ultisnips#completor'),
-                \ }))
+  call asyncomplete#register_source(asyncomplete#sources#ultisnips#get_source_options({
+        \ 'name': 'ultisnips',
+        \ 'whitelist': ['*'],
+        \ 'completor': function('asyncomplete#sources#ultisnips#completor'),
+        \ }))
 endif
+" }}}
 
-" ====================================== profiling ======================================
+" profiling {{{
 " vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
 function! ProfileCursorMove() abort
-    let profile_file = expand('./vim-profile.log')
-    if filereadable(profile_file)
-        call delete(profile_file)
-    endif
+  let profile_file = expand('./vim-profile.log')
+  if filereadable(profile_file)
+    call delete(profile_file)
+  endif
 
-    normal! ggzR
+  normal! ggzR
 
-    execute 'profile start ' . profile_file
-    profile func *
-    profile file *
+  execute 'profile start ' . profile_file
+  profile func *
+  profile file *
 
-    augroup ProfileCursorMove
-        autocmd!
-        autocmd CursorHold <buffer> profile pause | q
-    augroup END
+  augroup ProfileCursorMove
+    autocmd!
+    autocmd CursorHold <buffer> profile pause | q
+  augroup END
 
-    for i in range(1000)
-        call feedkeys('j')
-    endfor
+  for i in range(1000)
+    call feedkeys('j')
+  endfor
 endfunction
+" }}}
 
-" ====================================== emment ======================================
+" emment {{{
 let g:user_emmet_install_global = 0
 let g:user_emmet_settings = {
-            \ 'variables': {
-            \   'lang' : 'ja'
-            \ }
-            \}
+      \ 'variables': {
+      \   'lang' : 'ja'
+      \ }
+      \}
 
 augroup emmet
-    autocmd!
-    au FileType * EmmetInstall
-    au FileType * imap <C-f> <C-y>,
+  autocmd!
+  au FileType * EmmetInstall
+  au FileType * imap <C-f> <C-y>,
 augroup END
+" }}}
 
-" ====================================== lightline ======================================
+" lightline {{{
 set laststatus=2
 if !has('gui_running')
-    set t_Co=256
+  set t_Co=256
 endif
+" }}}
 
-" ====================================== ale ======================================
+" ale {{{
 "let g:ale_sign_error = 'xx'
 "let g:ale_sign_warning = '!!'
 "let g:ale_echo_msg_error_str = 'E'
 "let g:ale_echo_msg_warning_str = 'W'
 "let g:ale_echo_msg_format = '[%linter%] %s [%severity%]'
 "let g:ale_set_highlights = 0
+" }}}
 
-" ====================================== vim-vue ======================================
+" vim-vue {{{
 " https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
 " vueファイルのシンタックスが効かなくなる問題対応
 augroup VueSyntax
-    autocmd!
-    au FileType vue syntax sync fromstart
+  autocmd!
+  au FileType vue syntax sync fromstart
 augroup END
+" }}}
 
-" ====================================== gitgutter ======================================
+" gitgutter {{{
 " ハイライトを無効にする
 highlight default link GitGutterAdd          NONE
 highlight default link GitGutterChange       NONE
 highlight default link GitGutterDelete       NONE
 highlight default link GitGutterChangeDelete NONE
+" }}}
 
-
-" ====================================== nerd commenter ======================================
+" nerd commenter {{{
 " コメントの後にスペースを装入
 let g:NERDSpaceDelims=1
+" }}}
+
+" calendar.vim {{{
+" Googleカレンダー同期
+let g:calendar_google_calendar = 1
+" }}}
+
+" vim: tw=78 et sw=2 foldmethod=marker

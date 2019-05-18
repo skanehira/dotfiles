@@ -172,5 +172,13 @@ repo = 'vim-jp/vimdoc-ja'
 [[plugins]]
 repo = 'mbbill/undotree'
 
+# translate language
 [[plugins]]
 repo = 'skanehira/translate.vim'
+
+#[[plugins]]
+#repo = 'justinmk/vim-sneak'
+
+# calendar
+[[plugins]]
+repo = 'itchyny/calendar.vim'
