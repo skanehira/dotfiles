@@ -18,6 +18,10 @@ export LSCOLORS=gxfxcxdxbxegedabagacad
 # rust
 export PATH=$PATH:$HOME/.cargo/bin:/usr/local/bin
 
+# java
+export JAVA_HOME=$(/usr/libexec/java_home -v "1.8")
+export PATH=${JAVA_HOME}/bin:${PATH}
+
 # alias
 alias brew="env PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin brew"
 alias ls="ls -G"
