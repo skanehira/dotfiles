@@ -403,6 +403,7 @@ nnoremap <silent> <Leader>im :LspImplementation<CR>
 augroup LspMapping
   autocmd!
   au FileType php nnoremap <C-]> :LspDefinition<CR>
+  au FileType c nnoremap <C-]> :LspDefinition<CR>
 augroup END
 
 " 非同期補完を有効にする
@@ -418,7 +419,7 @@ let g:lsp_log_file = expand('~/vim-lsp.log')
 "let g:lsp_signs_enabled = 1
 "let g:lsp_diagnostics_echo_cursor = 1
 
-" Go
+" Go {{{
 augroup LspGo
   au!
   if executable('gopls')
@@ -429,8 +430,9 @@ augroup LspGo
           \ })
   endif
 augroup END
+" }}}
 
-" PHP
+" PHP {{{
 augroup LspPHP
   au!
   au User lsp_setup call lsp#register_server({
@@ -439,8 +441,9 @@ augroup LspPHP
         \ 'whitelist': ['php'],
         \ })
 augroup END
+" }}}
 
-" JavaScript
+" JavaScript {{{
 augroup LspJavaScript
   au!
   if executable('flow-language-server')
@@ -452,8 +455,9 @@ augroup LspJavaScript
           \ })
   endif
 augroup END
+" }}}
 
-" Docker
+" Docker {{{
 augroup LspDocker
   au!
   if executable('docker-langserver')
@@ -464,8 +468,9 @@ augroup LspDocker
           \ })
   endif
 augroup END
+" }}}
 
-" CSS
+" CSS {{{
 augroup LspCSS
   au!
   if executable('css-languageserver')
@@ -476,16 +481,19 @@ augroup LspCSS
           \ })
   endif
 augroup END
+" }}}
 
-" Markdown
-"augroup LspMarkdowon
-"    au!
-"    autocmd User lsp_setup call lsp#register_server({
-"                \ 'name': 'efm-langserver-markdown',
-"                \ 'cmd': {server_info->['efm-langserver', '-efm=%f: %l: %m', '-stdin', &shell, &shellcmdflag, 'markdownlint -s']},
-"                \ 'whitelist': ['markdown'],
-"                \ })
-"augroup END
+" clang {{{
+augroup LspClangd
+  if executable('clangd')
+    au!
+    au User lsp_setup call lsp#register_server({
+          \ 'name': 'clangd',
+          \ 'cmd': {server_info->['clangd', '-background-index']},
+          \ 'whitelist': ['c', 'cpp', 'objc', 'objcpp'],
+          \ })
+  endif
+augroup END
 " }}}
 
 " asyncomplete settings {{{
