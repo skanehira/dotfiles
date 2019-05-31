@@ -217,9 +217,10 @@ endfunction
 
 augroup format 
   autocmd!
-  au BufWritePre * if &filetype !=# "go" |
-        \ call Format() |
-        \ endif
+  autocmd BufWritePre *.js call Format()
+  autocmd BufWritePre *.vim call Format()
+  autocmd BufWritePre *.html call Format()
+  autocmd BufWritePre *.java call Format()
 augroup END
 " }}}
 
