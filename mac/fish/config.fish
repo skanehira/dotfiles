@@ -26,3 +26,4 @@ alias gc='git checkout .'
 alias gf='gol -f'
 alias repo='cd ( ls -ld $GOPATH/src/*/*/* | awk \'{print $9}\' | fzf )'
 
+alias buildvim='cd /Users/skanehira/dev/go/src/github.com/skanehira/vim/src && sudo make distclean && ./configure --enable-python3interp=yes --enable-fail-if-missing && make && sudo make install'
