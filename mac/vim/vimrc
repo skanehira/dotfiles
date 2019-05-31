@@ -258,7 +258,6 @@ nnoremap <Leader>. :e ~/.vimrc<CR>
 " Ctrl+cでnormalモード
 noremap <C-c> <C-\><C-n>
 noremap! <C-c> <C-\><C-n>
-tnoremap <C-c> <C-\><C-n>
 
 " text object key mapping
 onoremap 8 i(
