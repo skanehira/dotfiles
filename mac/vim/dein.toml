@@ -192,5 +192,6 @@ repo = 'skanehira/translate.vim'
 # calendar
 [[plugins]]
 repo = 'itchyny/calendar.vim'
+
 [[plugins]]
 repo = 'jwalton512/vim-blade'
