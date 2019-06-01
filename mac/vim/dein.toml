@@ -79,12 +79,22 @@ hook_add = '''
 	let g:lightline = {
 		\ 'colorscheme': 'wombat',
 		\ 'active': {
-			\ 'left': [ ['mode', 'paste'], ['readonly', 'filepath', 'modified'] ]
-				\ },
+			\ 'left': [ ['mode', 'paste'], ['readonly', 'branchName', 'filepath', 'modified'] ]
+			\ },
 		\ 'component_function':{
-			\ 'filepath': 'FilePath'
-				\ }
+			\ 'filepath': 'FilePath',
+            \ 'branchName': 'BranchName'
+			\ },
+        \ 'separator': { 'left': '', 'right': '' },
 		\ }
+
+	function! BranchName()
+		if exists('*fugitive#head')
+			let branch = FugitiveHead()
+			return branch !=# '' ? '⭠ '.branch : ''
+		endif
+		return ''
+	endfunction
 
 	function! FilePath()
 		if winwidth(0) > 90
