@@ -344,6 +344,12 @@ inoremap <c-e> <c-o>w
 inoremap <c-b> <c-o>b
 " }}}
 
+" カーソル上の単語を翻訳
+nnoremap <Leader>tw :Tran <C-r><C-w><CR>
+
+" 翻訳
+nnoremap <Leader>tr :Tran<CR>
+
 " vim-go settings {{{
 " ファイル保存時go importを実行する
 let g:go_fmt_command = "goimports"
