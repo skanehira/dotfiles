@@ -161,8 +161,8 @@ augroup fileTypeIndent
   autocmd!
   au BufRead,BufNewFile *.php setlocal tabstop=4 softtabstop=4 shiftwidth=4
   au BufRead,BufNewFile *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
-  au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2
-  au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2
+  au BufRead,BufNewFile *.js   setlocal tabstop=4 softtabstop=4 shiftwidth=4
+  au BufRead,BufNewFile *.vue  setlocal tabstop=4 softtabstop=4 shiftwidth=4
 augroup END
 " }}}
 
