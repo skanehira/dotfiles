@@ -195,3 +195,6 @@ repo = 'itchyny/calendar.vim'
 
 [[plugins]]
 repo = 'jwalton512/vim-blade'
+
+#[[plugins]]
+#repo = 'rbtnn/vim-popup_signature'
