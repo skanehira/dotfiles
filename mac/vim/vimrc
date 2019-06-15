@@ -230,36 +230,35 @@ augroup END
 " *でカーソルを移動しないようにする
 noremap * *N
 
-" ファイル保存と終了
+" ファイル保存と終了 {{{
 nnoremap <Leader>w :w<CR>
 nnoremap <Leader>q :q!<CR>
+" }}}
 
 " 検索
 nnoremap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
 
+
 " 置換
 nnoremap <Leader>re :%s;\<<C-R><C-W>\>;g<Left><Left>;
+
 
 " visualで選択したテキストを置換する
 vnoremap <Leader>re y:%s;<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>;;g<Left><Left>
 
+
 " ハイライトを削除する
 nnoremap <Esc><Esc> :nohlsearch<CR>
 
-" 画面移動
-"nnoremap <C-H> <C-W>h
-"nnoremap <C-J> <C-W>j
-"nnoremap <C-K> <C-W>k
-"nnoremap <C-L> <C-W>l
 
 " vimrcを開く
 nnoremap <Leader>. :e ~/.vimrc<CR>
 
-" Ctrl+cでnormalモード
+" <esc>代わり
 noremap <C-c> <C-\><C-n>
 noremap! <C-c> <C-\><C-n>
 
-" text object key mapping
+" テキストオブジェクトキーマッピング {{{
 onoremap 8 i(
 onoremap 2 i"
 onoremap 7 i'
@@ -288,10 +287,7 @@ nnoremap va7 va'
 nnoremap va@ va`
 nnoremap va[ va[
 nnoremap va{ va{
-
-" 数値の+-
-"nnoremap + <C-a>
-"nnoremap - <C-x>
+" }}}
 
 " 行先頭と行末
 map H ^
@@ -320,10 +316,6 @@ nnoremap <silent> <Leader>te :belowright term<cr>
 " コマンドウィンドウを開く
 "nnoremap : :<C-f>i
 
-" 画面分割
-"nnoremap <leader>s :vs<CR>
-"nnoremap <leader>v :sp<CR>
-
 " 上下の空白に移動
 nnoremap <C-j> }
 nnoremap <C-k> {
@@ -334,21 +326,19 @@ nnoremap <C-k> {
 " netrwを開く
 nnoremap <leader>e :Ve<CR>
 
-" コマンドラインで単語移動
+" コマンドラインで単語移動 {{{
 cnoremap <c-b> <S-Left>
 cnoremap <c-f> <S-Right>
 cnoremap <c-a> <Home>
-
-" インサートモードでのカーソル移動
-inoremap <c-e> <c-o>w
-inoremap <c-b> <c-o>b
 " }}}
 
-" カーソル上の単語を翻訳
+" 翻訳 {{{
 nnoremap <Leader>tw :Tran <C-r><C-w><CR>
-
-" 翻訳
 nnoremap <Leader>tr :Tran<CR>
+vnoremap <Leader>tr :Tran<CR>
+" }}}
+
+" }}}
 
 " vim-go settings {{{
 " ファイル保存時go importを実行する
@@ -375,7 +365,7 @@ let g:go_def_reuse_buffer = 1
 let g:go_def_mode = 'gopls'
 
 " key mapping
-augroup GoMapping
+augroup go_mapping
   autocmd!
   au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
   au FileType go nnoremap <silent> <Leader>r <Plug>(go-run)
