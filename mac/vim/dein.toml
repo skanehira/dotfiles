@@ -206,3 +206,5 @@ merged = 0
 [[plugins]]
 repo = 'skanehira/train.vim'
 
+[[plugins]]
+repo = 'tpope/vim-rhubarb'
