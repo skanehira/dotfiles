@@ -54,6 +54,7 @@ set noerrorbells
 
 " 文字コード {{{
 set encoding=utf-8
+scriptencoding utf-8
 set fileencodings=utf-8,iso-2022-jp,euc-jp,sjis
 set fileformats=unix,dos,mac
 " }}}
@@ -222,6 +223,28 @@ augroup format
   autocmd BufWritePre *.html call Format()
   autocmd BufWritePre *.java call Format()
 augroup END
+" }}}
+
+" プラグインディレクトリ配下の.vimをすべてsourceする {{{
+function! SourceDir(path) abort
+    if !isdirectory(a:path)
+        return
+    endif
+
+    exe "set rtp^=" . a:path
+    if isdirectory(a:path . '/plugin')
+        exe "runtime plugin/*.vim"
+    endif
+
+    if isdirectory(a:path . '/autoload')
+        exe "runtime autoload/*.vim"
+    endif
+endfunction
+" }}}
+
+" listの設定 {{{
+set list
+set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
 " }}}
 
 " }}}
@@ -491,6 +514,15 @@ augroup LspClangd
   endif
 augroup END
 " }}}
+
+"augroup LspVim
+"  au!
+"  autocmd User lsp_setup call lsp#register_server({
+"      \ 'name': 'efm-langserver-vim',
+"      \ 'cmd': {server_info->['efm-langserver', '-c=/Users/skanehira/.config/efm-langserver/config.yaml']},
+"      \ 'whitelist': ['vim'],
+"      \ })
+"augroup END
 
 " asyncomplete settings {{{
 inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"

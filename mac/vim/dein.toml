@@ -198,3 +198,11 @@ repo = 'jwalton512/vim-blade'
 
 #[[plugins]]
 #repo = 'rbtnn/vim-popup_signature'
+
+[[plugins]]
+repo = 'vim-jp/vital.vim'
+merged = 0
+
+[[plugins]]
+repo = 'skanehira/train.vim'
+
