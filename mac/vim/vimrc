@@ -150,7 +150,7 @@ set cursorline
 
 " https://vim-jp.org/vimdoc-ja/pi_netrw.html#g:netrw_liststyle
 " netrwツリー表示を有効にする {{{
-let g:netrw_liststyle=1
+let g:netrw_liststyle=3
 let g:netrw_banner=0
 let g:netrw_sizestyle="H"
 let g:netrw_timefmt="%Y/%m/%d(%a) %H:%M:%S"
@@ -261,21 +261,18 @@ nnoremap <Leader>q :q!<CR>
 " 検索
 nnoremap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
 
-
 " 置換
 nnoremap <Leader>re :%s;\<<C-R><C-W>\>;g<Left><Left>;
-
 
 " visualで選択したテキストを置換する
 vnoremap <Leader>re y:%s;<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>;;g<Left><Left>
 
-
 " ハイライトを削除する
 nnoremap <Esc><Esc> :nohlsearch<CR>
 
-
 " vimrcを開く
-nnoremap <Leader>. :e ~/.vimrc<CR>
+nnoremap <Leader>. :new ~/.vimrc<CR>
+nnoremap <Leader>s :source ~/.vimrc<CR>
 
 " <esc>代わり
 noremap <C-c> <C-\><C-n>
@@ -336,18 +333,12 @@ vnoremap <silent> <C-p> "0p<CR>
 " ターミナルを下部で開く
 nnoremap <silent> <Leader>te :belowright term<cr>
 
-" コマンドウィンドウを開く
-"nnoremap : :<C-f>i
-
 " 上下の空白に移動
 nnoremap <C-j> }
 nnoremap <C-k> {
 
-" 検索でvery magicを使用する
-"nnoremap /  /\v
-
 " netrwを開く
-nnoremap <leader>e :Ve<CR>
+nnoremap <leader>e :10Ve<CR>
 
 " コマンドラインで単語移動 {{{
 cnoremap <c-b> <S-Left>
