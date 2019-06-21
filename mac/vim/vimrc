@@ -225,19 +225,24 @@ augroup END
 " }}}
 
 " プラグインディレクトリ配下の.vimをすべてsourceする {{{
-function! SourceDir(path) abort
-    if !isdirectory(a:path)
-        return
-    endif
+function! SourceDir(...) abort
+  let l:path = getcwd()
+  if a:0 > 1
+    let l:path = a:1
+  endif
 
-    exe "set rtp^=" . a:path
-    if isdirectory(a:path . '/plugin')
-        exe "runtime plugin/*.vim"
-    endif
+  if !isdirectory(l:path)
+    return
+  endif
 
-    if isdirectory(a:path . '/autoload')
-        exe "runtime autoload/*.vim"
-    endif
+  exe "set rtp^=" . l:path
+  if isdirectory(l:path . '/plugin')
+    exe "runtime plugin/*.vim"
+  endif
+
+  if isdirectory(l:path . '/autoload')
+    exe "runtime autoload/*.vim"
+  endif
 endfunction
 " }}}
 
