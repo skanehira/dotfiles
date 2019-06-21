@@ -42,10 +42,6 @@ endif
 
 " general settings {{{
 
-" vim scriptでマルチバイト文字を使用しているため設定 {{{
-scriptencoding utf-8
-" }}}
-
 " ミュート {{{
 set t_vb=
 set visualbell
@@ -54,9 +50,12 @@ set noerrorbells
 
 " 文字コード {{{
 set encoding=utf-8
-scriptencoding utf-8
 set fileencodings=utf-8,iso-2022-jp,euc-jp,sjis
 set fileformats=unix,dos,mac
+" }}}
+
+" vim scriptでマルチバイト文字を使用しているため設定 {{{
+scriptencoding utf-8
 " }}}
 
 " https://vim-jp.org/vimdoc-ja/map.html#mapleader
@@ -379,7 +378,7 @@ let g:go_def_reuse_buffer = 1
 let g:go_def_mode = 'gopls'
 
 " key mapping
-augroup go_mapping
+augroup goMapping
   autocmd!
   au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
   au FileType go nnoremap <silent> <Leader>r <Plug>(go-run)
@@ -506,15 +505,6 @@ augroup LspClangd
 augroup END
 " }}}
 
-"augroup LspVim
-"  au!
-"  autocmd User lsp_setup call lsp#register_server({
-"      \ 'name': 'efm-langserver-vim',
-"      \ 'cmd': {server_info->['efm-langserver', '-c=/Users/skanehira/.config/efm-langserver/config.yaml']},
-"      \ 'whitelist': ['vim'],
-"      \ })
-"augroup END
-
 " asyncomplete settings {{{
 inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <C-k> pumvisible() ? "\<C-p>" : "\<S-Tab>"
@@ -631,6 +621,11 @@ let g:NERDSpaceDelims=1
 " calendar.vim {{{
 " Googleカレンダー同期
 let g:calendar_google_calendar = 1
+" }}}
+
+" sonictemplate.vim {{{
+let g:sonictemplate_author = 'skanehira'
+let g:sonictemplate_license = 'MIT'
 " }}}
 
 " vim: tw=78 et sw=2 foldmethod=marker
