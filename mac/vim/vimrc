@@ -251,6 +251,9 @@ set list
 set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
 " }}}
 
+" swapファイルを作成しない
+set noswapfile
+
 " }}}
 
 " key mappings {{{
