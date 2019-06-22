@@ -209,5 +209,5 @@ repo = 'skanehira/train.vim'
 [[plugins]]
 repo = 'tpope/vim-rhubarb'
 
-[[plugin]]
+[[plugins]]
 repo = 'skanehira/weather.vim'
