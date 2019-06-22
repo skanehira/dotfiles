@@ -254,6 +254,89 @@ set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
 " swapファイルを作成しない
 set noswapfile
 
+" ポップアップウィンドウで簡易ファイラー {{{
+if !exists('g:loaded_select')
+    let g:loaded_select = 1
+    call prop_type_add('select', {'highlight': 'PmenuSel'})
+endif
+
+function! s:get_files(path) abort
+    let l:entries = []
+
+    for l:entry in readdir(a:path)
+        let l:path_entry = a:path . '/' . l:entry
+        if isdirectory(l:path_entry)
+            let l:entries += s:get_files(l:path_entry)
+        else
+            cal add(l:entries, l:path_entry[2:])
+        endif
+    endfor
+    return l:entries
+endfunction
+
+function! s:highlight(ctx) abort
+    let l:buf = winbufnr(a:ctx.id)
+    let l:length = len(a:ctx.files[a:ctx.idx])
+    let l:lnum = a:ctx.idx+1
+    let l:lnum_end = len(a:ctx.files)
+
+    call prop_clear(1, l:lnum_end, {
+                \ 'bufnr': l:buf,
+                \ })
+
+    call prop_add(l:lnum, 1, {
+                \ 'bufnr': l:buf,
+                \ 'type': 'select',
+                \ 'length': l:length,
+                \ })
+
+    call win_execute(a:ctx.id, 'redraw')
+endfunction
+
+function! s:filter(ctx, id, key) abort
+    let l:buf = winbufnr(a:id)
+    let l:file = a:ctx.files[a:ctx.idx]
+
+    if a:key ==# 'q' || a:key ==# 'x'
+        call popup_close(a:id)
+        return 0
+    elseif a:key ==# "\n" || a:key ==# "\r"
+        call s:open_file(a:id, 'e', l:file)
+    elseif a:key ==# ""
+        call s:open_file(a:id, 'new', l:file)
+    elseif a:key ==# ""
+        call s:open_file(a:id, 'vnew', l:file)
+    elseif a:key ==# 'j'
+        let a:ctx.idx += a:ctx.idx ==# len(a:ctx.files)-1 ? 0 : 1
+        call s:highlight(a:ctx)
+    elseif a:key ==# 'k'
+        let a:ctx.idx -= a:ctx.idx ==# 0 ? 0 : 1
+        call s:highlight(a:ctx)
+    endif
+    return 1
+endfunction
+
+function! s:open_file(id, key, file) abort
+    call popup_close(a:id)
+    exe a:key a:file
+endfunction
+
+function! s:popup_files() abort
+    let l:ctx = {'idx': 0, 'files': s:get_files('.')}
+
+    let l:ctx.id = popup_create(l:ctx.files, {
+                \ 'filter': function('s:filter', [l:ctx]),
+                \ 'borderchars': ['-','|','-','|','+','+','+','+'],
+                \ 'border': [],
+                \ 'padding': [0,0,0,0],
+                \ })
+
+    call s:highlight(l:ctx)
+endfunction
+
+command! PopupFiles call s:popup_files()
+" }}}
+
 " }}}
 
 " key mappings {{{
