@@ -151,8 +151,8 @@ set cursorline
 " netrwツリー表示を有効にする {{{
 let g:netrw_liststyle=3
 let g:netrw_banner=0
-let g:netrw_sizestyle="H"
-let g:netrw_timefmt="%Y/%m/%d(%a) %H:%M:%S"
+let g:netrw_sizestyle='H'
+let g:netrw_timefmt='%Y/%m/%d(%a) %H:%M:%S'
 let g:netrw_preview=1
 " }}}
 
@@ -211,8 +211,8 @@ set helplang=ja
 " ファイル保存時に整形する {{{
 function! Format() abort
   let pos = getcurpos()
-  execute "normal 1G=G"
-  call setpos(".", pos)
+  execute 'normal 1G=G'
+  call setpos('.', pos)
 endfunction
 
 augroup format 
@@ -235,13 +235,13 @@ function! SourceDir(...) abort
     return
   endif
 
-  exe "set rtp^=" . l:path
+  exe 'set rtp^=' . l:path
   if isdirectory(l:path . '/plugin')
-    exe "runtime plugin/*.vim"
+    exe 'runtime plugin/*.vim'
   endif
 
   if isdirectory(l:path . '/autoload')
-    exe "runtime autoload/*.vim"
+    exe 'runtime autoload/*.vim'
   endif
 endfunction
 " }}}
@@ -446,7 +446,7 @@ vnoremap <Leader>tr :Tran<CR>
 
 " vim-go settings {{{
 " ファイル保存時go importを実行する
-let g:go_fmt_command = "goimports"
+let g:go_fmt_command = 'goimports'
 
 " ファイル保存時、linterを実行する
 let g:go_metalinter_autosave = 1
