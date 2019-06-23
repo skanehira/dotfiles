@@ -264,6 +264,9 @@ function! s:get_files(path) abort
     let l:entries = []
 
     for l:entry in readdir(a:path)
+        if l:entry[0] ==# '.'
+            continue
+        endif
         let l:path_entry = a:path . '/' . l:entry
         if isdirectory(l:path_entry)
             let l:entries += s:get_files(l:path_entry)
@@ -299,26 +302,30 @@ function! s:filter(ctx, id, key) abort
 
     if a:key ==# 'q' || a:key ==# 'x'
         call popup_close(a:id)
-        return 0
+        return 1
     elseif a:key ==# "\n" || a:key ==# "\r"
-        call s:open_file(a:id, 'e', l:file)
+        return s:open_file(a:id, 'e', l:file)
     elseif a:key ==# ""
-        call s:open_file(a:id, 'new', l:file)
+        return s:open_file(a:id, 'new', l:file)
     elseif a:key ==# ""
-        call s:open_file(a:id, 'vnew', l:file)
+        return s:open_file(a:id, 'vnew', l:file)
     elseif a:key ==# 'j'
         let a:ctx.idx += a:ctx.idx ==# len(a:ctx.files)-1 ? 0 : 1
-        call s:highlight(a:ctx)
     elseif a:key ==# 'k'
         let a:ctx.idx -= a:ctx.idx ==# 0 ? 0 : 1
-        call s:highlight(a:ctx)
+    elseif a:key ==# '0'
+        let a:ctx.idx = 0
+    elseif a:key ==# 'G'
+        let a:ctx.idx = len(a:ctx.files)-1
     endif
+        call s:highlight(a:ctx)
     return 1
 endfunction
 
 function! s:open_file(id, key, file) abort
     call popup_close(a:id)
     exe a:key a:file
+    return 1
 endfunction
 
 function! s:popup_files() abort
