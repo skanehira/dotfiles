@@ -193,6 +193,7 @@ repo = 'skanehira/translate.vim'
 [[plugins]]
 repo = 'itchyny/calendar.vim'
 
+# blade.php syntax highlight
 [[plugins]]
 repo = 'jwalton512/vim-blade'
 
@@ -203,11 +204,13 @@ repo = 'jwalton512/vim-blade'
 repo = 'vim-jp/vital.vim'
 merged = 0
 
+# train route search
 [[plugins]]
 repo = 'skanehira/train.vim'
 
-[[plugins]]
-repo = 'tpope/vim-rhubarb'
+#[[plugins]]
+#repo = 'tpope/vim-rhubarb'
 
+# weather
 [[plugins]]
 repo = 'skanehira/weather.vim'
