@@ -279,8 +279,8 @@ endfunction
 
 function! s:highlight(ctx) abort
     let l:buf = winbufnr(a:ctx.id)
-    let l:length = len(a:ctx.files[a:ctx.idx])
-    let l:lnum = a:ctx.idx+1
+    let l:length = len(a:ctx.files[a:ctx.select])
+    let l:lnum = a:ctx.select - a:ctx.offset +1
     let l:lnum_end = len(a:ctx.files)
 
     call prop_clear(1, l:lnum_end, {
@@ -296,9 +296,16 @@ function! s:highlight(ctx) abort
     call win_execute(a:ctx.id, 'redraw')
 endfunction
 
-function! s:filter(ctx, id, key) abort
+function! s:update_files(ctx) abort
+    let l:buf = winbufnr(a:ctx.id)
+    let l:files = copy(a:ctx.files)
+    call setbufline(l:buf, 1, l:files[a:ctx.offset:])
+    call s:highlight(a:ctx)
+endfunction
+
+function! s:popup_filter(ctx, id, key) abort
     let l:buf = winbufnr(a:id)
-    let l:file = a:ctx.files[a:ctx.idx]
+    let l:file = a:ctx.files[a:ctx.select]
 
     if a:key ==# 'q' || a:key ==# 'x'
         call popup_close(a:id)
@@ -309,16 +316,24 @@ function! s:filter(ctx, id, key) abort
         return s:open_file(a:id, 'new', l:file)
     elseif a:key ==# ""
         return s:open_file(a:id, 'vnew', l:file)
+    elseif a:key ==# ""
+        return s:open_file(a:id, 'tabnew' , l:file)
     elseif a:key ==# 'j'
-        let a:ctx.idx += a:ctx.idx ==# len(a:ctx.files)-1 ? 0 : 1
+        let a:ctx.select += a:ctx.select ==# len(a:ctx.files)-1 ? 0 : 1
+        if a:ctx.select >= a:ctx.offset + a:ctx.maxheight
+          let a:ctx.offset = a:ctx.select - (a:ctx.maxheight - 1)
+        endif
     elseif a:key ==# 'k'
-        let a:ctx.idx -= a:ctx.idx ==# 0 ? 0 : 1
+        let a:ctx.select -= a:ctx.select ==# 0 ? 0 : 1
+        if a:ctx.select < a:ctx.offset
+          let a:ctx.offset = a:ctx.select
+        endif
     elseif a:key ==# '0'
-        let a:ctx.idx = 0
+        let a:ctx.select = 0
     elseif a:key ==# 'G'
-        let a:ctx.idx = len(a:ctx.files)-1
+        let a:ctx.select = len(a:ctx.files)-1
     endif
-        call s:highlight(a:ctx)
+    call s:update_files(a:ctx)
     return 1
 endfunction
 
@@ -329,12 +344,13 @@ function! s:open_file(id, key, file) abort
 endfunction
 
 function! s:popup_files() abort
-    let l:ctx = {'idx': 0, 'files': s:get_files('.')}
+    let l:ctx = {'select': 0, 'files': s:get_files('.'), 'offset': 0, 'maxheight': 15}
 
     let l:ctx.id = popup_create(l:ctx.files, {
-                \ 'filter': function('s:filter', [l:ctx]),
+                \ 'filter': function('s:popup_filter', [l:ctx]),
                 \ 'borderchars': ['-','|','-','|','+','+','+','+'],
                 \ 'border': [],
+                \ 'maxheight': l:ctx.maxheight,
                 \ 'padding': [0,0,0,0],
                 \ })
 
