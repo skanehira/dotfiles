@@ -345,12 +345,20 @@ endfunction
 
 function! s:popup_files() abort
     let l:ctx = {'select': 0, 'files': s:get_files('.'), 'offset': 0, 'maxheight': 15}
+    let l:maxwidth = 0
+    for file in l:ctx.files
+      let length = len(file)
+      if length > l:maxwidth
+        let l:maxwidth = length
+      endif
+    endfor
 
     let l:ctx.id = popup_create(l:ctx.files, {
                 \ 'filter': function('s:popup_filter', [l:ctx]),
                 \ 'borderchars': ['-','|','-','|','+','+','+','+'],
                 \ 'border': [],
                 \ 'maxheight': l:ctx.maxheight,
+                \ 'minwidth': l:maxwidth,
                 \ 'padding': [0,0,0,0],
                 \ })
 
