@@ -249,6 +249,8 @@ endfunction
 " listの設定 {{{
 set list
 set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
+hi NonText    ctermbg=None ctermfg=Yellow
+hi SpecialKey ctermbg=None ctermfg=Yellow
 " }}}
 
 " swapファイルを作成しない
