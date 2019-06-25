@@ -271,7 +271,10 @@ function! s:get_files(path) abort
         if isdirectory(l:path_entry)
             let l:entries += s:get_files(l:path_entry)
         else
-            cal add(l:entries, l:path_entry[2:])
+            if l:path_entry[0] ==# '.'
+                let l:path_entry = l:path_entry[2:]
+            endif
+            cal add(l:entries, l:path_entry)
         endif
     endfor
     return l:entries
@@ -343,8 +346,19 @@ function! s:open_file(id, key, file) abort
     return 1
 endfunction
 
-function! s:popup_files() abort
-    let l:ctx = {'select': 0, 'files': s:get_files('.'), 'offset': 0, 'maxheight': 15}
+function! s:popup_files(...) abort
+    let l:path = '.'
+    if a:0 > 0
+        let l:path = a:1
+    endif
+
+    let l:files = s:get_files(l:path)
+    if empty(l:files)
+       echo 'not any files'
+       return
+    endif
+
+    let l:ctx = {'select': 0, 'files': l:files, 'offset': 0, 'maxheight': 15}
     let l:maxwidth = 0
     for file in l:ctx.files
       let length = len(file)
@@ -365,7 +379,7 @@ function! s:popup_files() abort
     call s:highlight(l:ctx)
 endfunction
 
-command! PopupFiles call s:popup_files()
+command! -nargs=? PopupFiles call s:popup_files(<f-args>)
 " }}}
 
 " }}}
