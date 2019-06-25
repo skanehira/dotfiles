@@ -97,7 +97,7 @@ set relativenumber
 " タブでも常に空白を挿入 {{{
 set tabstop=4
 set shiftwidth=4
-set expandtab
+"set expandtab
 " }}}
 
 " インクリメントサーチを有効にする {{{
@@ -249,8 +249,8 @@ endfunction
 " listの設定 {{{
 set list
 set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
-hi NonText    ctermbg=None ctermfg=Yellow
-hi SpecialKey ctermbg=None ctermfg=Yellow
+"hi NonText    ctermbg=None ctermfg=Yellow
+"hi SpecialKey ctermbg=None ctermfg=Yellow
 " }}}
 
 " swapファイルを作成しない
@@ -285,8 +285,12 @@ endfunction
 function! s:highlight(ctx) abort
     let l:buf = winbufnr(a:ctx.id)
     let l:length = len(a:ctx.files[a:ctx.select])
-    let l:lnum = a:ctx.select - a:ctx.offset +1
     let l:lnum_end = len(a:ctx.files)
+    let l:lnum = a:ctx.select - a:ctx.offset + 1
+    if a:ctx.search_mode ==# 1 && !empty(a:ctx.filter_files)
+        let l:length = len(a:ctx.filter_files[a:ctx.select])
+        let l:lnum_end = len(a:ctx.filter_files)
+    endif
 
     call prop_clear(1, l:lnum_end, {
                 \ 'bufnr': l:buf,
@@ -302,9 +306,20 @@ function! s:highlight(ctx) abort
 endfunction
 
 function! s:update_files(ctx) abort
-    let l:buf = winbufnr(a:ctx.id)
     let l:files = copy(a:ctx.files)
-    call setbufline(l:buf, 1, l:files[a:ctx.offset:])
+    if a:ctx.search_mode
+        let l:tmp = []
+        for file in l:files
+            if file =~? a:ctx.word[1:]
+                call add(l:tmp, file)
+            endif
+        endfor
+        let l:files = l:tmp
+        let a:ctx.filter_files = l:tmp
+    endif
+    echo a:ctx.word
+    call win_execute(a:ctx.id, '%d_')
+    call setbufline(winbufnr(a:ctx.id), 1, l:files[a:ctx.offset:])
     call s:highlight(a:ctx)
 endfunction
 
@@ -312,37 +327,87 @@ function! s:popup_filter(ctx, id, key) abort
     let l:buf = winbufnr(a:id)
     let l:file = a:ctx.files[a:ctx.select]
 
-    if a:key ==# 'q' || a:key ==# 'x'
-        call popup_close(a:id)
-        return 1
-    elseif a:key ==# "\n" || a:key ==# "\r"
-        return s:open_file(a:id, 'e', l:file)
-    elseif a:key ==# ""
-        return s:open_file(a:id, 'new', l:file)
-    elseif a:key ==# ""
-        return s:open_file(a:id, 'vnew', l:file)
-    elseif a:key ==# ""
-        return s:open_file(a:id, 'tabnew' , l:file)
-    elseif a:key ==# 'j'
-        let a:ctx.select += a:ctx.select ==# len(a:ctx.files)-1 ? 0 : 1
-        if a:ctx.select >= a:ctx.offset + a:ctx.maxheight
-          let a:ctx.offset = a:ctx.select - (a:ctx.maxheight - 1)
+    if a:ctx.search_mode ==# 0
+        if a:key ==# 'q' || a:key ==# 'x'
+            call popup_close(a:id)
+            return 1
+        elseif a:key ==# '/'
+            let a:ctx.search_mode = 1
+            let a:ctx.word .= a:key
+        elseif a:key ==# "\n" || a:key ==# "\r"
+            return s:open_file(a:id, 'e', l:file)
+        elseif a:key ==# ""
+            return s:open_file(a:id, 'new', l:file)
+        elseif a:key ==# ""
+            return s:open_file(a:id, 'vnew', l:file)
+        elseif a:key ==# ""
+            return s:open_file(a:id, 'tabnew' , l:file)
+        elseif a:key ==# 'j'
+            let a:ctx.select += a:ctx.select ==# len(a:ctx.files)-1 ? 0 : 1
+            if a:ctx.select >= a:ctx.offset + a:ctx.maxheight
+                let a:ctx.offset = a:ctx.select - (a:ctx.maxheight - 1)
+            endif
+        elseif a:key ==# 'k'
+            let a:ctx.select -= a:ctx.select ==# 0 ? 0 : 1
+            if a:ctx.select < a:ctx.offset
+                let a:ctx.offset = a:ctx.select
+            endif
+        elseif a:key ==# '0'
+            let a:ctx.select = 0
+            let a:ctx.offset = 0
+        elseif a:key ==# 'G'
+            let a:ctx.select = len(a:ctx.files)-1
+            let a:ctx.offset = len(a:ctx.files) - (a:ctx.maxheight)
         endif
-    elseif a:key ==# 'k'
-        let a:ctx.select -= a:ctx.select ==# 0 ? 0 : 1
-        if a:ctx.select < a:ctx.offset
-          let a:ctx.offset = a:ctx.select
+    else
+        " 検索モードの場合
+        if !empty(a:ctx.filter_files)
+            let l:file = a:ctx.filter_files[a:ctx.select]
+        else
+            let l:file = ''
         endif
-    elseif a:key ==# '0'
-        let a:ctx.select = 0
-    elseif a:key ==# 'G'
-        let a:ctx.select = len(a:ctx.files)-1
+        if a:key ==# "\<bs>" || a:key ==# "\b"
+            if strlen(a:ctx.word) == 1
+              let a:ctx.word = ''
+              let a:ctx.search_mode = 0
+            else
+              let a:ctx.word = a:ctx.word[:len(a:ctx.word)-2]
+            endif
+        elseif a:key ==# '}'
+            let a:ctx.select += a:ctx.select ==# len(a:ctx.filter_files)-1 ? 0 : 1
+            if a:ctx.select >= a:ctx.offset + a:ctx.maxheight
+                let a:ctx.offset = a:ctx.select - (a:ctx.maxheight - 1)
+            endif
+        elseif a:key ==# '{'
+            let a:ctx.select -= a:ctx.select ==# 0 ? 0 : 1
+            if a:ctx.select < a:ctx.offset
+                let a:ctx.offset = a:ctx.select
+            endif
+        elseif a:key ==# "\n" || a:key ==# "\r"
+            return s:open_file(a:id, 'e', l:file)
+        elseif a:key ==# ""
+            return s:open_file(a:id, 'new', l:file)
+        elseif a:key ==# ""
+            return s:open_file(a:id, 'vnew', l:file)
+        elseif a:key ==# ""
+            return s:open_file(a:id, 'tabnew' , l:file)
+        elseif a:key !=# "\<CursorHold>"
+            let a:ctx.select = 0
+            let a:ctx.offset = 0
+            let a:ctx.word .= a:key
+        endif
     endif
-    call s:update_files(a:ctx)
+
+    if a:key !=# "\<CursorHold>"
+        call s:update_files(a:ctx)
+    endif
     return 1
 endfunction
 
 function! s:open_file(id, key, file) abort
+    if empty(a:file)
+        return 1
+    endif
     call popup_close(a:id)
     exe a:key a:file
     return 1
@@ -360,7 +425,15 @@ function! s:popup_files(...) abort
        return
     endif
 
-    let l:ctx = {'select': 0, 'files': l:files, 'offset': 0, 'maxheight': 15}
+    let l:ctx = { 'select': 0,
+                \ 'files': l:files,
+                \ 'offset': 0,
+                \ 'maxheight': 15,
+                \ 'word' : '',
+                \ 'search_mode': 0,
+                \ 'filter_files': [],
+                \ }
+
     let l:maxwidth = 0
     for file in l:ctx.files
       let length = len(file)
