@@ -550,6 +550,15 @@ nnoremap <C-k> {
 " netrwを開く
 nnoremap <leader>e :10Ve<CR>
 
+" review
+augroup review
+  au!
+  au FileType review vnoremap <silent> <Leader>hi c@<cursor>{<c-r>"}<esc>
+augroup END
+
+" 改行
+nnoremap g<CR> o<esc>
+
 " コマンドラインで単語移動 {{{
 cnoremap <c-b> <S-Left>
 cnoremap <c-f> <S-Right>
@@ -839,4 +848,5 @@ let g:sonictemplate_author = 'skanehira'
 let g:sonictemplate_license = 'MIT'
 " }}}
 
-" vim: tw=78 et sw=2 foldmethod=marker
+" vim: tw=78 et sw=4 foldmethod=marker
+"
