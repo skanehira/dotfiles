@@ -214,3 +214,15 @@ repo = 'skanehira/train.vim'
 # weather
 [[plugins]]
 repo = 'skanehira/weather.vim'
+
+[[plugins]]
+repo = 'mattn/webapi-vim'
+
+[[plugins]]
+repo = 'mattn/gist-vim'
+
+[[plugins]]
+repo = 'tokorom/vim-review'
+
+[[plugins]]
+repo = 'terryma/vim-multiple-cursors'
