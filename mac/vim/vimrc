@@ -457,6 +457,52 @@ endfunction
 command! -nargs=? PopupFiles call s:popup_files(<f-args>)
 " }}}
 
+" {{{ ウィンドウ一覧
+function! s:get_win_info() abort
+	let l:win_info_list = []
+	for win in getwininfo()
+		let l:tmp_file = split(win.variables.netrw_prvfile, '/')
+		if empty(tmp_file)
+			let l:file = '[No Name]'
+		else
+			let l:file = l:tmp_file[len(tmp_file)-1:][0]
+		endif
+		call add(l:win_info_list, {'winid':win.winid, 'file': l:file})
+	endfor
+	return l:win_info_list
+endfunction
+
+function! s:goto_window(ctx, id, idx) abort
+	if a:idx ==# -1
+		return
+	endif
+	call win_gotoid(a:ctx[a:idx-1].winid)
+endfunction
+
+function! s:win_list() abort
+	let l:win_info = s:get_win_info()
+	let l:view_content = []
+	let l:min_width = 40
+
+	for win in l:win_info
+		call add(l:view_content, win.winid . "\t" . win.file)
+		if len(win.file) > l:min_width
+			let l:min_width = len(win.file)
+		endif
+	endfor
+	call popup_menu(l:view_content, {
+				\ 'border': [],
+                \ 'borderchars': ['-','|','-','|','+','+','+','+'],
+				\ 'padding': [0,0,0,0],
+				\ 'filter': 'popup_filter_menu',
+				\ 'callback': function('s:goto_window', [l:win_info]),
+				\ 'minwidth': l:min_width,
+				\ })
+endfunction
+
+command! Windows call s:win_list()
+" }}}
+
 " }}}
 
 " key mappings {{{
