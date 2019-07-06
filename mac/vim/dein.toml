@@ -226,3 +226,5 @@ repo = 'tokorom/vim-review'
 
 [[plugins]]
 repo = 'terryma/vim-multiple-cursors'
+[[plugins]]
+repo = 'Shougo/dein.vim'
