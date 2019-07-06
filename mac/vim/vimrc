@@ -253,6 +253,11 @@ set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
 "hi SpecialKey ctermbg=None ctermfg=Yellow
 " }}}
 
+" {{{	行末のホワイトスペースをハイライトする
+hi whitespace ctermbg=red ctermfg=red
+match whitespace /\s\+$/
+" }}}
+
 " swapファイルを作成しない
 set noswapfile
 
@@ -524,9 +529,9 @@ augroup END
 " }}}
 
 " asyncomplete settings {{{
-inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
-inoremap <expr> <C-k> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<cr>"
+"inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
+"inoremap <expr> <C-k> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+"inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<cr>"
 " }}}
 
 " vim-markdown settings {{{
@@ -544,9 +549,9 @@ nmap <Leader>{ ysiw}
 " }}}
 
 " ultisnips settings {{{
-let g:UltiSnipsExpandTrigger="<tab>"
-let g:UltiSnipsJumpForwardTrigger="<tab>"
-let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
+"let g:UltiSnipsExpandTrigger="<tab>"
+"let g:UltiSnipsJumpForwardTrigger="<tab>"
+"let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 
 " ultisnipes自動補完
 if has('python3')
