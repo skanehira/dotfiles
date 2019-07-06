@@ -248,13 +248,16 @@ endfunction
 
 " listの設定 {{{
 set list
-set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
+set listchars = tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
 "hi NonText    ctermbg=None ctermfg=Yellow
 "hi SpecialKey ctermbg=None ctermfg=Yellow
 " }}}
 
 " swapファイルを作成しない
 set noswapfile
+
+" セッションで保存する対象を設定する
+set sessionoptions = blank,buffers,curdir,folds,help,tabpages,winsize,terminal
 
 " ポップアップウィンドウで簡易ファイラー {{{
 if !exists('g:loaded_select')
@@ -530,10 +533,6 @@ nnoremap <Esc><Esc> :nohlsearch<CR>
 nnoremap <Leader>. :new ~/.vimrc<CR>
 nnoremap <Leader>s :source ~/.vimrc<CR>
 
-" <esc>代わり
-noremap <C-c> <C-\><C-n>
-noremap! <C-c> <C-\><C-n>
-
 " テキストオブジェクトキーマッピング {{{
 onoremap 8 i(
 onoremap 2 i"
@@ -570,8 +569,8 @@ map H ^
 map L $
 
 " タブ切り替え
-nnoremap <Tab> gt
-nnoremap <S-Tab> gT
+nnoremap <C-l> gt
+nnoremap <C-h> gT
 
 " visual時に選択行を移動
 vnoremap <C-j> :m '>+1<CR>gv
