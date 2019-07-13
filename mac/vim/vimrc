@@ -254,8 +254,8 @@ set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
 " }}}
 
 " {{{	行末のホワイトスペースをハイライトする
-hi whitespace ctermbg=red ctermfg=red
-match whitespace /\s\+$/
+"hi whitespace ctermbg=red ctermfg=red
+"match whitespace /\s\+$/
 " }}}
 
 " swapファイルを作成しない
@@ -439,7 +439,7 @@ augroup LspMapping
 augroup END
 
 " 非同期補完を有効にする
-let g:lsp_async_completion = 1
+"let g:lsp_async_completion = 1
 
 " lsp log
 let g:lsp_log_verbose = 0
@@ -452,16 +452,16 @@ let g:lsp_log_file = expand('~/vim-lsp.log')
 "let g:lsp_diagnostics_echo_cursor = 1
 
 " Go {{{
-augroup LspGo
-    au!
-    if executable('gopls')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'gopls',
-                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
-                    \ 'whitelist': ['go'],
-                    \ })
-    endif
-augroup END
+"augroup LspGo
+"    au!
+"    if executable('gopls')
+"        au User lsp_setup call lsp#register_server({
+"                    \ 'name': 'gopls',
+"                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
+"                    \ 'whitelist': ['go'],
+"                    \ })
+"    endif
+"augroup END
 " }}}
 
 " PHP {{{
@@ -528,10 +528,12 @@ augroup LspClangd
 augroup END
 " }}}
 
+" }}}
+
 " asyncomplete settings {{{
-"inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
-"inoremap <expr> <C-k> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-"inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<cr>"
+inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
+inoremap <expr> <C-k> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<cr>"
 " }}}
 
 " vim-markdown settings {{{
@@ -554,13 +556,13 @@ nmap <Leader>{ ysiw}
 "let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 
 " ultisnipes自動補完
-if has('python3')
-    call asyncomplete#register_source(asyncomplete#sources#ultisnips#get_source_options({
-                \ 'name': 'ultisnips',
-                \ 'whitelist': ['*'],
-                \ 'completor': function('asyncomplete#sources#ultisnips#completor'),
-                \ }))
-endif
+"if has('python3')
+"    call asyncomplete#register_source(asyncomplete#sources#ultisnips#get_source_options({
+"                \ 'name': 'ultisnips',
+"                \ 'whitelist': ['*'],
+"                \ 'completor': function('asyncomplete#sources#ultisnips#completor'),
+"                \ }))
+"endif
 " }}}
 
 " profiling {{{
@@ -651,6 +653,11 @@ let g:sonictemplate_author = 'skanehira'
 let g:sonictemplate_license = 'MIT'
 " }}}
 
+" vimhelpgenarator {{{
+let g:vimhelpgenerator_version = 'Version : 0.0.1'
+let g:vimhelpgenerator_author = 'Author  : skanehira'
+let g:vimhelpgenerator_uri = 'https://github.com/skanehira/'
+let g:vimhelpgenerator_defaultlanguage = 'en'
 " }}}
 
 " {{{ my functions
@@ -658,7 +665,7 @@ let g:sonictemplate_license = 'MIT'
 " ポップアップウィンドウで簡易ファイラー {{{
 if !exists('g:loaded_select')
     let g:loaded_select = 1
-    call prop_type_add('select', {'highlight': 'PmenuSel'})
+    call prop_type_add('select_file', {'highlight': 'PmenuSel'})
 endif
 
 function! s:get_files(path) abort
@@ -697,7 +704,7 @@ function! s:highlight(ctx) abort
 
     call prop_add(l:lnum, 1, {
                 \ 'bufnr': l:buf,
-                \ 'type': 'select',
+                \ 'type': 'select_file',
                 \ 'length': l:length,
                 \ })
 
