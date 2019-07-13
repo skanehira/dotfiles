@@ -12,16 +12,16 @@ repo = 'prabirshrestha/vim-lsp'
 repo = 'prabirshrestha/async.vim'
 
 # auto complete plugin
-[[plugins]]
-repo = 'prabirshrestha/asyncomplete.vim'
+#[[plugins]]
+#repo = 'prabirshrestha/asyncomplete.vim'
 
 # auto complete for lsp
-[[plugins]]
-repo = 'prabirshrestha/asyncomplete-lsp.vim'
+#[[plugins]]
+#repo = 'prabirshrestha/asyncomplete-lsp.vim'
 
 # auto complete for ultisnips
-[[plugins]]
-repo = 'prabirshrestha/asyncomplete-ultisnips.vim'
+#[[plugins]]
+#repo = 'prabirshrestha/asyncomplete-ultisnips.vim'
 
 # snippets
 [[plugins]]
@@ -226,5 +226,12 @@ repo = 'tokorom/vim-review'
 
 [[plugins]]
 repo = 'terryma/vim-multiple-cursors'
+
 [[plugins]]
 repo = 'Shougo/dein.vim'
+
+[[plugins]]
+repo = 'skanehira/docker.vim'
+
+[[plugins]]
+repo = 'LeafCage/vimhelpgenerator'
