@@ -268,7 +268,7 @@ set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal
 
 " key mappings {{{
 " *でカーソルを移動しないようにする
-noremap * *N
+"noremap * *N
 
 " ファイル保存と終了 {{{
 nnoremap <Leader>w :w<CR>
@@ -361,6 +361,12 @@ augroup END
 
 " 改行
 nnoremap g<CR> o<esc>
+
+" git status
+nnoremap <Leader>gs :Gstatus<CR>
+
+" バッファ一覧
+nnoremap <Leader>b :Buffers<CR>
 
 " コマンドラインで単語移動 {{{
 cnoremap <c-b> <S-Left>
