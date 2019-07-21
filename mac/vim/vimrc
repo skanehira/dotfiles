@@ -268,7 +268,7 @@ set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal
 
 " key mappings {{{
 " *でカーソルを移動しないようにする
-"noremap * *N
+noremap * *N
 
 " ファイル保存と終了 {{{
 nnoremap <Leader>w :w<CR>
