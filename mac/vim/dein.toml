@@ -168,8 +168,13 @@ repo = 'thinca/vim-showtime'
 [[plugins]]
 repo = 'thinca/vim-quickrun'
 
+# color scheme
 [[plugins]]
 repo = 'cocopon/iceberg.vim'
+
+# color scheme
+[[plugins]]
+repo = 'whatyouhide/vim-gotham'
 
 #[[plugins]]
 #repo = 'scrooloose/nerdcommenter'
