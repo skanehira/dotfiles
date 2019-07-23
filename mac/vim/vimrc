@@ -223,7 +223,7 @@ function! Format() abort
     call setpos('.', pos)
 endfunction
 
-augroup format 
+augroup format
     autocmd!
     autocmd BufWritePre *.js call Format()
     autocmd BufWritePre *.vim call Format()
@@ -251,6 +251,10 @@ function! SourceDir(...) abort
     if isdirectory(l:path . '/autoload')
         exe 'runtime autoload/*.vim'
     endif
+
+    if isdirectory(l:path . '/syntax')
+        exe 'runtime syntax/*.vim'
+    endif
 endfunction
 " }}}
 
@@ -261,9 +265,13 @@ set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
 "hi SpecialKey ctermbg=None ctermfg=Yellow
 " }}}
 
-" {{{	行末のホワイトスペースをハイライトする
-"hi whitespace ctermbg=red ctermfg=red
-"match whitespace /\s\+$/
+" {{{	行末のホワイトスペース削除
+autocmd BufWritePre * :silent %s/\s\+$//ge
+augroup HighlightTrailingSpaces
+  autocmd!
+  autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
+  autocmd VimEnter,WinEnter * match TrailingSpaces /\s\+$/
+augroup END
 " }}}
 
 " swapファイルを作成しない
