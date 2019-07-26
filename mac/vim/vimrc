@@ -408,8 +408,14 @@ let g:go_metalinter_autosave = 1
 " linter実行時、go vetのみを実行する
 let g:go_metalinter_autosave_enabled = ['vet']
 
+"
+let g:go_metalinter_command = "golangci-lint"
+
 " vim-lspをしようするので、vim-goの`Ctrl+]`を無効にする
 "let g:go_def_mapping_enabled = 0
+
+" GoDocでポップアップウィンドウを使用する
+let go_doc_popup_window = 1
 
 " GoRunやGoTest時の画面分割方法変更
 let g:go_term_mode = 'split'
@@ -622,8 +628,8 @@ let g:user_emmet_settings = {
 
 augroup emmet
     autocmd!
-    au FileType * EmmetInstall
-    au FileType * imap <C-f> <C-y>,
+    au FileType vue,html,js EmmetInstall
+    au FileType vue,html,js imap <C-f> <C-y>,
 augroup END
 " }}}
 

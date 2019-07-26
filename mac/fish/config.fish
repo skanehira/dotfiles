@@ -1,7 +1,7 @@
 # env
 set -x GOPATH $HOME/dev/go
 set -x GOBIN $GOPATH/bin
-set -x PATH $PATH $GOBIN $HOME/.cargo/bin /usr/local/bin /Users/skanehira/Library/Python/2.7/bin
+set -x PATH $PATH $GOBIN $HOME/.cargo/bin /usr/local/bin $HOME/.config/composer/vendor/bin
 set -x XDG_CONFIG_HOME $HOME/.config
 set -x PATH "/usr/local/opt/llvm/bin" $PATH
 set -x LANG "ja_JP.UTF-8"
