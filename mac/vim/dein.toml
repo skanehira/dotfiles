@@ -240,3 +240,10 @@ repo = 'skanehira/docker.vim'
 
 [[plugins]]
 repo = 'LeafCage/vimhelpgenerator'
+
+[[plugins]]
+repo = 'kana/vim-operator-user'
+
+[[plugins]]
+repo = 'kshenoy/vim-signature'
+
