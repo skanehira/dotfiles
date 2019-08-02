@@ -377,19 +377,15 @@ nnoremap <silent> <Leader>l :bo term ++close gol -f<CR>
 " visual paste
 vnoremap <silent> <C-p> "0p<CR>
 
-" ターミナルを開く
-noremap <C-s>\ :vert term<CR>
-noremap <C-s>- :bo term<CR>
-tnoremap <C-s>\ <C-w>:vert term<CR>
-tnoremap <C-s>- <C-w>:bo term<CR>
-
-" ターミナルノーマルモード
+" ターミナル関連
+noremap <silent> <C-s>\ :vert term<CR>
+noremap <silent> <C-s>- :bo term<CR>
+tnoremap <silent> <C-s>\ <C-w>:silent vert term<CR>
+tnoremap <silent> <C-s>- <C-w>:silent bo term<CR>
 tnoremap <C-w>n <C-w>N
-
-" ターミナルでウィンドウリサイズ
-tnoremap <C-w>e <C-w>:WinResizerStartResize<CR>
-
+tnoremap <C-w><C-e> <C-w>:WinResizerStartResize<CR>
 tnoremap <C-w>cd <C-w>:Repo<CR>
+tnoremap <C-g> <C-w>.
 
 " 上下の空白に移動
 nnoremap <C-j> }
