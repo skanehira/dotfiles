@@ -377,15 +377,38 @@ nnoremap <silent> <Leader>l :bo term ++close gol -f<CR>
 " visual paste
 vnoremap <silent> <C-p> "0p<CR>
 
-" ターミナル関連
-noremap <silent> <C-s>\ :vert term<CR>
-noremap <silent> <C-s>- :bo term<CR>
-tnoremap <silent> <C-s>\ <C-w>:silent vert term<CR>
-tnoremap <silent> <C-s>- <C-w>:silent bo term<CR>
+" ターミナル関連 {{{
+" ターミナルを開く
+function! s:open_terminal(...) abort
+	let open_type = 'bo'
+	if a:0 !=# 0
+		let open_type = a:1
+	endif
+	exe printf("%s term", open_type)
+	exe 'call term_setrestore("%", printf("++close bash -c \"cd %s & bash\"", getcwd()))'
+endfunction
+
+command! -nargs=? OpenTerminal call s:open_terminal(<f-args>)
+
+" ターミナルを開く
+noremap <silent> <C-s>\ :OpenTerminal vert<CR>
+noremap <silent> <C-s>- :OpenTerminal<CR>
+tnoremap <silent> <C-s>\ <C-w>:OpenTerminal vert<CR>
+tnoremap <silent> <C-s>- <C-w>:OpenTerminal<CR>
+
+" ターミナルノーマルモード
 tnoremap <C-w>n <C-w>N
+
+" ウィンドウリサイズ開始
 tnoremap <C-w><C-e> <C-w>:WinResizerStartResize<CR>
+
+" リポジトリ移動
 tnoremap <C-w>cd <C-w>:Repo<CR>
+
+" 単語削除
 tnoremap <C-g> <C-w>.
+
+" }}}
 
 " 上下の空白に移動
 nnoremap <C-j> }
@@ -737,13 +760,13 @@ command! Repo call s:repo('+m',function('s:cd_repo'))
 function! s:open_tabs(shell, repo) abort
 	exe printf('tabnew | lcd %s/%s', trim(system('ghq root')), a:repo)
 	exe printf('bo term ++rows=20 ++close %s', a:shell)
-	exe 'call term_setrestore("%", printf("++close fish -c \"cd %s & fish\"", getcwd()))'
+	exe 'call term_setrestore("%", printf("++close bash -c \"cd %s & bash\"", getcwd()))'
 	exe 'wincmd k'
 	exe 'Files'
 endfunction
 
 " fzf.vimのcallbackでは&shellがshになってしまうので、現在実行しているshellを渡す
-command! NewTab :call s:repo('-m', function('s:open_tabs', [&shell]))
+command! NewTab call s:repo('-m', function('s:open_tabs', [&shell]))
 
 " }}}
 
