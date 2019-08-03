@@ -361,8 +361,8 @@ map H ^
 map L $
 
 " タブ切り替え
-nnoremap <C-l> gt
-nnoremap <C-h> gT
+nnoremap <C-s>n gt
+nnoremap <C-s>p gT
 
 " visual時に選択行を移動
 vnoremap <C-j> :m '>+1<CR>gv
@@ -378,26 +378,50 @@ nnoremap <silent> <Leader>l :bo term ++close gol -f<CR>
 vnoremap <silent> <C-p> "0p<CR>
 
 " ターミナル関連 {{{
+
 " ターミナルを開く
+" a:1 new or vnew or tabnew(default is new)
+" a:2 path (default is current)
+" a:3 shell (default is &shell)
 function! s:open_terminal(...) abort
-	let open_type = 'bo'
-	if a:0 !=# 0
+	let open_type = 'new'
+	let shell = &shell
+	let path = getcwd()
+
+	if a:0 > 0 && a:0 !=# ''
 		let open_type = a:1
 	endif
-	exe printf("%s term", open_type)
-	exe 'call term_setrestore("%", printf("++close bash -c \"cd %s & bash\"", getcwd()))'
+	if a:0 > 1 && a:2 !=# ''
+		let path = a:2
+	endif
+	if a:0 > 2 && a:3 !=# ''
+		let shell = a:3
+	endif
+	if open_type ==# 'new'
+		let open_type = 'bo ' .. open_type
+	endif
+
+	exe printf('%s | lcd %s', open_type, path)
+	exe printf('term ++curwin ++close %s', shell)
+	exe 'call term_setrestore("%", printf("++close bash -c \"cd %s && bash\"", getcwd()))'
 endfunction
 
-command! -nargs=? OpenTerminal call s:open_terminal(<f-args>)
+command! -nargs=* OpenTerminal call s:open_terminal(<f-args>)
 
 " ターミナルを開く
-noremap <silent> <C-s>\ :OpenTerminal vert<CR>
+noremap <silent> <C-s>\ :OpenTerminal vnew<CR>
 noremap <silent> <C-s>- :OpenTerminal<CR>
-tnoremap <silent> <C-s>\ <C-w>:OpenTerminal vert<CR>
+noremap <silent> <C-s>^ :OpenTerminal tabnew<CR>
+tnoremap <silent> <C-s>\ <C-w>:OpenTerminal vnew<CR>
 tnoremap <silent> <C-s>- <C-w>:OpenTerminal<CR>
+tnoremap <silent> <C-s>^ <C-w>:OpenTerminal tabnew<CR>
 
 " ターミナルノーマルモード
 tnoremap <C-w>n <C-w>N
+
+" ターミナルでウィンドウ移動
+tnoremap <C-s>p <C-w>:tabprevious<CR>
+tnoremap <C-s>n <C-w>:tabnext<CR>
 
 " ウィンドウリサイズ開始
 tnoremap <C-w><C-e> <C-w>:WinResizerStartResize<CR>
@@ -735,8 +759,10 @@ let g:memolist_fzf = 1
 " {{{ 自作関数
 
 " {{{ リポジトリに移動
-function! s:cd_repo(repo) abort
+function! s:cd_repo(shell, repo) abort
 	exe 'lcd' trim(system('ghq root')) .. '/' .. a:repo
+	call s:open_terminal('new', '', a:shell)
+	exe 'wincmd k'
 	pwd
 endfunction
 
@@ -753,16 +779,15 @@ function! s:repo(multi, cb) abort
 	endif
 endfunction
 
-command! Repo call s:repo('+m',function('s:cd_repo'))
+command! Repo call s:repo('+m', function('s:cd_repo', [&shell]))
 " }}}
 
 " 新しいタブを開く {{{
 function! s:open_tabs(shell, repo) abort
 	exe printf('tabnew | lcd %s/%s', trim(system('ghq root')), a:repo)
 	exe printf('bo term ++rows=20 ++close %s', a:shell)
-	exe 'call term_setrestore("%", printf("++close bash -c \"cd %s & bash\"", getcwd()))'
+	exe 'call term_setrestore("%", printf("++close bash -c \"cd %s && bash\"", getcwd()))'
 	exe 'wincmd k'
-	exe 'Files'
 endfunction
 
 " fzf.vimのcallbackでは&shellがshになってしまうので、現在実行しているshellを渡す
