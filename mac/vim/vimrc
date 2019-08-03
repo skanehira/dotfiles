@@ -731,14 +731,15 @@ function! s:repo(multi, cb) abort
 endfunction
 
 command! Repo call s:repo('+m',function('s:cd_repo'))
-nnoremap <Leader>cd :Repo<CR>
 " }}}
 
 " 新しいタブを開く {{{
 function! s:open_tabs(shell, repo) abort
 	exe printf('tabnew | lcd %s/%s', trim(system('ghq root')), a:repo)
 	exe printf('bo term ++rows=20 ++close %s', a:shell)
+	exe 'call term_setrestore("%", printf("++close fish -c \"cd %s & fish\"", getcwd()))'
 	exe 'wincmd k'
+	exe 'Files'
 endfunction
 
 " fzf.vimのcallbackでは&shellがshになってしまうので、現在実行しているshellを渡す
