@@ -229,8 +229,8 @@ repo = 'mattn/gist-vim'
 [[plugins]]
 repo = 'tokorom/vim-review'
 
-[[plugins]]
-repo = 'terryma/vim-multiple-cursors'
+#[[plugins]]
+#repo = 'terryma/vim-multiple-cursors'
 
 [[plugins]]
 repo = 'Shougo/dein.vim'
@@ -247,3 +247,8 @@ repo = 'kana/vim-operator-user'
 [[plugins]]
 repo = 'kshenoy/vim-signature'
 
+[[plugins]]
+repo = 'shinespark/vim-list2tree'
+
+[[plugins]]
+repo = 'segeljakt/vim-silicon'
