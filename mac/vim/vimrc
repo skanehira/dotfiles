@@ -534,8 +534,8 @@ augroup END
 "let g:lsp_async_completion = 1
 
 " lsp log
-let g:lsp_log_verbose = 0
-let g:lsp_log_file = expand('~/vim-lsp.log')
+"let g:lsp_log_verbose = 0
+"let g:lsp_log_file = expand('~/vim-lsp.log')
 
 " enable signs
 "let g:lsp_signs_error = {'text': '✗'}
@@ -643,7 +643,7 @@ nmap <Leader>{ ysiw}
 " }}}
 
 " ultisnips settings {{{
-"let g:UltiSnipsExpandTrigger="<tab>"
+"let g:UltiSnipsExpandTrigger="<C-f>"
 "let g:UltiSnipsJumpForwardTrigger="<tab>"
 "let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 
@@ -732,7 +732,7 @@ highlight default link GitGutterChangeDelete NONE
 
 " nerd commenter {{{
 " コメントの後にスペースを装入
-let g:NERDSpaceDelims=1
+let g:NERDSpaceDelims = 1
 " }}}
 
 " calendar.vim {{{
@@ -754,6 +754,30 @@ let g:vimhelpgenerator_defaultlanguage = 'en'
 
 " {{{ MemoList
 let g:memolist_fzf = 1
+" }}}
+
+" silicon {{{
+if executable('silicon')
+	let g:silicon = {
+				\ 'theme':             'DarkNeon',
+				\ 'font':                  'Hack',
+				\ 'background':         '#aaaaff',
+				\ 'shadow-color':       '#555555',
+				\ 'line-pad':                   2,
+				\ 'pad-horiz':                 80,
+				\ 'pad-vert':                 100,
+				\ 'shadow-blur-radius':         0,
+				\ 'shadow-offset-x':            0,
+				\ 'shadow-offset-y':            0,
+				\ 'line-number':           v:true,
+				\ 'round-corner':          v:true,
+				\ 'window-controls':       v:true,
+				\ }
+endif
+" }}}
+
+" vsession {{{
+let g:vsession_use_fzf = 1
 " }}}
 
 " {{{ 自作関数
@@ -822,6 +846,11 @@ endfunction
 
 function! s:win_list() abort
     let l:win_info = s:get_win_info()
+	if empty(l:win_info)
+		call s:echo_err('cannot find windows')
+		return
+	endif
+
     let l:view_content = []
     let l:min_width = 40
 
@@ -843,6 +872,16 @@ endfunction
 
 command! Windows call s:win_list()
 " }}}
+
+" {{{ エラーメッセージ出力
+function! s:echo_err(message) abort
+	echohl ErrorMsg
+	redraw
+	echo a:message
+	echohl None
+endfunction
+" }}}
+
 " }}}
 
 " }}}
