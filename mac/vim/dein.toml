@@ -57,8 +57,8 @@ repo = 'junegunn/fzf.vim'
 repo = 'iamcco/markdown-preview.vim'
 
 # auto close parentheses
-[[plugins]]
-repo = 'cohama/lexima.vim'
+#[[plugins]]
+#repo = 'cohama/lexima.vim'
 
 # resize window size on vim
 [[plugins]]
@@ -252,3 +252,9 @@ repo = 'shinespark/vim-list2tree'
 
 [[plugins]]
 repo = 'segeljakt/vim-silicon'
+
+[[plugins]]
+repo = 'skanehira/badapple.vim'
+
+[[plugins]]
+repo = 'mhinz/vim-startify'
