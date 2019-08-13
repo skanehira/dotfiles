@@ -1,3 +1,10 @@
+"          __
+"  __  __ /\_\    ___ ___   _ __   ___
+" /\ \/\ \\/\ \ /' __` __`\/\`'__\/'___\
+" \ \ \_/ |\ \ \/\ \/\ \/\ \ \ \//\ \__/
+"  \ \___/  \ \_\ \_\ \_\ \_\ \_\\ \____\
+"   \/__/    \/_/\/_/\/_/\/_/\/_/ \/____/
+
 " dein.vim settings {{{
 " install dir {{{
 let s:dein_dir = expand('~/.cache/dein')
@@ -6,35 +13,35 @@ let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
 " dein installation check {{{
 if &runtimepath !~# '/dein.vim'
-    if !isdirectory(s:dein_repo_dir)
-        execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
-    endif
-    execute 'set runtimepath^=' . s:dein_repo_dir
+	if !isdirectory(s:dein_repo_dir)
+		execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+	endif
+	execute 'set runtimepath^=' . s:dein_repo_dir
 endif
 " }}}
 
 " begin settings {{{
 if dein#load_state(s:dein_dir)
-    call dein#begin(s:dein_dir)
+	call dein#begin(s:dein_dir)
 
-    " .toml file
-    let s:rc_dir = expand('~/.vim')
-    let s:toml = s:rc_dir . '/dein.toml'
-    let s:lazy_toml = s:rc_dir . '/dein_lazy.toml'
+	" .toml file
+	let s:rc_dir = expand('~/.vim')
+	let s:toml = s:rc_dir . '/dein.toml'
+	let s:lazy_toml = s:rc_dir . '/dein_lazy.toml'
 
-    " read toml and cache
-    call dein#load_toml(s:toml, {'lazy': 0})
-    call dein#load_toml(s:lazy_toml, {'lazy': 1})
+	" read toml and cache
+	call dein#load_toml(s:toml, {'lazy': 0})
+	call dein#load_toml(s:lazy_toml, {'lazy': 1})
 
-    " end settings
-    call dein#end()
-    call dein#save_state()
+	" end settings
+	call dein#end()
+	call dein#save_state()
 endif
 " }}}
 
 " plugin installation check {{{
 if dein#check_install()
-    call dein#install()
+	call dein#install()
 endif
 " }}}
 
@@ -166,11 +173,11 @@ let g:netrw_preview=1
 
 " 拡張子ごとのインデントを指定する {{{
 augroup fileTypeIndent
-    autocmd!
-    au BufRead,BufNewFile *.php setlocal tabstop=4 softtabstop=4 shiftwidth=4
-    au BufRead,BufNewFile *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
-    au BufRead,BufNewFile *.js   setlocal tabstop=4 softtabstop=4 shiftwidth=4
-    au BufRead,BufNewFile *.vue  setlocal tabstop=4 softtabstop=4 shiftwidth=4
+	autocmd!
+	au BufRead,BufNewFile *.php setlocal tabstop=4 softtabstop=4 shiftwidth=4
+	au BufRead,BufNewFile *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
+	au BufRead,BufNewFile *.js   setlocal tabstop=4 softtabstop=4 shiftwidth=4
+	au BufRead,BufNewFile *.vue  setlocal tabstop=4 softtabstop=4 shiftwidth=4
 augroup END
 " }}}
 
@@ -182,25 +189,25 @@ set wildmode=full
 
 " grepした結果をquickfixに表示する {{{
 augroup grepwindow
-    autocmd!
-    au QuickFixCmdPost *grep* cwindow
+	autocmd!
+	au QuickFixCmdPost *grep* cwindow
 augroup END
 " }}}
 
 " カーソルラインの位置を保存する {{{
 augroup cursorlineRestore
-    autocmd!
-    autocmd BufReadPost *
-                \ if line("'\"") > 0 && line ("'\"") <= line("$") |
-                \   exe "normal! g'\"" |
-                \ endif
+	autocmd!
+	autocmd BufReadPost *
+				\ if line("'\"") > 0 && line ("'\"") <= line("$") |
+				\   exe "normal! g'\"" |
+				\ endif
 augroup END
 " }}}
 
 " undoの保存先 {{{
 if has('persistent_undo')
-    set undodir=~/.vim/undo
-    set undofile
+	set undodir=~/.vim/undo
+	set undofile
 endif
 " }}}
 
@@ -236,37 +243,37 @@ function! JsFormat() abort
 endfunction
 
 augroup format
-    autocmd!
-    autocmd BufWritePre *.js call JsFormat()
-    autocmd BufWritePre *.vim call Format()
-    autocmd BufWritePre *.html call Format()
-    autocmd BufWritePre *.java call Format()
+	autocmd!
+	autocmd BufWritePre *.js call JsFormat()
+	autocmd BufWritePre *.vim call Format()
+	autocmd BufWritePre *.html call Format()
+	autocmd BufWritePre *.java call Format()
 augroup END
 " }}}
 
 " プラグインディレクトリ配下の.vimをすべてsourceする {{{
 function! SourceDir(...) abort
-    let l:path = getcwd()
-    if a:0 > 1
-        let l:path = a:1
-    endif
+	let l:path = getcwd()
+	if a:0 > 1
+		let l:path = a:1
+	endif
 
-    if !isdirectory(l:path)
-        return
-    endif
+	if !isdirectory(l:path)
+		return
+	endif
 
-    exe 'set rtp^=' . l:path
-    if isdirectory(l:path . '/plugin')
-        exe 'runtime plugin/*.vim'
-    endif
+	exe 'set rtp^=' . l:path
+	if isdirectory(l:path . '/plugin')
+		exe 'runtime plugin/*.vim'
+	endif
 
-    if isdirectory(l:path . '/autoload')
-        exe 'runtime autoload/*.vim'
-    endif
+	if isdirectory(l:path . '/autoload')
+		exe 'runtime autoload/*.vim'
+	endif
 
-    if isdirectory(l:path . '/syntax')
-        exe 'runtime syntax/*.vim'
-    endif
+	if isdirectory(l:path . '/syntax')
+		exe 'runtime syntax/*.vim'
+	endif
 endfunction
 " }}}
 
@@ -280,9 +287,9 @@ set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
 " {{{ 行末のホワイトスペース削除
 autocmd BufWritePre * :silent %s/\s\+$//ge
 augroup HighlightTrailingSpaces
-  autocmd!
-  autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
-  autocmd VimEnter,WinEnter * match TrailingSpaces /\s\+$/
+	autocmd!
+	autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
+	autocmd VimEnter,WinEnter * match TrailingSpaces /\s\+$/
 augroup END
 " }}}
 
@@ -290,7 +297,9 @@ augroup END
 set noswapfile
 
 " セッションで保存する対象を設定する
-set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal
+if !has('nvim')
+	set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal
+endif
 
 " ウィンドウサイズ自動調整を無効化
 set noequalalways
@@ -398,7 +407,7 @@ function! s:open_terminal(...) abort
 		let shell = a:3
 	endif
 	if open_type ==# 'new'
-		let open_type = 'bo ' .. open_type
+		let open_type = open_type
 	endif
 
 	exe printf('%s | lcd %s', open_type, path)
@@ -415,6 +424,8 @@ noremap <silent> <C-s>^ :OpenTerminal tabnew<CR>
 tnoremap <silent> <C-s>\ <C-w>:OpenTerminal vnew<CR>
 tnoremap <silent> <C-s>- <C-w>:OpenTerminal<CR>
 tnoremap <silent> <C-s>^ <C-w>:OpenTerminal tabnew<CR>
+""tnoremap <silent> <C-w> <C-w>.
+""tnoremap <silent> <C-w>. <C-w>
 
 " ターミナルノーマルモード
 tnoremap <C-w>n <C-w>N
@@ -431,7 +442,6 @@ tnoremap <C-w>cd <C-w>:Repo<CR>
 
 " 単語削除
 tnoremap <C-g> <C-w>.
-
 " }}}
 
 " 上下の空白に移動
@@ -440,8 +450,8 @@ nnoremap <C-k> {
 
 " review
 augroup review
-    au!
-    au FileType review vnoremap <silent> <Leader>hi c@<cursor>{<c-r>"}<esc>
+	au!
+	au FileType review vnoremap <silent> <Leader>hi c@<cursor>{<c-r>"}<esc>
 augroup END
 
 " 改行
@@ -453,6 +463,12 @@ nnoremap gs :Gstatus<CR>
 
 " バッファ一覧
 nnoremap gb :Buffers<CR>
+
+" ヘルプ
+augroup helpMapping
+	au!
+	au FileType help nnoremap <buffer> <silent> q :q<CR>
+augroup END
 
 " コマンドラインで単語移動 {{{
 cnoremap <c-b> <S-Left>
@@ -472,14 +488,14 @@ let g:go_metalinter_autosave = 1
 " linter実行時、go vetのみを実行する
 let g:go_metalinter_autosave_enabled = ['vet']
 
-"
+" golangci-lintを使う
 let g:go_metalinter_command = "golangci-lint"
 
 " vim-lspをしようするので、vim-goの`Ctrl+]`を無効にする
 "let g:go_def_mapping_enabled = 0
 
 " GoDocでポップアップウィンドウを使用する
-" let go_doc_popup_window = 1
+let g:go_doc_popup_window = 1
 
 " GoRunやGoTest時の画面分割方法変更
 let g:go_term_mode = 'split'
@@ -490,32 +506,36 @@ let g:go_template_autocreate = 0
 " すでに開いているバッファに定義ジャンプする
 let g:go_def_reuse_buffer = 1
 
+" goplsで定義ジャンプ
 let g:go_def_mode = 'gopls'
+
+let g:go_fold_enable = ['block', 'import', 'varconst', 'package_comment']
 
 " key mapping
 augroup goMapping
-    autocmd!
-    au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
-    au FileType go nnoremap <silent> <Leader>r <Plug>(go-run)
-    au FileType go nnoremap <silent> <Leader>t <Plug>(go-test)
-    au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
-    au FileType go nnoremap <silent> <Leader>at :GoAddTags<CR>
-    au FileType go nnoremap <silent> <Leader>rt :GoRemoveTags<CR>
-    au FileType go nnoremap <silent> <Leader>fs :GoFillStruct<CR>
-    au FileType go nnoremap <silent> <Leader>ki :GoKeyify<CR>
-    au FileType go nnoremap <silent> <Leader>dd :GoDeclsDir<CR>
-    au FileType go nnoremap <silent> <Leader>dl :GoDecls<CR>
-    au FileType go nnoremap <silent> <Leader>ip :GoImpl<CR>
-    au FileType go nnoremap <silent> <Leader>rn :GoRename<CR>
-    au FileType go nnoremap <silent> <F12> :GoDebugStart<CR>
-    au FileType go nnoremap <silent> <F12><F12> :GoDebugStop<CR>
+	autocmd!
+	au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
+	au FileType go nnoremap <silent> <Leader>r <Plug>(go-run)
+	au FileType go nnoremap <silent> <Leader>t <Plug>(go-test)
+	au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
+	au FileType go nnoremap <silent> <Leader>at :GoAddTags<CR>
+	au FileType go nnoremap <silent> <Leader>rt :GoRemoveTags<CR>
+	au FileType go nnoremap <silent> <Leader>fs :GoFillStruct<CR>
+	au FileType go nnoremap <silent> <Leader>ki :GoKeyify<CR>
+	au FileType go nnoremap <silent> <Leader>dd :GoDeclsDir<CR>
+	au FileType go nnoremap <silent> <Leader>dl :GoDecls<CR>
+	au FileType go nnoremap <silent> <Leader>ip :GoImpl<CR>
+	au FileType go nnoremap <silent> <Leader>rn :GoRename<CR>
+	au FileType go nnoremap <silent> <F12> :GoDebugStart<CR>
+	au FileType go nnoremap <silent> <F12><F12> :GoDebugStop<CR>
+	au FileType go set foldmethod=syntax
 augroup END
 " }}}
 
 " fzf settings {{{
 " ファイル一覧を出すときにプレビュー表示
 command! -bang -nargs=? -complete=dir Files
-            \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
+			\ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
 nnoremap <C-P> :Files<CR>
 " }}}
 
@@ -525,9 +545,9 @@ nnoremap <silent> <Leader>rf :LspReferences<CR>
 nnoremap <silent> <Leader>im :LspImplementation<CR>
 
 augroup LspMapping
-    autocmd!
-    au FileType php nnoremap <C-]> :LspDefinition<CR>
-    au FileType c nnoremap <C-]> :LspDefinition<CR>
+	autocmd!
+	au FileType php nnoremap <C-]> :LspDefinition<CR>
+	au FileType c nnoremap <C-]> :LspDefinition<CR>
 augroup END
 
 " 非同期補完を有効にする
@@ -558,65 +578,65 @@ augroup END
 
 " PHP {{{
 augroup LspPHP
-    au!
-    au User lsp_setup call lsp#register_server({
-                \ 'name': 'php-language-server',
-                \ 'cmd': {server_info->['php', expand('~/.cache/dein/repos/github.com/felixfbecker/php-language-server/bin/php-language-server.php')]},
-                \ 'whitelist': ['php'],
-                \ })
+	au!
+	au User lsp_setup call lsp#register_server({
+				\ 'name': 'php-language-server',
+				\ 'cmd': {server_info->['php', expand('~/.cache/dein/repos/github.com/felixfbecker/php-language-server/bin/php-language-server.php')]},
+				\ 'whitelist': ['php'],
+				\ })
 augroup END
 " }}}
 
 " JavaScript {{{
 augroup LspJavaScript
-    au!
-    if executable('flow-language-server')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'flow-language-server',
-                    \ 'cmd': {server_info->[&shell, &shellcmdflag, 'flow-language-server --stdio']},
-                    \ 'root_uri':{server_info->lsp#utils#path_to_uri(lsp#utils#find_nearest_parent_file_directory(lsp#utils#get_buffer_path(), '.flowconfig'))},
-                    \ 'whitelist': ['javascript', 'javascript.jsx'],
-                    \ })
-    endif
+	au!
+	if executable('flow-language-server')
+		au User lsp_setup call lsp#register_server({
+					\ 'name': 'flow-language-server',
+					\ 'cmd': {server_info->[&shell, &shellcmdflag, 'flow-language-server --stdio']},
+					\ 'root_uri':{server_info->lsp#utils#path_to_uri(lsp#utils#find_nearest_parent_file_directory(lsp#utils#get_buffer_path(), '.flowconfig'))},
+					\ 'whitelist': ['javascript', 'javascript.jsx'],
+					\ })
+	endif
 augroup END
 " }}}
 
 " Docker {{{
 augroup LspDocker
-    au!
-    if executable('docker-langserver')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'docker-langserver',
-                    \ 'cmd': {server_info->[&shell, &shellcmdflag, 'docker-langserver --stdio']},
-                    \ 'whitelist': ['dockerfile'],
-                    \ })
-    endif
+	au!
+	if executable('docker-langserver')
+		au User lsp_setup call lsp#register_server({
+					\ 'name': 'docker-langserver',
+					\ 'cmd': {server_info->[&shell, &shellcmdflag, 'docker-langserver --stdio']},
+					\ 'whitelist': ['dockerfile'],
+					\ })
+	endif
 augroup END
 " }}}
 
 " CSS {{{
 augroup LspCSS
-    au!
-    if executable('css-languageserver')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'css-languageserver',
-                    \ 'cmd': {server_info->[&shell, &shellcmdflag, 'css-languageserver --stdio']},
-                    \ 'whitelist': ['css', 'less', 'sass'],
-                    \ })
-    endif
+	au!
+	if executable('css-languageserver')
+		au User lsp_setup call lsp#register_server({
+					\ 'name': 'css-languageserver',
+					\ 'cmd': {server_info->[&shell, &shellcmdflag, 'css-languageserver --stdio']},
+					\ 'whitelist': ['css', 'less', 'sass'],
+					\ })
+	endif
 augroup END
 " }}}
 
 " clang {{{
 augroup LspClangd
-    if executable('clangd')
-        au!
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'clangd',
-                    \ 'cmd': {server_info->['clangd', '-background-index']},
-                    \ 'whitelist': ['c', 'cpp', 'objc', 'objcpp'],
-                    \ })
-    endif
+	if executable('clangd')
+		au!
+		au User lsp_setup call lsp#register_server({
+					\ 'name': 'clangd',
+					\ 'cmd': {server_info->['clangd', '-background-index']},
+					\ 'whitelist': ['c', 'cpp', 'objc', 'objcpp'],
+					\ })
+	endif
 augroup END
 " }}}
 
@@ -660,47 +680,47 @@ nmap <Leader>{ ysiw}
 " profiling {{{
 " vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
 function! ProfileCursorMove() abort
-    let profile_file = expand('./vim-profile.log')
-    if filereadable(profile_file)
-        call delete(profile_file)
-    endif
+	let profile_file = expand('./vim-profile.log')
+	if filereadable(profile_file)
+		call delete(profile_file)
+	endif
 
-    normal! ggzR
+	normal! ggzR
 
-    execute 'profile start ' . profile_file
-    profile func *
-    profile file *
+	execute 'profile start ' . profile_file
+	profile func *
+	profile file *
 
-    augroup ProfileCursorMove
-        autocmd!
-        autocmd CursorHold <buffer> profile pause | q
-    augroup END
+	augroup ProfileCursorMove
+		autocmd!
+		autocmd CursorHold <buffer> profile pause | q
+	augroup END
 
-    for i in range(1000)
-        call feedkeys('j')
-    endfor
+	for i in range(1000)
+		call feedkeys('j')
+	endfor
 endfunction
 " }}}
 
 " emment {{{
 let g:user_emmet_install_global = 0
 let g:user_emmet_settings = {
-            \ 'variables': {
-            \   'lang' : 'ja'
-            \ }
-            \}
+			\ 'variables': {
+			\   'lang' : 'ja'
+			\ }
+			\}
 
 augroup emmet
-    autocmd!
-    au FileType vue,html,js EmmetInstall
-    au FileType vue,html,js imap <C-f> <C-y>,
+	autocmd!
+	au FileType vue,html,js EmmetInstall
+	au FileType vue,html,js imap <C-f> <C-y>,
 augroup END
 " }}}
 
 " lightline {{{
 set laststatus=2
 if !has('gui_running')
-    set t_Co=256
+	set t_Co=256
 endif
 " }}}
 
@@ -717,8 +737,8 @@ endif
 " https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
 " vueファイルのシンタックスが効かなくなる問題対応
 augroup VueSyntax
-    autocmd!
-    au FileType vue syntax sync fromstart
+	autocmd!
+	au FileType vue syntax sync fromstart
 augroup END
 " }}}
 
@@ -747,7 +767,7 @@ let g:sonictemplate_license = 'MIT'
 
 " vimhelpgenarator {{{
 let g:vimhelpgenerator_version = 'Version : 0.0.1'
-let g:vimhelpgenerator_author = 'Author  : skanehira'
+let g:vimhelpgenerator_author = 'Author  : skanehira <sho19921005@gmai.com>'
 let g:vimhelpgenerator_uri = 'https://github.com/skanehira/'
 let g:vimhelpgenerator_defaultlanguage = 'en'
 " }}}
@@ -780,13 +800,42 @@ endif
 let g:vsession_use_fzf = 1
 " }}}
 
+" {{{ vim-startify
+let g:startify_bookmarks = ["~/.vimrc", "~/.vim/dein.toml"]
+let g:startify_list_order = [
+			\ ['セッション:'],
+			\ 'sessions',
+			\ ['ブックマーク:'],
+			\ 'bookmarks',
+			\ ]
+
+let g:startify_session_dir = expand('~/.vim/sessions/')
+let g:startify_custom_header = ['']
+"let g:startify_custom_header = [
+"			\ '                                   8z####88                    8eeeeeeeee8',
+"			\ '                        8ee888eez####88    88                8e88888888888e8                                                                     eee eee',
+"			\ '                     8e8888  z#####8   88z###z8            8e8888       8888e8                                                                   888 888',
+"			\ '                   8e888eeez###8    8#####z88            8e8888   eeeee   8888e8                                                       eee',
+"			\ '                  8e  z8   88ee8 ######z8              8e8888 8888888888888 8888e8             eee eee         88888888888888888       888888888888888',
+"			\ '                88z####88ee8  888e#8   <8               888 888888888888888888888              888 888         88888888888888888       888888888888888',
+"			\ '              z#####8   z##88e8  888e   8e                  888            888        88888888e8               888           888      e888         888',
+"			\ '           z####8  8 z###888  888   8   88e                 888888888888888888        8888888888e8             888           888     e888          888',
+"			\ '        z###8  8z####:8888 88e 88        88e8               888            888        888     8888e8           888           888                   888',
+"			\ '     z###8 8z####88 88888 88 8888;         88888eee8        888888888888888888                  8888e8         888           888                   888',
+"			\ '  z##88z#####88        8888   88888         88;  :88        888     8888e8 8e8                    8888e8       888           888                 88888',
+"			\ ' 8  z###88                      8888e8      88   88         888       8888888                       8888e8     88888888888888888               8e8888',
+"			\ '   88                              888ee8 8888  888        e888eeeee     8888eeee                     88888    88888888888888888            8ee8888',
+"			\ '                                       88888e  888         8888888T8       888888                       8                                    888',
+"			\ '                                           88888',
+"			\ ]
+
+" }}}
+
 " {{{ 自作関数
 
 " {{{ リポジトリに移動
 function! s:cd_repo(shell, repo) abort
 	exe 'lcd' trim(system('ghq root')) .. '/' .. a:repo
-	call s:open_terminal('new', '', a:shell)
-	exe 'wincmd k'
 	pwd
 endfunction
 
@@ -809,9 +858,6 @@ command! Repo call s:repo('+m', function('s:cd_repo', [&shell]))
 " 新しいタブを開く {{{
 function! s:open_tabs(shell, repo) abort
 	exe printf('tabnew | lcd %s/%s', trim(system('ghq root')), a:repo)
-	exe printf('bo term ++rows=20 ++close %s', a:shell)
-	exe 'call term_setrestore("%", printf("++close bash -c \"cd %s && bash\"", getcwd()))'
-	exe 'wincmd k'
 endfunction
 
 " fzf.vimのcallbackでは&shellがshになってしまうので、現在実行しているshellを渡す
@@ -821,53 +867,53 @@ command! NewTab call s:repo('-m', function('s:open_tabs', [&shell]))
 
 " {{{ ウィンドウ一覧
 function! s:get_win_info() abort
-    let l:win_info_list = []
-    for win in getwininfo()
+	let l:win_info_list = []
+	for win in getwininfo()
 		if !has_key(win.variables, "netrw_prvfile")
 			continue
 		endif
-        let l:tmp_file = split(win.variables.netrw_prvfile, '/')
-        if empty(tmp_file)
-            let l:file = '[No Name]'
-        else
-            let l:file = l:tmp_file[len(tmp_file)-1:][0]
-        endif
-        call add(l:win_info_list, {'winid':win.winid, 'file': l:file})
-    endfor
-    return l:win_info_list
+		let l:tmp_file = split(win.variables.netrw_prvfile, '/')
+		if empty(tmp_file)
+			let l:file = '[No Name]'
+		else
+			let l:file = l:tmp_file[len(tmp_file)-1:][0]
+		endif
+		call add(l:win_info_list, {'winid':win.winid, 'file': l:file})
+	endfor
+	return l:win_info_list
 endfunction
 
 function! s:goto_window(ctx, id, idx) abort
-    if a:idx ==# -1
-        return
-    endif
-    call win_gotoid(a:ctx[a:idx-1].winid)
+	if a:idx ==# -1
+		return
+	endif
+	call win_gotoid(a:ctx[a:idx-1].winid)
 endfunction
 
 function! s:win_list() abort
-    let l:win_info = s:get_win_info()
+	let l:win_info = s:get_win_info()
 	if empty(l:win_info)
 		call s:echo_err('cannot find windows')
 		return
 	endif
 
-    let l:view_content = []
-    let l:min_width = 40
+	let l:view_content = []
+	let l:min_width = 40
 
-    for win in l:win_info
-        call add(l:view_content, win.winid . "\t" . win.file)
-        if len(win.file) > l:min_width
-            let l:min_width = len(win.file)
-        endif
-    endfor
-    call popup_menu(l:view_content, {
-                \ 'border': [],
-                \ 'borderchars': ['-','|','-','|','+','+','+','+'],
-                \ 'padding': [0,0,0,0],
-                \ 'filter': 'popup_filter_menu',
-                \ 'callback': function('s:goto_window', [l:win_info]),
-                \ 'minwidth': l:min_width,
-                \ })
+	for win in l:win_info
+		call add(l:view_content, win.winid . "\t" . win.file)
+		if len(win.file) > l:min_width
+			let l:min_width = len(win.file)
+		endif
+	endfor
+	call popup_menu(l:view_content, {
+				\ 'border': [],
+				\ 'borderchars': ['-','|','-','|','+','+','+','+'],
+				\ 'padding': [0,0,0,0],
+				\ 'filter': 'popup_filter_menu',
+				\ 'callback': function('s:goto_window', [l:win_info]),
+				\ 'minwidth': l:min_width,
+				\ })
 endfunction
 
 command! Windows call s:win_list()
@@ -882,6 +928,206 @@ function! s:echo_err(message) abort
 endfunction
 " }}}
 
+" {{{ ファイル検索（ポップアップウィンドウ）
+if !exists('g:loaded_select')
+	let g:loaded_select = 1
+	call prop_type_add('file_select', {'highlight': 'PmenuSel'})
+endif
+
+function! s:get_files(path) abort
+	let l:entries = []
+
+	for l:entry in readdir(a:path)
+		if l:entry[0] ==# '.'
+			continue
+		endif
+		let l:path_entry = a:path . '/' . l:entry
+		if isdirectory(l:path_entry)
+			let l:entries += s:get_files(l:path_entry)
+		else
+			if l:path_entry[0] ==# '.'
+				let l:path_entry = l:path_entry[2:]
+			endif
+			cal add(l:entries, l:path_entry)
+		endif
+	endfor
+	return l:entries
+endfunction
+
+function! s:highlight(ctx) abort
+	let l:buf = winbufnr(a:ctx.id)
+	let l:length = len(a:ctx.files[a:ctx.select])
+	let l:lnum_end = len(a:ctx.files)
+	let l:lnum = a:ctx.select - a:ctx.offset + 1
+	if a:ctx.search_mode ==# 1 && !empty(a:ctx.filter_files)
+		let l:length = len(a:ctx.filter_files[a:ctx.select])
+		let l:lnum_end = len(a:ctx.filter_files)
+	endif
+
+	call prop_clear(1, l:lnum_end, {
+				\ 'bufnr': l:buf,
+				\ })
+
+	call prop_add(l:lnum, 1, {
+				\ 'bufnr': l:buf,
+				\ 'type': 'file_select',
+				\ 'length': l:length,
+				\ })
+
+	call win_execute(a:ctx.id, 'redraw')
+endfunction
+
+function! s:update_files(ctx) abort
+	let l:files = copy(a:ctx.files)
+	if a:ctx.search_mode
+		let l:tmp = []
+		for file in l:files
+			if file =~? a:ctx.word[1:]
+				call add(l:tmp, file)
+			endif
+		endfor
+		let l:files = l:tmp
+		let a:ctx.filter_files = l:tmp
+	endif
+	echo a:ctx.word
+	call popup_settext(a:ctx.id, l:files[a:ctx.offset:])
+	call s:highlight(a:ctx)
+	redraw
+endfunction
+
+function! s:popup_filter(ctx, id, key) abort
+	let l:buf = winbufnr(a:id)
+	let l:file = a:ctx.files[a:ctx.select]
+
+	if a:ctx.search_mode ==# 0
+		if a:key ==# 'q' || a:key ==# 'x'
+			call popup_close(a:id)
+			return 1
+		elseif a:key ==# '/'
+			let a:ctx.search_mode = 1
+			let a:ctx.word .= a:key
+		elseif a:key ==# "\n" || a:key ==# "\r"
+			return s:open_file(a:id, 'e', l:file)
+		elseif a:key ==# ""
+			return s:open_file(a:id, 'new', l:file)
+		elseif a:key ==# ""
+			return s:open_file(a:id, 'vnew', l:file)
+		elseif a:key ==# ""
+			return s:open_file(a:id, 'tabnew' , l:file)
+		elseif a:key ==# 'j'
+			let a:ctx.select += a:ctx.select ==# len(a:ctx.files)-1 ? 0 : 1
+			if a:ctx.select >= a:ctx.offset + a:ctx.maxheight
+				let a:ctx.offset = a:ctx.select - (a:ctx.maxheight - 1)
+			endif
+		elseif a:key ==# 'k'
+			let a:ctx.select -= a:ctx.select ==# 0 ? 0 : 1
+			if a:ctx.select < a:ctx.offset
+				let a:ctx.offset = a:ctx.select
+			endif
+		elseif a:key ==# '0'
+			let a:ctx.select = 0
+			let a:ctx.offset = 0
+		elseif a:key ==# 'G'
+			let a:ctx.select = len(a:ctx.files)-1
+			let a:ctx.offset = len(a:ctx.files) - (a:ctx.maxheight)
+		endif
+	else
+		" 検索モードの場合
+		if !empty(a:ctx.filter_files)
+			let l:file = a:ctx.filter_files[a:ctx.select]
+		else
+			let l:file = ''
+		endif
+		if a:key ==# "\<bs>" || a:key ==# "\b"
+			if strlen(a:ctx.word) == 1
+				let a:ctx.word = ''
+				let a:ctx.search_mode = 0
+			else
+				let a:ctx.word = a:ctx.word[:len(a:ctx.word)-2]
+			endif
+		elseif a:key ==# '}'
+			let a:ctx.select += a:ctx.select ==# len(a:ctx.filter_files)-1 ? 0 : 1
+			if a:ctx.select >= a:ctx.offset + a:ctx.maxheight
+				let a:ctx.offset = a:ctx.select - (a:ctx.maxheight - 1)
+			endif
+		elseif a:key ==# '{'
+			let a:ctx.select -= a:ctx.select ==# 0 ? 0 : 1
+			if a:ctx.select < a:ctx.offset
+				let a:ctx.offset = a:ctx.select
+			endif
+		elseif a:key ==# "\n" || a:key ==# "\r"
+			return s:open_file(a:id, 'e', l:file)
+		elseif a:key ==# ""
+			return s:open_file(a:id, 'new', l:file)
+		elseif a:key ==# ""
+			return s:open_file(a:id, 'vnew', l:file)
+		elseif a:key ==# ""
+			return s:open_file(a:id, 'tabnew' , l:file)
+		elseif a:key !=# "\<CursorHold>"
+			let a:ctx.select = 0
+			let a:ctx.offset = 0
+			let a:ctx.word .= a:key
+		endif
+	endif
+
+	if a:key !=# "\<CursorHold>"
+		call s:update_files(a:ctx)
+	endif
+	return 1
+endfunction
+
+function! s:open_file(id, key, file) abort
+	if empty(a:file)
+		return 1
+	endif
+	call popup_close(a:id)
+	exe a:key a:file
+	return 1
+endfunction
+
+function! s:popup_files(...) abort
+	let l:path = '.'
+	if a:0 > 0
+		let l:path = a:1
+	endif
+
+	let l:files = s:get_files(l:path)
+	if empty(l:files)
+		echo 'not any files'
+		return
+	endif
+
+	let l:ctx = { 'select': 0,
+				\ 'files': l:files,
+				\ 'offset': 0,
+				\ 'maxheight': 15,
+				\ 'word' : '',
+				\ 'search_mode': 0,
+				\ 'filter_files': [],
+				\ }
+
+	let l:maxwidth = 0
+	for file in l:ctx.files
+		let length = len(file)
+		if length > l:maxwidth
+			let l:maxwidth = length
+		endif
+	endfor
+
+	let l:ctx.id = popup_create(l:ctx.files, {
+				\ 'filter': function('s:popup_filter', [l:ctx]),
+				\ 'borderchars': ['-','|','-','|','+','+','+','+'],
+				\ 'border': [],
+				\ 'maxheight': l:ctx.maxheight,
+				\ 'minwidth': l:maxwidth,
+				\ 'padding': [0,0,0,0],
+				\ 'mapping': 0,
+				\ })
+
+	call s:highlight(l:ctx)
+endfunction
+
+command! -nargs=? PopupFiles call s:popup_files(<f-args>)
 " }}}
 
 " }}}
