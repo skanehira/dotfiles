@@ -242,12 +242,23 @@ function! JsFormat() abort
 	endif
 endfunction
 
+function! JsonFormat() abort
+	if executable('jq')
+		let pos = getcurpos()
+		exe "%!jq --tab"
+		call setpos('.', pos)
+	else
+		echo "jq doesn't install, please refference the https://stedolan.github.io/jq/"
+	endif
+endfunction
+
 augroup format
 	autocmd!
 	autocmd BufWritePre *.js call JsFormat()
 	autocmd BufWritePre *.vim call Format()
 	autocmd BufWritePre *.html call Format()
 	autocmd BufWritePre *.java call Format()
+	autocmd BufWritePre *.json call JsonFormat()
 augroup END
 " }}}
 
@@ -724,15 +735,6 @@ if !has('gui_running')
 endif
 " }}}
 
-" ale {{{
-"let g:ale_sign_error = 'xx'
-"let g:ale_sign_warning = '!!'
-"let g:ale_echo_msg_error_str = 'E'
-"let g:ale_echo_msg_warning_str = 'W'
-"let g:ale_echo_msg_format = '[%linter%] %s [%severity%]'
-"let g:ale_set_highlights = 0
-" }}}
-
 " vim-vue {{{
 " https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
 " vueファイルのシンタックスが効かなくなる問題対応
@@ -744,10 +746,10 @@ augroup END
 
 " gitgutter {{{
 " ハイライトを無効にする
-highlight default link GitGutterAdd          NONE
-highlight default link GitGutterChange       NONE
-highlight default link GitGutterDelete       NONE
-highlight default link GitGutterChangeDelete NONE
+"highlight default link GitGutterAdd          NONE
+"highlight default link GitGutterChange       NONE
+"highlight default link GitGutterDelete       NONE
+"highlight default link GitGutterChangeDelete NONE
 " }}}
 
 " nerd commenter {{{
@@ -798,37 +800,6 @@ endif
 
 " vsession {{{
 let g:vsession_use_fzf = 1
-" }}}
-
-" {{{ vim-startify
-let g:startify_bookmarks = ["~/.vimrc", "~/.vim/dein.toml"]
-let g:startify_list_order = [
-			\ ['セッション:'],
-			\ 'sessions',
-			\ ['ブックマーク:'],
-			\ 'bookmarks',
-			\ ]
-
-let g:startify_session_dir = expand('~/.vim/sessions/')
-let g:startify_custom_header = ['']
-"let g:startify_custom_header = [
-"			\ '                                   8z####88                    8eeeeeeeee8',
-"			\ '                        8ee888eez####88    88                8e88888888888e8                                                                     eee eee',
-"			\ '                     8e8888  z#####8   88z###z8            8e8888       8888e8                                                                   888 888',
-"			\ '                   8e888eeez###8    8#####z88            8e8888   eeeee   8888e8                                                       eee',
-"			\ '                  8e  z8   88ee8 ######z8              8e8888 8888888888888 8888e8             eee eee         88888888888888888       888888888888888',
-"			\ '                88z####88ee8  888e#8   <8               888 888888888888888888888              888 888         88888888888888888       888888888888888',
-"			\ '              z#####8   z##88e8  888e   8e                  888            888        88888888e8               888           888      e888         888',
-"			\ '           z####8  8 z###888  888   8   88e                 888888888888888888        8888888888e8             888           888     e888          888',
-"			\ '        z###8  8z####:8888 88e 88        88e8               888            888        888     8888e8           888           888                   888',
-"			\ '     z###8 8z####88 88888 88 8888;         88888eee8        888888888888888888                  8888e8         888           888                   888',
-"			\ '  z##88z#####88        8888   88888         88;  :88        888     8888e8 8e8                    8888e8       888           888                 88888',
-"			\ ' 8  z###88                      8888e8      88   88         888       8888888                       8888e8     88888888888888888               8e8888',
-"			\ '   88                              888ee8 8888  888        e888eeeee     8888eeee                     88888    88888888888888888            8ee8888',
-"			\ '                                       88888e  888         8888888T8       888888                       8                                    888',
-"			\ '                                           88888',
-"			\ ]
-
 " }}}
 
 " {{{ 自作関数
@@ -1128,6 +1099,20 @@ function! s:popup_files(...) abort
 endfunction
 
 command! -nargs=? PopupFiles call s:popup_files(<f-args>)
+
+" }}}
+
+" {{{ ディレクトリ自動生成
+augroup vimrc-auto-mkdir
+  autocmd!
+  autocmd BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'), v:cmdbang)
+  function! s:auto_mkdir(dir, force)
+    if !isdirectory(a:dir) && (a:force ||
+    \    input(printf('"%s" does not exist. Create? [y/N]', a:dir)) =~? '^y\%[es]$')
+      call mkdir(iconv(a:dir, &encoding, &termencoding), 'p')
+    endif
+  endfunction
+augroup END
 " }}}
 
 " }}}
