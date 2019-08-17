@@ -58,9 +58,7 @@ endif
 " general settings {{{
 
 " ミュート {{{
-set t_vb=
-set visualbell
-set noerrorbells
+set belloff=all
 " }}}
 
 " 文字コード {{{
@@ -296,9 +294,9 @@ set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
 " }}}
 
 " {{{ 行末のホワイトスペース削除
-autocmd BufWritePre * :silent %s/\s\+$//ge
 augroup HighlightTrailingSpaces
 	autocmd!
+	autocmd BufWritePre * :silent keeppatterns %s/\s\+$//ge
 	autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
 	autocmd VimEnter,WinEnter * match TrailingSpaces /\s\+$/
 augroup END
@@ -557,8 +555,8 @@ nnoremap <silent> <Leader>im :LspImplementation<CR>
 
 augroup LspMapping
 	autocmd!
-	au FileType php nnoremap <C-]> :LspDefinition<CR>
-	au FileType c nnoremap <C-]> :LspDefinition<CR>
+	au FileType php nnoremap <buffer> <C-]> :LspDefinition<CR>
+	au FileType c nnoremap <buffer> <C-]> :LspDefinition<CR>
 augroup END
 
 " 非同期補完を有効にする
