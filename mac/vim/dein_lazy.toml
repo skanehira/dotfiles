@@ -1,8 +1,1 @@
-[[plugins]]
-repo = 'rhysd/reply.vim'
-on_cmd = ['Repl', 'ReplAuto']
 
-[[plugins]]
-repo = 'rhysd/git-messenger.vim'
-on_cmd = ['GitMessenger']
-on_map = ['<Plug>(git-messenger-']

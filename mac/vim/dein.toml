@@ -1,6 +1,10 @@
 # Go
+#[[plugins]]
+#repo = 'fatih/vim-go'
+#on_ft = 'go'
+
 [[plugins]]
-repo = 'fatih/vim-go'
+repo = 'skanehira/vim-go'
 on_ft = 'go'
 
 # language server protocol
@@ -36,13 +40,13 @@ repo = 'honza/vim-snippets'
 repo = 'godlygeek/tabular'
 
 # surroundings quotes, tags, and more.
-[[plugins]]
-repo = 'tpope/vim-surround'
+#[[plugins]]
+#repo = 'tpope/vim-surround'
 
 # for repeat surroundings
-[[plugins]]
-repo = 'tpope/vim-repeat'
-on_idle = 1
+#[[plugins]]
+#repo = 'tpope/vim-repeat'
+#on_idle = 1
 
 # fuzzy finder
 [[plugins]]
@@ -184,8 +188,8 @@ repo = 'whatyouhide/vim-gotham'
 repo = 'vim-jp/vimdoc-ja'
 
 # undo tree
-[[plugins]]
-repo = 'mbbill/undotree'
+#[[plugins]]
+#repo = 'mbbill/undotree'
 
 # translate language
 [[plugins]]
@@ -199,8 +203,8 @@ repo = 'skanehira/translate.vim'
 repo = 'itchyny/calendar.vim'
 
 # blade.php syntax highlight
-[[plugins]]
-repo = 'jwalton512/vim-blade'
+#[[plugins]]
+#repo = 'jwalton512/vim-blade'
 
 #[[plugins]]
 #repo = 'rbtnn/vim-popup_signature'
@@ -241,20 +245,25 @@ repo = 'skanehira/docker.vim'
 [[plugins]]
 repo = 'LeafCage/vimhelpgenerator'
 
-[[plugins]]
-repo = 'kana/vim-operator-user'
+#[[plugins]]
+#repo = 'kana/vim-operator-user'
 
 [[plugins]]
 repo = 'kshenoy/vim-signature'
 
-[[plugins]]
-repo = 'shinespark/vim-list2tree'
+#[[plugins]]
+#repo = 'shinespark/vim-list2tree'
 
 [[plugins]]
 repo = 'segeljakt/vim-silicon'
 
-[[plugins]]
-repo = 'skanehira/badapple.vim'
+#[[plugins]]
+#repo = 'skanehira/badapple.vim'
+
+#[[plugins]]
+#repo = 'mhinz/vim-startify'
 
 [[plugins]]
-repo = 'mhinz/vim-startify'
+repo = 'rhysd/reply.vim'
+on_cmd = ['Repl', 'ReplAuto']
+
