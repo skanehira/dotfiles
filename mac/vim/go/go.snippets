@@ -37,3 +37,8 @@ defer file.Close()
 
 fmt.Fprintln(file, "${4:Hello World}")
 endsnippet
+
+# log
+snippet logf "log.printf"
+log.Printf("%#v", ${1:})
+endsnippet
