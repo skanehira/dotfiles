@@ -61,8 +61,8 @@ repo = 'junegunn/fzf.vim'
 repo = 'iamcco/markdown-preview.vim'
 
 # auto close parentheses
-#[[plugins]]
-#repo = 'cohama/lexima.vim'
+[[plugins]]
+repo = 'cohama/lexima.vim'
 
 # resize window size on vim
 [[plugins]]

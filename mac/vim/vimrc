@@ -5,6 +5,10 @@
 "  \ \___/  \ \_\ \_\ \_\ \_\ \_\\ \____\
 "   \/__/    \/_/\/_/\/_/\/_/\/_/ \/____/
 
+" vimrcでマルチバイト文字を使用しているため設定 {{{
+scriptencoding utf-8
+" }}}
+
 " dein.vim settings {{{
 " install dir {{{
 let s:dein_dir = expand('~/.cache/dein')
@@ -67,10 +71,6 @@ set fileencodings=utf-8,iso-2022-jp,euc-jp,sjis
 set fileformats=unix,dos,mac
 " }}}
 
-" vim scriptでマルチバイト文字を使用しているため設定 {{{
-scriptencoding utf-8
-" }}}
-
 " https://vim-jp.org/vimdoc-ja/map.html#mapleader
 " Leaderキーをスペースに設定 {{{
 let g:mapleader = "\<Space>"
@@ -96,6 +96,11 @@ set backspace=2
 
 " 改行時自動インデント {{{
 set smartindent
+set autoindent
+" }}}
+
+" 自動インデントの空白の数
+set shiftwidth=4
 " }}}
 
 " 行番号を表示 {{{
@@ -109,7 +114,6 @@ set relativenumber
 " https://vim-jp.org/vimdoc-ja/options.html#'tabstop'
 " タブでも常に空白を挿入 {{{
 set tabstop=4
-set shiftwidth=4
 "set expandtab
 " }}}
 
@@ -144,7 +148,7 @@ set scrolloff=100
 " }}}
 
 " スワップファイルに書き込まれる時間(ミリ秒単位) {{{
-set updatetime=450
+"set updatetime=450
 " }}}
 
 " マクロで効果発揮 {{{
@@ -182,7 +186,6 @@ augroup END
 " https://vim-jp.org/vimdoc-ja/options.html#'wildmode'
 " wildmenuを有効にする {{{
 set wildmenu
-set wildmode=full
 " }}}
 
 " grepした結果をquickfixに表示する {{{
@@ -222,41 +225,58 @@ set helplang=ja
 " }}}
 
 " ファイル保存時に整形する {{{
+" key is file type, value is command args
+let s:format_targets = {
+			\ 'javascript': 'js',
+			\ 'html': 'html',
+			\ 'css': 'css',
+			\ 'json': '--tab',
+			\ 'vue': '',
+			\ 'vim': '',
+			\ 'java': '',
+			\ }
+
+" format function
 function! Format() abort
+	" if format target is not exsist, nothing to do
+	if !has_key(s:format_targets, &ft)
+		return
+	endif
+
+	let args = s:format_targets[&ft]
 	let pos = getcurpos()
-	execute 'normal 1G=G'
+
+	" use js-beautify to format js, html, css
+	if &ft is# 'javascript' || &ft is# 'html' || &ft is# 'css'
+		if executable('js-beautify')
+			" --type [js|css|html] default is js
+			" -t indent with tabs
+			exe "%!js-beautify --type " .. args
+		else
+			call s:echo_err("js-beautify doesn't installed, please refference the https://github.com/beautify-web/js-beautify")
+		endif
+	elseif &ft is# 'json'
+		if executable('jq')
+			exe "%!jq " .. args
+		else
+			call s:echo_err("jq doesn't installed, please refference the https://stedolan.github.io/jq/")
+		endif
+	elseif &ft is# 'vue'
+		if executable('vue-formatter')
+			exe "%!vue-formatter"
+		else
+			call s:echo_err("vue-formatter doesn't installed, please refference the https://github.com/MaraniMatias/vue-formatter")
+		endif
+	else
+		execute 'normal 1G=G'
+	endif
+
 	call setpos('.', pos)
-endfunction
-
-function! JsFormat() abort
-	if executable('js-beautify')
-		" --type [js|css|html] default is js
-		" -t indent with tabs
-		let pos = getcurpos()
-		exe "%!js-beautify --type js -t"
-		call setpos('.', pos)
-	else
-		echo "js-beautify doesn't install, please refference the https://github.com/beautify-web/js-beautify"
-	endif
-endfunction
-
-function! JsonFormat() abort
-	if executable('jq')
-		let pos = getcurpos()
-		exe "%!jq --tab"
-		call setpos('.', pos)
-	else
-		echo "jq doesn't install, please refference the https://stedolan.github.io/jq/"
-	endif
 endfunction
 
 augroup format
 	autocmd!
-	autocmd BufWritePre *.js call JsFormat()
-	autocmd BufWritePre *.vim call Format()
-	autocmd BufWritePre *.html call Format()
-	autocmd BufWritePre *.java call Format()
-	autocmd BufWritePre *.json call JsonFormat()
+	autocmd BufWritePre * call Format()
 augroup END
 " }}}
 
@@ -315,7 +335,6 @@ set noequalalways
 
 " タブを常に表示
 set showtabline=2
-
 " }}}
 
 " key mappings {{{
@@ -476,7 +495,7 @@ nnoremap gb :Buffers<CR>
 " ヘルプ
 augroup helpMapping
 	au!
-	au FileType help nnoremap <buffer> <silent> q :q<CR>
+	au FileType help nnoremap <buffer> <silent>q :bw!<CR>
 augroup END
 
 " コマンドラインで単語移動 {{{
@@ -800,6 +819,15 @@ endif
 let g:vsession_use_fzf = 1
 " }}}
 
+" {{{ lexima
+let g:lexima_enable_basic_rules = 1
+" }}}
+
+" {{{ docker.vim
+let g:docker_terminal_open = 'tab'
+" }}}
+
+
 " {{{ 自作関数
 
 " {{{ リポジトリに移動
@@ -898,7 +926,7 @@ endfunction
 " }}}
 
 " {{{ ファイル検索（ポップアップウィンドウ）
-if !exists('g:loaded_select')
+if !exists('g:loaded_select') && !has('nvim')
 	let g:loaded_select = 1
 	call prop_type_add('file_select', {'highlight': 'PmenuSel'})
 endif
@@ -1102,14 +1130,14 @@ command! -nargs=? PopupFiles call s:popup_files(<f-args>)
 
 " {{{ ディレクトリ自動生成
 augroup vimrc-auto-mkdir
-  autocmd!
-  autocmd BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'), v:cmdbang)
-  function! s:auto_mkdir(dir, force)
-    if !isdirectory(a:dir) && (a:force ||
-    \    input(printf('"%s" does not exist. Create? [y/N]', a:dir)) =~? '^y\%[es]$')
-      call mkdir(iconv(a:dir, &encoding, &termencoding), 'p')
-    endif
-  endfunction
+	autocmd!
+	autocmd BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'), v:cmdbang)
+	function! s:auto_mkdir(dir, force)
+		if !isdirectory(a:dir) && (a:force ||
+					\    input(printf('"%s" does not exist. Create? [y/N]', a:dir)) =~? '^y\%[es]$')
+			call mkdir(iconv(a:dir, &encoding, &termencoding), 'p')
+		endif
+	endfunction
 augroup END
 " }}}
 
