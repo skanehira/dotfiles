@@ -304,6 +304,8 @@ function! SourceDir(...) abort
 		exe 'runtime syntax/*.vim'
 	endif
 endfunction
+
+command! -nargs=* Source call SourceDir(<f-args>)
 " }}}
 
 " listの設定 {{{
@@ -1125,8 +1127,43 @@ function! s:popup_files(...) abort
 endfunction
 
 command! -nargs=? PopupFiles call s:popup_files(<f-args>)
-
 " }}}
+
+" {{ gitコマンド関連
+function! s:git_log(...) abort
+	let open_type = 'tab'
+	if a:0 isnot# 0
+		let open_type = a:1
+	endif
+	exec open_type .. ' term ++close git log'
+endfunction
+
+function! s:git_exec(...) abort
+	if a:0 is# 0
+		call s:echo_err('no git sub command')
+		return
+	endif
+
+	exec 'tab term git ' .. a:1
+	nnoremap <buffer> <silent> q :bw!<CR>
+
+	" TODO create popup window
+
+	" TODO start job
+endfunction
+
+function! s:git_push() abort
+	call s:git_exec('push')
+endfunction
+
+function! s:git_pull() abort
+	call s:git_exec('pull')
+endfunction
+
+command! Gitpush call s:git_push()
+command! Gitpull call s:git_pull()
+command! -nargs=? Gitlog call s:git_log(<f-args>)
+" }}
 
 " {{{ ディレクトリ自動生成
 augroup vimrc-auto-mkdir
