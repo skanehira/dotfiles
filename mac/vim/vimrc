@@ -337,6 +337,9 @@ set noequalalways
 
 " タブを常に表示
 set showtabline=2
+
+" 外部でファイルの変更があった場合、自動的に読み直す
+set autoread
 " }}}
 
 " key mappings {{{
@@ -829,7 +832,6 @@ let g:lexima_enable_basic_rules = 1
 let g:docker_terminal_open = 'tab'
 " }}}
 
-
 " {{{ 自作関数
 
 " {{{ リポジトリに移動
@@ -1129,41 +1131,91 @@ endfunction
 command! -nargs=? PopupFiles call s:popup_files(<f-args>)
 " }}}
 
-" {{ gitコマンド関連
-function! s:git_log(...) abort
-	let open_type = 'tab'
-	if a:0 isnot# 0
-		let open_type = a:1
+" {{{ gitコマンド関連
+" options:
+" {
+"	cmd: 'diff'
+"	args: [
+"		'HEAD^',
+"	],
+"	auto_close: 0,	" 1: true, 0: false
+"	window_way: 'bo',	" tab, bo, vert, term, etc...
+"	mode: 'term', " term, popup, fzf
+"	focus: 1008, " window id
+" }
+function! s:git_exec(opt) abort
+	let cmd = 'git ' .. a:opt.cmd
+	if has_key(a:opt, 'args') && !empty(a:opt.args)
+		let cmd = cmd .. ' ' .. join(a:opt.args, ' ')
 	endif
-	exec open_type .. ' term ++close git log'
-endfunction
+	let current_winid = win_getid()
 
-function! s:git_exec(...) abort
-	if a:0 is# 0
-		call s:echo_err('no git sub command')
-		return
+	if a:opt.mode is# 'term'
+		if has_key(a:opt, 'auto_close') && a:opt.auto_close is# 1
+			let cmd = a:opt.window_way .. ' term ++close ' .. cmd
+		else
+			let cmd = a:opt.window_way .. ' term ' .. cmd
+		endif
+		exec cmd
+		nnoremap <buffer> <silent> q :bw!<CR>
+	elseif a:opt.mode is# 'pop'
+		" TODO use popup window
+	elseif a:opt.mode is# 'fzf'
+		" TODO use fzf
 	endif
 
-	exec 'tab term git ' .. a:1
-	nnoremap <buffer> <silent> q :bw!<CR>
-
-	" TODO create popup window
-
-	" TODO start job
+	call win_gotoid(current_winid)
 endfunction
 
-function! s:git_push() abort
-	call s:git_exec('push')
+function! s:git_log() abort
+	" use fish command
+	tab term ++close fish -c "gitlog"
 endfunction
 
-function! s:git_pull() abort
-	call s:git_exec('pull')
+function! s:git_push(...) abort
+	let opt = {
+				\ 'cmd': 'push',
+				\ 'args': a:000,
+				\ 'auto_close': 0,
+				\ 'window_way': 'top',
+				\ 'mode': 'term',
+				\ }
+
+	call s:git_exec(opt)
 endfunction
 
-command! Gitpush call s:git_push()
-command! Gitpull call s:git_pull()
-command! -nargs=? Gitlog call s:git_log(<f-args>)
-" }}
+function! s:git_pull(...) abort
+	let opt = {
+				\ 'cmd': 'pull',
+				\ 'args': a:000,
+				\ 'auto_close': 0,
+				\ 'window_way': 'top',
+				\ 'mode': 'term',
+				\ }
+
+	call s:git_exec(opt)
+endfunction
+
+function! s:git_checkout(...) abort
+	" use fish function
+	term ++close fish -c "checkout"
+	"let opt = {
+	"			\ 'cmd': 'checkout',
+	"			\ 'args': a:000,
+	"			\ 'auto_close': 0,
+	"			\ 'window_way': 'tab',
+	"			\ 'mode': 'term',
+	"			\ }
+	"call s:git_exec(opt)
+endfunction
+
+command! -nargs=* Gitpush call s:git_push(<f-args>)
+command! -nargs=* Gitpull call s:git_pull()
+command! -nargs=* Gitblame call s:git_blame()
+command! -nargs=* GitCheckout call s:git_checkout(<f-args>)
+command! Gitlog call s:git_log()
+command! Lazygit :vert term ++close lazygit
+" }}}
 
 " {{{ ディレクトリ自動生成
 augroup vimrc-auto-mkdir
