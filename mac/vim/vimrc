@@ -1142,15 +1142,16 @@ command! -nargs=? PopupFiles call s:popup_files(<f-args>)
 "	window_way: 'bo',	" tab, bo, vert, term, etc...
 "	mode: 'term', " term, popup, fzf
 "	focus: 1008, " window id
+"	source: [], " fzf source
+"	cb: functionm "fzf callback
 " }
 function! s:git_exec(opt) abort
-	let cmd = 'git ' .. a:opt.cmd
-	if has_key(a:opt, 'args') && !empty(a:opt.args)
-		let cmd = cmd .. ' ' .. join(a:opt.args, ' ')
-	endif
 	let current_winid = win_getid()
-
 	if a:opt.mode is# 'term'
+		let cmd = 'git ' .. a:opt.cmd
+		if has_key(a:opt, 'args') && !empty(a:opt.args)
+			let cmd = cmd .. ' ' .. join(a:opt.args, ' ')
+		endif
 		if has_key(a:opt, 'auto_close') && a:opt.auto_close is# 1
 			let cmd = a:opt.window_way .. ' term ++close ' .. cmd
 		else
@@ -1161,7 +1162,15 @@ function! s:git_exec(opt) abort
 	elseif a:opt.mode is# 'pop'
 		" TODO use popup window
 	elseif a:opt.mode is# 'fzf'
-		" TODO use fzf
+		if exists('*fzf#run()') && executable('fzf')
+			call fzf#run({
+						\ 'source': a:opt.source,
+						\ 'sink': a:opt.cb,
+						\ 'down': '40%'},
+						\ )
+		endif
+	else
+		call s:echo_err("doesn't installed fzf.vim(require fzf)")
 	endif
 
 	call win_gotoid(current_winid)
@@ -1196,17 +1205,24 @@ function! s:git_pull(...) abort
 	call s:git_exec(opt)
 endfunction
 
+function! s:git_checkout_cb(repo) abort
+	call system('git checkout' .. a:repo)
+endfunction
+
 function! s:git_checkout(...) abort
-	" use fish function
-	term ++close fish -c "checkout"
-	"let opt = {
-	"			\ 'cmd': 'checkout',
-	"			\ 'args': a:000,
-	"			\ 'auto_close': 0,
-	"			\ 'window_way': 'tab',
-	"			\ 'mode': 'term',
-	"			\ }
-	"call s:git_exec(opt)
+	let source = filter(systemlist('git branch'), 'v:val[0] isnot# "*"')
+	if empty(source)
+		call s:echo_err("no other branch")
+		return
+	endif
+
+	let opt = {
+				\ 'source': source,
+				\ 'mode': 'fzf',
+				\ 'cb': function('s:git_checkout_cb'),
+				\ }
+
+	call s:git_exec(opt)
 endfunction
 
 command! -nargs=* Gitpush call s:git_push(<f-args>)
@@ -1214,7 +1230,10 @@ command! -nargs=* Gitpull call s:git_pull()
 command! -nargs=* Gitblame call s:git_blame()
 command! -nargs=* GitCheckout call s:git_checkout(<f-args>)
 command! Gitlog call s:git_log()
-command! Lazygit :vert term ++close lazygit
+command! Lazygit :tab term ++close lazygit
+
+nnoremap <silent> gl :Lazygit<CR>
+nnoremap <silent> gc :GitCheckout<CR>
 " }}}
 
 " {{{ ディレクトリ自動生成
