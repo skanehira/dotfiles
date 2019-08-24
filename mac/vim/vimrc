@@ -30,6 +30,9 @@ if dein#load_state(s:dein_dir)
 
 	" .toml file
 	let s:rc_dir = expand('~/.vim')
+	if !isdirectory(s:rc_dir)
+		call mkdir(s:rc_dir, 'p')
+	endif
 	let s:toml = s:rc_dir . '/dein.toml'
 	let s:lazy_toml = s:rc_dir . '/dein_lazy.toml'
 
@@ -104,12 +107,18 @@ set shiftwidth=4
 " }}}
 
 " 行番号を表示 {{{
-set number
+"set number
 " }}}
 
 " カーソルから相対的な行数を表示する {{{
-set relativenumber
+"set relativenumber
 " }}}
+
+"augroup numberToggle
+"	au!
+"	au InsertEnter * set relativenumber! | set number!
+"	au InsertLeave * set relativenumber | set number
+"augroup END
 
 " https://vim-jp.org/vimdoc-ja/options.html#'tabstop'
 " タブでも常に空白を挿入 {{{
@@ -161,7 +170,7 @@ set synmaxcol=256
 " }}}
 
 " カーソルラインを表示する {{{
-set cursorline
+"set cursorline
 " }}}
 
 " https://vim-jp.org/vimdoc-ja/pi_netrw.html#g:netrw_liststyle
@@ -199,7 +208,7 @@ augroup END
 augroup cursorlineRestore
 	autocmd!
 	autocmd BufReadPost *
-				\ if line("'\"") > 0 && line ("'\"") <= line("$") |
+				\ if line("'\"") > 0 && line("'\"") <= line("$") |
 				\   exe "normal! g'\"" |
 				\ endif
 augroup END
@@ -207,7 +216,8 @@ augroup END
 
 " undoの保存先 {{{
 if has('persistent_undo')
-	set undodir=~/.vim/undo
+	let undo_path = expand('~/.vim/undo')
+	exe 'set undodir=' .. undo_path
 	set undofile
 endif
 " }}}
@@ -457,8 +467,6 @@ noremap <silent> <C-s>^ :OpenTerminal tabnew<CR>
 tnoremap <silent> <C-s>\ <C-w>:OpenTerminal vnew<CR>
 tnoremap <silent> <C-s>- <C-w>:OpenTerminal<CR>
 tnoremap <silent> <C-s>^ <C-w>:OpenTerminal tabnew<CR>
-""tnoremap <silent> <C-w> <C-w>.
-""tnoremap <silent> <C-w>. <C-w>
 
 " ターミナルノーマルモード
 tnoremap <C-w>n <C-w>N
@@ -469,9 +477,6 @@ tnoremap <C-s>n <C-w>:tabnext<CR>
 
 " ウィンドウリサイズ開始
 tnoremap <C-w><C-e> <C-w>:WinResizerStartResize<CR>
-
-" リポジトリ移動
-tnoremap <C-w>cd <C-w>:Repo<CR>
 
 " 単語削除
 tnoremap <C-g> <C-w>.
@@ -830,6 +835,10 @@ let g:lexima_enable_basic_rules = 1
 
 " {{{ docker.vim
 let g:docker_terminal_open = 'tab'
+" }}}
+
+" {{{ markdown-preview.nvim
+let g:mkdp_auto_close = 0
 " }}}
 
 " {{{ 自作関数

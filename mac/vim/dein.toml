@@ -58,7 +58,11 @@ repo = 'junegunn/fzf.vim'
 
 # preview markdown on browser
 [[plugins]]
-repo = 'iamcco/markdown-preview.vim'
+repo = 'iamcco/markdown-preview.nvim'
+on_ft = ['markdown', 'pandoc.markdown', 'rmd']
+build = '''
+cd app & yarn install
+'''
 
 # auto close parentheses
 [[plugins]]
