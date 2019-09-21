@@ -1,11 +1,11 @@
 # Go
-#[[plugins]]
-#repo = 'fatih/vim-go'
-#on_ft = 'go'
-
 [[plugins]]
-repo = 'skanehira/vim-go'
+repo = 'fatih/vim-go'
 on_ft = 'go'
+
+#[[plugins]]
+#repo = 'skanehira/vim-go'
+#on_ft = 'go'
 
 # language server protocol
 [[plugins]]
@@ -65,8 +65,8 @@ cd app & yarn install
 '''
 
 # auto close parentheses
-[[plugins]]
-repo = 'cohama/lexima.vim'
+#[[plugins]]
+#repo = 'cohama/lexima.vim'
 
 # resize window size on vim
 [[plugins]]
@@ -245,6 +245,7 @@ repo = 'Shougo/dein.vim'
 
 [[plugins]]
 repo = 'skanehira/docker.vim'
+#rev = 'develop'
 
 [[plugins]]
 repo = 'LeafCage/vimhelpgenerator'
@@ -273,3 +274,12 @@ on_cmd = ['Repl', 'ReplAuto']
 
 [[plugins]]
 repo = 'skanehira/generatedir.vim'
+
+[[plugins]]
+repo = 'yasukotelin/shirotelin'
+
+[[plugins]]
+repo = 'pocke/keycast.vim'
+
+[[plugins]]
+repo = 'pocke/vanner'
