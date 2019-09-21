@@ -1,7 +1,7 @@
 # env
 set -x GOPATH $HOME/dev/go
 set -x GOBIN $GOPATH/bin
-set -x PATH $PATH $GOBIN $HOME/.cargo/bin /usr/local/bin $HOME/.config/composer/vendor/bin
+set -x PATH $PATH $GOBIN $HOME/.cargo/bin /usr/local/bin $HOME/.config/composer/vendor/bin /Users/skanehira/Library/Python/3.7/bin
 set -x XDG_CONFIG_HOME $HOME/.config
 set -x PATH "/usr/local/opt/llvm/bin" $PATH
 set -x LANG "ja_JP.UTF-8"
@@ -26,5 +26,5 @@ alias gl='git log'
 alias gc='git checkout .'
 alias gf='gol -f'
 alias repo='cd ( ls -ld $GOPATH/src/*/*/* | awk \'{print $9}\' | fzf )'
-alias buildvim='cd /Users/skanehira/dev/go/src/github.com/skanehira/vim/src && sudo make distclean && ./configure --enable-python3interp=yes --enable-fail-if-missing && make && sudo make install'
+alias buildvim='cd /Users/skanehira/dev/go/src/github.com/vim/vim/src && sudo make distclean && ./configure --enable-python3interp=yes --enable-fail-if-missing && make && sudo make install'
 alias vimt='vim -c ":bo term ++rows=20"'
