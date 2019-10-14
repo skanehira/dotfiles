@@ -85,6 +85,7 @@ syntax enable
 
 " カラースキームを使う {{{
 colorscheme iceberg
+"colorscheme gotham256
 " }}}
 
 " https://vim-jp.org/vimdoc-ja/filetype.html#:filetype-plugin-on
@@ -107,7 +108,7 @@ set shiftwidth=4
 " }}}
 
 " 行番号を表示 {{{
-"set number
+set number
 " }}}
 
 " カーソルから相対的な行数を表示する {{{
@@ -171,6 +172,9 @@ set synmaxcol=256
 
 " カーソルラインを表示する {{{
 "set cursorline
+if !has('nvim')
+	"set cursorlineopt=both
+endif
 " }}}
 
 " https://vim-jp.org/vimdoc-ja/pi_netrw.html#g:netrw_liststyle
@@ -223,7 +227,7 @@ endif
 " }}}
 
 " visualモードのハイライトカラー {{{
-hi Visual cterm=reverse ctermbg=NONE
+"hi Visual cterm=reverse ctermbg=NONE
 " }}}
 
 " 矩形選択時に文字の無いところまで選択範囲を広げる {{{
@@ -234,14 +238,20 @@ set virtualedit=block
 set helplang=ja
 " }}}
 
+" {{{
+set autowrite
+" }}}
+"
+"set ambiwidth=double
+
 " ファイル保存時に整形する {{{
 " key is file type, value is command args
 let s:format_targets = {
-			\ 'javascript': 'js',
-			\ 'html': 'html',
-			\ 'css': 'css',
+			\ 'javascript': '--use-tabs=true --tab-width=4 --single-quote=true %',
+			\ 'html': '--use-tabs=true --tab-width=4 --single-quote=true %',
+			\ 'css': '',
 			\ 'json': '--tab',
-			\ 'vue': '',
+			\ 'vue':  '--use-tabs=true --tab-width=4 --single-quote=true %',
 			\ 'vim': '',
 			\ 'java': '',
 			\ }
@@ -257,25 +267,19 @@ function! Format() abort
 	let pos = getcurpos()
 
 	" use js-beautify to format js, html, css
-	if &ft is# 'javascript' || &ft is# 'html' || &ft is# 'css'
-		if executable('js-beautify')
-			" --type [js|css|html] default is js
-			" -t indent with tabs
-			exe "%!js-beautify --type " .. args
+	if &ft is# 'javascript' || &ft is# 'html' || &ft is# 'vue'
+		if executable('prettier')
+			exe '%!prettier ' .. args
 		else
-			call s:echo_err("js-beautify doesn't installed, please refference the https://github.com/beautify-web/js-beautify")
+			call s:echo_err("prettier doesn't installed, please refference the https://github.com/beautify-web/js-beautify")
 		endif
+	elseif &ft is# 'css'
+		" TODO
 	elseif &ft is# 'json'
 		if executable('jq')
 			exe "%!jq " .. args
 		else
 			call s:echo_err("jq doesn't installed, please refference the https://stedolan.github.io/jq/")
-		endif
-	elseif &ft is# 'vue'
-		if executable('vue-formatter')
-			exe "%!vue-formatter"
-		else
-			call s:echo_err("vue-formatter doesn't installed, please refference the https://github.com/MaraniMatias/vue-formatter")
 		endif
 	else
 		execute 'normal 1G=G'
@@ -284,10 +288,12 @@ function! Format() abort
 	call setpos('.', pos)
 endfunction
 
-augroup format
-	autocmd!
-	autocmd BufWritePre * call Format()
-augroup END
+nnoremap <C-f> :call Format()<CR>
+
+"augroup format
+"	autocmd!
+"	autocmd BufWritePre * call Format()
+"augroup END
 " }}}
 
 " プラグインディレクトリ配下の.vimをすべてsourceする {{{
@@ -350,6 +356,10 @@ set showtabline=2
 
 " 外部でファイルの変更があった場合、自動的に読み直す
 set autoread
+augroup vimrc-misc
+	au!
+	autocmd WinEnter,FocusGained * checktime
+augroup END
 " }}}
 
 " key mappings {{{
@@ -409,16 +419,16 @@ nnoremap va{ va{
 " }}}
 
 " 行先頭と行末
-map H ^
-map L $
+noremap H ^
+noremap L $
 
 " タブ切り替え
-nnoremap <C-s>n gt
-nnoremap <C-s>p gT
+nnoremap <C-l> gt
+nnoremap <C-h> gT
 
 " visual時に選択行を移動
-vnoremap <C-j> :m '>+1<CR>gv
-vnoremap <C-k> :m '<-2<CR>gv
+"vnoremap <C-j> :m '>+1<CR>gv
+"vnoremap <C-k> :m '<-2<CR>gv
 
 " numberとrelativenumberの切り替え
 nnoremap <silent> <Leader>n :set relativenumber!<CR>
@@ -461,19 +471,19 @@ endfunction
 command! -nargs=* OpenTerminal call s:open_terminal(<f-args>)
 
 " ターミナルを開く
-noremap <silent> <C-s>\ :OpenTerminal vnew<CR>
-noremap <silent> <C-s>- :OpenTerminal<CR>
-noremap <silent> <C-s>^ :OpenTerminal tabnew<CR>
-tnoremap <silent> <C-s>\ <C-w>:OpenTerminal vnew<CR>
-tnoremap <silent> <C-s>- <C-w>:OpenTerminal<CR>
-tnoremap <silent> <C-s>^ <C-w>:OpenTerminal tabnew<CR>
+"noremap <silent> <C-s>\ :OpenTerminal vnew<CR>
+"noremap <silent> <C-s>- :OpenTerminal<CR>
+"noremap <silent> <C-s>^ :OpenTerminal tabnew<CR>
+"tnoremap <silent> <C-s>\ <C-w>:OpenTerminal vnew<CR>
+"tnoremap <silent> <C-s>- <C-w>:OpenTerminal<CR>
+"tnoremap <silent> <C-s>^ <C-w>:OpenTerminal tabnew<CR>
 
 " ターミナルノーマルモード
 tnoremap <C-w>n <C-w>N
 
 " ターミナルでウィンドウ移動
-tnoremap <C-s>p <C-w>:tabprevious<CR>
-tnoremap <C-s>n <C-w>:tabnext<CR>
+tnoremap <silent> <C-h> <C-w>:tabprevious<CR>
+tnoremap <silent> <C-l> <C-w>:tabnext<CR>
 
 " ウィンドウリサイズ開始
 tnoremap <C-w><C-e> <C-w>:WinResizerStartResize<CR>
@@ -489,7 +499,7 @@ nnoremap <C-k> {
 " review
 augroup review
 	au!
-	au FileType review vnoremap <silent> <Leader>hi c@<cursor>{<c-r>"}<esc>
+	au FileType review vnoremap <silent> <buffer> <Leader>hi c@<cursor>{<c-r>"}<esc>
 augroup END
 
 " 改行
@@ -507,6 +517,11 @@ augroup helpMapping
 	au!
 	au FileType help nnoremap <buffer> <silent>q :bw!<CR>
 augroup END
+
+" オレオレキーボード配列
+inoremap <C-j> '
+inoremap <C-k> "
+inoremap <C-l> %
 
 " コマンドラインで単語移動 {{{
 cnoremap <c-b> <S-Left>
@@ -533,7 +548,7 @@ let g:go_metalinter_command = "golangci-lint"
 "let g:go_def_mapping_enabled = 0
 
 " GoDocでポップアップウィンドウを使用する
-let g:go_doc_popup_window = 1
+"let g:go_doc_popup_window = 1
 
 " GoRunやGoTest時の画面分割方法変更
 let g:go_term_mode = 'split'
@@ -552,20 +567,6 @@ let g:go_fold_enable = ['block', 'import', 'varconst', 'package_comment']
 " key mapping
 augroup goMapping
 	autocmd!
-	au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
-	au FileType go nnoremap <silent> <Leader>r <Plug>(go-run)
-	au FileType go nnoremap <silent> <Leader>t <Plug>(go-test)
-	au FileType go nnoremap <silent> <Leader>c <Plug>(go-coverage)
-	au FileType go nnoremap <silent> <Leader>at :GoAddTags<CR>
-	au FileType go nnoremap <silent> <Leader>rt :GoRemoveTags<CR>
-	au FileType go nnoremap <silent> <Leader>fs :GoFillStruct<CR>
-	au FileType go nnoremap <silent> <Leader>ki :GoKeyify<CR>
-	au FileType go nnoremap <silent> <Leader>dd :GoDeclsDir<CR>
-	au FileType go nnoremap <silent> <Leader>dl :GoDecls<CR>
-	au FileType go nnoremap <silent> <Leader>ip :GoImpl<CR>
-	au FileType go nnoremap <silent> <Leader>rn :GoRename<CR>
-	au FileType go nnoremap <silent> <F12> :GoDebugStart<CR>
-	au FileType go nnoremap <silent> <F12><F12> :GoDebugStop<CR>
 	au FileType go set foldmethod=syntax
 augroup END
 " }}}
@@ -681,9 +682,9 @@ augroup END
 " }}}
 
 " asyncomplete settings {{{
-inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
-inoremap <expr> <C-k> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<cr>"
+"inoremap <expr> <C-j> pumvisible() ? "\<C-n>" : "\<Tab>"
+"inoremap <expr> <C-k> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+"inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<cr>"
 " }}}
 
 " vim-markdown settings {{{
@@ -751,7 +752,7 @@ let g:user_emmet_settings = {
 augroup emmet
 	autocmd!
 	au FileType vue,html,js EmmetInstall
-	au FileType vue,html,js imap <C-f> <C-y>,
+	au FileType vue,html,js imap <buffer> <C-f> <plug>(emmet-expand-abbr)
 augroup END
 " }}}
 
@@ -808,13 +809,13 @@ let g:memolist_fzf = 1
 " silicon {{{
 if executable('silicon')
 	let g:silicon = {
-				\ 'theme':             'DarkNeon',
+				\ 'theme':              'Dracula',
 				\ 'font':                  'Hack',
 				\ 'background':         '#aaaaff',
 				\ 'shadow-color':       '#555555',
 				\ 'line-pad':                   2,
-				\ 'pad-horiz':                 80,
-				\ 'pad-vert':                 100,
+				\ 'pad-horiz':                  0,
+				\ 'pad-vert':                   0,
 				\ 'shadow-blur-radius':         0,
 				\ 'shadow-offset-x':            0,
 				\ 'shadow-offset-y':            0,
@@ -834,7 +835,9 @@ let g:lexima_enable_basic_rules = 1
 " }}}
 
 " {{{ docker.vim
-let g:docker_terminal_open = 'tab'
+let g:docker_terminal_open = 'top'
+let s:docker_auth_file = expand('~/.docker/docker.vim.json')
+let g:docker_registry_auth = json_decode(join(readfile(s:docker_auth_file), "\n"))
 " }}}
 
 " {{{ markdown-preview.nvim
@@ -1162,9 +1165,9 @@ function! s:git_exec(opt) abort
 			let cmd = cmd .. ' ' .. join(a:opt.args, ' ')
 		endif
 		if has_key(a:opt, 'auto_close') && a:opt.auto_close is# 1
-			let cmd = a:opt.window_way .. ' term ++close ' .. cmd
+			let cmd = a:opt.window_way .. ' term ++rows=10 ++close ' .. cmd
 		else
-			let cmd = a:opt.window_way .. ' term ' .. cmd
+			let cmd = a:opt.window_way .. ' term ++rows=10 ' .. cmd
 		endif
 		exec cmd
 		nnoremap <buffer> <silent> q :bw!<CR>
@@ -1194,7 +1197,7 @@ function! s:git_push(...) abort
 	let opt = {
 				\ 'cmd': 'push',
 				\ 'args': a:000,
-				\ 'auto_close': 0,
+				\ 'auto_close': 1,
 				\ 'window_way': 'top',
 				\ 'mode': 'term',
 				\ }
@@ -1243,6 +1246,37 @@ command! Lazygit :tab term ++close lazygit
 
 nnoremap <silent> gl :Lazygit<CR>
 nnoremap <silent> gc :GitCheckout<CR>
+" }}}
+
+" {{{ バッファ関連
+function! s:buflist() abort
+	return filter(range(1, bufnr('$')), 'buflisted(v:val) && getbufvar(v:val, "&filetype") != "qf"')
+endfunction
+
+function! s:format_buffer(b)
+	let name = bufname(a:b)
+	let name = empty(name) ? '[No Name]' : fnamemodify(name, ":p:~:.")
+	let flag = a:b == bufnr('')  ? '%' : a:b == bufnr('#') ? '#' : ' '
+	let modified = getbufvar(a:b, '&modified') ? ' [+]' : ''
+	let readonly = getbufvar(a:b, '&modifiable') ? '' : ' [RO]'
+	let extra = join(filter([modified, readonly], '!empty(v:val)'), '')
+	return printf("[%s] %s\t%s\t%s", a:b, flag, name, extra)
+endfunction
+
+function! s:delbuf(buf) abort
+	exe 'bw!' a:buf[match(a:buf, '[')+1:match(a:buf, ']')-1]
+endfunction
+
+function! s:delbuflist() abort
+	call fzf#run({
+				\ 'source': map(copy(s:buflist()), 's:format_buffer(v:val)'),
+				\ 'sink': function('s:delbuf'),
+				\ 'options': "-m",
+				\ 'down': '40%'},
+				\ )
+endfunction
+
+command! DelBuf call s:delbuflist()
 " }}}
 
 " {{{ ディレクトリ自動生成

@@ -65,8 +65,8 @@ cd app & yarn install
 '''
 
 # auto close parentheses
-#[[plugins]]
-#repo = 'cohama/lexima.vim'
+[[plugins]]
+repo = 'cohama/lexima.vim'
 
 # resize window size on vim
 [[plugins]]
@@ -99,7 +99,7 @@ hook_add = '''
 	function! BranchName()
 		if exists('*fugitive#head')
 			let branch = FugitiveHead()
-			return branch !=# '' ? '⭠ '.branch : ''
+			return branch !=# '' ? ' '.branch : ''
 		endif
 		return ''
 	endfunction
@@ -278,8 +278,14 @@ repo = 'skanehira/generatedir.vim'
 [[plugins]]
 repo = 'yasukotelin/shirotelin'
 
-[[plugins]]
-repo = 'pocke/keycast.vim'
+#[[plugins]]
+#repo = 'pocke/keycast.vim'
+
+#[[plugins]]
+#repo = 'pocke/vanner'
 
 [[plugins]]
-repo = 'pocke/vanner'
+repo = 'liuchengxu/vim-clap'
+
+[[plugins]]
+repo = 'thinca/vim-themis'
