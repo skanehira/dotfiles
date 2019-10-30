@@ -171,9 +171,9 @@ set synmaxcol=256
 " }}}
 
 " カーソルラインを表示する {{{
-"set cursorline
+set cursorline
 if !has('nvim')
-	"set cursorlineopt=both
+	set cursorlineopt=number
 endif
 " }}}
 
@@ -193,6 +193,7 @@ augroup fileTypeIndent
 	au BufRead,BufNewFile *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
 	au BufRead,BufNewFile *.js   setlocal tabstop=4 softtabstop=4 shiftwidth=4
 	au BufRead,BufNewFile *.vue  setlocal tabstop=4 softtabstop=4 shiftwidth=4
+	au BufRead,BufNewFile *yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2
 augroup END
 " }}}
 
@@ -203,7 +204,7 @@ set wildmenu
 
 " grepした結果をquickfixに表示する {{{
 augroup grepwindow
-	autocmd!
+	au!
 	au QuickFixCmdPost *grep* cwindow
 augroup END
 " }}}
@@ -326,7 +327,7 @@ command! -nargs=* Source call SourceDir(<f-args>)
 
 " listの設定 {{{
 set list
-set listchars=tab:»-,trail:-,eol:↲,extends:»,precedes:«,nbsp:%
+set listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:%
 "hi NonText    ctermbg=None ctermfg=Yellow
 "hi SpecialKey ctermbg=None ctermfg=Yellow
 " }}}
@@ -486,7 +487,9 @@ tnoremap <silent> <C-h> <C-w>:tabprevious<CR>
 tnoremap <silent> <C-l> <C-w>:tabnext<CR>
 
 " ウィンドウリサイズ開始
-tnoremap <C-w><C-e> <C-w>:WinResizerStartResize<CR>
+"tnoremap <C-w><C-e> <C-w>:WinResizerStartResize<CR>
+
+"set termwinkey=<C-g>
 
 " 単語削除
 tnoremap <C-g> <C-w>.
@@ -513,15 +516,10 @@ nnoremap gs :Gstatus<CR>
 nnoremap gb :Buffers<CR>
 
 " ヘルプ
-augroup helpMapping
+augroup help-mapping
 	au!
 	au FileType help nnoremap <buffer> <silent>q :bw!<CR>
 augroup END
-
-" オレオレキーボード配列
-inoremap <C-j> '
-inoremap <C-k> "
-inoremap <C-l> %
 
 " コマンドラインで単語移動 {{{
 cnoremap <c-b> <S-Left>
@@ -579,15 +577,9 @@ nnoremap <C-P> :Files<CR>
 " }}}
 
 " lsp settings {{{
-"nnoremap <silent> <C-]> :LspDefinition<CR>
+nnoremap <silent> <C-]> :LspDefinition<CR>
 nnoremap <silent> <Leader>rf :LspReferences<CR>
 nnoremap <silent> <Leader>im :LspImplementation<CR>
-
-augroup LspMapping
-	autocmd!
-	au FileType php nnoremap <buffer> <C-]> :LspDefinition<CR>
-	au FileType c nnoremap <buffer> <C-]> :LspDefinition<CR>
-augroup END
 
 " 非同期補完を有効にする
 "let g:lsp_async_completion = 1
@@ -604,14 +596,14 @@ augroup END
 
 " Go {{{
 "augroup LspGo
-"    au!
-"    if executable('gopls')
-"        au User lsp_setup call lsp#register_server({
-"                    \ 'name': 'gopls',
-"                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
-"                    \ 'whitelist': ['go'],
-"                    \ })
-"    endif
+"	au!
+"	if executable('gopls')
+"		au User lsp_setup call lsp#register_server({
+"					\ 'name': 'gopls',
+"					\ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
+"					\ 'whitelist': ['go'],
+"					\ })
+"	endif
 "augroup END
 " }}}
 
@@ -1190,7 +1182,7 @@ endfunction
 
 function! s:git_log() abort
 	" use fish command
-	tab term ++close fish -c "gitlog"
+	call system('tmux new-window fish -c "gitlog"')
 endfunction
 
 function! s:git_push(...) abort
@@ -1242,10 +1234,13 @@ command! -nargs=* Gitpull call s:git_pull()
 command! -nargs=* Gitblame call s:git_blame()
 command! -nargs=* GitCheckout call s:git_checkout(<f-args>)
 command! Gitlog call s:git_log()
-command! Lazygit :tab term ++close lazygit
+command! Lazygit call system('tmux new-window lazygit')
+command! Pst call system('tmux split-window -h pst')
+command! Docui call system('tmux new-window docui')
 
 nnoremap <silent> gl :Lazygit<CR>
 nnoremap <silent> gc :GitCheckout<CR>
+
 " }}}
 
 " {{{ バッファ関連
