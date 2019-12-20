@@ -1,0 +1,200 @@
+# Go
+[[plugins]]
+repo = 'fatih/vim-go'
+on_ft = 'go'
+
+# language server protocol
+[[plugins]]
+repo = 'prabirshrestha/vim-lsp'
+
+# async auto complete
+[[plugins]]
+repo = 'prabirshrestha/async.vim'
+
+
+# snippets
+#[[plugins]]
+#repo = 'SirVer/ultisnips'
+
+# snippets collection
+[[plugins]]
+repo = 'honza/vim-snippets'
+
+# format text
+[[plugins]]
+repo = 'godlygeek/tabular'
+
+# surroundings quotes, tags, and more.
+#[[plugins]]
+#repo = 'tpope/vim-surround'
+
+# fuzzy finder
+[[plugins]]
+repo = 'junegunn/fzf'
+build_on = '''
+./install --all
+'''
+
+# fzf for vim
+[[plugins]]
+repo = 'junegunn/fzf.vim'
+
+# preview markdown on browser
+#[[plugins]]
+#repo = 'iamcco/markdown-preview.nvim'
+#on_ft = ['markdown', 'pandoc.markdown', 'rmd']
+#build = '''
+#cd app & yarn install
+#'''
+
+# auto close parentheses
+[[plugins]]
+repo = 'cohama/lexima.vim'
+
+# resize window size on vim
+[[plugins]]
+repo = 'simeji/winresizer'
+
+# memo
+[[plugins]]
+repo = 'glidenote/memolist.vim'
+
+# emmet for vim
+[[plugins]]
+repo = 'mattn/emmet-vim'
+
+# status line
+[[plugins]]
+repo = 'itchyny/lightline.vim'
+hook_add = '''
+	let g:lightline = {
+		\ 'colorscheme': 'wombat',
+		\ 'active': {
+			\ 'left': [ ['mode', 'paste'], ['readonly', 'branchName', 'filepath', 'modified'] ]
+			\ },
+		\ 'component_function':{
+			\ 'filepath': 'FilePath',
+			\ },
+		\ }
+
+	function! FilePath()
+		if winwidth(0) > 90
+			return expand("%:s")
+		else
+			return expand("%:t")
+		endif
+	endfunction
+
+	" # show statusbar
+	set laststatus=2
+	" # hide --INSERT--
+	set noshowmode
+'''
+
+# template
+[[plugins]]
+repo = 'mattn/sonictemplate-vim'
+hook_add = '''
+let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
+'''
+# manage session
+[[plugins]]
+repo = 'skanehira/vsession'
+
+# show git diff
+#[[plugins]]
+#repo = 'airblade/vim-gitgutter'
+
+# git wrapper
+[[plugins]]
+repo = 'tpope/vim-fugitive'
+
+# preview for the following Ex commands
+[[plugins]]
+repo = 'markonm/traces.vim'
+
+# syntax file type vue
+[[plugins]]
+repo = 'posva/vim-vue'
+
+# syntax file type markdown
+[[plugins]]
+repo = 'plasticboy/vim-markdown'
+
+# syntax file type toml
+[[plugins]]
+repo = 'cespare/vim-toml'
+
+# syntax file type fish
+[[plugins]]
+repo = 'dag/vim-fish'
+
+# make table
+[[plugins]]
+repo = 'mattn/vim-maketable'
+
+# presentation slide with markdown
+[[plugins]]
+repo = 'thinca/vim-showtime'
+
+# quickrun buffer source cod
+[[plugins]]
+repo = 'thinca/vim-quickrun'
+
+# color scheme
+[[plugins]]
+repo = 'cocopon/iceberg.vim'
+
+# color scheme
+[[plugins]]
+repo = 'whatyouhide/vim-gotham'
+
+# vim help ja
+[[plugins]]
+repo = 'vim-jp/vimdoc-ja'
+
+# translate language
+[[plugins]]
+repo = 'skanehira/translate.vim'
+
+# calendar
+[[plugins]]
+repo = 'itchyny/calendar.vim'
+
+[[plugins]]
+repo = 'vim-jp/vital.vim'
+merged = 0
+
+[[plugins]]
+repo = 'mattn/webapi-vim'
+
+[[plugins]]
+repo = 'mattn/gist-vim'
+
+[[plugins]]
+repo = 'tokorom/vim-review'
+
+[[plugins]]
+repo = 'Shougo/dein.vim'
+
+[[plugins]]
+repo = 'skanehira/docker.vim'
+#rev = 'develop'
+
+[[plugins]]
+repo = 'LeafCage/vimhelpgenerator'
+
+[[plugins]]
+repo = 'kshenoy/vim-signature'
+
+#[[plugins]]
+#repo = 'shinespark/vim-list2tree'
+
+[[plugins]]
+repo = 'skanehira/generatedir.vim'
+
+[[plugins]]
+repo = 'thinca/vim-themis'
+
+#[[plugins]]
+#repo = 'skanehira/docker-compose.vim'
