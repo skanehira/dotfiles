@@ -288,4 +288,4 @@ repo = 'yasukotelin/shirotelin'
 repo = 'liuchengxu/vim-clap'
 
 [[plugins]]
-repo = 'thinca/vim-themis'
+repo = 'andymass/vim-matchup'
