@@ -34,11 +34,9 @@ if dein#load_state(s:dein_dir)
 		call mkdir(s:rc_dir, 'p')
 	endif
 	let s:toml = s:rc_dir . '/dein.toml'
-	let s:lazy_toml = s:rc_dir . '/dein_lazy.toml'
 
 	" read toml and cache
 	call dein#load_toml(s:toml, {'lazy': 0})
-	call dein#load_toml(s:lazy_toml, {'lazy': 1})
 
 	" end settings
 	call dein#end()
@@ -193,7 +191,7 @@ augroup fileTypeIndent
 	au BufRead,BufNewFile *.html setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
 	au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
 	au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-	au BufRead,BufNewFile *yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2
+	au BufRead,BufNewFile *.yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2
 augroup END
 " }}}
 
@@ -840,13 +838,10 @@ let g:docker_terminal_open = 'top'
 let g:mkdp_auto_close = 0
 " }}}
 
-" {{{ gofmtmd
-let g:gofmtmd_auto_fmt = 1
+" {{{ vim-textlint
+let g:textlint_enable_quickfix = 1
 " }}}
 
-" {{{ gist
-"let g:gist_use_password_in_gitconfig = 1
-" }}}
 
 " {{{ 自作関数
 
