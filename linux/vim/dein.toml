@@ -179,7 +179,6 @@ repo = 'Shougo/dein.vim'
 
 [[plugins]]
 repo = 'skanehira/docker.vim'
-#rev = 'develop'
 
 [[plugins]]
 repo = 'LeafCage/vimhelpgenerator'
@@ -198,3 +197,6 @@ repo = 'thinca/vim-themis'
 
 #[[plugins]]
 #repo = 'skanehira/docker-compose.vim'
+
+[[plugins]]
+repo = 'heavenshell/vim-textlint'
