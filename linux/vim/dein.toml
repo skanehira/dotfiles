@@ -11,7 +11,6 @@ repo = 'prabirshrestha/vim-lsp'
 [[plugins]]
 repo = 'prabirshrestha/async.vim'
 
-
 # snippets
 #[[plugins]]
 #repo = 'SirVer/ultisnips'
@@ -38,6 +37,7 @@ build_on = '''
 # fzf for vim
 [[plugins]]
 repo = 'junegunn/fzf.vim'
+merged = 0
 
 # preview markdown on browser
 #[[plugins]]
