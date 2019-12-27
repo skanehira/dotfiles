@@ -848,8 +848,8 @@ if $WSL_DISTRO_NAME != ''
         autocmd TextYankPost * call system('win32yank.exe -i', v:event.regcontents)
     augroup END
 
-    nnoremap <silent> p :call setreg('"',system('win32yank.exe -o')) \| :put<CR>
-    nnoremap <silent> P :call setreg('"',system('win32yank.exe -o')) \| :put!<CR>
+    nnoremap <silent> p :call setreg('"',system('win32yank.exe -o')) \| normal! p<CR>
+    nnoremap <silent> P :call setreg('"',system('win32yank.exe -o')) \| normal! P!<CR>
 endif
 
 " {{{ 自作関数
