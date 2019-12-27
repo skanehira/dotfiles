@@ -842,6 +842,15 @@ let g:mkdp_auto_close = 0
 let g:textlint_enable_quickfix = 1
 " }}}
 
+if $WSL_DISTRO_NAME != ''
+    augroup yankpost
+        au!
+        autocmd TextYankPost * call system('win32yank.exe -i', v:event.regcontents)
+    augroup END
+
+    nnoremap <silent> p :call setreg('"',system('win32yank.exe -o')) \| :put<CR>
+    nnoremap <silent> P :call setreg('"',system('win32yank.exe -o')) \| :put!<CR>
+endif
 
 " {{{ 自作関数
 
