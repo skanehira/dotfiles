@@ -573,7 +573,8 @@ augroup END
 " fzf settings {{{
 " ファイル一覧を出すときにプレビュー表示
 command! -bang -nargs=? -complete=dir Files
-			\ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
+    \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
+
 nnoremap <C-P> :Files<CR>
 " }}}
 
@@ -845,11 +846,12 @@ let g:textlint_enable_quickfix = 1
 if $WSL_DISTRO_NAME != ''
     augroup yankpost
         au!
-        autocmd TextYankPost * call system('win32yank.exe -i', v:event.regcontents)
+        autocmd TextYankPost * echo v:event
+        autocmd TextYankPost * call system('win32yank.exe -i', v:event.regcontents + [''])
     augroup END
 
-    nnoremap <silent> p :call setreg('"',system('win32yank.exe -o')) \| normal! p<CR>
-    nnoremap <silent> P :call setreg('"',system('win32yank.exe -o')) \| normal! P!<CR>
+    noremap <silent> p :call setreg('"',system('win32yank.exe -o')) \| normal! p<CR>
+    noremap <silent> P :call setreg('"',system('win32yank.exe -o')) \| normal! P<CR>
 endif
 
 " {{{ 自作関数
