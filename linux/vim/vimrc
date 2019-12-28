@@ -148,7 +148,7 @@ set undolevels=1000
 " }}}
 
 " mac os のクリップボードを共有 {{{
-set clipboard+=unnamed
+set clipboard^=unnamedplus
 " }}}
 
 " カーソルが常に中央に来るようにする {{{
@@ -532,7 +532,7 @@ cnoremap <c-a> <Home>
 let g:go_fmt_command = 'goimports'
 
 " goplsを無効化
-let g:go_gopls_enabled = 0
+let g:go_gopls_enabled = 1
 
 " ファイル保存時、linterを実行する
 let g:go_metalinter_autosave = 1
