@@ -831,12 +831,13 @@ let g:lexima_enable_basic_rules = 1
 
 " {{{ docker.vim
 let g:docker_terminal_open = 'top'
+let g:docker_open_browser_cmd = 'xdg-open'
 "let s:docker_auth_file = expand('~/.docker/docker.vim.json')
 "let g:docker_registry_auth = json_decode(join(readfile(s:docker_auth_file), "\n"))
 " }}}
 
-" {{{ markdown-preview.nvim
-let g:mkdp_auto_close = 0
+" {{{ previm
+let g:previm_open_cmd = 'xdg-open'
 " }}}
 
 " {{{ vim-textlint
