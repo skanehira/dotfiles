@@ -178,8 +178,5 @@ repo = 'skanehira/generatedir.vim'
 [[plugins]]
 repo = 'thinca/vim-themis'
 
-#[[plugins]]
-#repo = 'skanehira/docker-compose.vim'
-
 [[plugins]]
 repo = 'heavenshell/vim-textlint'
