@@ -16,8 +16,8 @@ repo = 'prabirshrestha/async.vim'
 #repo = 'SirVer/ultisnips'
 
 # snippets collection
-[[plugins]]
-repo = 'honza/vim-snippets'
+#[[plugins]]
+#repo = 'honza/vim-snippets'
 
 # format text
 [[plugins]]
@@ -39,13 +39,8 @@ build_on = '''
 repo = 'junegunn/fzf.vim'
 merged = 0
 
-# preview markdown on browser
-#[[plugins]]
-#repo = 'iamcco/markdown-preview.nvim'
-#on_ft = ['markdown', 'pandoc.markdown', 'rmd']
-#build = '''
-#cd app & yarn install
-#'''
+[[plugins]]
+repo = 'previm/previm'
 
 # auto close parentheses
 [[plugins]]
@@ -133,10 +128,6 @@ repo = 'dag/vim-fish'
 [[plugins]]
 repo = 'mattn/vim-maketable'
 
-# presentation slide with markdown
-[[plugins]]
-repo = 'thinca/vim-showtime'
-
 # quickrun buffer source cod
 [[plugins]]
 repo = 'thinca/vim-quickrun'
@@ -145,10 +136,6 @@ repo = 'thinca/vim-quickrun'
 [[plugins]]
 repo = 'cocopon/iceberg.vim'
 
-# color scheme
-[[plugins]]
-repo = 'whatyouhide/vim-gotham'
-
 # vim help ja
 [[plugins]]
 repo = 'vim-jp/vimdoc-ja'
@@ -156,10 +143,6 @@ repo = 'vim-jp/vimdoc-ja'
 # translate language
 [[plugins]]
 repo = 'skanehira/translate.vim'
-
-# calendar
-[[plugins]]
-repo = 'itchyny/calendar.vim'
 
 [[plugins]]
 repo = 'vim-jp/vital.vim'
