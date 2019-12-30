@@ -1,6 +1,8 @@
 #!/bin/bash
+if [[ ! -d $HOME/.tmux-themepack ]]; then
+    git clone https://github.com/jimeh/tmux-themepack.git ~/.tmux-themepack
+fi
 
-file=~/.tmux.conf
-
-cp -p tmux.conf $file
-cp -Rp tmux/* ~/.tmux/
+if [[ ! -e $HOME/.tmux.conf ]]; then
+    ln -s $PWD/tmux.conf ~/.tmux.conf
+fi
