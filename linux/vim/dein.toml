@@ -180,3 +180,6 @@ repo = 'thinca/vim-themis'
 
 [[plugins]]
 repo = 'heavenshell/vim-textlint'
+
+[[plugins]]
+repo = 'po3rin/vim-gofmtmd'

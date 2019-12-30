@@ -459,7 +459,7 @@ cnoremap <c-a> <Home>
 let g:go_fmt_command = 'goimports'
 
 " goplsを有効化
-let g:go_gopls_enabled = 1
+let g:go_gopls_enabled = 0
 
 " ファイル保存時、linterを実行する
 let g:go_metalinter_autosave = 1
@@ -629,6 +629,10 @@ let g:previm_open_cmd = 'xdg-open'
 
 " {{{ vim-textlint
 let g:textlint_enable_quickfix = 1
+" }}}
+
+" {{{ markdownのGoソースを自動整形
+let g:gofmtmd_auto_fmt = 1
 " }}}
 
 " {{{ WSLのクリップボード設定
