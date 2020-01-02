@@ -1,6 +1,7 @@
 set -x GOPATH $HOME/dev/go
 set -x GOBIN $GOPATH/bin
-set -x PATH $PATH $GOBIN
+set -x THEMIS_HOME $HOME/.cache/dein/repos/github.com/thinca/vim-themis
+set -x PATH $PATH $GOBIN $THEMIS_HOME/bin
 set -x FZF_DEFAULT_OPTS "--layout=reverse --inline-info --select-1 --exit-0 -m"
 set -x EDITOR vim
 set -x LC_CTYPE "en_US.UTF-8"
