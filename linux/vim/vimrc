@@ -171,6 +171,7 @@ let g:netrw_preview=1
 " 拡張子ごとのインデントを指定する {{{
 augroup fileTypeIndent
 	autocmd!
+	au BufRead,BufNewFile *.vim setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
 	au BufRead,BufNewFile *.php setlocal tabstop=4 softtabstop=4 shiftwidth=4
 	au BufRead,BufNewFile *.html setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
 	au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
