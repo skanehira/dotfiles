@@ -840,6 +840,21 @@ let g:docker_terminal_open = 'top'
 let g:previm_open_cmd = 'open'
 " }}}
 
+" {{{
+let g:sql_profiles = [
+            \ {
+            \ 'name': 'sqlite3',
+            \ 'dbtype': 'sqlite3',
+            \ 'dsn': ':memory:'
+            \ },
+            \ {
+            \ 'name': 'mysql_test',
+            \ 'dbtype': 'mysql',
+            \ 'dsn': 'root:test@tcp(localhost:3306)/test'
+            \ },
+        \ ]
+" }}}
+
 " {{{ 自作関数
 
 " {{{ リポジトリに移動
@@ -935,208 +950,6 @@ function! s:echo_err(message) abort
 	echo a:message
 	echohl None
 endfunction
-" }}}
-
-" {{{ ファイル検索（ポップアップウィンドウ）
-if !exists('g:loaded_select') && !has('nvim')
-	let g:loaded_select = 1
-	call prop_type_add('file_select', {'highlight': 'PmenuSel'})
-endif
-
-function! s:get_files(path) abort
-	let l:entries = []
-
-	for l:entry in readdir(a:path)
-		if l:entry[0] ==# '.'
-			continue
-		endif
-		let l:path_entry = a:path . '/' . l:entry
-		if isdirectory(l:path_entry)
-			let l:entries += s:get_files(l:path_entry)
-		else
-			if l:path_entry[0] ==# '.'
-				let l:path_entry = l:path_entry[2:]
-			endif
-			cal add(l:entries, l:path_entry)
-		endif
-	endfor
-	return l:entries
-endfunction
-
-function! s:highlight(ctx) abort
-	let l:buf = winbufnr(a:ctx.id)
-	let l:length = len(a:ctx.files[a:ctx.select])
-	let l:lnum_end = len(a:ctx.files)
-	let l:lnum = a:ctx.select - a:ctx.offset + 1
-	if a:ctx.search_mode ==# 1 && !empty(a:ctx.filter_files)
-		let l:length = len(a:ctx.filter_files[a:ctx.select])
-		let l:lnum_end = len(a:ctx.filter_files)
-	endif
-
-	call prop_clear(1, l:lnum_end, {
-				\ 'bufnr': l:buf,
-				\ })
-
-	call prop_add(l:lnum, 1, {
-				\ 'bufnr': l:buf,
-				\ 'type': 'file_select',
-				\ 'length': l:length,
-				\ })
-
-	call win_execute(a:ctx.id, 'redraw')
-endfunction
-
-function! s:update_files(ctx) abort
-	let l:files = copy(a:ctx.files)
-	if a:ctx.search_mode
-		let l:tmp = []
-		for file in l:files
-			if file =~? a:ctx.word[1:]
-				call add(l:tmp, file)
-			endif
-		endfor
-		let l:files = l:tmp
-		let a:ctx.filter_files = l:tmp
-	endif
-	echo a:ctx.word
-	call popup_settext(a:ctx.id, l:files[a:ctx.offset:])
-	call s:highlight(a:ctx)
-	redraw
-endfunction
-
-function! s:popup_filter(ctx, id, key) abort
-	let l:buf = winbufnr(a:id)
-	let l:file = a:ctx.files[a:ctx.select]
-
-	if a:ctx.search_mode ==# 0
-		if a:key ==# 'q' || a:key ==# 'x'
-			call popup_close(a:id)
-			return 1
-		elseif a:key ==# '/'
-			let a:ctx.search_mode = 1
-			let a:ctx.word .= a:key
-		elseif a:key ==# "\n" || a:key ==# "\r"
-			return s:open_file(a:id, 'e', l:file)
-		elseif a:key ==# "\<c-x>"
-			return s:open_file(a:id, 'new', l:file)
-		elseif a:key ==# "\<c-v>"
-			return s:open_file(a:id, 'vnew', l:file)
-		elseif a:key ==# "\<c-t>"
-			return s:open_file(a:id, 'tabnew' , l:file)
-		elseif a:key ==# 'j'
-			let a:ctx.select += a:ctx.select ==# len(a:ctx.files)-1 ? 0 : 1
-			if a:ctx.select >= a:ctx.offset + a:ctx.maxheight
-				let a:ctx.offset = a:ctx.select - (a:ctx.maxheight - 1)
-			endif
-		elseif a:key ==# 'k'
-			let a:ctx.select -= a:ctx.select ==# 0 ? 0 : 1
-			if a:ctx.select < a:ctx.offset
-				let a:ctx.offset = a:ctx.select
-			endif
-		elseif a:key ==# '0'
-			let a:ctx.select = 0
-			let a:ctx.offset = 0
-		elseif a:key ==# 'G'
-			let a:ctx.select = len(a:ctx.files)-1
-			let a:ctx.offset = len(a:ctx.files) - (a:ctx.maxheight)
-		endif
-	else
-		" 検索モードの場合
-		if !empty(a:ctx.filter_files)
-			let l:file = a:ctx.filter_files[a:ctx.select]
-		else
-			let l:file = ''
-		endif
-		if a:key ==# "\<bs>" || a:key ==# "\b"
-			if strlen(a:ctx.word) == 1
-				let a:ctx.word = ''
-				let a:ctx.search_mode = 0
-			else
-				let a:ctx.word = a:ctx.word[:len(a:ctx.word)-2]
-			endif
-		elseif a:key ==# '}'
-			let a:ctx.select += a:ctx.select ==# len(a:ctx.filter_files)-1 ? 0 : 1
-			if a:ctx.select >= a:ctx.offset + a:ctx.maxheight
-				let a:ctx.offset = a:ctx.select - (a:ctx.maxheight - 1)
-			endif
-		elseif a:key ==# '{'
-			let a:ctx.select -= a:ctx.select ==# 0 ? 0 : 1
-			if a:ctx.select < a:ctx.offset
-				let a:ctx.offset = a:ctx.select
-			endif
-		elseif a:key ==# "\n" || a:key ==# "\r"
-			return s:open_file(a:id, 'e', l:file)
-		elseif a:key ==# ""
-			return s:open_file(a:id, 'new', l:file)
-		elseif a:key ==# ""
-			return s:open_file(a:id, 'vnew', l:file)
-		elseif a:key ==# ""
-			return s:open_file(a:id, 'tabnew' , l:file)
-		elseif a:key !=# "\<CursorHold>"
-			let a:ctx.select = 0
-			let a:ctx.offset = 0
-			let a:ctx.word .= a:key
-		endif
-	endif
-
-	if a:key !=# "\<CursorHold>"
-		call s:update_files(a:ctx)
-	endif
-	return 1
-endfunction
-
-function! s:open_file(id, key, file) abort
-	if empty(a:file)
-		return 1
-	endif
-	call popup_close(a:id)
-	exe a:key a:file
-	return 1
-endfunction
-
-function! s:popup_files(...) abort
-	let l:path = '.'
-	if a:0 > 0
-		let l:path = expand(a:1)
-	endif
-
-	let l:files = s:get_files(l:path)
-	if empty(l:files)
-		echo 'not any files'
-		return
-	endif
-
-	let l:ctx = { 'select': 0,
-				\ 'files': l:files,
-				\ 'offset': 0,
-				\ 'maxheight': 15,
-				\ 'word' : '',
-				\ 'search_mode': 0,
-				\ 'filter_files': [],
-				\ }
-
-	let l:maxwidth = 0
-	for file in l:ctx.files
-		let length = len(file)
-		if length > l:maxwidth
-			let l:maxwidth = length
-		endif
-	endfor
-
-	let l:ctx.id = popup_menu(l:ctx.files, {
-				\ 'filter': function('s:popup_filter', [l:ctx]),
-				\ 'borderchars': ['-','|','-','|','+','+','+','+'],
-				\ 'border': [],
-				\ 'maxheight': l:ctx.maxheight,
-				\ 'minwidth': l:maxwidth,
-				\ 'padding': [0,0,0,0],
-				\ 'mapping': 0,
-				\ })
-
-	call s:highlight(l:ctx)
-endfunction
-
-command! -nargs=? PopupFiles call s:popup_files(<f-args>)
 " }}}
 
 " {{{ gitコマンド関連
