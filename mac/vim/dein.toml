@@ -123,6 +123,9 @@ repo = 'markonm/traces.vim'
 [[plugins]]
 repo = 'posva/vim-vue'
 
+[[plugins]]
+repo = 'previm/previm'
+
 # syntax file type markdown
 [[plugins]]
 repo = 'plasticboy/vim-markdown'
