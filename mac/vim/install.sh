@@ -2,9 +2,14 @@
 path=~/.vim
 
 if [ ! -e $path ]; then
-	echo "create directory $path"
+    echo "create directory $path"
     mkdir -p $path
 fi
 
-ln -s $PWD/dein.toml $path/dein.toml
-ln -s $PWD/vimrc ~/.vimrc
+if [[ ! -e $path/dein.toml ]]; then
+    ln -s $PWD/dein.toml $path/dein.toml
+fi
+
+if [[ ! -e $HOME/.vimrc ]]; then
+    ln -s $PWD/vimrc $HOME/.vimrc
+fi

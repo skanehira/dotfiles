@@ -3,10 +3,6 @@
 repo = 'fatih/vim-go'
 on_ft = 'go'
 
-#[[plugins]]
-#repo = 'skanehira/vim-go'
-#on_ft = 'go'
-
 # language server protocol
 [[plugins]]
 repo = 'prabirshrestha/vim-lsp'
@@ -39,15 +35,6 @@ repo = 'honza/vim-snippets'
 [[plugins]]
 repo = 'godlygeek/tabular'
 
-# surroundings quotes, tags, and more.
-#[[plugins]]
-#repo = 'tpope/vim-surround'
-
-# for repeat surroundings
-#[[plugins]]
-#repo = 'tpope/vim-repeat'
-#on_idle = 1
-
 # fuzzy finder
 [[plugins]]
 repo = '/usr/local/opt/fzf'
@@ -55,14 +42,6 @@ repo = '/usr/local/opt/fzf'
 # fzf for vim
 [[plugins]]
 repo = 'junegunn/fzf.vim'
-
-# preview markdown on browser
-[[plugins]]
-repo = 'iamcco/markdown-preview.nvim'
-on_ft = ['markdown', 'pandoc.markdown', 'rmd']
-build = '''
-cd app & yarn install
-'''
 
 # auto close parentheses
 [[plugins]]
@@ -136,14 +115,6 @@ repo = 'airblade/vim-gitgutter'
 [[plugins]]
 repo = 'tpope/vim-fugitive'
 
-# async Lint
-#[[plugins]]
-#repo = 'w0rp/ale'
-
-# docker container
-#[[plugins]]
-#repo = 'kkvh/vim-docker-tools'
-
 # preview for the following Ex commands
 [[plugins]]
 repo = 'markonm/traces.vim'
@@ -180,38 +151,17 @@ repo = 'thinca/vim-quickrun'
 [[plugins]]
 repo = 'cocopon/iceberg.vim'
 
-# color scheme
-[[plugins]]
-repo = 'whatyouhide/vim-gotham'
-
-#[[plugins]]
-#repo = 'scrooloose/nerdcommenter'
-
 # vim help ja
 [[plugins]]
 repo = 'vim-jp/vimdoc-ja'
-
-# undo tree
-#[[plugins]]
-#repo = 'mbbill/undotree'
 
 # translate language
 [[plugins]]
 repo = 'skanehira/translate.vim'
 
-#[[plugins]]
-#repo = 'justinmk/vim-sneak'
-
 # calendar
 [[plugins]]
 repo = 'itchyny/calendar.vim'
-
-# blade.php syntax highlight
-#[[plugins]]
-#repo = 'jwalton512/vim-blade'
-
-#[[plugins]]
-#repo = 'rbtnn/vim-popup_signature'
 
 [[plugins]]
 repo = 'vim-jp/vital.vim'
@@ -220,9 +170,6 @@ merged = 0
 # train route search
 [[plugins]]
 repo = 'skanehira/train.vim'
-
-#[[plugins]]
-#repo = 'tpope/vim-rhubarb'
 
 # weather
 [[plugins]]
@@ -237,21 +184,15 @@ repo = 'mattn/gist-vim'
 [[plugins]]
 repo = 'tokorom/vim-review'
 
-#[[plugins]]
-#repo = 'terryma/vim-multiple-cursors'
-
 [[plugins]]
 repo = 'Shougo/dein.vim'
 
 [[plugins]]
 repo = 'skanehira/docker.vim'
-#rev = 'develop'
 
 [[plugins]]
 repo = 'LeafCage/vimhelpgenerator'
 
-#[[plugins]]
-#repo = 'kana/vim-operator-user'
 
 [[plugins]]
 repo = 'kshenoy/vim-signature'
@@ -260,32 +201,11 @@ repo = 'kshenoy/vim-signature'
 #repo = 'shinespark/vim-list2tree'
 
 [[plugins]]
-repo = 'segeljakt/vim-silicon'
-
-#[[plugins]]
-#repo = 'skanehira/badapple.vim'
-
-#[[plugins]]
-#repo = 'mhinz/vim-startify'
-
-[[plugins]]
 repo = 'rhysd/reply.vim'
 on_cmd = ['Repl', 'ReplAuto']
 
 [[plugins]]
 repo = 'skanehira/generatedir.vim'
-
-[[plugins]]
-repo = 'yasukotelin/shirotelin'
-
-#[[plugins]]
-#repo = 'pocke/keycast.vim'
-
-#[[plugins]]
-#repo = 'pocke/vanner'
-
-[[plugins]]
-repo = 'liuchengxu/vim-clap'
 
 [[plugins]]
 repo = 'andymass/vim-matchup'
