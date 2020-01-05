@@ -170,14 +170,6 @@ repo = 'itchyny/calendar.vim'
 repo = 'vim-jp/vital.vim'
 merged = 0
 
-# train route search
-[[plugins]]
-repo = 'skanehira/train.vim'
-
-# weather
-[[plugins]]
-repo = 'skanehira/weather.vim'
-
 [[plugins]]
 repo = 'mattn/webapi-vim'
 
