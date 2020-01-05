@@ -6,6 +6,5 @@ if [ ! -e $path ]; then
     mkdir -p $path
 fi
 
-cp -p *.toml $path/
-cp -p vimrc ~/.vimrc
-cp -p go/go.snippets ~/.vim/UltiSnips/
+ln -s $PWD/dein.toml $path/dein.toml
+ln -s $PWD/vimrc ~/.vimrc
