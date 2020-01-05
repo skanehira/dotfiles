@@ -547,6 +547,8 @@ let g:go_metalinter_command = "golangci-lint"
 " vim-lspをしようするので、vim-goの`Ctrl+]`を無効にする
 let g:go_def_mapping_enabled = 0
 
+let g:go_gopls_enabled = 0
+
 " GoDocでポップアップウィンドウを使用する
 "let g:go_doc_popup_window = 1
 
@@ -602,7 +604,7 @@ augroup LspGo
 	if executable('gopls')
 		au User lsp_setup call lsp#register_server({
 					\ 'name': 'gopls',
-					\ 'cmd': {server_info->['gopls', '-mode', 'stdio', '-logfile', '/Users/skanehira/gopls.log']},
+					\ 'cmd': {server_info->['gopls', '-mode', 'stdio']},
 					\ 'whitelist': ['go'],
 					\ })
 	endif
