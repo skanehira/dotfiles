@@ -3,7 +3,7 @@ set -x GOPATH $HOME/dev/go
 set -x GOBIN $GOPATH/bin
 set -x PATH $PATH $GOBIN $HOME/.cargo/bin /usr/local/bin $HOME/.config/composer/vendor/bin /Users/skanehira/Library/Python/3.7/bin
 set -x XDG_CONFIG_HOME $HOME/.config
-set -x PATH "/usr/local/opt/llvm/bin" $PATH
+set -x PATH /usr/local/sbin "/usr/local/opt/llvm/bin" $PATH
 set -x LANG "ja_JP.UTF-8"
 set -x HOMEBREW_INSTALL_CLEANUP 1
 set -x FZF_DEFAULT_OPTS "--layout=reverse --inline-info --select-1 --exit-0 -m"
