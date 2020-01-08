@@ -636,6 +636,19 @@ let g:textlint_enable_quickfix = 1
 let g:gofmtmd_auto_fmt = 1
 " }}}
 
+" {{{ gql.vim
+try
+    let s:contents = readfile(expand('~/.vim/.token/graphql.github'))
+    let g:gql_authorization_token = trim(join(s:contents, ""))
+catch
+    echom v:exception
+endtry
+" }}}
+
+" {{{ preview-markdown.vim
+let g:preview_markdown_vertical = 1
+" }}}
+
 " {{{ WSLのクリップボード設定
 if $WSL_DISTRO_NAME != ''
     augroup yankpost
