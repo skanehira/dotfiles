@@ -192,3 +192,7 @@ repo = 'jparise/vim-graphql'
 
 [[plugins]]
 repo = 'skanehira/preview-markdown.vim'
+
+[[plugins]]
+repo = 'mattn/qiita-vim'
+
