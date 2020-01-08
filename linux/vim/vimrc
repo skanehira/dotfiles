@@ -604,7 +604,7 @@ let g:sonictemplate_license = 'MIT'
 
 " vimhelpgenarator {{{
 let g:vimhelpgenerator_version = 'Version: 0.0.1'
-let g:vimhelpgenerator_author = 'Author: skanehira <sho19921005@gmai.com>'
+let g:vimhelpgenerator_author = 'Author: skanehira <sho19921005@gmail.com>'
 let g:vimhelpgenerator_uri = 'https://github.com/skanehira/'
 let g:vimhelpgenerator_defaultlanguage = 'en'
 " }}}
