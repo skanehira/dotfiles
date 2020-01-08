@@ -183,3 +183,12 @@ repo = 'heavenshell/vim-textlint'
 
 [[plugins]]
 repo = 'po3rin/vim-gofmtmd'
+
+[[plugins]]
+repo = 'skanehira/gql.vim'
+
+[[plugins]]
+repo = 'jparise/vim-graphql'
+
+[[plugins]]
+repo = 'skanehira/preview-markdown.vim'
