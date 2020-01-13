@@ -204,3 +204,9 @@ repo = 'skanehira/generatedir.vim'
 
 [[plugins]]
 repo = 'andymass/vim-matchup'
+
+[[plugins]]
+repo = 'jparise/vim-graphql'
+
+[[plugins]]
+repo = 'skanehira/preview-markdown.vim'
