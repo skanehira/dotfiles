@@ -196,10 +196,6 @@ repo = 'kshenoy/vim-signature'
 #repo = 'shinespark/vim-list2tree'
 
 [[plugins]]
-repo = 'rhysd/reply.vim'
-on_cmd = ['Repl', 'ReplAuto']
-
-[[plugins]]
 repo = 'skanehira/generatedir.vim'
 
 [[plugins]]
@@ -210,3 +206,9 @@ repo = 'jparise/vim-graphql'
 
 [[plugins]]
 repo = 'skanehira/preview-markdown.vim'
+
+[[plugins]]
+repo = 'tweekmonster/helpful.vim'
+
+[[plugins]]
+repo = 'gyim/vim-boxdraw'
