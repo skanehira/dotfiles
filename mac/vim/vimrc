@@ -649,7 +649,11 @@ let g:docker_terminal_open = 'top'
 let g:previm_open_cmd = 'open'
 " }}}
 
-" {{{
+" {{{ preview-markdown.vim
+let g:preview_markdown_vertical = 1
+" }}}
+
+" {{{ sql-client.vim
 let g:sql_profiles = [
             \ {
             \ 'name': 'sqlite3',
@@ -663,6 +667,11 @@ let g:sql_profiles = [
             \ },
             \ ]
 " }}}
+
+"{{{ gist-vim
+let g:gist_post_private = 1
+let g:gist_list_vsplit = 1
+"}}}
 
 " {{{ 自作関数
 
