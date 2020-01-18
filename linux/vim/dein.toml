@@ -196,3 +196,8 @@ repo = 'skanehira/preview-markdown.vim'
 [[plugins]]
 repo = 'mattn/qiita-vim'
 
+[[plugins]]
+repo = 'tweekmonster/helpful.vim'
+
+[[plugins]]
+repo = 'gyim/vim-boxdraw'
