@@ -308,11 +308,16 @@ set listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:%
 " }}}
 
 " {{{ 行末のホワイトスペース削除
+let s:highlight_trailing_ft = {
+            \ 'markdown': 0,
+            \ 'javascript': 1,
+            \ 'go': 1,
+            \ }
 augroup HighlightTrailingSpaces
 	autocmd!
 	autocmd BufWritePre * :silent keeppatterns %s/\s\+$//ge
 	autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
-	autocmd VimEnter,WinEnter * match TrailingSpaces /\s\+$/
+    autocmd VimEnter,WinEnter * if get(s:highlight_trailing_ft, &ft, 0) | match TrailingSpaces /\s\+$/ | endif
 augroup END
 " }}}
 
