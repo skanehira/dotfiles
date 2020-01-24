@@ -313,9 +313,10 @@ let s:highlight_trailing_ft = {
             \ 'javascript': 1,
             \ 'go': 1,
             \ }
+
 augroup HighlightTrailingSpaces
 	autocmd!
-	autocmd BufWritePre * :silent keeppatterns %s/\s\+$//ge
+    autocmd BufWritePre * if get(s:highlight_trailing_ft, &ft, 0) | :silent keeppatterns %s/\s\+$//ge | endif
 	autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
     autocmd VimEnter,WinEnter * if get(s:highlight_trailing_ft, &ft, 0) | match TrailingSpaces /\s\+$/ | endif
 augroup END
@@ -652,6 +653,8 @@ endtry
 
 " {{{ preview-markdown.vim
 let g:preview_markdown_vertical = 1
+let g:preview_markdown_auto_update = 1
+let g:preview_markdown_parser = 'mdr'
 " }}}
 
 " {{{ WSLのクリップボード設定
