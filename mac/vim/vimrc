@@ -385,7 +385,7 @@ nnoremap va{ va{
 
 " 行先頭と行末
 noremap H ^
-noremap L $
+noremap L g_
 
 " タブ切り替え
 nnoremap <C-l> gt
