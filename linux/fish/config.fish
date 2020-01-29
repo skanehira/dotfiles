@@ -9,5 +9,5 @@ set -x GHQ_ROOT $GOPATH/src
 set -x XDG_CONFIG_HOME $HOME/.config
 
 alias lg="lazygit"
-alias buildvim='cd $GOPATH/src/github.com/vim/vim/src && git pull && sudo make distclean && ./configure --with-x --enable-multibyte --enable-fail-if-missing && make && sudo make install'
+alias buildvim='cd $GOPATH/src/github.com/vim/vim/src && git pull && sudo make distclean && ./configure --with-x --enable-multibyte --enable-fail-if-missing && make && sudo make install && cd -'
 

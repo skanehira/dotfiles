@@ -201,3 +201,6 @@ repo = 'tweekmonster/helpful.vim'
 
 [[plugins]]
 repo = 'gyim/vim-boxdraw'
+
+#[[plugins]]
+#repo = 'skywind3000/vim-quickui'
