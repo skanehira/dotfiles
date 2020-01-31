@@ -607,6 +607,12 @@ augroup END
 " sonictemplate.vim {{{
 let g:sonictemplate_author = 'skanehira'
 let g:sonictemplate_license = 'MIT'
+
+let s:sonictemplate_dir = expand('~/.vim/sonictemplate')
+if !isdirectory(s:sonictemplate_dir)
+  call mkdir(s:sonictemplate_dir, 'p')
+endif
+let g:sonictemplate_vim_template_dir = s:sonictemplate_dir
 " }}}
 
 " vimhelpgenarator {{{
