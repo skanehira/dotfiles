@@ -663,6 +663,10 @@ let g:preview_markdown_auto_update = 1
 let g:preview_markdown_parser = 'mdr'
 " }}}
 
+" {{{ vista
+let g:vista_default_executive = 'vim_lsp'
+" }}}
+
 " {{{ WSLのクリップボード設定
 if $WSL_DISTRO_NAME != ''
     augroup yankpost

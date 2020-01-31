@@ -210,3 +210,6 @@ repo = 'tyru/open-browser-github.vim'
 
 [[plugins]]
 repo = 'tyru/open-browser.vim'
+
+[[plugins]]
+repo = 'liuchengxu/vista.vim'
