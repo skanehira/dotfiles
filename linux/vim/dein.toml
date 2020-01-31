@@ -204,3 +204,9 @@ repo = 'gyim/vim-boxdraw'
 
 #[[plugins]]
 #repo = 'skywind3000/vim-quickui'
+
+[[plugins]]
+repo = 'tyru/open-browser-github.vim'
+
+[[plugins]]
+repo = 'tyru/open-browser.vim'
