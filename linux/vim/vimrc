@@ -364,7 +364,7 @@ nnoremap <Leader>re :%s;\<<C-R><C-W>\>;g<Left><Left>;
 vnoremap <Leader>re y:%s;<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>;;g<Left><Left>
 
 " ハイライトを削除する
-nnoremap <Esc><Esc> :nohlsearch<CR>
+nnoremap <silent> <Esc><Esc> :nohlsearch<CR>
 
 " vimrcを開く
 nnoremap <Leader>. :new ~/.vimrc<CR>
