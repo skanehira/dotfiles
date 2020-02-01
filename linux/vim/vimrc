@@ -82,7 +82,6 @@ syntax enable
 
 " カラースキームを使う {{{
 colorscheme iceberg
-"colorscheme gotham256
 " }}}
 
 " ファイル形式別プラグインとインデントを有効にする {{{
@@ -104,10 +103,6 @@ set shiftwidth=4
 
 " 行番号を表示 {{{
 set number
-" }}}
-
-" カーソルから相対的な行数を表示する {{{
-"set relativenumber
 " }}}
 
 " タブでも常に空白を挿入 {{{
@@ -156,7 +151,7 @@ set synmaxcol=256
 set cursorline
 " 描画負担軽減のため、行番号のみハイライト
 if !has('nvim')
-	"set cursorlineopt=number
+    set cursorlineopt=number
 endif
 " }}}
 
@@ -165,7 +160,6 @@ let g:netrw_liststyle=3
 let g:netrw_banner=0
 let g:netrw_sizestyle='H'
 let g:netrw_timefmt='%Y/%m/%d(%a) %H:%M:%S'
-let g:netrw_preview=1
 " }}}
 
 " 拡張子ごとのインデントを指定する {{{
@@ -226,7 +220,6 @@ set autowrite
 " }}}
 
 " ファイル保存時に整形する {{{
-" key is file type, value is command args
 let s:format_targets = {
             \ 'javascript': '--use-tabs=false --single-quote=true %',
             \ 'html': '--use-tabs=false --single-quote=true %',
@@ -303,8 +296,6 @@ command! -nargs=* Source call SourceDir(<f-args>)
 " listの設定 {{{
 set list
 set listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:%
-"hi NonText    ctermbg=None ctermfg=Yellow
-"hi SpecialKey ctermbg=None ctermfg=Yellow
 " }}}
 
 " {{{ 行末のホワイトスペース削除
@@ -403,15 +394,11 @@ nnoremap va{ va{
 
 " 行先頭と行末
 noremap H ^
-noremap L $
+noremap L g_
 
 " タブ切り替え
 nnoremap <C-l> gt
 nnoremap <C-h> gT
-
-" visual時に選択行を移動
-"vnoremap <C-j> :m '>+1<CR>gv
-"vnoremap <C-k> :m '<-2<CR>gv
 
 " numberとrelativenumberの切り替え
 nnoremap <silent> <Leader>n :set relativenumber!<CR>
@@ -423,9 +410,6 @@ tnoremap <C-w>n <C-w>N
 " ターミナルでウィンドウ移動
 tnoremap <silent> <C-h> <C-w>:tabprevious<CR>
 tnoremap <silent> <C-l> <C-w>:tabnext<CR>
-
-" ターミナルのプレフィックスキーを変更
-"set termwinkey=<C-g>
 
 " <c-g>を<c-w>代わりにする
 tnoremap <C-g> <C-w>.
@@ -448,18 +432,23 @@ nnoremap gk O<esc>
 " git status
 nnoremap gs :Gstatus<CR>
 
+" バッファ一覧
+nnoremap gb :Buffers<CR>
+
 " ヘルプ
-augroup helpmapping
+augroup help-mapping
     au!
     au FileType help nnoremap <buffer> <silent>q :bw!<CR>
 augroup END
 
 " }}}
-"
+
 " コマンドラインで単語移動 {{{
 cnoremap <c-b> <S-Left>
 cnoremap <c-f> <S-Right>
 cnoremap <c-a> <Home>
+" }}}
+
 " }}}
 
 " vim-go settings {{{
@@ -611,7 +600,7 @@ let g:sonictemplate_vim_template_dir = expand('~/.vim/sonictemplate')
 " }}}
 
 " vimhelpgenarator {{{
-let g:vimhelpgenerator_version = 'Version: 0.0.1'
+let g:vimhelpgenerator_version = ''
 let g:vimhelpgenerator_author = 'Author: skanehira <sho19921005@gmail.com>'
 let g:vimhelpgenerator_uri = 'https://github.com/skanehira/'
 let g:vimhelpgenerator_defaultlanguage = 'en'
@@ -673,6 +662,10 @@ if $WSL_DISTRO_NAME != ''
     noremap <silent> <Leader>p :call setreg('"',system('win32yank.exe -o'))<CR>
 endif
 " }}}
+"{{{ gist-vim
+let g:gist_post_private = 1
+let g:gist_list_vsplit = 1
+"}}}
 
 " {{{ 自作関数
 
@@ -783,7 +776,7 @@ function! s:git_pull(...) abort
     let opt = {
                 \ 'cmd': 'pull',
                 \ 'args': a:000,
-                \ 'auto_close': 0,
+                \ 'auto_close': 1,
                 \ 'window_way': 'top',
                 \ 'mode': 'term',
                 \ }
@@ -818,9 +811,12 @@ command! -nargs=* GitCheckout call s:git_checkout(<f-args>)
 command! Gitlog call s:git_log()
 command! Lazygit call system('tmux new-window lazygit')
 command! Pst call system('tmux split-window -h pst')
+command! Docui call system('tmux new-window docui')
+command! FF call system('tmux split-window -h ff')
 
 nnoremap <silent> gl :Lazygit<CR>
 nnoremap <silent> gc :GitCheckout<CR>
+
 " }}}
 
 " {{{ バッファ関連
