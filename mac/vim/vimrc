@@ -317,10 +317,11 @@ augroup END
 " swapファイルを作成しない
 set noswapfile
 
-" セッションで保存する対象を設定する
+" {{{ セッションで保存する対象を設定する
 if !has('nvim')
     set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal
 endif
+" }}}
 
 " ウィンドウサイズ自動調整を無効化
 set noequalalways
@@ -328,7 +329,7 @@ set noequalalways
 " タブを常に表示
 set showtabline=2
 
-" 外部でファイルの変更があった場合、自動的に読み直す
+" {{{ 外部でファイルの変更があった場合、自動的に読み直す
 set autoread
 augroup vimrc-misc
     au!
@@ -447,8 +448,6 @@ augroup END
 cnoremap <c-b> <S-Left>
 cnoremap <c-f> <S-Right>
 cnoremap <c-a> <Home>
-" }}}
-
 " }}}
 
 " vim-go settings {{{
@@ -624,7 +623,7 @@ let g:docker_terminal_open = 'top'
 let g:previm_open_cmd = 'open'
 " }}}
 
-" {{{ markdownのGoソースを自動整形
+" {{{ gofmtmd
 let g:gofmtmd_auto_fmt = 1
 " }}}
 " {{{ preview-markdown.vim
