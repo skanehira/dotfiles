@@ -11,21 +11,9 @@ repo = 'prabirshrestha/vim-lsp'
 [[plugins]]
 repo = 'prabirshrestha/async.vim'
 
-# snippets
-#[[plugins]]
-#repo = 'SirVer/ultisnips'
-
-# snippets collection
-#[[plugins]]
-#repo = 'honza/vim-snippets'
-
 # format text
 [[plugins]]
 repo = 'godlygeek/tabular'
-
-# surroundings quotes, tags, and more.
-#[[plugins]]
-#repo = 'tpope/vim-surround'
 
 # fuzzy finder
 [[plugins]]
@@ -97,8 +85,8 @@ let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
 repo = 'skanehira/vsession'
 
 # show git diff
-#[[plugins]]
-#repo = 'airblade/vim-gitgutter'
+[[plugins]]
+repo = 'airblade/vim-gitgutter'
 
 # git wrapper
 [[plugins]]
@@ -201,9 +189,6 @@ repo = 'tweekmonster/helpful.vim'
 
 [[plugins]]
 repo = 'gyim/vim-boxdraw'
-
-#[[plugins]]
-#repo = 'skywind3000/vim-quickui'
 
 [[plugins]]
 repo = 'tyru/open-browser-github.vim'
