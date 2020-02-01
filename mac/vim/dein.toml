@@ -11,37 +11,24 @@ repo = 'prabirshrestha/vim-lsp'
 [[plugins]]
 repo = 'prabirshrestha/async.vim'
 
-# auto complete plugin
-#[[plugins]]
-#repo = 'prabirshrestha/asyncomplete.vim'
-
-# auto complete for lsp
-#[[plugins]]
-#repo = 'prabirshrestha/asyncomplete-lsp.vim'
-
-# auto complete for ultisnips
-#[[plugins]]
-#repo = 'prabirshrestha/asyncomplete-ultisnips.vim'
-
-# snippets
-[[plugins]]
-repo = 'SirVer/ultisnips'
-
-# snippets collection
-[[plugins]]
-repo = 'honza/vim-snippets'
-
 # format text
 [[plugins]]
 repo = 'godlygeek/tabular'
 
 # fuzzy finder
 [[plugins]]
-repo = '/usr/local/opt/fzf'
+repo = 'junegunn/fzf'
+build_on = '''
+./install --all
+'''
 
 # fzf for vim
 [[plugins]]
 repo = 'junegunn/fzf.vim'
+merged = 0
+
+[[plugins]]
+repo = 'previm/previm'
 
 # auto close parentheses
 [[plugins]]
@@ -70,18 +57,8 @@ hook_add = '''
 			\ },
 		\ 'component_function':{
 			\ 'filepath': 'FilePath',
-            \ 'branchName': 'BranchName'
 			\ },
-        \ 'separator': { 'left': '', 'right': '' },
 		\ }
-
-	function! BranchName()
-		if exists('*fugitive#head')
-			let branch = FugitiveHead()
-			return branch !=# '' ? ' '.branch : ''
-		endif
-		return ''
-	endfunction
 
 	function! FilePath()
 		if winwidth(0) > 90
@@ -123,9 +100,6 @@ repo = 'markonm/traces.vim'
 [[plugins]]
 repo = 'posva/vim-vue'
 
-[[plugins]]
-repo = 'previm/previm'
-
 # syntax file type markdown
 [[plugins]]
 repo = 'plasticboy/vim-markdown'
@@ -142,10 +116,6 @@ repo = 'dag/vim-fish'
 [[plugins]]
 repo = 'mattn/vim-maketable'
 
-# presentation slide with markdown
-[[plugins]]
-repo = 'thinca/vim-showtime'
-
 # quickrun buffer source cod
 [[plugins]]
 repo = 'thinca/vim-quickrun'
@@ -161,10 +131,6 @@ repo = 'vim-jp/vimdoc-ja'
 # translate language
 [[plugins]]
 repo = 'skanehira/translate.vim'
-
-# calendar
-[[plugins]]
-repo = 'itchyny/calendar.vim'
 
 [[plugins]]
 repo = 'vim-jp/vital.vim'
@@ -188,7 +154,6 @@ repo = 'skanehira/docker.vim'
 [[plugins]]
 repo = 'LeafCage/vimhelpgenerator'
 
-
 [[plugins]]
 repo = 'kshenoy/vim-signature'
 
@@ -199,7 +164,16 @@ repo = 'kshenoy/vim-signature'
 repo = 'skanehira/generatedir.vim'
 
 [[plugins]]
-repo = 'andymass/vim-matchup'
+repo = 'thinca/vim-themis'
+
+[[plugins]]
+repo = 'heavenshell/vim-textlint'
+
+[[plugins]]
+repo = 'po3rin/vim-gofmtmd'
+
+[[plugins]]
+repo = 'skanehira/gql.vim'
 
 [[plugins]]
 repo = 'jparise/vim-graphql'
@@ -208,7 +182,30 @@ repo = 'jparise/vim-graphql'
 repo = 'skanehira/preview-markdown.vim'
 
 [[plugins]]
+repo = 'mattn/qiita-vim'
+
+[[plugins]]
 repo = 'tweekmonster/helpful.vim'
 
 [[plugins]]
 repo = 'gyim/vim-boxdraw'
+
+[[plugins]]
+repo = 'tyru/open-browser-github.vim'
+
+[[plugins]]
+repo = 'tyru/open-browser.vim'
+
+[[plugins]]
+repo = 'liuchengxu/vista.vim'
+
+
+[[plugins]]
+repo = 'tweekmonster/helpful.vim'
+
+[[plugins]]
+repo = 'andymass/vim-matchup'
+
+[[plugins]]
+repo = 'gyim/vim-boxdraw'
+
