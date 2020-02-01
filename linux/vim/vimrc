@@ -317,10 +317,11 @@ augroup END
 " swapファイルを作成しない
 set noswapfile
 
-" セッションで保存する対象を設定する
+" {{{ セッションで保存する対象を設定する
 if !has('nvim')
     set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal
 endif
+" }}}
 
 " ウィンドウサイズ自動調整を無効化
 set noequalalways
@@ -328,7 +329,7 @@ set noequalalways
 " タブを常に表示
 set showtabline=2
 
-" 外部でファイルの変更があった場合、自動的に読み直す
+" {{{ 外部でファイルの変更があった場合、自動的に読み直す
 set autoread
 augroup vimrc-misc
     au!
@@ -447,8 +448,6 @@ augroup END
 cnoremap <c-b> <S-Left>
 cnoremap <c-f> <S-Right>
 cnoremap <c-a> <Home>
-" }}}
-
 " }}}
 
 " vim-go settings {{{
@@ -621,7 +620,7 @@ let g:docker_open_browser_cmd = 'xdg-open'
 "let g:docker_registry_auth = json_decode(join(readfile(s:docker_auth_file), "\n"))
 " }}}
 
-" {{{ previm
+" {{{ preview.vim
 let g:previm_open_cmd = 'xdg-open'
 " }}}
 
@@ -629,7 +628,7 @@ let g:previm_open_cmd = 'xdg-open'
 let g:textlint_enable_quickfix = 1
 " }}}
 
-" {{{ markdownのGoソースを自動整形
+" {{{ gofmtmd
 let g:gofmtmd_auto_fmt = 1
 " }}}
 
@@ -651,6 +650,11 @@ let g:preview_markdown_parser = 'mdr'
 let g:vista_default_executive = 'vim_lsp'
 " }}}
 
+"{{{ gist-vim
+let g:gist_post_private = 1
+let g:gist_list_vsplit = 1
+"}}}
+
 " {{{ WSLのクリップボード設定
 if $WSL_DISTRO_NAME != ''
     augroup yankpost
@@ -662,10 +666,6 @@ if $WSL_DISTRO_NAME != ''
     noremap <silent> <Leader>p :call setreg('"',system('win32yank.exe -o'))<CR>
 endif
 " }}}
-"{{{ gist-vim
-let g:gist_post_private = 1
-let g:gist_list_vsplit = 1
-"}}}
 
 " {{{ 自作関数
 
