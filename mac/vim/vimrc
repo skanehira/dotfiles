@@ -106,7 +106,7 @@ set number
 " }}}
 
 " タブでも常に空白を挿入 {{{
-set tabstop=4
+set tabstop=2
 set expandtab
 " }}}
 
@@ -114,12 +114,10 @@ set expandtab
 set incsearch
 " }}}
 
-" https://vim-jp.org/vimdoc-ja/options.html#'ignorecase'
 " 検索時大文字小文字を区別しない {{{
 set ignorecase
 " }}}
 
-" https://vim-jp.org/vimdoc-ja/options.html#'smartcase'
 " 検索時に大文字を入力した場合ignorecaseが無効になる {{{
 set smartcase
 " }}}
@@ -151,6 +149,7 @@ set synmaxcol=256
 
 " カーソルラインを表示する {{{
 set cursorline
+" 描画負担軽減のため、行番号のみハイライト
 if !has('nvim')
     set cursorlineopt=number
 endif
@@ -166,12 +165,12 @@ let g:netrw_timefmt='%Y/%m/%d(%a) %H:%M:%S'
 " 拡張子ごとのインデントを指定する {{{
 augroup fileTypeIndent
     autocmd!
-    au BufRead,BufNewFile *.php setlocal tabstop=4 softtabstop=4 shiftwidth=4
-    au BufRead,BufNewFile *.html setlocal tabstop=4 softtabstop=4 shiftwidth=4
-    au BufRead,BufNewFile *.js   setlocal tabstop=4 softtabstop=4 shiftwidth=4
-    au BufRead,BufNewFile *.vue  setlocal tabstop=4 softtabstop=4 shiftwidth=4
-    au BufRead,BufNewFile *.yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2
     au BufRead,BufNewFile *.vim setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au BufRead,BufNewFile *.php setlocal tabstop=4 softtabstop=4 shiftwidth=4
+    au BufRead,BufNewFile *.html setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au BufRead,BufNewFile *.yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2
 augroup END
 " }}}
 
@@ -199,7 +198,8 @@ augroup END
 " undoの保存先 {{{
 if has('persistent_undo')
     let undo_path = expand('~/.vim/undo')
-    if !isdirectory((undo_path))
+    " ディレクトリが存在しない場合は作成
+    if !isdirectory(undo_path)
         call mkdir(undo_path, 'p')
     endif
     exe 'set undodir=' .. undo_path
@@ -215,17 +215,17 @@ set virtualedit=block
 set helplang=ja
 " }}}
 
-" {{{
+" {{{ 他のバッファに移動する時に自動保存
 set autowrite
 " }}}
-"
+
 " ファイル保存時に整形する {{{
 let s:format_targets = {
-            \ 'javascript': '--use-tabs=true --tab-width=4 --single-quote=true %',
-            \ 'html': '--use-tabs=true --tab-width=4 --single-quote=true %',
+            \ 'javascript': '--use-tabs=false --single-quote=true %',
+            \ 'html': '--use-tabs=false --single-quote=true %',
             \ 'css': '',
             \ 'json': '--tab',
-            \ 'vue':  '--use-tabs=true --tab-width=4 --single-quote=true %',
+            \ 'vue':  '--use-tabs=false --single-quote=true %',
             \ 'vim': '',
             \ 'java': '',
             \ }
@@ -263,6 +263,7 @@ function! Format() abort
 endfunction
 
 nnoremap <C-f> :call Format()<CR>
+" }}}
 
 " プラグインディレクトリ配下の.vimをすべてsourceする {{{
 function! SourceDir(...) abort
@@ -298,11 +299,18 @@ set listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:%
 " }}}
 
 " {{{ 行末のホワイトスペース削除
+let s:spaces_target_ft = {
+            \ 'markdown': 0,
+            \ 'go': 1,
+            \ 'javascript': 1,
+            \ 'graphql': 1,
+            \ 'terminal': 1,
+            \ }
 augroup HighlightTrailingSpaces
-    autocmd!
-    autocmd BufWritePre * if &ft != 'markdown' | :silent keeppatterns %s/\s\+$//ge | endif
+	autocmd!
+    autocmd BufWritePre * if get(s:spaces_target_ft, &ft, 0) | :silent keeppatterns %s/\s\+$//ge | endif
     autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
-    autocmd VimEnter,WinEnter * match TrailingSpaces /\s\+$/
+    autocmd VimEnter,WinEnter * if get(s:spaces_target_ft, &ft, 0) | match TrailingSpaces /\s\+$/ | endif
 augroup END
 " }}}
 
@@ -329,6 +337,7 @@ augroup END
 " }}}
 
 " key mappings {{{
+" *でカーソルを移動しないようにする
 noremap * *N
 
 " ファイル保存と終了 {{{
@@ -346,7 +355,7 @@ nnoremap <Leader>re :%s;\<<C-R><C-W>\>;g<Left><Left>;
 vnoremap <Leader>re y:%s;<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>;;g<Left><Left>
 
 " ハイライトを削除する
-nnoremap <Esc><Esc> :nohlsearch<CR>
+nnoremap <silent> <Esc><Esc> :nohlsearch<CR>
 
 " vimrcを開く
 nnoremap <Leader>. :new ~/.vimrc<CR>
@@ -394,15 +403,6 @@ nnoremap <C-h> gT
 " numberとrelativenumberの切り替え
 nnoremap <silent> <Leader>n :set relativenumber!<CR>
 
-" 自作アプリケーションランチャー
-nnoremap <silent> <Leader>l :bo term ++close gol -f<CR>
-
-" visual paste
-vnoremap <silent> <C-p> "0p<CR>
-
-" ff
-nnoremap <Leader>f :vert term ++close ++cols=50 ff<CR>
-
 " ターミナル関連 {{{
 " ターミナルノーマルモード
 tnoremap <C-w>n <C-w>N
@@ -411,9 +411,7 @@ tnoremap <C-w>n <C-w>N
 tnoremap <silent> <C-h> <C-w>:tabprevious<CR>
 tnoremap <silent> <C-l> <C-w>:tabnext<CR>
 
-"set termwinkey=<C-g>
-
-" 単語削除
+" <c-g>を<c-w>代わりにする
 tnoremap <C-g> <C-w>.
 " }}}
 
@@ -443,6 +441,8 @@ augroup help-mapping
     au FileType help nnoremap <buffer> <silent>q :bw!<CR>
 augroup END
 
+" }}}
+
 " コマンドラインで単語移動 {{{
 cnoremap <c-b> <S-Left>
 cnoremap <c-f> <S-Right>
@@ -455,6 +455,9 @@ cnoremap <c-a> <Home>
 " ファイル保存時go importを実行する
 let g:go_fmt_command = 'goimports'
 
+" goplsを有効化
+let g:go_gopls_enabled = 0
+
 " ファイル保存時、linterを実行する
 let g:go_metalinter_autosave = 1
 
@@ -464,10 +467,8 @@ let g:go_metalinter_autosave_enabled = ['vet']
 " golangci-lintを使う
 let g:go_metalinter_command = "golangci-lint"
 
-" vim-lspをしようするので、vim-goの`Ctrl+]`を無効にする
+" vim-lspを使用するので、vim-goの`Ctrl+]`を無効にする
 let g:go_def_mapping_enabled = 0
-
-let g:go_gopls_enabled = 0
 
 " GoDocでポップアップウィンドウを使用する
 "let g:go_doc_popup_window = 1
@@ -494,13 +495,12 @@ augroup END
 " ファイル一覧を出すときにプレビュー表示
 command! -bang -nargs=? -complete=dir Files
             \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
+
 nnoremap <C-P> :Files<CR>
 " }}}
 
 " lsp settings {{{
 nnoremap <silent> <C-]> :LspDefinition<CR>
-nnoremap <silent> <Leader>rf :LspReferences<CR>
-nnoremap <silent> <Leader>im :LspImplementation<CR>
 
 " 非同期補完を有効にする
 "let g:lsp_async_completion = 1
@@ -511,7 +511,7 @@ nnoremap <silent> <Leader>im :LspImplementation<CR>
 
 " enable signs
 let g:lsp_signs_error = {'text': 'ｳﾎ'}
-let g:lsp_signs_warning = {'text': 'ｳｯ'}
+let g:lsp_signs_warning = {'text': '🍌'}
 let g:lsp_signs_enabled = 1
 "let g:lsp_diagnostics_echo_cursor = 1
 
@@ -544,16 +544,6 @@ nmap <Leader>[ ysiw]
 nmap <Leader>{ ysiw}
 " }}}
 
-" ultisnipes自動補完
-"if has('python3')
-"    call asyncomplete#register_source(asyncomplete#sources#ultisnips#get_source_options({
-"                \ 'name': 'ultisnips',
-"                \ 'whitelist': ['*'],
-"                \ 'completor': function('asyncomplete#sources#ultisnips#completor'),
-"                \ }))
-"endif
-" }}}
-
 " profiling {{{
 " vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
 function! ProfileCursorMove() abort
@@ -579,7 +569,7 @@ function! ProfileCursorMove() abort
 endfunction
 " }}}
 
-" emment {{{
+" emmet {{{
 let g:user_emmet_install_global = 0
 let g:user_emmet_settings = {
             \ 'variables': {
@@ -594,13 +584,6 @@ augroup emmet
 augroup END
 " }}}
 
-" lightline {{{
-set laststatus=2
-if !has('gui_running')
-    set t_Co=256
-endif
-" }}}
-
 " vim-vue {{{
 " https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
 " vueファイルのシンタックスが効かなくなる問題対応
@@ -610,29 +593,21 @@ augroup VueSyntax
 augroup END
 " }}}
 
-" calendar.vim {{{
-" Googleカレンダー同期
-let g:calendar_google_calendar = 1
-" }}}
-
 " sonictemplate.vim {{{
 let g:sonictemplate_author = 'skanehira'
 let g:sonictemplate_license = 'MIT'
+let g:sonictemplate_vim_template_dir = expand('~/.vim/sonictemplate')
 " }}}
 
 " vimhelpgenarator {{{
-let g:vimhelpgenerator_version = 'Version : 0.0.1'
-let g:vimhelpgenerator_author = 'Author  : skanehira <sho19921005@gmai.com>'
+let g:vimhelpgenerator_version = ''
+let g:vimhelpgenerator_author = 'Author: skanehira <sho19921005@gmail.com>'
 let g:vimhelpgenerator_uri = 'https://github.com/skanehira/'
 let g:vimhelpgenerator_defaultlanguage = 'en'
 " }}}
 
 " {{{ MemoList
 let g:memolist_fzf = 1
-" }}}
-
-" vsession {{{
-let g:vsession_use_fzf = 1
 " }}}
 
 " {{{ lexima
@@ -649,8 +624,17 @@ let g:docker_terminal_open = 'top'
 let g:previm_open_cmd = 'open'
 " }}}
 
+" {{{ markdownのGoソースを自動整形
+let g:gofmtmd_auto_fmt = 1
+" }}}
 " {{{ preview-markdown.vim
 let g:preview_markdown_vertical = 1
+let g:preview_markdown_auto_update = 1
+let g:preview_markdown_parser = 'mdr'
+" }}}
+
+" {{{ vista
+let g:vista_default_executive = 'vim_lsp'
 " }}}
 
 " {{{ sql-client.vim
@@ -761,6 +745,11 @@ function! s:git_exec(opt) abort
     call win_gotoid(current_winid)
 endfunction
 
+function! s:git_log() abort
+    " use fish command
+    call system('tmux new-window git log')
+endfunction
+
 function! s:git_push(...) abort
     let opt = {
                 \ 'cmd': 'push',
@@ -777,7 +766,7 @@ function! s:git_pull(...) abort
     let opt = {
                 \ 'cmd': 'pull',
                 \ 'args': a:000,
-                \ 'auto_close': 0,
+                \ 'auto_close': 1,
                 \ 'window_way': 'top',
                 \ 'mode': 'term',
                 \ }
@@ -809,6 +798,7 @@ command! -nargs=* Gitpush call s:git_push(<f-args>)
 command! -nargs=* Gitpull call s:git_pull()
 command! -nargs=* Gitblame call s:git_blame()
 command! -nargs=* GitCheckout call s:git_checkout(<f-args>)
+command! Gitlog call s:git_log()
 command! Lazygit call system('tmux new-window lazygit')
 command! Pst call system('tmux split-window -h pst')
 command! Docui call system('tmux new-window docui')
