@@ -14,3 +14,14 @@ alias lg="lazygit"
 alias buildvim='cd $GOPATH/src/github.com/vim/vim/src && git pull && sudo make distclean && ./configure --with-x --enable-multibyte --enable-fail-if-missing && make && sudo make install && cd -'
 alias open="xdg-open"
 
+# restore ctrl+f, ctrl+n, ctrl+p
+# https://github.com/fish-shell/fish-shell/issues/3541
+function fish_user_key_bindings
+    for mode in insert default visual
+        bind -M $mode \cf forward-char
+        bind -M $mode \cp up-or-search
+        bind -M $mode \cn down-or-search
+    end
+end
+
+fish_user_key_bindings
