@@ -669,6 +669,10 @@ endif
 
 " {{{ 自作関数
 
+" {{{ ポップアップウィンドウでターミナル
+command! Terminal call popup_create(term_start(['fish'], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: 80, minheight: 24 })
+" }}}
+
 " {{{ リポジトリに移動
 function! s:cd_repo(shell, repo) abort
     exe 'lcd' trim(system('ghq root')) .. '/' .. a:repo
