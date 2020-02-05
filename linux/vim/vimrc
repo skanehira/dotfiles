@@ -670,7 +670,7 @@ endif
 " {{{ 自作関数
 
 " {{{ ポップアップウィンドウでターミナル
-command! Terminal call popup_create(term_start(['fish'], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: 80, minheight: 24 })
+command! Terminal call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0)/2, minheight: &lines/2 })
 " }}}
 
 " {{{ リポジトリに移動
