@@ -106,7 +106,7 @@ set number
 " }}}
 
 " タブでも常に空白を挿入 {{{
-set tabstop=2
+set tabstop=4
 set expandtab
 " }}}
 
