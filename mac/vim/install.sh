@@ -15,5 +15,5 @@ if [[ ! -e $HOME/.vimrc ]]; then
 fi
 
 if [[ ! -e $path/sonictemplate ]]; then
-    ln -s $PWD/sonictemplate $path/onictemplate
+    ln -s $(dirname $(dirname $PWD))/sonictemplate $path/sonictemplate
 fi
