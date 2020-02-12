@@ -11,10 +11,10 @@ start:
 	docker start ${select_container}
 
 stop:
-	docker stop ${select_container}
+	docker stop ${select_running_container}
 
 kill:
-	docker kill ${select_container}
+	docker kill ${select_running_container}
 
 image-remove:
 	docker rmi ${select_image}
