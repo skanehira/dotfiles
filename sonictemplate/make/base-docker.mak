@@ -21,3 +21,8 @@ image-remove:
 
 container-remove:
 	docker rm ${select_container}
+
+attach:
+	for c in ${select_running_container}; do \
+		tmux split-window docker exec -it $$c sh; \
+	done
