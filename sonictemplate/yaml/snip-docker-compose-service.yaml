@@ -1,0 +1,11 @@
+  # {{_input_:service}}
+  {{_input_:service}}:
+    image: {{_input_:image}}
+    networks:
+      - {{_input_:network}}
+    ports:
+      - {{_input_:port}}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - "TZ=${TZ:-Asia/Tokyo}"
