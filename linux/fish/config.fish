@@ -13,4 +13,13 @@ alias gs="git status"
 alias lg="lazygit"
 alias buildvim='cd $GOPATH/src/github.com/vim/vim/src && git pull && sudo make distclean && ./configure --with-x --enable-multibyte --enable-fail-if-missing && make && sudo make install && cd -'
 alias open="xdg-open"
+alias gl="git log"
 
+# use vi mode in fish
+fish_vi_key_bindings
+
+functions --copy cd standard_cd
+
+function cd
+  standard_cd $argv; and ls
+end
