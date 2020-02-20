@@ -6,7 +6,8 @@ set -x XDG_CONFIG_HOME $HOME/.config
 set -x PATH /usr/local/sbin "/usr/local/opt/llvm/bin" $PATH
 set -x LANG "ja_JP.UTF-8"
 set -x HOMEBREW_INSTALL_CLEANUP 1
-set -x FZF_DEFAULT_OPTS "--layout=reverse --inline-info --select-1 --exit-0 -m"
+set -x FZF_DEFAULT_OPTS "--layout=reverse --inline-info --exit-0 -m"
+set -x FZF_DEFAULT_COMMAND "ag -g ."
 set -g theme_display_date no
 set -x TERM xterm-256color
 set -x LSCOLORS gxfxcxdxbxegedabagacad
@@ -27,5 +28,5 @@ alias gl='git log'
 alias gc='git checkout .'
 alias gf='gol -f'
 alias repo='cd ( ls -ld $GOPATH/src/*/*/* | awk \'{print $9}\' | fzf )'
-alias buildvim='cd /Users/skanehira/dev/go/src/github.com/vim/vim/src && sudo make distclean && ./configure --enable-python3interp=yes --enable-fail-if-missing && make && sudo make install'
+alias buildvim='cd /Users/skanehira/dev/go/src/github.com/vim/vim/src && sudo make distclean && ./configure --enable-python3interp=yes --enable-fail-if-missing && make && sudo make install && cd -'
 alias vimt='vim -c ":bo term ++rows=20"'
