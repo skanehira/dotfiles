@@ -13,6 +13,7 @@ set -x LSCOLORS gxfxcxdxbxegedabagacad
 set -x GO111MODULE on
 set -x EDITOR vim
 set -x LC_CTYPE "en_US.UTF-8"
+set -x GHQ_ROOT $GOPATH/src
 
 # alias
 alias lg="lazygit"
