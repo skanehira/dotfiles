@@ -18,15 +18,20 @@ set -x GHQ_ROOT $GOPATH/src
 
 # alias
 alias lg="lazygit"
-alias dry="docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock moncho/dry"
 alias ll='ls -lahG'
-alias bw='w3m https://google.com'
-alias 2gif='docker run --rm -v $PWD:/data asciinema/asciicast2gif'
 alias gs='git status'
 alias gd='git diff'
 alias gl='git log'
 alias gc='git checkout .'
-alias gf='gol -f'
-alias repo='cd ( ls -ld $GOPATH/src/*/*/* | awk \'{print $9}\' | fzf )'
+alias gdc='git diff (git log --pretty=oneline | fzf | awk "{print \$1}")'
 alias buildvim='cd /Users/skanehira/dev/go/src/github.com/vim/vim/src && sudo make distclean && ./configure --enable-python3interp=yes --enable-fail-if-missing && make && sudo make install && cd -'
 alias vimt='vim -c ":bo term ++rows=20"'
+
+# use vi mode in fish
+fish_vi_key_bindings
+
+functions --copy cd standard_cd
+
+function cd
+  standard_cd $argv; and ls
+end
