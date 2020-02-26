@@ -2,8 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>{{_cursor_}}</title>
+  <title></title>
   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.js"></script>
 </head>
 <body>
   <div id="app">
@@ -23,7 +24,8 @@ const app = new Vue({
       console.log("hello gorilla")
     },
   },
-  created: {
+  mounted(){
+    this.hello();
   }
 })
 </script>
