@@ -3,6 +3,7 @@ set -x GOBIN $GOPATH/bin
 set -x THEMIS_HOME $HOME/.cache/dein/repos/github.com/thinca/vim-themis
 set -x PATH $PATH $GOBIN $THEMIS_HOME/bin
 set -x FZF_DEFAULT_OPTS "--layout=reverse --inline-info --select-1 --exit-0 -m --bind ctrl-a:toggle-all"
+set -x FZF_DEFAULT_COMMAND 'ag --nocolor -g .'
 set -x EDITOR vim
 set -x LC_CTYPE "en_US.UTF-8"
 set -x GHQ_ROOT $GOPATH/src
