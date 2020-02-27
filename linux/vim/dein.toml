@@ -11,6 +11,12 @@ repo = 'prabirshrestha/vim-lsp'
 [[plugins]]
 repo = 'prabirshrestha/async.vim'
 
+[[plugins]]
+repo = 'prabirshrestha/asyncomplete.vim'
+
+[[plugins]]
+repo = 'prabirshrestha/asyncomplete-lsp.vim'
+
 # format text
 [[plugins]]
 repo = 'godlygeek/tabular'
@@ -198,3 +204,6 @@ repo = 'tyru/open-browser.vim'
 
 [[plugins]]
 repo = 'liuchengxu/vista.vim'
+
+[[plugins]]
+repo = 'mattn/vim-lsp-settings'
