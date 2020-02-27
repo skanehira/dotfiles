@@ -597,6 +597,7 @@ augroup END
 let g:sonictemplate_author = 'skanehira'
 let g:sonictemplate_license = 'MIT'
 let g:sonictemplate_vim_template_dir = expand('~/.vim/sonictemplate')
+inoremap <silent> <C-f> <C-o>:call fzf#sonictemplate#run()<CR>
 " }}}
 
 " vimhelpgenarator {{{
