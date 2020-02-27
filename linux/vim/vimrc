@@ -107,7 +107,7 @@ set number
 
 " タブでも常に空白を挿入 {{{
 set tabstop=4
-set expandtab
+"set expandtab
 " }}}
 
 " インクリメントサーチを有効にする {{{
@@ -168,6 +168,7 @@ augroup fileTypeIndent
     au BufRead,BufNewFile *.vim setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
     au BufRead,BufNewFile *.php setlocal tabstop=4 softtabstop=4 shiftwidth=4
     au BufRead,BufNewFile *.html setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au BufRead,BufNewFile *.css setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
     au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
     au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
     au BufRead,BufNewFile *.yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2
