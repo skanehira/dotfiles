@@ -1,0 +1,55 @@
+\(.*\)\.try$
+	if err := {{$1}}; err != nil {
+		{{_cursor_}}
+	}
+
+\(\S\+\)\.for\.\(\S\+\)$
+	for _, {{$1}} := range {{$2}} {
+		{{_cursor_}}
+	}
+
+\(\S\+\)\.str$
+	type {{$1}} struct {
+		{{_cursor_}}
+	}
+
+\(".*"\)\.errn$
+	errors.New({{$1}})
+	{{_cursor_}}
+
+\(".*"\)\.open
+	file, err := os.Open({{$1}})
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	{{_cursor_}}
+
+errf
+	if err != nil {
+		log.Fatal(err)
+	}
+	{{_cursor_}}
+
+return.err
+	if err != nil {
+		return err
+	}
+	{{_cursor_}}
+
+\(".*"\)\.\(".*"\)\.db.open
+	db, err := db.Open({{$1}}, {{$2}})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	{{_cursor_}}
+
+\(".*"\)\.db.query
+	rows, err := db.Query({{$1}})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+	{{_cursor_}}
+
