@@ -53,3 +53,44 @@ return.err
 	defer rows.Close()
 	{{_cursor_}}
 
+json\.decode\.\(\S\+\)\.\(\S\+\)$
+	if err := json.NewDecoder({{$1}}).Decode({{$2}}); err != nil {
+		{{_cursor_}}
+	}
+
+json\.encode\.\(\S\+\)\.\(\S\+\)$
+	if err := json.NewEncoder({{$1}}).Encode({{$2}}); err != nil {
+		{{_cursor_}}
+	}
+
+\(\S\+\)\.logf
+	log.Fatal({{$1}})
+
+^main$
+	package main
+	
+	func main() {
+		{{_cursor_}}
+	}
+
+http\.server\.\(\S\+\)$
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Hello Gorilla"))
+	})
+	log.Fatal(http.ListenAndServe(":{{$1}}", nil))
+	{{_cursor_}}
+
+http\.file$
+	http.Handle("/", http.FileServer(http.Dir(".")))
+	{{_cursor_}}
+
+http\.handle$
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		{{_cursor_}}
+	}
+
+\(\S\+\)\.map\.\(\S\+\)\.\(\S\+\)$
+	{{$1}} := map[{{$2}}]{{$3}} {
+		{{_cursor_}}
+	}
+	
