@@ -482,13 +482,13 @@ let g:go_template_autocreate = 0
 " すでに開いているバッファに定義ジャンプする
 let g:go_def_reuse_buffer = 1
 
-let g:go_fold_enable = ['block', 'import', 'varconst', 'package_comment']
+"let g:go_fold_enable = ['block', 'import', 'varconst', 'package_comment']
 
 " key mapping
-augroup goMapping
-    autocmd!
-    au FileType go set foldmethod=syntax
-augroup END
+"augroup goMapping
+"    autocmd!
+"    au FileType go set foldmethod=syntax
+"augroup END
 " }}}
 
 " fzf settings {{{
@@ -598,6 +598,7 @@ let g:sonictemplate_author = 'skanehira'
 let g:sonictemplate_license = 'MIT'
 let g:sonictemplate_vim_template_dir = expand('~/.vim/sonictemplate')
 inoremap <silent> <C-f> <C-o>:call fzf#sonictemplate#run()<CR>
+imap <silent> <C-l> <plug>(sonictemplate-postfix)
 " }}}
 
 " vimhelpgenarator {{{
