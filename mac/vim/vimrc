@@ -626,7 +626,7 @@ let g:previm_open_cmd = 'open'
 " }}}
 
 " {{{ gofmtmd
-let g:gofmtmd_auto_fmt = 1
+let g:gofmtmd_auto_fmt = 0
 " }}}
 " {{{ preview-markdown.vim
 let g:preview_markdown_vertical = 1
