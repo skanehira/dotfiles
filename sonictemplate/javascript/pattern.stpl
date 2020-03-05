@@ -36,7 +36,7 @@ post\.\(".*"\)\.\(.*\)$
 		console.log(err);
 	})
 
-new.vue$
+new\.vue$
 	const app = new Vue({
 	  el: '#app',
 	  data: {
@@ -49,3 +49,28 @@ new.vue$
 
 	  }
 	}
+
+\(.*\)\.json\.decode\.\(.*\)$
+	const {{$1}} = JSON.parse({{$2}})
+	{{_cursor_}}
+
+\(.*\)\.json\.encode\.\(.*\)$
+	const {{$1}} = JSON.stringify({{$2}})
+	{{_cursor_}}
+
+\(.*\)\.get\.id\.\(.*\)$
+	const {{$1}} = document.getElementById({{$2}})
+	{{_cursor_}}
+
+func.\(.*\)$
+	function {{$1}}() {
+		{{_cursor_}}
+	}
+	
+log\.debug\.\(.*\)$
+	console.debug({{$1}})
+	{{_cursor_}}
+
+log\.\(.*\)$
+	console.log({{$1}})
+	{{_cursor_}}
