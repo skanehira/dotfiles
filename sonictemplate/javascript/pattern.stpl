@@ -1,0 +1,37 @@
+axios.post\.\(".*"\)\.\(\S\+\)$
+	axios.post({{$1}}, {{$2}}).then((response) => {
+		{{_cursor_}}
+	}).catch((error) => {
+		console.log(error);
+	})
+
+axios.get\.\(".*"\)\.\(\S\+\)$
+	axios.get({{$1}}, {{$2}}).then((response) => {
+		{{_cursor_}}
+	}).catch((error) => {
+		console.log(error);
+	})
+
+get\.\(".*"\)$
+	fetch({{$1}}).then((response) => {
+		return response.json();
+	}).then((json) => {
+		{{_cursor_}}
+	}).catch((err) => {
+		console.log(err);
+	})
+
+post\.\(".*"\)\.\(.*\)$
+	fetch({{$1}}, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({{$2}}),
+	}).then((response) => {
+		return response.json();
+	}).then((json) => {
+		{{_cursor_}}
+	}).catch((err) => {
+		console.log(err);
+	})
