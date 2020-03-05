@@ -207,3 +207,6 @@ repo = 'liuchengxu/vista.vim'
 
 [[plugins]]
 repo = 'mattn/vim-lsp-settings'
+
+[[plugins]]
+repo = 'skanehira/google-map.vim'
