@@ -94,3 +94,6 @@ http\.handle$
 		{{_cursor_}}
 	}
 	
+\(\S\+\)\.append\.\(\S\+\)$
+	{{$1}} = append({{$1}}, {{$2}})
+
