@@ -107,7 +107,7 @@ set number
 
 " タブでも常に空白を挿入 {{{
 set tabstop=4
-set expandtab
+"set expandtab
 " }}}
 
 " インクリメントサーチを有効にする {{{
@@ -513,18 +513,19 @@ let g:lsp_signs_error = {'text': 'ｳﾎ'}
 let g:lsp_signs_warning = {'text': '🍌'}
 let g:lsp_signs_enabled = 1
 "let g:lsp_diagnostics_echo_cursor = 1
+nmap <Leader>ho <plug>(lsp-hover)
 
 " Go {{{
-augroup LspGo
-    au!
-    if executable('gopls')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'gopls',
-                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio']},
-                    \ 'whitelist': ['go'],
-                    \ })
-    endif
-augroup END
+"augroup LspGo
+"    au!
+"    if executable('gopls')
+"        au User lsp_setup call lsp#register_server({
+"                    \ 'name': 'gopls',
+"                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio']},
+"                    \ 'whitelist': ['go'],
+"                    \ })
+"    endif
+"augroup END
 " }}}
 
 " }}}
@@ -596,8 +597,7 @@ augroup END
 let g:sonictemplate_author = 'skanehira'
 let g:sonictemplate_license = 'MIT'
 let g:sonictemplate_vim_template_dir = expand('~/.vim/sonictemplate')
-inoremap <silent> <C-f> <C-o>:call fzf#sonictemplate#run()<CR>
-nnoremap <silent> <C-f> :<C-u>call fzf#sonictemplate#run()<CR>
+imap <silent> <C-l> <plug>(sonictemplate-postfix)
 " }}}
 
 " vimhelpgenarator {{{
