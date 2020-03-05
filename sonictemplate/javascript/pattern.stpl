@@ -35,3 +35,17 @@ post\.\(".*"\)\.\(.*\)$
 	}).catch((err) => {
 		console.log(err);
 	})
+
+new.vue$
+	const app = new Vue({
+	  el: '#app',
+	  data: {
+		  {{_cursor_}}
+	  },
+	  methods: {
+
+	  },
+	  mounted(){
+
+	  }
+	}
