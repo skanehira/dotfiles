@@ -63,8 +63,9 @@ json\.encode\.\(\S\+\)\.\(\S\+\)$
 		{{_cursor_}}
 	}
 
-\(\S\+\)\.logf
+logf\.\(\S\+\)$
 	log.Fatal({{$1}})
+	{{_cursor_}}
 
 ^main$
 	package main
@@ -84,8 +85,8 @@ http\.file$
 	http.Handle("/", http.FileServer(http.Dir(".")))
 	{{_cursor_}}
 
-http\.handle$
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+http\.handle\.\(\S\+\)$
+	http.HandleFunc({{$1}}, func(w http.ResponseWriter, r *http.Request) {
 		{{_cursor_}}
 	}
 
@@ -96,4 +97,5 @@ http\.handle$
 	
 \(\S\+\)\.append\.\(\S\+\)$
 	{{$1}} = append({{$1}}, {{$2}})
+	{{_cursor_}}
 
