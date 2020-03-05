@@ -75,10 +75,10 @@ json\.encode\.\(\S\+\)\.\(\S\+\)$
 
 http\.server\.\(\S\+\)$
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello Gorilla"))
+		{{_cursor_}}
 	})
+	log.Println("start http server :{{$1}}")
 	log.Fatal(http.ListenAndServe(":{{$1}}", nil))
-	{{_cursor_}}
 
 http\.file$
 	http.Handle("/", http.FileServer(http.Dir(".")))
