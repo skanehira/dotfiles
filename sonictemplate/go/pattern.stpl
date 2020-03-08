@@ -37,7 +37,7 @@ return.err
 	}
 	{{_cursor_}}
 
-\(".*"\)\.\(".*"\)\.db.open
+db.open\.\(".*"\)\.\(".*"\)
 	db, err := sql.Open({{$1}}, {{$2}})
 	if err != nil {
 		log.Fatal(err)
@@ -45,7 +45,7 @@ return.err
 	defer db.Close()
 	{{_cursor_}}
 
-\(".*"\)\.db.query
+db.query\.\(.*\)
 	rows, err := db.Query({{$1}})
 	if err != nil {
 		log.Fatal(err)
