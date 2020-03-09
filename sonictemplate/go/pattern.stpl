@@ -107,3 +107,14 @@ form\.file$
 		return
 	}
 	defer file.Close()
+
+mrand$
+	rand.Seed(time.Now().UnixNano())
+	n := rand.Intn({{_cursor_}})
+
+crand$
+	n, err := rand.Int(rand.Reader, big.NewInt({{_cursor_}}))
+	if err != nil {
+		log.Fatal(err)
+	}
+	i := n.Int64()
