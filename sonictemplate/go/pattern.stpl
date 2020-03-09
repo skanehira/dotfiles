@@ -99,3 +99,11 @@ http\.handle\.\(\S\+\)$
 	{{$1}} = append({{$1}}, {{$2}})
 	{{_cursor_}}
 
+
+form\.file$
+	file, reader, err := r.FormFile("{{_cursor_}}")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
