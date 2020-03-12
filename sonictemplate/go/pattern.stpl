@@ -17,12 +17,25 @@
 	errors.New({{$1}})
 	{{_cursor_}}
 
-file\.open$
+create\.file$
+	file, err := os.Create({{_cursor_}})
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+open\.file$
 	file, err := os.Open({{_cursor_}})
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+
+read\.file$
+	b, err := ioutil.ReadFile({{_cursor_}})
+	if err != nil {
+		return err
+	}
 
 errf$
 	if err != nil {
@@ -66,6 +79,9 @@ logf\.\(\S\+\)$
 	log.Fatal({{$1}})
 	{{_cursor_}}
 
+printf\.\(\S\+\)$
+	fmt.Printf("%#+v", {{$1}})
+
 ^main$
 	package main
 	
@@ -98,8 +114,11 @@ http\.handle\.\(\S\+\)$
 	{{$1}} = append({{$1}}, {{$2}})
 	{{_cursor_}}
 
+http\.error
+	http.Error(w, err.Error(), {{_cursor_}})
+
 form\.file$
-	file, reader, err := r.FormFile("{{_cursor_}}")
+	file, header, err := r.FormFile("{{_cursor_}}")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
