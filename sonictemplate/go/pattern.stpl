@@ -17,27 +17,26 @@
 	errors.New({{$1}})
 	{{_cursor_}}
 
-\(".*"\)\.open
-	file, err := os.Open({{$1}})
+file\.open$
+	file, err := os.Open({{_cursor_}})
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-	{{_cursor_}}
 
-errf
+errf$
 	if err != nil {
 		log.Fatal(err)
 	}
 	{{_cursor_}}
 
-return.err
+return.err$
 	if err != nil {
 		return err
 	}
 	{{_cursor_}}
 
-db.open\.\(".*"\)\.\(".*"\)
+db.open\.\(".*"\)\.\(".*"\)$
 	db, err := sql.Open({{$1}}, {{$2}})
 	if err != nil {
 		log.Fatal(err)
@@ -45,7 +44,7 @@ db.open\.\(".*"\)\.\(".*"\)
 	defer db.Close()
 	{{_cursor_}}
 
-db.query\.\(.*\)
+db.query\.\(.*\)$
 	rows, err := db.Query({{$1}})
 	if err != nil {
 		log.Fatal(err)
@@ -99,7 +98,6 @@ http\.handle\.\(\S\+\)$
 	{{$1}} = append({{$1}}, {{$2}})
 	{{_cursor_}}
 
-
 form\.file$
 	file, reader, err := r.FormFile("{{_cursor_}}")
 	if err != nil {
@@ -118,3 +116,11 @@ crand$
 		log.Fatal(err)
 	}
 	i := n.Int64()
+
+\(\S.*\)\.if$
+	if {{$1}} {
+		{{_cursor_}}
+	}
+
+\(\S.*\)\.len$
+	len({{$1}}){{_cursor_}}
