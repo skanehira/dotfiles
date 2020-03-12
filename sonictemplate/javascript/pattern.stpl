@@ -1,14 +1,28 @@
 axios\.post\.\(".*"\)\.\(\S\+\)$
-	axios.post({{$1}}, {{$2}}).then((response) => {
+	axios.post({{$1}}, {{$2}}).then(response => {
 		{{_cursor_}}
-	}).catch((error) => {
+	}).catch(error => {
 		console.log(error);
 	})
 
 axios\.get\.\(".*"\)\.\(\S\+\)$
-	axios.get({{$1}}, {{$2}}).then((response) => {
+	axios.get({{$1}}, {{$2}}).then(response => {
 		{{_cursor_}}
-	}).catch((error) => {
+	}).catch(error => {
+		console.log(error);
+	})
+
+axios\.delete\.\(".*"\)\.\(\S\+\)$
+	axios.delete({{$1}}, {{$2}}).then(response => {
+		{{_cursor_}}
+	}).catch(error => {
+		console.log(error);
+	})
+
+axios\.put\.\(".*"\)\.\(\S\+\)$
+	axios.put({{$1}}, {{$2}}).then(response => {
+		{{_cursor_}}
+	}).catch(error => {
 		console.log(error);
 	})
 
