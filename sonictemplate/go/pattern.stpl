@@ -1,4 +1,4 @@
-\(.*\)\.try$
+\(\S.*\)\.try$
 	if err := {{$1}}; err != nil {
 		{{_cursor_}}
 	}
@@ -36,7 +36,7 @@ return.err$
 	}
 	{{_cursor_}}
 
-db.open\.\(".*"\)\.\(".*"\)$
+db\.open\.\(".*"\)\.\(".*"\)$
 	db, err := sql.Open({{$1}}, {{$2}})
 	if err != nil {
 		log.Fatal(err)
@@ -44,7 +44,7 @@ db.open\.\(".*"\)\.\(".*"\)$
 	defer db.Close()
 	{{_cursor_}}
 
-db.query\.\(.*\)$
+db\.query\.\(.*\)$
 	rows, err := db.Query({{$1}})
 	if err != nil {
 		log.Fatal(err)
