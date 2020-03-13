@@ -13,9 +13,10 @@
 		{{_cursor_}}
 	}
 
-\(".*"\)\.errn$
-	errors.New({{$1}})
-	{{_cursor_}}
+errn$
+	if err != nil {
+		return err
+	}
 
 create\.file$
 	file, err := os.Create({{_cursor_}})
