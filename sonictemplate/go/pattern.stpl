@@ -17,6 +17,7 @@ errn$
 	if err != nil {
 		return err
 	}
+	{{_cursor_}}
 
 create\.file$
 	file, err := os.Create({{_cursor_}})
@@ -81,7 +82,7 @@ logf\.\(\S\+\)$
 	{{_cursor_}}
 
 printf\.\(\S\+\)$
-	fmt.Printf("%#+v", {{$1}})
+	fmt.Printf("%#+v\n", {{$1}})
 
 ^main$
 	package main
