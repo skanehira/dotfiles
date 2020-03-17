@@ -171,6 +171,7 @@ augroup fileTypeIndent
     au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
     au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
     au BufRead,BufNewFile *.yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2
+    au BufRead,BufNewFile *.json   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
 augroup END
 " }}}
 
@@ -628,6 +629,7 @@ let g:previm_open_cmd = 'open'
 " {{{ gofmtmd
 let g:gofmtmd_auto_fmt = 0
 " }}}
+
 " {{{ preview-markdown.vim
 let g:preview_markdown_vertical = 1
 let g:preview_markdown_auto_update = 1
