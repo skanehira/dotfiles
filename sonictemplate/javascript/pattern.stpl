@@ -92,3 +92,6 @@ log\.\(.*\)$
 new\.vuetify$
 	vuetify: new Vuetify(),
 	{{_cursor_}}
+
+now$
+	new Date().toLocaleString({ timeZone: 'Asia/Tokyo' }){{_cursor_}}
