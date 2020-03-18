@@ -5,8 +5,8 @@ axios\.post\.\(".*"\)\.\(\S\+\)$
 		console.log(error);
 	})
 
-axios\.get\.\(".*"\)\.\(\S\+\)$
-	axios.get({{$1}}, {{$2}}).then(response => {
+axios\.get\.\(".*"\)$
+	axios.get({{$1}}).then(response => {
 		{{_cursor_}}
 	}).catch(error => {
 		console.log(error);
