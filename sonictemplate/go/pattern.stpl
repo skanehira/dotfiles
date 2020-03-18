@@ -145,3 +145,12 @@ crand$
 
 \(\S.*\)\.len$
 	len({{$1}}){{_cursor_}}
+
+64\.encode$
+	str := base64.StdEncoding.EncodeToString({{_cursor_}})
+
+64\.decode$
+	b, err := base64.StdEncoding.DecodeString({{_cursor_}})
+	if err != nil {
+		return err
+	}
