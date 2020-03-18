@@ -76,11 +76,6 @@ new\.vue$
 	const {{$1}} = document.getElementById({{$2}})
 	{{_cursor_}}
 
-func.\(.*\)$
-	function {{$1}}() {
-		{{_cursor_}}
-	}
-	
 log\.debug\.\(.*\)$
 	console.debug({{$1}})
 	{{_cursor_}}
@@ -94,4 +89,10 @@ new\.vuetify$
 	{{_cursor_}}
 
 now$
-	new Date().toLocaleString({ timeZone: 'Asia/Tokyo' }){{_cursor_}}
+	const now = new Date().toLocaleString({ timeZone: 'Asia/Tokyo' })
+	{{_cursor_}}
+
+f.\(.*\)$
+	function {{$1}}() {
+		{{_cursor_}}
+	}
