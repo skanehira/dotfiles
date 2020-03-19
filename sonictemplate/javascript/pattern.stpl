@@ -78,11 +78,9 @@ new\.vue$
 
 log\.debug\.\(.*\)$
 	console.debug({{$1}})
-	{{_cursor_}}
 
 log\.\(.*\)$
 	console.log({{$1}})
-	{{_cursor_}}
 
 new\.vuetify$
 	vuetify: new Vuetify(),
@@ -92,7 +90,17 @@ now$
 	const now = new Date().toLocaleString({ timeZone: 'Asia/Tokyo' })
 	{{_cursor_}}
 
-f.\(.*\)$
+f\.\(.*\)$
 	function {{$1}}() {
+		{{_cursor_}}
+	}
+
+for\.in.\(.*\)\.\(.*\)
+	for (const {{$1}} in {{$2}}) {
+		{{_cursor_}}
+	}
+
+for\.of.\(.*\)\.\(.*\)
+	for (const {{$1}} of {{$2}}) {
 		{{_cursor_}}
 	}
