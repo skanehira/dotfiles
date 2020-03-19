@@ -104,3 +104,6 @@ for\.of.\(.*\)\.\(.*\)
 	for (const {{$1}} of {{$2}}) {
 		{{_cursor_}}
 	}
+
+getid.\(.*\)
+	const {{_cursor_}} = document.getElementById("{{$1}}")
