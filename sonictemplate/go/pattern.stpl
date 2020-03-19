@@ -1,4 +1,4 @@
-\(\S.*\)\.try$
+\(\S.*\)\.err$
 	if err := {{$1}}; err != nil {
 		{{_cursor_}}
 	}
