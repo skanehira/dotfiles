@@ -573,15 +573,16 @@ endfunction
 " emmet {{{
 let g:user_emmet_install_global = 0
 let g:user_emmet_settings = {
-            \ 'variables': {
-            \   'lang' : 'ja'
+            \   'variables': {
+            \     'lang' : 'ja'
+            \   }
             \ }
-            \}
+let g:user_emmet_leader_key = '<C-g>'
 
 augroup emmet
     autocmd!
-    au FileType vue,html,js EmmetInstall
-    au FileType vue,html,js imap <buffer> <C-f> <plug>(emmet-expand-abbr)
+    au FileType vue,html,js,css EmmetInstall
+    au FileType vue,html,js,css imap <buffer> <C-f> <plug>(emmet-expand-abbr)
 augroup END
 " }}}
 
