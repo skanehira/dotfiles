@@ -158,6 +158,9 @@ repo = 'Shougo/dein.vim'
 repo = 'skanehira/docker.vim'
 
 [[plugins]]
+repo = 'skanehira/docker-compose.vim'
+
+[[plugins]]
 repo = 'LeafCage/vimhelpgenerator'
 
 [[plugins]]
