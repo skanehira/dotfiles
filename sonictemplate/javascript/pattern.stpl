@@ -50,6 +50,18 @@ post\.\(".*"\)\.\(.*\)$
 		console.log(err);
 	})
 
+delete\.\(".*"\)$
+	fetch({{$1}}, {
+		method: 'DELETE',
+		headers: {},
+	}).then((response) => {
+		return response.json();
+	}).then((json) => {
+		{{_cursor_}}
+	}).catch((err) => {
+		console.log(err);
+	})
+
 new\.vue$
 	const app = new Vue({
 	  el: '#app',
@@ -64,12 +76,12 @@ new\.vue$
 	  }
 	})
 
-\(.*\)\.json\.decode\.\(.*\)$
-	const {{$1}} = JSON.parse({{$2}})
+json\.decode\.\(\S.*\)$
+	JSON.parse({{$1}})
 	{{_cursor_}}
 
-\(.*\)\.json\.encode\.\(.*\)$
-	const {{$1}} = JSON.stringify({{$2}})
+json\.encode\.\(\S.*\)$
+	JSON.stringify({{$1}})
 	{{_cursor_}}
 
 \(.*\)\.get\.id\.\(.*\)$
