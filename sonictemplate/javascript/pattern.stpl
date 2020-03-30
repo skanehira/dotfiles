@@ -118,4 +118,5 @@ for\.of.\(.*\)\.\(.*\)
 	}
 
 getid.\(.*\)
-	const {{_cursor_}} = document.getElementById("{{$1}}")
+	const {{$1}} = document.getElementById("{{$1}}")
+	{{_cursor_}}
