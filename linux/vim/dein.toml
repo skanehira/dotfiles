@@ -11,11 +11,11 @@ repo = 'prabirshrestha/vim-lsp'
 [[plugins]]
 repo = 'prabirshrestha/async.vim'
 
-[[plugins]]
-repo = 'prabirshrestha/asyncomplete.vim'
-
-[[plugins]]
-repo = 'prabirshrestha/asyncomplete-lsp.vim'
+#[[plugins]]
+#repo = 'prabirshrestha/asyncomplete.vim'
+#
+#[[plugins]]
+#repo = 'prabirshrestha/asyncomplete-lsp.vim'
 
 # format text
 [[plugins]]
