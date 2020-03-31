@@ -172,6 +172,7 @@ augroup fileTypeIndent
     au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
     au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
     au BufRead,BufNewFile *.yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2
+    au BufRead,BufNewFile *.json setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
 augroup END
 " }}}
 
@@ -516,16 +517,16 @@ let g:lsp_signs_enabled = 1
 "let g:lsp_diagnostics_echo_cursor = 1
 
 " Go {{{
-augroup LspGo
-    au!
-    if executable('gopls')
-        au User lsp_setup call lsp#register_server({
-                    \ 'name': 'gopls',
-                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio']},
-                    \ 'whitelist': ['go'],
-                    \ })
-    endif
-augroup END
+"augroup LspGo
+"    au!
+"    if executable('gopls')
+"        au User lsp_setup call lsp#register_server({
+"                    \ 'name': 'gopls',
+"                    \ 'cmd': {server_info->['gopls', '-mode', 'stdio']},
+"                    \ 'whitelist': ['go'],
+"                    \ })
+"    endif
+"augroup END
 " }}}
 
 " }}}
@@ -577,10 +578,12 @@ let g:user_emmet_settings = {
             \ }
             \}
 
+let g:user_emmet_leader_key = '<C-g>'
+
 augroup emmet
     autocmd!
-    au FileType vue,html,js EmmetInstall
-    au FileType vue,html,js imap <buffer> <C-f> <plug>(emmet-expand-abbr)
+    au FileType vue,html,css EmmetInstall
+    au FileType vue,html,css imap <buffer> <C-f> <plug>(emmet-expand-abbr)
 augroup END
 " }}}
 
