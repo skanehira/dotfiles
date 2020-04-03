@@ -1,0 +1,122 @@
+axios\.post\.\(".*"\)\.\(\S\+\)$
+	axios.post({{$1}}, {{$2}}).then(response => {
+		{{_cursor_}}
+	}).catch(error => {
+		console.log(error);
+	})
+
+axios\.get\.\(".*"\)$
+	axios.get({{$1}}).then(response => {
+		{{_cursor_}}
+	}).catch(error => {
+		console.log(error);
+	})
+
+axios\.delete\.\(".*"\)\.\(\S\+\)$
+	axios.delete({{$1}}, {{$2}}).then(response => {
+		{{_cursor_}}
+	}).catch(error => {
+		console.log(error);
+	})
+
+axios\.put\.\(".*"\)\.\(\S\+\)$
+	axios.put({{$1}}, {{$2}}).then(response => {
+		{{_cursor_}}
+	}).catch(error => {
+		console.log(error);
+	})
+
+get\.\(".*"\)$
+	fetch({{$1}}).then((response) => {
+		return response.json();
+	}).then((json) => {
+		{{_cursor_}}
+	}).catch((err) => {
+		console.log(err);
+	})
+
+post\.\(".*"\)\.\(.*\)$
+	fetch({{$1}}, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({{$2}}),
+	}).then((response) => {
+		return response.json();
+	}).then((json) => {
+		{{_cursor_}}
+	}).catch((err) => {
+		console.log(err);
+	})
+
+delete\.\(".*"\)$
+	fetch({{$1}}, {
+		method: 'DELETE',
+		headers: {},
+	}).then((response) => {
+		return response.json();
+	}).then((json) => {
+		{{_cursor_}}
+	}).catch((err) => {
+		console.log(err);
+	})
+
+new\.vue$
+	const app = new Vue({
+	  el: '#app',
+	  data: {
+		  {{_cursor_}}
+	  },
+	  methods: {
+
+	  },
+	  mounted(){
+
+	  }
+	})
+
+json\.decode\.\(\S.*\)$
+	JSON.parse({{$1}})
+	{{_cursor_}}
+
+json\.encode\.\(\S.*\)$
+	JSON.stringify({{$1}})
+	{{_cursor_}}
+
+\(.*\)\.get\.id\.\(.*\)$
+	const {{$1}} = document.getElementById({{$2}})
+	{{_cursor_}}
+
+log\.debug\.\(.*\)$
+	console.debug({{$1}})
+
+log\.\(.*\)$
+	console.log({{$1}})
+
+new\.vuetify$
+	vuetify: new Vuetify(),
+	{{_cursor_}}
+
+now$
+	const now = new Date().toLocaleString({ timeZone: 'Asia/Tokyo' })
+	{{_cursor_}}
+
+f\.\(.*\)$
+	function {{$1}}() {
+		{{_cursor_}}
+	}
+
+for\.in.\(.*\)\.\(.*\)
+	for (const {{$1}} in {{$2}}) {
+		{{_cursor_}}
+	}
+
+for\.of.\(.*\)\.\(.*\)
+	for (const {{$1}} of {{$2}}) {
+		{{_cursor_}}
+	}
+
+getid.\(.*\)
+	const {{$1}} = document.getElementById("{{$1}}")
+	{{_cursor_}}
