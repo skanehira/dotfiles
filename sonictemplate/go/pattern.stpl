@@ -15,9 +15,8 @@
 
 errn$
 	if err != nil {
-		return err
+		{{_cursor_}}
 	}
-	{{_cursor_}}
 
 create\.file$
 	file, err := os.Create({{_cursor_}})
@@ -143,8 +142,10 @@ crand$
 		{{_cursor_}}
 	}
 
-\(\S.*\)\.len$
-	len({{$1}}){{_cursor_}}
+\(\S\+\)\.len$
+	if len({{$1}}) {{_cursor_}} {
+
+	}
 
 64\.encode$
 	str := base64.StdEncoding.EncodeToString({{_cursor_}})
@@ -179,3 +180,8 @@ http\.get
 		return err
 	}
 	defer resp.Body.Close()
+
+slice\.insert\.\(\S.*\)
+	func insert(a []{{$1}}, x {{$1}}, i int) []{{$1}} {
+		return append(a[:i], append([]{{$1}}{x}, a[i:]...)...)
+	}
