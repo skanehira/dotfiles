@@ -13,13 +13,13 @@ merged = 0
 repo = 'prabirshrestha/async.vim'
 merged = 0
 
-[[plugins]]
-repo = 'prabirshrestha/asyncomplete.vim'
-merged = 0
-
-[[plugins]]
-repo = 'prabirshrestha/asyncomplete-lsp.vim'
-merged = 0
+#[[plugins]]
+#repo = 'prabirshrestha/asyncomplete.vim'
+#merged = 0
+#
+#[[plugins]]
+#repo = 'prabirshrestha/asyncomplete-lsp.vim'
+#merged = 0
 
 # format text
 [[plugins]]
@@ -221,3 +221,6 @@ repo = 'gyim/vim-boxdraw'
 [[plugins]]
 repo = 'mattn/vim-lsp-settings'
 merged = 0
+
+[[plugins]]
+repo = 'skanehira/badapple.vim'
