@@ -9,6 +9,7 @@ set -x LC_CTYPE "en_US.UTF-8"
 set -x GHQ_ROOT $GOPATH/src
 set -x XDG_CONFIG_HOME $HOME/.config
 set -x LANG "en_US.UTF8"
+set -x GO111MODULE auto
 
 alias gs="git status"
 alias lg="lazygit"
