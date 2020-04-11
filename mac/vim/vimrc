@@ -98,7 +98,7 @@ set autoindent
 " }}}
 
 " 自動インデントの空白の数
-set shiftwidth=4
+set shiftwidth=2
 " }}}
 
 " 行番号を表示 {{{
@@ -171,7 +171,9 @@ augroup fileTypeIndent
     au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
     au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
     au BufRead,BufNewFile *.yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2
-    au BufRead,BufNewFile *.json   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au BufRead,BufNewFile *.json setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au BufRead,BufNewFile *.sh setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au BufRead,BufNewFile *.fish setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
 augroup END
 " }}}
 

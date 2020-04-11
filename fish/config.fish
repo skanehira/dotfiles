@@ -1,9 +1,8 @@
 # env
 set -x GOPATH $HOME/dev/go
 set -x GOBIN $GOPATH/bin
-set -x PATH $PATH $GOBIN $HOME/.cargo/bin /usr/local/bin $HOME/.config/composer/vendor/bin /Users/skanehira/Library/Python/3.7/bin
+set -x PATH $PATH $GOBIN
 set -x XDG_CONFIG_HOME $HOME/.config
-set -x PATH /usr/local/sbin "/usr/local/opt/llvm/bin" $PATH
 set -x LANG "ja_JP.UTF-8"
 set -x HOMEBREW_INSTALL_CLEANUP 1
 set -x FZF_DEFAULT_OPTS "--layout=reverse --inline-info --exit-0 -m"
@@ -23,14 +22,14 @@ alias gd='git diff'
 alias gl='git log'
 alias gc='git checkout .'
 alias gdc='git diff (git log --pretty=oneline | fzf | awk "{print \$1}")'
-alias buildvim='cd /Users/skanehira/dev/go/src/github.com/vim/vim/src && sudo make distclean && ./configure --enable-python3interp=yes --enable-fail-if-missing && make && sudo make install && cd -'
-alias vimt='vim -c ":bo term ++rows=20"'
+
+switch (uname)
+  case Linux
+    alias buildvim='cd $GOPATH/src/github.com/vim/vim/src && git pull && sudo make distclean && ./configure --with-x --enable-multibyte --enable-fail-if-missing && make && sudo make install && cd -'
+    alias open="xdg-open"
+  case Darwin
+    alias buildvim='cd $GOPATH/src/github.com/vim/vim/src && git pull && sudo make distclean && ./configure --enable-fail-if-missing && make && sudo make install && cd -'
+end
 
 # use vi mode in fish
 fish_vi_key_bindings
-
-functions --copy cd standard_cd
-
-function cd
-  standard_cd $argv; and ls
-end
