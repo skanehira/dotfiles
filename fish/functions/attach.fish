@@ -3,8 +3,7 @@ function attach
 
     if [ "$container" != "" ]
         set id (echo "$container" | awk "{print \$1}")
-        set cmd (read -P "cmd:")
-        docker exec -it $id $cmd
+        docker exec -it $id sh -c "[ -e /bin/bash ] && /bin/bash || sh"
     end
 end
 
