@@ -1,5 +1,0 @@
-" カラースキーマ
-colorscheme iceberg
-
-" 文字サイズ
-set guifont=MS_Gothic:h8:cSHIFTJIS guifontwide=MS_Gothic:h8
