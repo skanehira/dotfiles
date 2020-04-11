@@ -98,7 +98,7 @@ set autoindent
 " }}}
 
 " 自動インデントの空白の数
-set shiftwidth=2
+set shiftwidth=4
 " }}}
 
 " 行番号を表示 {{{
@@ -130,8 +130,12 @@ set hlsearch
 set undolevels=1000
 " }}}
 
-" mac os のクリップボードを共有 {{{
-set clipboard+=unnamed
+" クリップボードを共有 {{{
+if has("mac")
+  set clipboard+=unnamed
+else
+  set clipboard^=unnamedplus
+endif
 " }}}
 
 " カーソルが常に中央に来るようにする {{{
@@ -634,21 +638,6 @@ let g:preview_markdown_parser = 'mdr'
 
 " {{{ vista
 let g:vista_default_executive = 'vim_lsp'
-" }}}
-
-" {{{ sql-client.vim
-let g:sql_profiles = [
-            \ {
-            \ 'name': 'sqlite3',
-            \ 'dbtype': 'sqlite3',
-            \ 'dsn': ':memory:'
-            \ },
-            \ {
-            \ 'name': 'mysql_test',
-            \ 'dbtype': 'mysql',
-            \ 'dsn': 'root:test@tcp(localhost:3306)/test'
-            \ },
-            \ ]
 " }}}
 
 "{{{ gist-vim

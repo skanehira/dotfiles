@@ -2,7 +2,6 @@
 path=~/.vim
 
 if [ ! -e $path ]; then
-    echo "create directory $path"
     mkdir -p $path
 fi
 
@@ -15,5 +14,5 @@ if [[ ! -e $HOME/.vimrc ]]; then
 fi
 
 if [[ ! -e $path/sonictemplate ]]; then
-    ln -s $(dirname $(dirname $PWD))/sonictemplate $path/sonictemplate
+    ln -s $PWD/sonictemplate $path/sonictemplate
 fi

@@ -10,12 +10,15 @@ repo = 'prabirshrestha/vim-lsp'
 # async auto complete
 [[plugins]]
 repo = 'prabirshrestha/async.vim'
+merged = 0
 
 #[[plugins]]
 #repo = 'prabirshrestha/asyncomplete.vim'
+#merged = 0
 #
 #[[plugins]]
 #repo = 'prabirshrestha/asyncomplete-lsp.vim'
+#merged = 0
 
 # format text
 [[plugins]]
@@ -209,7 +212,17 @@ repo = 'tyru/open-browser.vim'
 repo = 'liuchengxu/vista.vim'
 
 [[plugins]]
+repo = 'tweekmonster/helpful.vim'
+
+[[plugins]]
+repo = 'andymass/vim-matchup'
+
+[[plugins]]
+repo = 'gyim/vim-boxdraw'
+
+[[plugins]]
 repo = 'mattn/vim-lsp-settings'
+merged = 0
 
 [[plugins]]
 repo = 'skanehira/google-map.vim'
