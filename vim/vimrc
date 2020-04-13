@@ -359,9 +359,6 @@ nnoremap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
 " 置換
 nnoremap <Leader>re :%s;\<<C-R><C-W>\>;g<Left><Left>;
 
-" visualで選択したテキストを置換する
-vnoremap <Leader>re y:%s;<C-r>=substitute(@", "<C-v><NL>", "\\\\n", "g")<CR>;;g<Left><Left>
-
 " ハイライトを削除する
 nnoremap <silent> <Esc><Esc> :nohlsearch<CR>
 
@@ -416,16 +413,22 @@ nnoremap <silent> <Leader>n :set relativenumber!<CR>
 tnoremap <C-w>n <C-w>N
 
 " ターミナルでウィンドウ移動
-tnoremap <silent> <C-h> <C-w>:tabprevious<CR>
-tnoremap <silent> <C-l> <C-w>:tabnext<CR>
+tnoremap <silent> <C-w>p <C-w>:tabprevious<CR>
+tnoremap <silent> <C-w>n <C-w>:tabnext<CR>
+
+" ウィンドウの移動
+nnoremap <C-h> <C-w>h
+nnoremap <C-l> <C-w>l
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+
+" タブ移動
+nnoremap <silent> <C-w>n :tabnext<CR>
+nnoremap <silent> <C-w>p :tabprevious<CR>
 
 " <c-g>を<c-w>代わりにする
 tnoremap <C-g> <C-w>.
 " }}}
-
-" 上下の空白に移動
-nnoremap <C-j> }
-nnoremap <C-k> {
 
 " review
 augroup review
