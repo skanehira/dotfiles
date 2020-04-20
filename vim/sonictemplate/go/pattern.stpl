@@ -83,6 +83,9 @@ logf\.\(\S\+\)$
 printf\.\(\S\+\)$
 	fmt.Printf("%#+v\n", {{$1}})
 
+p\.\(\S\+\)$
+	fmt.Println({{$1}})
+
 ^main$
 	package main
 	
