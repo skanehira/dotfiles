@@ -188,3 +188,7 @@ slice\.insert\.\(\S.*\)
 	func insert(a []{{$1}}, x {{$1}}, i int) []{{$1}} {
 		return append(a[:i], append([]{{$1}}{x}, a[i:]...)...)
 	}
+
+f\.\(\S.*\)
+	func {{$1}} ({{_cursor_}}) {
+	}
