@@ -583,8 +583,8 @@ let g:user_emmet_leader_key = '<C-g>'
 
 augroup emmet
     autocmd!
-    au FileType vue,html,js,css EmmetInstall
-    au FileType vue,html,js,css imap <buffer> <C-f> <plug>(emmet-expand-abbr)
+    au FileType vue,html,javascript,css EmmetInstall
+    au FileType vue,html,javascript,css imap <buffer> <C-f> <plug>(emmet-expand-abbr)
 augroup END
 " }}}
 
