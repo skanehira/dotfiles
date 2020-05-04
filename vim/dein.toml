@@ -226,3 +226,6 @@ merged = 0
 
 [[plugins]]
 repo = 'skanehira/google-map.vim'
+
+[[plugins]]
+repo = 'lambdalisue/fern.vim'

@@ -345,6 +345,10 @@ augroup END
 " }}}
 
 " key mappings {{{
+
+" open file tree
+nnoremap <silent> <Leader>f :Fern . -drawer<CR>
+
 " *でカーソルを移動しないようにする
 noremap * *N
 
