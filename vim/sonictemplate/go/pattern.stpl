@@ -78,7 +78,6 @@ json\.encode\.\(\S\+\)\.\(\S\+\)$
 
 logf\.\(\S\+\)$
 	log.Fatal({{$1}})
-	{{_cursor_}}
 
 printf\.\(\S\+\)$
 	fmt.Printf("%#+v\n", {{$1}})
@@ -190,5 +189,5 @@ slice\.insert\.\(\S.*\)
 	}
 
 f\.\(\S.*\)
-	func {{$1}} ({{_cursor_}}) {
+	func {{$1}}({{_cursor_}}) {
 	}
