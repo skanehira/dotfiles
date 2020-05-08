@@ -15,3 +15,5 @@ if [[ ! -e $file ]]; then
 fi
 
 fish install_fisher.fish
+
+fish -C "fisher add decors/fish-ghq"
