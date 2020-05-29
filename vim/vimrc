@@ -331,7 +331,7 @@ endif
 " }}}
 
 " ウィンドウサイズ自動調整を無効化
-set noequalalways
+"set noequalalways
 
 " タブを常に表示
 set showtabline=2
