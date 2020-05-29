@@ -417,18 +417,12 @@ nnoremap <silent> <Leader>n :set relativenumber!<CR>
 tnoremap <C-w>n <C-w>N
 
 " ターミナルでウィンドウ移動
-tnoremap <silent> <C-w>p <C-w>:tabprevious<CR>
-tnoremap <silent> <C-w>n <C-w>:tabnext<CR>
-
-" ウィンドウの移動
-nnoremap <C-h> <C-w>h
-nnoremap <C-l> <C-w>l
-nnoremap <C-j> <C-w>j
-nnoremap <C-k> <C-w>k
+tnoremap <silent> <C-l> <C-w>:tabnext<CR>
+tnoremap <silent> <C-h> <C-w>:tabprevious<CR>
 
 " タブ移動
-nnoremap <silent> <C-w>n :tabnext<CR>
-nnoremap <silent> <C-w>p :tabprevious<CR>
+nnoremap <silent> <C-l> :tabnext<CR>
+nnoremap <silent> <C-h> :tabprevious<CR>
 
 " <c-g>を<c-w>代わりにする
 tnoremap <C-g> <C-w>.
@@ -624,7 +618,7 @@ let g:lexima_enable_basic_rules = 1
 " }}}
 
 " {{{ docker.vim
-let g:docker_terminal_open = 'top'
+let g:docker_terminal_open = 'vert'
 "let s:docker_auth_file = expand('~/.docker/docker.vim.json')
 "let g:docker_registry_auth = json_decode(join(readfile(s:docker_auth_file), "\n"))
 " }}}
