@@ -90,8 +90,8 @@ hook_add = '''
 let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
 '''
 # manage session
-[[plugins]]
-repo = 'skanehira/vsession'
+#[[plugins]]
+#repo = 'skanehira/vsession'
 
 # show git diff
 [[plugins]]
@@ -172,29 +172,29 @@ repo = 'kshenoy/vim-signature'
 #[[plugins]]
 #repo = 'shinespark/vim-list2tree'
 
-[[plugins]]
-repo = 'skanehira/generatedir.vim'
+#[[plugins]]
+#repo = 'skanehira/generatedir.vim'
 
 [[plugins]]
 repo = 'thinca/vim-themis'
 
-[[plugins]]
-repo = 'heavenshell/vim-textlint'
+#[[plugins]]
+#repo = 'heavenshell/vim-textlint'
 
-[[plugins]]
-repo = 'po3rin/vim-gofmtmd'
+#[[plugins]]
+#repo = 'po3rin/vim-gofmtmd'
 
-[[plugins]]
-repo = 'skanehira/gql.vim'
+#[[plugins]]
+#repo = 'skanehira/gql.vim'
 
-[[plugins]]
-repo = 'jparise/vim-graphql'
+#[[plugins]]
+#repo = 'jparise/vim-graphql'
 
 [[plugins]]
 repo = 'skanehira/preview-markdown.vim'
 
-[[plugins]]
-repo = 'mattn/qiita-vim'
+#[[plugins]]
+#repo = 'mattn/qiita-vim'
 
 [[plugins]]
 repo = 'tweekmonster/helpful.vim'
@@ -216,9 +216,6 @@ repo = 'tweekmonster/helpful.vim'
 
 [[plugins]]
 repo = 'andymass/vim-matchup'
-
-[[plugins]]
-repo = 'gyim/vim-boxdraw'
 
 [[plugins]]
 repo = 'mattn/vim-lsp-settings'
