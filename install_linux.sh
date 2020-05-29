@@ -44,6 +44,9 @@ cd $GOPATH/src/github.com/tmux/tmux
 make
 sudo make install
 
+echo Setup tmux
+cd ../tmux && bash install.sh
+
 echo Install fzf
 ghq get https://github.com/junegunn/fzf
 cd $GOPATH/src/github.com/junegunn/fzf
@@ -59,9 +62,6 @@ cd $GOPATH/src/github.com/skanehira/dotfiles
 echo Setup fish
 mkdir ~/.config/fish/functions
 cd fish && bash install.sh
-
-echo Setup tmux
-cd ../tmux && bash install.sh
 
 echo Uninstall exist vim
 sudo apt remove vim
