@@ -28,7 +28,7 @@ repo = 'godlygeek/tabular'
 [[plugins]]
 repo = 'junegunn/fzf'
 build_on = '''
-./install --all
+./install
 '''
 
 # fzf for vim
