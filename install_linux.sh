@@ -47,8 +47,10 @@ sudo make install
 echo Install fzf
 ghq get https://github.com/junegunn/fzf
 cd $GOPATH/src/github.com/junegunn/fzf
-./install --all
 go install
+
+echo Install ag
+sudo apt-get install silversearcher-ag
 
 echo Clone my dotfiles
 ghq get github.com/skanehira/dotfiles
