@@ -461,6 +461,11 @@ call gina#custom#mapping#nmap(
    \ '<Plug>(gina-patch-oneside-tab)',
    \ {'silent': 1},
    \)
+call gina#custom#mapping#nmap(
+   \ 'status', 'q',
+   \ ':<C-u>bw!<CR>',
+   \ {'noremap': 1, 'silent': 1},
+   \)
 
 " バッファ一覧
 nnoremap gb :Buffers<CR>
