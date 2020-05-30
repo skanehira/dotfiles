@@ -3,7 +3,7 @@ set -x GOPATH $HOME/dev/go
 set -x GOBIN $GOPATH/bin
 set -x PATH $PATH $GOBIN
 set -x XDG_CONFIG_HOME $HOME/.config
-set -x LANG "ja_JP.UTF-8"
+set -x LANG "en_US.UTF-8"
 set -x HOMEBREW_INSTALL_CLEANUP 1
 set -x FZF_DEFAULT_OPTS "--layout=reverse --inline-info --exit-0 -m"
 set -x FZF_DEFAULT_COMMAND "ag -g ."

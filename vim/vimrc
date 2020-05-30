@@ -438,8 +438,29 @@ augroup END
 nnoremap gj o<esc>
 nnoremap gk O<esc>
 
-" git status
-nnoremap gs :Gstatus<CR>
+" gina
+nnoremap <silent> gs :Gina status<CR>
+nnoremap <silent> gl :Gina log<CR>
+call gina#custom#mapping#nmap(
+   \ 'status', 'gp',
+   \ ':<C-u>Gina push<CR>',
+   \ {'noremap': 1, 'silent': 1},
+   \)
+call gina#custom#mapping#nmap(
+   \ 'status', 'cm',
+   \ ':<C-u>Gina commit<CR>',
+   \ {'noremap': 1, 'silent': 1},
+   \)
+call gina#custom#mapping#nmap(
+   \ 'status', 'ca',
+   \ ':<C-u>Gina commit --amend<CR>',
+   \ {'noremap': 1, 'silent': 1},
+   \)
+call gina#custom#mapping#nmap(
+   \ 'status', 'dp',
+   \ '<Plug>(gina-patch-oneside-tab)',
+   \ {'silent': 1},
+   \)
 
 " バッファ一覧
 nnoremap gb :Buffers<CR>
@@ -787,13 +808,8 @@ command! -nargs=* Gitpush call s:git_push(<f-args>)
 command! -nargs=* Gitpull call s:git_pull()
 command! -nargs=* Gitblame call s:git_blame()
 command! -nargs=* GitCheckout call s:git_checkout(<f-args>)
-command! Gitlog call s:git_log()
 command! Lazygit call system('tmux new-window lazygit')
-command! Pst call system('tmux split-window -h pst')
-command! Docui call system('tmux new-window docui')
-command! FF call system('tmux split-window -h ff')
 
-nnoremap <silent> gl :Lazygit<CR>
 nnoremap <silent> gc :GitCheckout<CR>
 
 " }}}
