@@ -102,11 +102,11 @@ set shiftwidth=4
 " }}}
 
 " 行番号を表示 {{{
-set number
+"set number
 " }}}
 
 " タブでも常に空白を挿入 {{{
-set tabstop=4
+"set tabstop=4
 "set expandtab
 " }}}
 
@@ -166,18 +166,20 @@ let g:netrw_sizestyle='H'
 let g:netrw_timefmt='%Y/%m/%d(%a) %H:%M:%S'
 " }}}
 
-" 拡張子ごとのインデントを指定する {{{
+" 拡張子ごとのインデント設定 {{{
 augroup fileTypeIndent
     autocmd!
-    au BufRead,BufNewFile *.vim setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au BufRead,BufNewFile *.php setlocal tabstop=4 softtabstop=4 shiftwidth=4
-    au BufRead,BufNewFile *.html setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au BufRead,BufNewFile *.js   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au BufRead,BufNewFile *.vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au BufRead,BufNewFile *.yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2
-    au BufRead,BufNewFile *.json setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au BufRead,BufNewFile *.sh setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au BufRead,BufNewFile *.fish setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au FileType go setlocal tabstop=4
+    au FIleType vim setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au FIleType php setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au FIleType html setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au FIleType javascript   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au FIleType typescript   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au FIleType vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au FIleType yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au FIleType json setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au FIleType sh setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+    au FIleType fish setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
 augroup END
 " }}}
 
@@ -314,7 +316,7 @@ let s:spaces_target_ft = {
             \ 'terminal': 1,
             \ }
 augroup HighlightTrailingSpaces
-	autocmd!
+    autocmd!
     autocmd BufWritePre * if get(s:spaces_target_ft, &ft, 0) | :silent keeppatterns %s/\s\+$//ge | endif
     autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
     autocmd VimEnter,WinEnter * if get(s:spaces_target_ft, &ft, 0) | match TrailingSpaces /\s\+$/ | endif
@@ -336,6 +338,11 @@ endif
 " タブを常に表示
 set showtabline=2
 
+" 数値の加減算を考慮
+if has('patch-8.2.0860')
+  setglobal nrformats+=unsigned
+endif
+
 " {{{ 外部でファイルの変更があった場合、自動的に読み直す
 set autoread
 augroup vimrc-misc
@@ -346,7 +353,7 @@ augroup END
 
 " key mappings {{{
 
-" open file tree
+" fern
 nnoremap <silent> <Leader>f :Fern . -drawer<CR>
 
 " *でカーソルを移動しないようにする
@@ -468,6 +475,11 @@ call gina#custom#mapping#nmap(
    \ {'noremap': 1, 'silent': 1},
    \)
 call gina#custom#mapping#nmap(
+   \ 'status', 'ga',
+   \ '--',
+   \ {'silent': 1},
+   \)
+call gina#custom#mapping#vmap(
    \ 'status', 'ga',
    \ '--',
    \ {'silent': 1},
