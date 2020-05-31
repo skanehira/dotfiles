@@ -435,8 +435,9 @@ augroup review
 augroup END
 
 " 改行
-nnoremap gj o<esc>
-nnoremap gk O<esc>
+nnoremap gj o<ESC>
+nnoremap gk O<ESC>
+nnoremap o A<CR>
 
 " gina
 nnoremap <silent> gs :Gina status<CR>
@@ -463,6 +464,16 @@ call gina#custom#mapping#nmap(
    \)
 call gina#custom#mapping#nmap(
    \ 'status', 'q',
+   \ ':<C-u>bw!<CR>',
+   \ {'noremap': 1, 'silent': 1},
+   \)
+call gina#custom#mapping#nmap(
+   \ 'status', 'ga',
+   \ '--',
+   \ {'silent': 1},
+   \)
+call gina#custom#mapping#nmap(
+   \ 'log', 'q',
    \ ':<C-u>bw!<CR>',
    \ {'noremap': 1, 'silent': 1},
    \)
