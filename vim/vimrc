@@ -355,6 +355,10 @@ augroup END
 
 " fern
 nnoremap <silent> <Leader>f :Fern . -drawer<CR>
+augroup fern-setteings
+  autocmd! *
+  autocmd FileType fern nnoremap <silent> q ::bw!<CR>
+augroup END
 
 " *でカーソルを移動しないようにする
 noremap * *N
@@ -486,6 +490,16 @@ call gina#custom#mapping#vmap(
    \)
 call gina#custom#mapping#nmap(
    \ 'log', 'q',
+   \ ':<C-u>bw!<CR>',
+   \ {'noremap': 1, 'silent': 1},
+   \)
+call gina#custom#mapping#nmap(
+   \ 'log', 'dd',
+   \ '<Plug>(gina-changes-of)',
+   \ {'silent': 1},
+   \)
+call gina#custom#mapping#nmap(
+   \ 'changes', 'q',
    \ ':<C-u>bw!<CR>',
    \ {'noremap': 1, 'silent': 1},
    \)
