@@ -446,9 +446,19 @@ augroup review
 augroup END
 
 " 改行
-nnoremap gj o<ESC>
-nnoremap gk O<ESC>
+nnoremap <C-j> o<ESC>
+nnoremap <C-k> O<ESC>
 nnoremap o A<CR>
+
+" 挿入モードでのカーソル移動
+inoremap <silent> <C-f> <Right>
+inoremap <silent> <C-b> <Left>
+inoremap <silent> <C-e> <Esc>A
+inoremap <silent> <C-a> <Esc>I
+
+" 囲う
+nnoremap <silent> gw[ cw``<Esc>P
+vnoremap <silent> gw[ c``<Esc>P
 
 " gina
 nnoremap <silent> gs :Gina status<CR>
