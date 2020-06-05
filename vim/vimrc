@@ -526,8 +526,8 @@ augroup END
 " }}}
 
 " コマンドラインで単語移動 {{{
-cnoremap <c-b> <S-Left>
-cnoremap <c-f> <S-Right>
+cnoremap <c-b> <Left>
+cnoremap <c-f> <Right>
 cnoremap <c-a> <Home>
 " }}}
 
