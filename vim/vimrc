@@ -17,44 +17,44 @@ let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
 " dein installation check {{{
 if &runtimepath !~# '/dein.vim'
-    if !isdirectory(s:dein_repo_dir)
-        execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
-    endif
-    execute 'set runtimepath^=' . s:dein_repo_dir
+  if !isdirectory(s:dein_repo_dir)
+    execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+  endif
+  execute 'set runtimepath^=' . s:dein_repo_dir
 endif
 " }}}
 
 " begin settings {{{
 if dein#load_state(s:dein_dir)
-    call dein#begin(s:dein_dir)
+  call dein#begin(s:dein_dir)
 
-    " .toml file
-    let s:rc_dir = expand('~/.vim')
-    if !isdirectory(s:rc_dir)
-        call mkdir(s:rc_dir, 'p')
-    endif
-    let s:toml = s:rc_dir . '/dein.toml'
+  " .toml file
+  let s:rc_dir = expand('~/.vim')
+  if !isdirectory(s:rc_dir)
+    call mkdir(s:rc_dir, 'p')
+  endif
+  let s:toml = s:rc_dir . '/dein.toml'
 
-    " read toml and cache
-    call dein#load_toml(s:toml, {'lazy': 0})
+  " read toml and cache
+  call dein#load_toml(s:toml, {'lazy': 0})
 
-    " end settings
-    call dein#end()
-    call dein#save_state()
+  " end settings
+  call dein#end()
+  call dein#save_state()
 endif
 " }}}
 
 " plugin installation check {{{
 if dein#check_install()
-    call dein#install()
+  call dein#install()
 endif
 " }}}
 
 " plugin remove check {{{
 let s:removed_plugins = dein#check_clean()
 if len(s:removed_plugins) > 0
-    call map(s:removed_plugins, "delete(v:val, 'rf')")
-    call dein#recache_runtimepath()
+  call map(s:removed_plugins, "delete(v:val, 'rf')")
+  call dein#recache_runtimepath()
 endif
 " }}}
 
@@ -98,7 +98,7 @@ set autoindent
 " }}}
 
 " 自動インデントの空白の数
-set shiftwidth=4
+"set shiftwidth=2
 " }}}
 
 " 行番号を表示 {{{
@@ -155,7 +155,7 @@ set synmaxcol=256
 set cursorline
 " 描画負担軽減のため、行番号のみハイライト
 if !has('nvim')
-    set cursorlineopt=number
+  set cursorlineopt=number
 endif
 " }}}
 
@@ -168,18 +168,18 @@ let g:netrw_timefmt='%Y/%m/%d(%a) %H:%M:%S'
 
 " 拡張子ごとのインデント設定 {{{
 augroup fileTypeIndent
-    autocmd!
-    au FileType go setlocal tabstop=4
-    au FIleType vim setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au FIleType php setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au FIleType html setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au FIleType javascript   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au FIleType typescript   setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au FIleType vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au FIleType yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au FIleType json setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au FIleType sh setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-    au FIleType fish setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  autocmd!
+  au FileType go setlocal tabstop=4
+  au FileType vim setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType php setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType html setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType javascript setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType typescript setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType json setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType sh setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType fish setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
 augroup END
 " }}}
 
@@ -189,30 +189,30 @@ set wildmenu
 
 " grepした結果をquickfixに表示する {{{
 augroup grepwindow
-    au!
-    au QuickFixCmdPost *grep* cwindow
+  au!
+  au QuickFixCmdPost *grep* cwindow
 augroup END
 " }}}
 
 " カーソルラインの位置を保存する {{{
 augroup cursorlineRestore
-    autocmd!
-    autocmd BufReadPost *
-                \ if line("'\"") > 0 && line("'\"") <= line("$") |
-                \   exe "normal! g'\"" |
-                \ endif
+  autocmd!
+  autocmd BufReadPost *
+        \ if line("'\"") > 0 && line("'\"") <= line("$") |
+        \   exe "normal! g'\"" |
+        \ endif
 augroup END
 " }}}
 
 " undoの保存先 {{{
 if has('persistent_undo')
-    let undo_path = expand('~/.vim/undo')
-    " ディレクトリが存在しない場合は作成
-    if !isdirectory(undo_path)
-        call mkdir(undo_path, 'p')
-    endif
-    exe 'set undodir=' .. undo_path
-    set undofile
+  let undo_path = expand('~/.vim/undo')
+  " ディレクトリが存在しない場合は作成
+  if !isdirectory(undo_path)
+    call mkdir(undo_path, 'p')
+  endif
+  exe 'set undodir=' .. undo_path
+  set undofile
 endif
 " }}}
 
@@ -230,45 +230,45 @@ set autowrite
 
 " ファイル保存時に整形する {{{
 let s:format_targets = {
-            \ 'javascript': '--use-tabs=false --single-quote=true %',
-            \ 'html': '--use-tabs=false --single-quote=true %',
-            \ 'css': '',
-            \ 'json': '--tab',
-            \ 'vue':  '--use-tabs=false --single-quote=true %',
-            \ 'vim': '',
-            \ 'java': '',
-            \ }
+      \ 'javascript': '--use-tabs=false --single-quote=true %',
+      \ 'html': '--use-tabs=false --single-quote=true %',
+      \ 'css': '',
+      \ 'json': '--tab',
+      \ 'vue':  '--use-tabs=false --single-quote=true %',
+      \ 'vim': '',
+      \ 'java': '',
+      \ }
 
 " format function
 function! Format() abort
-    " if format target is not exsist, nothing to do
-    if !has_key(s:format_targets, &ft)
-        return
-    endif
+  " if format target is not exsist, nothing to do
+  if !has_key(s:format_targets, &ft)
+    return
+  endif
 
-    let args = s:format_targets[&ft]
-    let pos = getcurpos()
+  let args = s:format_targets[&ft]
+  let pos = getcurpos()
 
-    " use js-beautify to format js, html, css
-    if &ft is# 'javascript' || &ft is# 'html' || &ft is# 'vue'
-        if executable('prettier')
-            exe '%!prettier ' .. args
-        else
-            call s:echo_err("prettier doesn't installed, please refference the https://github.com/beautify-web/js-beautify")
-        endif
-    elseif &ft is# 'css'
-        " TODO
-    elseif &ft is# 'json'
-        if executable('jq')
-            exe "%!jq " .. args
-        else
-            call s:echo_err("jq doesn't installed, please refference the https://stedolan.github.io/jq/")
-        endif
+  " use js-beautify to format js, html, css
+  if &ft is# 'javascript' || &ft is# 'html' || &ft is# 'vue'
+    if executable('prettier')
+      exe '%!prettier ' .. args
     else
-        execute 'normal 1G=G'
+      call s:echo_err("prettier doesn't installed, please refference the https://github.com/beautify-web/js-beautify")
     endif
+  elseif &ft is# 'css'
+    " TODO
+  elseif &ft is# 'json'
+    if executable('jq')
+      exe "%!jq " .. args
+    else
+      call s:echo_err("jq doesn't installed, please refference the https://stedolan.github.io/jq/")
+    endif
+  else
+    execute 'normal 1G=G'
+  endif
 
-    call setpos('.', pos)
+  call setpos('.', pos)
 endfunction
 
 nnoremap <C-f> :call Format()<CR>
@@ -276,27 +276,27 @@ nnoremap <C-f> :call Format()<CR>
 
 " プラグインディレクトリ配下の.vimをすべてsourceする {{{
 function! SourceDir(...) abort
-    let l:path = getcwd()
-    if a:0 > 1
-        let l:path = a:1
-    endif
+  let l:path = getcwd()
+  if a:0 > 1
+    let l:path = a:1
+  endif
 
-    if !isdirectory(l:path)
-        return
-    endif
+  if !isdirectory(l:path)
+    return
+  endif
 
-    exe 'set rtp^=' . l:path
-    if isdirectory(l:path . '/plugin')
-        exe 'runtime plugin/*.vim'
-    endif
+  exe 'set rtp^=' . l:path
+  if isdirectory(l:path . '/plugin')
+    exe 'runtime plugin/*.vim'
+  endif
 
-    if isdirectory(l:path . '/autoload')
-        exe 'runtime autoload/*.vim'
-    endif
+  if isdirectory(l:path . '/autoload')
+    exe 'runtime autoload/*.vim'
+  endif
 
-    if isdirectory(l:path . '/syntax')
-        exe 'runtime syntax/*.vim'
-    endif
+  if isdirectory(l:path . '/syntax')
+    exe 'runtime syntax/*.vim'
+  endif
 endfunction
 
 command! -nargs=* Source call SourceDir(<f-args>)
@@ -309,17 +309,17 @@ set listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:%
 
 " {{{ 行末のホワイトスペース削除
 let s:spaces_target_ft = {
-            \ 'markdown': 0,
-            \ 'go': 1,
-            \ 'javascript': 1,
-            \ 'graphql': 1,
-            \ 'terminal': 1,
-            \ }
+      \ 'markdown': 0,
+      \ 'go': 1,
+      \ 'javascript': 1,
+      \ 'graphql': 1,
+      \ 'terminal': 1,
+      \ }
 augroup HighlightTrailingSpaces
-    autocmd!
-    autocmd BufWritePre * if get(s:spaces_target_ft, &ft, 0) | :silent keeppatterns %s/\s\+$//ge | endif
-    autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
-    autocmd VimEnter,WinEnter * if get(s:spaces_target_ft, &ft, 0) | match TrailingSpaces /\s\+$/ | endif
+  autocmd!
+  autocmd BufWritePre * if get(s:spaces_target_ft, &ft, 0) | :silent keeppatterns %s/\s\+$//ge | endif
+  autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
+  autocmd VimEnter,WinEnter * if get(s:spaces_target_ft, &ft, 0) | match TrailingSpaces /\s\+$/ | endif
 augroup END
 " }}}
 
@@ -328,7 +328,7 @@ set noswapfile
 
 " {{{ セッションで保存する対象を設定する
 if !has('nvim')
-    set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal
+  set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal
 endif
 " }}}
 
@@ -346,8 +346,8 @@ endif
 " {{{ 外部でファイルの変更があった場合、自動的に読み直す
 set autoread
 augroup vimrc-misc
-    au!
-    autocmd WinEnter,FocusGained * checktime
+  au!
+  autocmd WinEnter,FocusGained * checktime
 augroup END
 " }}}
 
@@ -441,8 +441,8 @@ tnoremap <C-g> <C-w>.
 
 " review
 augroup review
-    au!
-    au FileType review vnoremap <silent> <buffer> <Leader>hi c@<cursor>{<c-r>"}<esc>
+  au!
+  au FileType review vnoremap <silent> <buffer> <Leader>hi c@<cursor>{<c-r>"}<esc>
 augroup END
 
 " 改行
@@ -464,63 +464,63 @@ vnoremap <silent> gw[ c``<Esc>P
 nnoremap <silent> gs :Gina status<CR>
 nnoremap <silent> gl :Gina log<CR>
 call gina#custom#mapping#nmap(
-   \ 'status', 'gp',
-   \ ':<C-u>Gina push<CR>',
-   \ {'noremap': 1, 'silent': 1},
-   \)
+      \ 'status', 'gp',
+      \ ':<C-u>Gina push<CR>',
+      \ {'noremap': 1, 'silent': 1},
+      \)
 call gina#custom#mapping#nmap(
-   \ 'status', 'cm',
-   \ ':<C-u>Gina commit<CR>',
-   \ {'noremap': 1, 'silent': 1},
-   \)
+      \ 'status', 'cm',
+      \ ':<C-u>Gina commit<CR>',
+      \ {'noremap': 1, 'silent': 1},
+      \)
 call gina#custom#mapping#nmap(
-   \ 'status', 'ca',
-   \ ':<C-u>Gina commit --amend<CR>',
-   \ {'noremap': 1, 'silent': 1},
-   \)
+      \ 'status', 'ca',
+      \ ':<C-u>Gina commit --amend<CR>',
+      \ {'noremap': 1, 'silent': 1},
+      \)
 call gina#custom#mapping#nmap(
-   \ 'status', 'dp',
-   \ '<Plug>(gina-patch-oneside-tab)',
-   \ {'silent': 1},
-   \)
+      \ 'status', 'dp',
+      \ '<Plug>(gina-patch-oneside-tab)',
+      \ {'silent': 1},
+      \)
 call gina#custom#mapping#nmap(
-   \ 'status', 'q',
-   \ ':<C-u>bw!<CR>',
-   \ {'noremap': 1, 'silent': 1},
-   \)
+      \ 'status', 'q',
+      \ ':<C-u>bw!<CR>',
+      \ {'noremap': 1, 'silent': 1},
+      \)
 call gina#custom#mapping#nmap(
-   \ 'status', 'ga',
-   \ '--',
-   \ {'silent': 1},
-   \)
+      \ 'status', 'ga',
+      \ '--',
+      \ {'silent': 1},
+      \)
 call gina#custom#mapping#vmap(
-   \ 'status', 'ga',
-   \ '--',
-   \ {'silent': 1},
-   \)
+      \ 'status', 'ga',
+      \ '--',
+      \ {'silent': 1},
+      \)
 call gina#custom#mapping#nmap(
-   \ 'log', 'q',
-   \ ':<C-u>bw!<CR>',
-   \ {'noremap': 1, 'silent': 1},
-   \)
+      \ 'log', 'q',
+      \ ':<C-u>bw!<CR>',
+      \ {'noremap': 1, 'silent': 1},
+      \)
 call gina#custom#mapping#nmap(
-   \ 'log', 'dd',
-   \ '<Plug>(gina-changes-of)',
-   \ {'silent': 1},
-   \)
+      \ 'log', 'dd',
+      \ '<Plug>(gina-changes-of)',
+      \ {'silent': 1},
+      \)
 call gina#custom#mapping#nmap(
-   \ 'changes', 'q',
-   \ ':<C-u>bw!<CR>',
-   \ {'noremap': 1, 'silent': 1},
-   \)
+      \ 'changes', 'q',
+      \ ':<C-u>bw!<CR>',
+      \ {'noremap': 1, 'silent': 1},
+      \)
 
 " バッファ一覧
 nnoremap gb :Buffers<CR>
 
 " ヘルプ
 augroup help-mapping
-    au!
-    au FileType help nnoremap <buffer> <silent>q :bw!<CR>
+  au!
+  au FileType help nnoremap <buffer> <silent>q :bw!<CR>
 augroup END
 
 " }}}
@@ -574,7 +574,7 @@ let g:go_def_reuse_buffer = 1
 " fzf settings {{{
 " ファイル一覧を出すときにプレビュー表示
 command! -bang -nargs=? -complete=dir Files
-            \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
+      \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
 
 nnoremap <C-P> :Files<CR>
 " }}}
@@ -586,20 +586,20 @@ nnoremap <C-P> :Files<CR>
 "let g:lsp_log_file = expand('~/vim-lsp.log')
 
 function! s:on_lsp_buffer_enabled() abort
-    setlocal omnifunc=lsp#complete
-	set completeopt^=popup
-	nmap <Leader>ho <plug>(lsp-hover)
-	nnoremap <silent> <C-]> :LspDefinition<CR>
+  setlocal omnifunc=lsp#complete
+  set completeopt^=popup
+  nmap <Leader>ho <plug>(lsp-hover)
+  nnoremap <silent> <C-]> :LspDefinition<CR>
 
-	" enable signs
-	let g:lsp_signs_error = {'text': 'ｳﾎ'}
-	let g:lsp_signs_warning = {'text': '🍌'}
-	let g:lsp_signs_enabled = 1
+  " enable signs
+  let g:lsp_signs_error = {'text': 'ｳﾎ'}
+  let g:lsp_signs_warning = {'text': '🍌'}
+  let g:lsp_signs_enabled = 1
 endfunction
 
 augroup lsp_install
-    au!
-    autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+  au!
+  autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
 augroup END
 
 " }}}
@@ -621,41 +621,41 @@ nmap <Leader>{ ysiw}
 " profiling {{{
 " vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
 function! ProfileCursorMove() abort
-    let profile_file = expand('./vim-profile.log')
-    if filereadable(profile_file)
-        call delete(profile_file)
-    endif
+  let profile_file = expand('./vim-profile.log')
+  if filereadable(profile_file)
+    call delete(profile_file)
+  endif
 
-    normal! ggzR
+  normal! ggzR
 
-    execute 'profile start ' . profile_file
-    profile func *
-    profile file *
+  execute 'profile start ' . profile_file
+  profile func *
+  profile file *
 
-    augroup ProfileCursorMove
-        autocmd!
-        autocmd CursorHold <buffer> profile pause | q
-    augroup END
+  augroup ProfileCursorMove
+    autocmd!
+    autocmd CursorHold <buffer> profile pause | q
+  augroup END
 
-    for i in range(1000)
-        call feedkeys('j')
-    endfor
+  for i in range(1000)
+    call feedkeys('j')
+  endfor
 endfunction
 " }}}
 
 " emmet {{{
 let g:user_emmet_install_global = 0
 let g:user_emmet_settings = {
-            \   'variables': {
-            \     'lang' : 'ja'
-            \   }
-            \ }
+      \   'variables': {
+      \     'lang' : 'ja'
+      \   }
+      \ }
 let g:user_emmet_leader_key = '<C-g>'
 
 augroup emmet
-    autocmd!
-    au FileType vue,html,javascript,css EmmetInstall
-    au FileType vue,html,javascript,css imap <buffer> <C-f> <plug>(emmet-expand-abbr)
+  autocmd!
+  au FileType vue,html,javascript,css EmmetInstall
+  au FileType vue,html,javascript,css imap <buffer> <C-f> <plug>(emmet-expand-abbr)
 augroup END
 " }}}
 
@@ -663,8 +663,8 @@ augroup END
 " https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
 " vueファイルのシンタックスが効かなくなる問題対応
 augroup VueSyntax
-    autocmd!
-    au FileType vue syntax sync fromstart
+  autocmd!
+  au FileType vue syntax sync fromstart
 augroup END
 " }}}
 
@@ -723,21 +723,21 @@ let g:gist_list_vsplit = 1
 
 " {{{ リポジトリに移動
 function! s:cd_repo(shell, repo) abort
-    exe 'lcd' trim(system('ghq root')) .. '/' .. a:repo
-    pwd
+  exe 'lcd' trim(system('ghq root')) .. '/' .. a:repo
+  pwd
 endfunction
 
 function! s:repo(multi, cb) abort
-    if executable('ghq') && exists('*fzf#run()') && executable('fzf')
-        call fzf#run({
-                    \ 'source': systemlist('ghq list'),
-                    \ 'sink': a:cb,
-                    \ 'options': a:multi,
-                    \ 'down': '40%'},
-                    \ )
-    else
-        echo "doesn't installed ghq or fzf.vim(require fzf)"
-    endif
+  if executable('ghq') && exists('*fzf#run()') && executable('fzf')
+    call fzf#run({
+          \ 'source': systemlist('ghq list'),
+          \ 'sink': a:cb,
+          \ 'options': a:multi,
+          \ 'down': '40%'},
+          \ )
+  else
+    echo "doesn't installed ghq or fzf.vim(require fzf)"
+  endif
 endfunction
 
 command! Repo call s:repo('+m', function('s:cd_repo', [&shell]))
@@ -745,7 +745,7 @@ command! Repo call s:repo('+m', function('s:cd_repo', [&shell]))
 
 " 新しいタブを開く {{{
 function! s:open_tabs(shell, repo) abort
-    exe printf('tabnew | lcd %s/%s', trim(system('ghq root')), a:repo)
+  exe printf('tabnew | lcd %s/%s', trim(system('ghq root')), a:repo)
 endfunction
 
 " fzf.vimのcallbackでは&shellがshになってしまうので、現在実行しているshellを渡す
@@ -755,10 +755,10 @@ command! NewTab call s:repo('-m', function('s:open_tabs', [&shell]))
 
 " {{{ エラーメッセージ出力
 function! s:echo_err(message) abort
-    echohl ErrorMsg
-    redraw
-    echo a:message
-    echohl None
+  echohl ErrorMsg
+  redraw
+  echo a:message
+  echohl None
 endfunction
 " }}}
 
@@ -777,83 +777,83 @@ endfunction
 "	cb: functionm "fzf callback
 " }
 function! s:git_exec(opt) abort
-    let current_winid = win_getid()
-    if a:opt.mode is# 'term'
-        let cmd = 'git ' .. a:opt.cmd
-        if has_key(a:opt, 'args') && !empty(a:opt.args)
-            let cmd = cmd .. ' ' .. join(a:opt.args, ' ')
-        endif
-        if has_key(a:opt, 'auto_close') && a:opt.auto_close is# 1
-            let cmd = a:opt.window_way .. ' term ++rows=10 ++close ' .. cmd
-        else
-            let cmd = a:opt.window_way .. ' term ++rows=10 ' .. cmd
-        endif
-        exec cmd
-        nnoremap <buffer> <silent> q :bw!<CR>
-    elseif a:opt.mode is# 'pop'
-        " TODO use popup window
-    elseif a:opt.mode is# 'fzf'
-        if exists('*fzf#run()') && executable('fzf')
-            call fzf#run({
-                        \ 'source': a:opt.source,
-                        \ 'sink': a:opt.cb,
-                        \ 'down': '40%'},
-                        \ )
-        endif
-    else
-        call s:echo_err("doesn't installed fzf.vim(require fzf)")
+  let current_winid = win_getid()
+  if a:opt.mode is# 'term'
+    let cmd = 'git ' .. a:opt.cmd
+    if has_key(a:opt, 'args') && !empty(a:opt.args)
+      let cmd = cmd .. ' ' .. join(a:opt.args, ' ')
     endif
+    if has_key(a:opt, 'auto_close') && a:opt.auto_close is# 1
+      let cmd = a:opt.window_way .. ' term ++rows=10 ++close ' .. cmd
+    else
+      let cmd = a:opt.window_way .. ' term ++rows=10 ' .. cmd
+    endif
+    exec cmd
+    nnoremap <buffer> <silent> q :bw!<CR>
+  elseif a:opt.mode is# 'pop'
+    " TODO use popup window
+  elseif a:opt.mode is# 'fzf'
+    if exists('*fzf#run()') && executable('fzf')
+      call fzf#run({
+            \ 'source': a:opt.source,
+            \ 'sink': a:opt.cb,
+            \ 'down': '40%'},
+            \ )
+    endif
+  else
+    call s:echo_err("doesn't installed fzf.vim(require fzf)")
+  endif
 
-    call win_gotoid(current_winid)
+  call win_gotoid(current_winid)
 endfunction
 
 function! s:git_log() abort
-    " use fish command
-    call system('tmux new-window git log')
+  " use fish command
+  call system('tmux new-window git log')
 endfunction
 
 function! s:git_push(...) abort
-    let opt = {
-                \ 'cmd': 'push',
-                \ 'args': a:000,
-                \ 'auto_close': 1,
-                \ 'window_way': 'top',
-                \ 'mode': 'term',
-                \ }
+  let opt = {
+        \ 'cmd': 'push',
+        \ 'args': a:000,
+        \ 'auto_close': 1,
+        \ 'window_way': 'top',
+        \ 'mode': 'term',
+        \ }
 
-    call s:git_exec(opt)
+  call s:git_exec(opt)
 endfunction
 
 function! s:git_pull(...) abort
-    let opt = {
-                \ 'cmd': 'pull',
-                \ 'args': a:000,
-                \ 'auto_close': 1,
-                \ 'window_way': 'top',
-                \ 'mode': 'term',
-                \ }
+  let opt = {
+        \ 'cmd': 'pull',
+        \ 'args': a:000,
+        \ 'auto_close': 1,
+        \ 'window_way': 'top',
+        \ 'mode': 'term',
+        \ }
 
-    call s:git_exec(opt)
+  call s:git_exec(opt)
 endfunction
 
 function! s:git_checkout_cb(repo) abort
-    call system('git checkout' .. a:repo)
+  call system('git checkout' .. a:repo)
 endfunction
 
 function! s:git_checkout(...) abort
-    let source = filter(systemlist('git branch'), 'v:val[0] isnot# "*"')
-    if empty(source)
-        call s:echo_err("no other branch")
-        return
-    endif
+  let source = filter(systemlist('git branch'), 'v:val[0] isnot# "*"')
+  if empty(source)
+    call s:echo_err("no other branch")
+    return
+  endif
 
-    let opt = {
-                \ 'source': source,
-                \ 'mode': 'fzf',
-                \ 'cb': function('s:git_checkout_cb'),
-                \ }
+  let opt = {
+        \ 'source': source,
+        \ 'mode': 'fzf',
+        \ 'cb': function('s:git_checkout_cb'),
+        \ }
 
-    call s:git_exec(opt)
+  call s:git_exec(opt)
 endfunction
 
 command! -nargs=* Gitpush call s:git_push(<f-args>)
@@ -868,30 +868,30 @@ nnoremap <silent> gc :GitCheckout<CR>
 
 " {{{ バッファ関連
 function! s:buflist() abort
-    return filter(range(1, bufnr('$')), 'buflisted(v:val) && getbufvar(v:val, "&filetype") != "qf"')
+  return filter(range(1, bufnr('$')), 'buflisted(v:val) && getbufvar(v:val, "&filetype") != "qf"')
 endfunction
 
 function! s:format_buffer(b)
-    let name = bufname(a:b)
-    let name = empty(name) ? '[No Name]' : fnamemodify(name, ":p:~:.")
-    let flag = a:b == bufnr('')  ? '%' : a:b == bufnr('#') ? '#' : ' '
-    let modified = getbufvar(a:b, '&modified') ? ' [+]' : ''
-    let readonly = getbufvar(a:b, '&modifiable') ? '' : ' [RO]'
-    let extra = join(filter([modified, readonly], '!empty(v:val)'), '')
-    return printf("[%s] %s\t%s\t%s", a:b, flag, name, extra)
+  let name = bufname(a:b)
+  let name = empty(name) ? '[No Name]' : fnamemodify(name, ":p:~:.")
+  let flag = a:b == bufnr('')  ? '%' : a:b == bufnr('#') ? '#' : ' '
+  let modified = getbufvar(a:b, '&modified') ? ' [+]' : ''
+  let readonly = getbufvar(a:b, '&modifiable') ? '' : ' [RO]'
+  let extra = join(filter([modified, readonly], '!empty(v:val)'), '')
+  return printf("[%s] %s\t%s\t%s", a:b, flag, name, extra)
 endfunction
 
 function! s:delbuf(buf) abort
-    exe 'bw!' a:buf[match(a:buf, '[')+1:match(a:buf, ']')-1]
+  exe 'bw!' a:buf[match(a:buf, '[')+1:match(a:buf, ']')-1]
 endfunction
 
 function! s:delbuflist() abort
-    call fzf#run({
-                \ 'source': map(copy(s:buflist()), 's:format_buffer(v:val)'),
-                \ 'sink': function('s:delbuf'),
-                \ 'options': "-m",
-                \ 'down': '40%'},
-                \ )
+  call fzf#run({
+        \ 'source': map(copy(s:buflist()), 's:format_buffer(v:val)'),
+        \ 'sink': function('s:delbuf'),
+        \ 'options': "-m",
+        \ 'down': '40%'},
+        \ )
 endfunction
 
 command! DelBuf call s:delbuflist()
@@ -899,17 +899,17 @@ command! DelBuf call s:delbuflist()
 
 " {{{ ディレクトリ自動生成
 augroup vimrc-auto-mkdir
-    autocmd!
-    autocmd BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'), v:cmdbang)
-    function! s:auto_mkdir(dir, force)
-        if !isdirectory(a:dir) && (a:force ||
-                    \    input(printf('"%s" does not exist. Create? [y/N]', a:dir)) =~? '^y\%[es]$')
-            call mkdir(iconv(a:dir, &encoding, &termencoding), 'p')
-        endif
-    endfunction
+  autocmd!
+  autocmd BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'), v:cmdbang)
+  function! s:auto_mkdir(dir, force)
+    if !isdirectory(a:dir) && (a:force ||
+          \    input(printf('"%s" does not exist. Create? [y/N]', a:dir)) =~? '^y\%[es]$')
+      call mkdir(iconv(a:dir, &encoding, &termencoding), 'p')
+    endif
+  endfunction
 augroup END
 " }}}
 
 " }}}
 
-" vim: tw=78 sw=4 foldmethod=marker
+" vim: foldmethod=marker
