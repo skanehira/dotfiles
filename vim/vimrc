@@ -169,7 +169,7 @@ let g:netrw_timefmt='%Y/%m/%d(%a) %H:%M:%S'
 " 拡張子ごとのインデント設定 {{{
 augroup fileTypeIndent
   autocmd!
-  au FileType go setlocal tabstop=4
+  au FileType go setlocal tabstop=4 shiftwidth=4
   au FileType vim setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType php setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType html setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
@@ -539,13 +539,13 @@ let g:go_fmt_command = 'goimports'
 let g:go_gopls_enabled = 0
 
 " ファイル保存時、linterを実行する
-let g:go_metalinter_autosave = 1
+"let g:go_metalinter_autosave = 1
 
 " linter実行時、go vetのみを実行する
-let g:go_metalinter_autosave_enabled = ['vet']
+"let g:go_metalinter_autosave_enabled = ['vet']
 
 " golangci-lintを使う
-let g:go_metalinter_command = "golangci-lint"
+"let g:go_metalinter_command = "golangci-lint"
 
 " vim-lspを使用するので、vim-goの`Ctrl+]`を無効にする
 let g:go_def_mapping_enabled = 0
