@@ -7,11 +7,6 @@ on_ft = 'go'
 [[plugins]]
 repo = 'prabirshrestha/vim-lsp'
 
-# async auto complete
-[[plugins]]
-repo = 'prabirshrestha/async.vim'
-merged = 0
-
 # format text
 [[plugins]]
 repo = 'godlygeek/tabular'
