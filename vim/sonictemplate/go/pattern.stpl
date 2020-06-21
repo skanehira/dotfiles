@@ -115,7 +115,6 @@ http\.handlerfunc\.\(\S\+\)$
 	
 \(\S\+\)\.append\.\(\S\+\)$
 	{{$1}} = append({{$1}}, {{$2}})
-	{{_cursor_}}
 
 http\.error
 	http.Error(w, err.Error(), {{_cursor_}})
