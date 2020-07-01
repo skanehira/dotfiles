@@ -371,7 +371,7 @@ nnoremap <Leader>q :q!<CR>
 " }}}
 
 " 検索
-nnoremap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
+"nnoremap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
 
 " 置換
 nnoremap <Leader>re :%s;\<<C-R><C-W>\>;g<Left><Left>;
@@ -427,18 +427,17 @@ nnoremap <silent> <Leader>n :set relativenumber!<CR>
 
 " ターミナル関連 {{{
 " ターミナルノーマルモード
-tnoremap <C-w>n <C-w>N
+tnoremap <C-g>n <C-g>N
 
 " ターミナルでウィンドウ移動
-tnoremap <silent> <C-l> <C-w>:tabnext<CR>
-tnoremap <silent> <C-h> <C-w>:tabprevious<CR>
-
-" タブ移動
-nnoremap <silent> <C-l> :tabnext<CR>
-nnoremap <silent> <C-h> :tabprevious<CR>
+"tnoremap <silent> <C-n> <C-g>:tabnext<CR>
+"tnoremap <silent> <C-p> <C-g>:tabprevious<CR>
 
 " <c-g>を<c-w>代わりにする
-tnoremap <C-g> <C-w>.
+"tnoremap <C-g> <C-w>.
+
+" prefixキーを<C-g>に変更
+set termwinkey=<C-g>
 " }}}
 
 " review
@@ -608,15 +607,6 @@ augroup END
 let g:vim_markdown_folding_disabled = 1
 " }}}
 
-" vim-surround settings {{{
-nmap <Leader>7 ysiw'
-nmap <Leader>2 ysiw"
-nmap <Leader>` ysiw`
-nmap <Leader>8 ysiw)
-nmap <Leader>[ ysiw]
-nmap <Leader>{ ysiw}
-" }}}
-
 " profiling {{{
 " vim +'call ProfileCursorMove()' <カーソルを動かすのが重いファイル>
 function! ProfileCursorMove() abort
@@ -726,12 +716,11 @@ function! s:cd_repo(shell, repo) abort
   pwd
 endfunction
 
-function! s:repo(multi, cb) abort
+function! s:repo(cb) abort
   if executable('ghq') && exists('*fzf#run()') && executable('fzf')
     call fzf#run({
           \ 'source': systemlist('ghq list'),
           \ 'sink': a:cb,
-          \ 'options': a:multi,
           \ 'down': '40%'},
           \ )
   else
@@ -739,7 +728,7 @@ function! s:repo(multi, cb) abort
   endif
 endfunction
 
-command! Repo call s:repo('+m', function('s:cd_repo', [&shell]))
+command! Repo call s:repo(function('s:cd_repo', [&shell]))
 " }}}
 
 " 新しいタブを開く {{{
@@ -748,7 +737,7 @@ function! s:open_tabs(shell, repo) abort
 endfunction
 
 " fzf.vimのcallbackでは&shellがshになってしまうので、現在実行しているshellを渡す
-command! NewTab call s:repo('-m', function('s:open_tabs', [&shell]))
+command! Repot call s:repo(function('s:open_tabs', [&shell]))
 
 " }}}
 
