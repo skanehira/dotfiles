@@ -190,3 +190,12 @@ slice\.insert\.\(\S.*\)
 f\.\(\S.*\)
 	func {{$1}}({{_cursor_}}) {
 	}
+
+test.\(\S.*\)$
+	func {{$1}}(t *testing.T) {
+		{{_cursor_}}
+	}
+
+test\.run$
+	t.Run("{{_cursor_}}", func(t *testing.T) {
+	})

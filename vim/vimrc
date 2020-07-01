@@ -168,7 +168,7 @@ let g:netrw_timefmt='%Y/%m/%d(%a) %H:%M:%S'
 
 " 拡張子ごとのインデント設定 {{{
 augroup fileTypeIndent
-  autocmd!
+  au!
   au FileType go setlocal tabstop=4 shiftwidth=4
   au FileType vim setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType php setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
@@ -196,8 +196,8 @@ augroup END
 
 " カーソルラインの位置を保存する {{{
 augroup cursorlineRestore
-  autocmd!
-  autocmd BufReadPost *
+  au!
+  au BufReadPost *
         \ if line("'\"") > 0 && line("'\"") <= line("$") |
         \   exe "normal! g'\"" |
         \ endif
@@ -316,10 +316,10 @@ let s:spaces_target_ft = {
       \ 'terminal': 1,
       \ }
 augroup HighlightTrailingSpaces
-  autocmd!
-  autocmd BufWritePre * if get(s:spaces_target_ft, &ft, 0) | :silent keeppatterns %s/\s\+$//ge | endif
-  autocmd VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
-  autocmd VimEnter,WinEnter * if get(s:spaces_target_ft, &ft, 0) | match TrailingSpaces /\s\+$/ | endif
+  au!
+  au BufWritePre * if get(s:spaces_target_ft, &ft, 0) | :silent keeppatterns %s/\s\+$//ge | endif
+  au VimEnter,WinEnter,ColorScheme * highlight TrailingSpaces term=underline guibg=Red ctermbg=Red
+  au VimEnter,WinEnter * if get(s:spaces_target_ft, &ft, 0) | match TrailingSpaces /\s\+$/ | endif
 augroup END
 " }}}
 
@@ -347,7 +347,7 @@ endif
 set autoread
 augroup vimrc-misc
   au!
-  autocmd WinEnter,FocusGained * checktime
+  au WinEnter,FocusGained * checktime
 augroup END
 " }}}
 
@@ -356,9 +356,11 @@ augroup END
 " fern
 nnoremap <silent> <Leader>f :Fern . -drawer<CR>
 augroup fern-setteings
-  autocmd! *
-  autocmd FileType fern nnoremap <silent> q ::bw!<CR>
+  au!
+  au FileType fern nnoremap <silent> q :bw!<CR>
 augroup END
+
+let g:fern#drawer_keep = 1
 
 " *でカーソルを移動しないようにする
 noremap * *N
@@ -562,13 +564,13 @@ let g:go_template_autocreate = 0
 " すでに開いているバッファに定義ジャンプする
 let g:go_def_reuse_buffer = 1
 
-"let g:go_fold_enable = ['block', 'import', 'varconst', 'package_comment']
+let g:go_fold_enable = ['block', 'import', 'varconst', 'package_comment']
 
 " key mapping
-"augroup goMapping
-"    autocmd!
-"    au FileType go set foldmethod=syntax
-"augroup END
+augroup goMapping
+  au!
+  au FileType go set foldmethod=syntax
+augroup END
 " }}}
 
 " fzf settings {{{
@@ -580,11 +582,6 @@ nnoremap <C-P> :Files<CR>
 " }}}
 
 " lsp settings {{{
-
-" lsp log
-"let g:lsp_log_verbose = 1
-"let g:lsp_log_file = expand('~/vim-lsp.log')
-
 function! s:on_lsp_buffer_enabled() abort
   setlocal omnifunc=lsp#complete
   set completeopt^=popup
@@ -595,13 +592,15 @@ function! s:on_lsp_buffer_enabled() abort
   let g:lsp_signs_error = {'text': 'ｳﾎ'}
   let g:lsp_signs_warning = {'text': '🍌'}
   let g:lsp_signs_enabled = 1
+
+  "let g:lsp_log_verbose = 1
+  "let g:lsp_log_file = expand('~/vim-lsp.log')
 endfunction
 
 augroup lsp_install
   au!
-  autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+  au User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
 augroup END
-
 " }}}
 
 " vim-markdown settings {{{
@@ -633,8 +632,8 @@ function! ProfileCursorMove() abort
   profile file *
 
   augroup ProfileCursorMove
-    autocmd!
-    autocmd CursorHold <buffer> profile pause | q
+    au!
+    au CursorHold <buffer> profile pause | q
   augroup END
 
   for i in range(1000)
@@ -653,7 +652,7 @@ let g:user_emmet_settings = {
 let g:user_emmet_leader_key = '<C-g>'
 
 augroup emmet
-  autocmd!
+  au!
   au FileType vue,html,javascript,css EmmetInstall
   au FileType vue,html,javascript,css imap <buffer> <C-f> <plug>(emmet-expand-abbr)
 augroup END
@@ -663,7 +662,7 @@ augroup END
 " https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
 " vueファイルのシンタックスが効かなくなる問題対応
 augroup VueSyntax
-  autocmd!
+  au!
   au FileType vue syntax sync fromstart
 augroup END
 " }}}
@@ -899,8 +898,8 @@ command! DelBuf call s:delbuflist()
 
 " {{{ ディレクトリ自動生成
 augroup vimrc-auto-mkdir
-  autocmd!
-  autocmd BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'), v:cmdbang)
+  au!
+  au BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'), v:cmdbang)
   function! s:auto_mkdir(dir, force)
     if !isdirectory(a:dir) && (a:force ||
           \    input(printf('"%s" does not exist. Create? [y/N]', a:dir)) =~? '^y\%[es]$')
