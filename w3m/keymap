@@ -1,0 +1,14 @@
+keymap C-u PREV_PAGE
+keymap C-d NEXT_PAGE
+keymap C-h BACK
+keymap C-l NEXT
+keymap ] NEXT_TAB
+keymap [ PREV_TAB
+keymap C-w CLOSE_TAB
+keymap b PREV_WORD
+keymap H HISTORY
+keymap ? HELP
+keymap C-n NEXT_LINK
+keymap C-p PREV_LINK
+keymap C-q EXIT
+keymap C-g GOTO
