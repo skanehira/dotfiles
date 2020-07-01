@@ -710,6 +710,20 @@ let g:gist_list_vsplit = 1
 
 " {{{ 自作関数
 
+" {{{ w3m
+function! s:gg(package) abort
+  execute('term ++close ++shell w3m pkg.go.dev/' . a:package)
+endfunction
+
+command! -nargs=1 GG call s:gg(<f-args>)
+
+function! s:www(word) abort
+  execute('term ++close ++shell w3m google.com/search\?q=' . a:word)
+endfunction
+
+command! -nargs=1 WWW call s:www(<f-args>)
+" }}}
+
 " {{{ リポジトリに移動
 function! s:cd_repo(shell, repo) abort
   exe 'lcd' trim(system('ghq root')) .. '/' .. a:repo
