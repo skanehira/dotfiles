@@ -11,4 +11,4 @@ keymap ? HELP
 keymap C-n NEXT_LINK
 keymap C-p PREV_LINK
 keymap C-q EXIT
-keymap C-g GOTO
+keymap C-k GOTO

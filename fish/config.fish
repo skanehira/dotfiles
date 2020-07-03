@@ -23,6 +23,7 @@ alias gd='git diff'
 alias gl='git log'
 alias gc='git checkout .'
 alias gdc='git diff (git log --pretty=oneline | fzf | awk "{print \$1}")'
+alias www="w3m google.com"
 
 switch (uname)
   case Linux
