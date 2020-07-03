@@ -718,7 +718,7 @@ endfunction
 command! -nargs=1 GG call s:gg(<f-args>)
 
 function! s:www(word) abort
-  execute('term ++close ++shell w3m google.com/search\?q=' . a:word)
+  execute('term ++close ++shell w3m google.com/search\?q="' . a:word . '"')
 endfunction
 
 command! -nargs=1 WWW call s:www(<f-args>)
