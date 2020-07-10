@@ -489,11 +489,6 @@ call gina#custom#mapping#nmap(
       \ {'silent': 1},
       \)
 call gina#custom#mapping#nmap(
-      \ 'status', 'q',
-      \ ':<C-u>bw!<CR>',
-      \ {'noremap': 1, 'silent': 1},
-      \)
-call gina#custom#mapping#nmap(
       \ 'status', 'ga',
       \ '--',
       \ {'silent': 1},
@@ -514,7 +509,7 @@ call gina#custom#mapping#nmap(
       \ {'silent': 1},
       \)
 call gina#custom#mapping#nmap(
-      \ 'changes', 'q',
+      \ '/.*', 'q',
       \ ':<C-u>bw!<CR>',
       \ {'noremap': 1, 'silent': 1},
       \)
