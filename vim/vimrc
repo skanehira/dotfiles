@@ -352,6 +352,10 @@ augroup END
 " }}}
 
 " key mappings {{{
+augroup go
+  au!
+  au FileType go imap <C-e> err != nil {<CR>
+augroup END
 
 " fern
 nnoremap <silent> <Leader>f :Fern . -drawer<CR>
@@ -860,10 +864,7 @@ endfunction
 
 command! -nargs=* Gitpush call s:git_push(<f-args>)
 command! -nargs=* Gitpull call s:git_pull()
-command! -nargs=* Gitblame call s:git_blame()
 command! -nargs=* GitCheckout call s:git_checkout(<f-args>)
-command! Lazygit call system('tmux new-window lazygit')
-
 nnoremap <silent> gc :GitCheckout<CR>
 
 " }}}
