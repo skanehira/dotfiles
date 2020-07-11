@@ -352,6 +352,9 @@ augroup END
 " }}}
 
 " key mappings {{{
+nmap gr <Plug>(Translate)
+vmap t <Plug>(VTranslate)
+
 augroup go
   au!
   au FileType go imap <C-e> err != nil {<CR>
@@ -529,6 +532,13 @@ augroup END
 cnoremap <c-b> <Left>
 cnoremap <c-f> <Right>
 cnoremap <c-a> <Home>
+" }}}
+
+" Better <C-n>/<C-p> in Command {{{
+cnoremap <C-p> <Up>
+cnoremap <C-n> <Down>
+cnoremap <Up> <C-p>
+cnoremap <Down> <C-n>
 " }}}
 
 " vim-go settings {{{
@@ -709,6 +719,16 @@ let g:gist_list_vsplit = 1
 
 " {{{ 自作関数
 
+" {{{ レジスタクリア
+function! s:clear_register() abort
+  let rs = split('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-"', '\zs')
+  for r in rs
+    call setreg(r, [])
+  endfor
+endfunction
+" }}}
+
+command! ClearRegister call s:clear_register()
 " {{{ w3m
 function! s:gg(package) abort
   execute('term ++close ++shell w3m pkg.go.dev/' . a:package)
