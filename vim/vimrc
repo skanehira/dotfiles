@@ -434,17 +434,14 @@ nnoremap <silent> <Leader>n :set relativenumber!<CR>
 
 " ターミナル関連 {{{
 " ターミナルノーマルモード
-tnoremap <C-g>n <C-g>N
+tnoremap <C-w>n <C-w>N
 
 " ターミナルでウィンドウ移動
-"tnoremap <silent> <C-n> <C-g>:tabnext<CR>
-"tnoremap <silent> <C-p> <C-g>:tabprevious<CR>
+tnoremap <silent> <C-n> <C-w>:tabnext<CR>
+tnoremap <silent> <C-p> <C-w>:tabprevious<CR>
 
 " <c-g>を<c-w>代わりにする
-"tnoremap <C-g> <C-w>.
-
-" prefixキーを<C-g>に変更
-set termwinkey=<C-g>
+tnoremap <C-g> <C-w>.
 " }}}
 
 " review
@@ -689,7 +686,7 @@ let g:lexima_enable_basic_rules = 1
 " }}}
 
 " {{{ docker.vim
-let g:docker_terminal_open = 'vert'
+"let g:docker_terminal_open = 'vert'
 "let s:docker_auth_file = expand('~/.docker/docker.vim.json')
 "let g:docker_registry_auth = json_decode(join(readfile(s:docker_auth_file), "\n"))
 " }}}
