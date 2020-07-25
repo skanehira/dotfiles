@@ -192,3 +192,7 @@ repo = 'skanehira/google-map.vim'
 
 [[plugins]]
 repo = 'lambdalisue/fern.vim'
+
+[[plugins]]
+repo = 'kristijanhusak/vim-carbon-now-sh'
+
