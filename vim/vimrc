@@ -946,8 +946,11 @@ augroup END
 " {{{ ターミナルバッファ
 " eg. vnew term://bsah でターミナルを実行
 function! s:termopen() abort
-  let cmd = split(bufname(), '\/\/')[1]
-  call execute(printf('term ++curwin ++close ++shell %s', cmd))
+  let name = split(bufname(), '\/\/')
+  if len(name) < 2
+    return
+  endif
+  call execute(printf('term ++curwin ++close ++shell %s', name[1]))
 endfunction
 
 augroup terminal
