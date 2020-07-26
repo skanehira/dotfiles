@@ -195,4 +195,3 @@ repo = 'lambdalisue/fern.vim'
 
 [[plugins]]
 repo = 'kristijanhusak/vim-carbon-now-sh'
-
