@@ -82,6 +82,7 @@ syntax enable
 
 " カラースキームを使う {{{
 colorscheme iceberg
+set bg=dark
 " }}}
 
 " ファイル形式別プラグインとインデントを有効にする {{{
@@ -355,11 +356,6 @@ augroup END
 nmap gr <Plug>(Translate)
 vmap t <Plug>(VTranslate)
 
-augroup go
-  au!
-  au FileType go imap <C-e> err != nil {<CR>
-augroup END
-
 " fern
 nnoremap <silent> <Leader>f :Fern . -drawer<CR>
 augroup fern-setteings
@@ -594,6 +590,7 @@ function! s:on_lsp_buffer_enabled() abort
   let g:lsp_signs_error = {'text': 'ｳﾎ'}
   let g:lsp_signs_warning = {'text': '🍌'}
   let g:lsp_signs_enabled = 1
+  let g:lsp_diagnostics_echo_cursor = 1 
 
   let g:lsp_settings_root_markers = ['go.mod'] + g:lsp_settings_root_markers
   "let g:lsp_log_verbose = 1
@@ -943,6 +940,18 @@ augroup vimrc-auto-mkdir
 augroup END
 " }}}
 
+" {{{ ターミナルバッファ
+" eg. vnew term://bsah でターミナルを実行
+function! s:termopen() abort
+  let cmd = split(bufname(), '\/\/')[1]
+  call execute(printf('term ++curwin ++close ++shell %s', cmd))
+endfunction
+
+augroup terminal
+  au!
+  au BufReadCmd term://* call s:termopen()
+augroup END
+" }}}
 " }}}
 
 " vim: foldmethod=marker
