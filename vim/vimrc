@@ -370,7 +370,6 @@ noremap * *N
 
 " ファイル保存と終了 {{{
 nnoremap <Leader>w :w<CR>
-nnoremap <Leader>q :q!<CR>
 " }}}
 
 " 検索
@@ -527,6 +526,10 @@ cnoremap <C-p> <Up>
 cnoremap <C-n> <Down>
 cnoremap <Up> <C-p>
 cnoremap <Down> <C-n>
+" }}}
+
+" {{{ quick run
+nnoremap <Leader>q :QuickRun<CR>
 " }}}
 
 " vim-go settings {{{
