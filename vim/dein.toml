@@ -195,3 +195,6 @@ repo = 'lambdalisue/fern.vim'
 
 [[plugins]]
 repo = 'kristijanhusak/vim-carbon-now-sh'
+
+[[plugins]]
+repo = 'skanehira/code2img.vim'

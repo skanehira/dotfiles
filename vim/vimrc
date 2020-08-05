@@ -532,6 +532,11 @@ cnoremap <Down> <C-n>
 nnoremap <Leader>q :QuickRun<CR>
 " }}}
 
+" {{{ code2img
+map gi <Plug>(Code2img)
+xmap gi <Plug>(Code2img)
+" }}}
+
 " vim-go settings {{{
 " ファイル保存時go importを実行する
 let g:go_fmt_command = 'goimports'
