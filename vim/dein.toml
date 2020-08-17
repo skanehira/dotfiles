@@ -198,3 +198,12 @@ repo = 'kristijanhusak/vim-carbon-now-sh'
 
 [[plugins]]
 repo = 'skanehira/code2img.vim'
+
+[[plugins]]
+repo = 'lambdalisue/fern-git-status.vim'
+
+[[plugins]]
+repo = 'basyura/TweetVim'
+
+[[plugins]]
+repo = 'basyura/twibill.vim'

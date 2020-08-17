@@ -353,8 +353,10 @@ augroup END
 " }}}
 
 " key mappings {{{
+imap <C-h> <BS>
+
 nmap gr <Plug>(Translate)
-vmap t <Plug>(VTranslate)
+vmap gt <Plug>(VTranslate)
 
 " fern
 nnoremap <silent> <Leader>f :Fern . -drawer<CR>
@@ -736,6 +738,14 @@ let g:vista_default_executive = 'vim_lsp'
 let g:gist_post_private = 1
 let g:gist_list_vsplit = 1
 "}}}
+
+" {{{ tweetvim
+nnoremap <silent> <Leader>th :<C-u>TweetVimHomeTimeline<CR>
+nnoremap <silent> <Leader>ts :<C-u>TweetVimSay<CR>
+nnoremap <silent> <Leader>tm :<C-u>TweetVimMentions<CR>
+let g:tweetvim_display_time = 1
+let g:tweetvim_open_buffer_cmd = 'tabnew'
+" }}}
 
 " {{{ 自作関数
 
