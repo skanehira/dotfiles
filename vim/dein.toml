@@ -76,9 +76,6 @@ repo = 'mattn/sonictemplate-vim'
 hook_add = '''
 let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
 '''
-# manage session
-#[[plugins]]
-#repo = 'skanehira/vsession'
 
 # show git diff
 [[plugins]]
@@ -148,9 +145,6 @@ repo = 'Shougo/dein.vim'
 repo = 'skanehira/docker.vim'
 
 [[plugins]]
-repo = 'skanehira/docker-compose.vim'
-
-[[plugins]]
 repo = 'LeafCage/vimhelpgenerator'
 
 [[plugins]]
@@ -175,12 +169,6 @@ repo = 'tyru/open-browser-github.vim'
 repo = 'tyru/open-browser.vim'
 
 [[plugins]]
-repo = 'liuchengxu/vista.vim'
-
-[[plugins]]
-repo = 'tweekmonster/helpful.vim'
-
-[[plugins]]
 repo = 'andymass/vim-matchup'
 
 [[plugins]]
@@ -188,19 +176,10 @@ repo = 'mattn/vim-lsp-settings'
 merged = 0
 
 [[plugins]]
-repo = 'skanehira/google-map.vim'
-
-[[plugins]]
 repo = 'lambdalisue/fern.vim'
 
 [[plugins]]
-repo = 'kristijanhusak/vim-carbon-now-sh'
-
-[[plugins]]
 repo = 'skanehira/code2img.vim'
-
-[[plugins]]
-repo = 'lambdalisue/fern-git-status.vim'
 
 [[plugins]]
 repo = 'basyura/TweetVim'
