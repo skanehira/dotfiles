@@ -463,7 +463,7 @@ nnoremap <silent> gw[ cw``<Esc>P
 vnoremap <silent> gw[ c``<Esc>P
 
 " gina
-nnoremap <silent> gs :Gina status<CR>
+nnoremap <silent> gs :Gina status -s<CR>
 nnoremap <silent> gl :Gina log<CR>
 call gina#custom#mapping#nmap(
       \ 'status', 'gp',
@@ -1018,6 +1018,79 @@ function! TweetWithImg(first, last, ...) abort
 endfunction
 
 command! -nargs=? -range TweetWithImg call TweetWithImg(<line1>, <line2>, <q-args>)
+" }}}
+
+" {{{ gina preview
+function! s:clean_up() abort
+  execute "tabclose!"
+  let t:gina_preview = 0
+  call gina#core#emitter#unsubscribe("command:called", function("s:boot"))
+  augroup status-cursor
+    au!
+  augroup END
+endfunction
+
+function! s:boot(...) abort
+  nnoremap <silent> <buffer> q :call <SID>clean_up()<CR>
+
+  let l = substitute(getline("."), "\<Esc>[^m]\\+m", "", "g")
+  if empty(l)
+    return
+  endif
+
+  let type = l[0:2]
+  let file = l[3:]
+
+  if type[0] == "M"
+    let cmd = ["git", "diff", "--cached"]
+  elseif type[1] == "M"
+    let cmd = ["git", "diff"]
+  elseif type[0] == "D"
+    let cmd = ["git", "diff", "--cached", "--"]
+  elseif type[1] == "D"
+    let cmd = ["git", "diff", "--"]
+  elseif file[-1:] == "/"
+    let cmd = ["tree"]
+  else
+    let cmd = ["cat"]
+  endif
+
+  let cmd += [file]
+
+  call win_gotoid(t:winid_preview)
+  %d_
+  call execute("0r!" . join(cmd, " "))
+  normal! gg
+
+  call win_gotoid(t:winid_gina)
+endfunction
+
+function! s:open_git_status_preview() abort
+  if get(t:, "gina_preview", 0)
+    return
+  endif
+  let t:gina_preview = 1
+  tabnew
+  Gina status -s
+
+  let t:winid_gina = win_getid()
+
+  belowright vnew
+  set ft=diff
+  set buftype=nofile
+  let t:winid_preview = win_getid()
+
+  call win_gotoid(t:winid_gina)
+  execute "vertical resize" &columns / 3
+  call gina#core#emitter#subscribe("command:called", function("s:boot"))
+
+  augroup status-cursor
+    au!
+    autocmd CursorMoved <buffer> call s:boot()
+  augroup END
+endfunction
+
+nnoremap <silent> gp :call <SID>open_git_status_preview()<CR>
 " }}}
 
 " }}}
