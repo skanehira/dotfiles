@@ -365,7 +365,8 @@ augroup fern-setteings
   au FileType fern nnoremap <silent> q :bw!<CR>
 augroup END
 
-let g:fern#drawer_keep = 1
+let g:fern#disable_viewer_hide_cursor = 1
+"let g:fern#drawer_keep = 1
 
 " *でカーソルを移動しないようにする
 noremap * *N
@@ -671,8 +672,8 @@ let g:user_emmet_leader_key = '<C-g>'
 
 augroup emmet
   au!
-  au FileType vue,html,javascript,css EmmetInstall
-  au FileType vue,html,javascript,css imap <buffer> <C-f> <plug>(emmet-expand-abbr)
+  au FileType vue,html,css EmmetInstall
+  au FileType vue,html,css imap <buffer> <C-f> <plug>(emmet-expand-abbr)
 augroup END
 " }}}
 
