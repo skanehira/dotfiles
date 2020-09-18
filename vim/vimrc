@@ -435,8 +435,8 @@ nnoremap <silent> <Leader>n :set relativenumber!<CR>
 tnoremap <C-w>n <C-w>N
 
 " ターミナルでウィンドウ移動
-tnoremap <silent> <C-n> <C-w>:tabnext<CR>
-tnoremap <silent> <C-p> <C-w>:tabprevious<CR>
+tnoremap <silent> <C-j> <C-w>:tabnext<CR>
+tnoremap <silent> <C-k> <C-w>:tabprevious<CR>
 
 " <c-g>を<c-w>代わりにする
 tnoremap <C-g> <C-w>.
@@ -1050,6 +1050,8 @@ function! s:boot(...) abort
     let cmd = ["git", "diff", "--cached", "--"]
   elseif type[1] == "D"
     let cmd = ["git", "diff", "--"]
+  elseif type[1] == "A"
+    let cmd = ["git", "diff"]
   elseif file[-1:] == "/"
     let cmd = ["tree"]
   else
@@ -1095,5 +1097,20 @@ nnoremap <silent> gp :call <SID>open_git_status_preview()<CR>
 " }}}
 
 " }}}
+function! s:grep(word) abort
+  cexpr system(printf('ag "%s"', a:word)) | cw
+endfunction
+
+command! -nargs=1 Grep call <SID>grep(<q-args>)
+
+function! s:create_zenn_article(article_name) abort
+  let date = strftime("%Y-%m-%d")
+  let slug = date . "-" . a:article_name
+  call system("npx zenn new:article --slug " . slug )
+  let article_path = "articles/" . slug . ".md"
+  exe "edit " . article_path
+endfunction
+
+command! -nargs=1 ZennCreateArticle call <SID>create_zenn_article(<f-args>)
 
 " vim: foldmethod=marker
