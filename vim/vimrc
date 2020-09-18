@@ -362,7 +362,7 @@ vmap gt <Plug>(VTranslate)
 nnoremap <silent> <Leader>f :Fern . -drawer<CR>
 augroup fern-setteings
   au!
-  au FileType fern nnoremap <silent> q :bw!<CR>
+  au FileType fern nnoremap <buffer> <silent> q :bw!<CR>
 augroup END
 
 let g:fern#disable_viewer_hide_cursor = 1
