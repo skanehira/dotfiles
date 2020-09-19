@@ -360,9 +360,14 @@ vmap gt <Plug>(VTranslate)
 
 " fern
 nnoremap <silent> <Leader>f :Fern . -drawer<CR>
+function! s:fern_init() abort
+  nnoremap <buffer> <silent> q :q<CR>
+  map <buffer> <silent> <C-v> <Plug>(fern-action-open:split)
+endfunction
+
 augroup fern-setteings
   au!
-  au FileType fern nnoremap <buffer> <silent> q :bw!<CR>
+  au FileType fern call s:fern_init()
 augroup END
 
 let g:fern#disable_viewer_hide_cursor = 1
@@ -376,7 +381,7 @@ nnoremap <Leader>w :w<CR>
 " }}}
 
 " 検索
-"nnoremap <C-G><C-G> :Ggrep <C-R><C-W><CR><CR>
+nnoremap <C-G><C-G> :Grep <C-R><C-W><CR>
 
 " 置換
 nnoremap <Leader>re :%s;\<<C-R><C-W>\>;g<Left><Left>;
