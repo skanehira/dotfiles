@@ -471,6 +471,8 @@ vnoremap <silent> gw[ c``<Esc>P
 " gina
 nnoremap <silent> gs :Gina status -s<CR>
 nnoremap <silent> gl :Gina log<CR>
+nnoremap <silent> gm :Gina blame<CR>
+nnoremap <silent> gb :Gina branch<CR>
 call gina#custom#mapping#nmap(
       \ 'status', 'gp',
       \ ':<C-u>Gina push<CR>',
@@ -511,9 +513,6 @@ call gina#custom#mapping#nmap(
       \ ':<C-u>bw!<CR>',
       \ {'noremap': 1, 'silent': 1},
       \)
-
-" バッファ一覧
-nnoremap gb :Buffers<CR>
 
 " ヘルプ
 augroup help-mapping
