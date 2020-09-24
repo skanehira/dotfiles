@@ -1101,6 +1101,9 @@ nnoremap <silent> gp :call <SID>open_git_status_preview()<CR>
 " }}}
 
 " }}}
+let g:gh_token = trim(readfile(expand('~/.gh-vim'))[0])
+let g:gh_enable_delete_repository = 0
+
 function! s:grep(word) abort
   cexpr system(printf('ag "%s"', a:word)) | cw
 endfunction
