@@ -186,3 +186,5 @@ repo = 'basyura/TweetVim'
 
 [[plugins]]
 repo = 'basyura/twibill.vim'
+[[plugins]]
+repo = 'shinespark/vim-list2tree'
