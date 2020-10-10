@@ -1105,9 +1105,13 @@ endfunction
 nnoremap <silent> gp :call <SID>open_git_status_preview()<CR>
 " }}}
 
+" {{{ gh.vim
+let gh_token_file = expand('~/.gh-vim')
+if filereadable(gh_token_file)
+  let g:gh_token = trim(readfile(gh_token_file)[0])
+  let g:gh_enable_delete_repository = 0
+endif
 " }}}
-let g:gh_token = trim(readfile(expand('~/.gh-vim'))[0])
-let g:gh_enable_delete_repository = 0
 
 function! s:grep(word) abort
   let cmd = printf('ag -S %s', a:word)
