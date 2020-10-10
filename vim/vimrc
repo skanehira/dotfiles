@@ -1111,6 +1111,21 @@ if filereadable(gh_token_file)
   let g:gh_token = trim(readfile(gh_token_file)[0])
   let g:gh_enable_delete_repository = 0
 endif
+
+function! s:gh_map_apply() abort
+  call gh#map#add('gh-buffer-issue-list', 'map', 'e', '<Plug>(gh_issue_edit)')
+  call gh#map#add('gh-buffer-issue-list', 'map', 'gm', '<Plug>(gh_issue_open_comment)')
+  call gh#map#add('gh-buffer-issue-comment-list', 'map', 'n', '<Plug>(gh_issue_comment_new)')
+  call gh#map#add('gh-buffer-issue-edit', 'map', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
+endfunction
+
+" key mapping
+augroup gh-maps
+  au!
+  au VimEnter * call <SID>gh_map_apply()
+augroup END
+" }}}
+
 " }}}
 
 function! s:grep(word) abort
