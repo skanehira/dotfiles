@@ -1119,7 +1119,7 @@ command! -nargs=1 Grep call <SID>grep(<q-args>)
 function! s:create_zenn_article(article_name) abort
   let date = strftime("%Y-%m-%d")
   let slug = date . "-" . a:article_name
-  call system("npx zenn new:article --slug " . slug )
+  call system("npx zenn new:article --emoji 🦍 --slug " . slug )
   let article_path = "articles/" . slug . ".md"
   exe "edit " . article_path
 endfunction
