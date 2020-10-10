@@ -727,6 +727,7 @@ let g:docker_use_tmux = 1
 
 " {{{ preview.vim
 let g:previm_open_cmd = 'open'
+let g:previm_plantuml_imageprefix = 'http://localhost:8888/png/'
 " }}}
 
 " {{{ gofmtmd
