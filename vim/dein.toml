@@ -47,7 +47,7 @@ repo = 'mattn/emmet-vim'
 repo = 'itchyny/lightline.vim'
 hook_add = '''
 	let g:lightline = {
-		\ 'colorscheme': 'wombat',
+		\ 'colorscheme': 'tokyonight',
 		\ 'active': {
 			\ 'left': [ ['mode', 'paste'], ['readonly', 'branchName', 'filepath', 'modified'] ]
 			\ },
@@ -116,6 +116,9 @@ repo = 'thinca/vim-quickrun'
 # color scheme
 [[plugins]]
 repo = 'cocopon/iceberg.vim'
+
+[[plugins]]
+repo = 'ghifarit53/tokyonight-vim'
 
 # vim help ja
 [[plugins]]

@@ -81,8 +81,9 @@ syntax enable
 " }}}
 
 " カラースキームを使う {{{
-colorscheme iceberg
-set bg=dark
+"colorscheme iceberg
+let g:tokyonight_disable_italic_comment = 1
+colorscheme tokyonight
 " }}}
 
 " ファイル形式別プラグインとインデントを有効にする {{{
