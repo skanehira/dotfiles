@@ -595,6 +595,7 @@ function! s:create_zenn_article(article_name) abort
   call system("npx zenn new:article --emoji 🦍 --slug " . slug )
   let article_path = "articles/" . slug . ".md"
   exe "edit " . article_path
+endfunction
 
 command! -nargs=1 ZennCreateArticle call <SID>create_zenn_article(<f-args>)
 " }}}
