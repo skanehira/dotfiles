@@ -5,10 +5,10 @@
 "  \ \___/  \ \_\ \_\ \_\ \_\ \_\\ \____\
 "   \/__/    \/_/\/_/\/_/\/_/\/_/ \/____/
 
+let g:mapleader = "\<Space>" " Leaderキーをスペースに設定
 " プラグイン設定をロード
 exec 'source' expand('~/.plugin.vim')
 
-let g:mapleader = "\<Space>" " Leaderキーをスペースに設定
 syntax enable " シンタックスを有効にする
 
 " カラースキームを使う {{{
