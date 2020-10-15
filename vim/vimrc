@@ -1100,15 +1100,40 @@ augroup gh-maps
 augroup END
 " }}}
 
+" {{{ golangci-lint
+function! s:golangci(...) abort
+  if !executable('golangci-lint')
+    call s:echo_err('golangci-lint doesn''t installed')
+    return
+  endif
+
+  if a:0 > 0
+    let opts = a:000
+  else
+    let opts = get(g:, 'golangci_opts', ['misspell', 'unparam', 'stylecheck',
+          \ 'gosec', 'prealloc', 'scopelint', 'gocritic', 'gomnd', 'unconvert'])
+  endif
+
+  if get(g:, 'golangci_disable_all', 0)
+    let cmd = printf('golangci-lint run --disable-all --print-issued-lines=false --enable=%s', join(opts, ','))
+  else
+    let cmd = printf('golangci-lint run --print-issued-lines=false --enable=%s', join(opts, ','))
+  endif
+  cexpr system(cmd) | cw
+endfunction
+command! -nargs=* GolangCI call <SID>golangci(<f-args>)
 " }}}
 
+" {{{ grep
 function! s:grep(word) abort
   let cmd = printf('ag -S %s', a:word)
   cexpr system(cmd) | cw
 endfunction
 
 command! -nargs=1 Grep call <SID>grep(<q-args>)
+" }}}
 
+" {{{ zenn command
 function! s:create_zenn_article(article_name) abort
   let date = strftime("%Y-%m-%d")
   let slug = date . "-" . a:article_name
@@ -1118,5 +1143,8 @@ function! s:create_zenn_article(article_name) abort
 endfunction
 
 command! -nargs=1 ZennCreateArticle call <SID>create_zenn_article(<f-args>)
+" }}}
+
+" }}}
 
 " vim: foldmethod=marker
