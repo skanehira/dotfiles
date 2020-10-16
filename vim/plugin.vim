@@ -17,15 +17,53 @@ if dein#load_state(s:dein_dir)
     let g:dein#install_github_api_token = trim(readfile(s:tokenfile)[0])
   endif
 
-  " .toml file
-  let s:rc_dir = expand('~/.vim')
-  if !isdirectory(s:rc_dir)
-    call mkdir(s:rc_dir, 'p')
-  endif
-  let s:toml = s:rc_dir . '/dein.toml'
-
-  " read toml and cache
-  call dein#load_toml(s:toml, {'lazy': 0})
+  " add plugins
+  call dein#add('LeafCage/vimhelpgenerator')
+  call dein#add('Shougo/dein.vim')
+  call dein#add('airblade/vim-gitgutter')
+  call dein#add('andymass/vim-matchup')
+  call dein#add('basyura/TweetVim')
+  call dein#add('basyura/twibill.vim')
+  call dein#add('cespare/vim-toml')
+  call dein#add('cocopon/iceberg.vim')
+  call dein#add('cohama/lexima.vim')
+  call dein#add('ctrlpvim/ctrlp.vim')
+  call dein#add('dag/vim-fish')
+  call dein#add('fatih/vim-go')
+  call dein#add('ghifarit53/tokyonight-vim')
+  call dein#add('glidenote/memolist.vim')
+  call dein#add('godlygeek/tabular')
+  call dein#add('gyim/vim-boxdraw')
+  call dein#add('itchyny/lightline.vim')
+  call dein#add('kshenoy/vim-signature')
+  call dein#add('lambdalisue/fern.vim')
+  call dein#add('lambdalisue/gina.vim')
+  call dein#add('markonm/traces.vim')
+  call dein#add('mattn/ctrlp-matchfuzzy')
+  call dein#add('mattn/emmet-vim')
+  call dein#add('mattn/gist-vim')
+  call dein#add('mattn/sonictemplate-vim')
+  call dein#add('mattn/vim-lsp-settings', {'merged': 0})
+  call dein#add('mattn/vim-maketable')
+  call dein#add('mattn/webapi-vim')
+  call dein#add('plasticboy/vim-markdown')
+  call dein#add('posva/vim-vue')
+  call dein#add('prabirshrestha/vim-lsp')
+  call dein#add('previm/previm')
+  call dein#add('shinespark/vim-list2tree')
+  call dein#add('simeji/winresizer')
+  call dein#add('skanehira/code2img.vim')
+  call dein#add('skanehira/docker.vim')
+  call dein#add('skanehira/preview-markdown.vim')
+  call dein#add('skanehira/translate.vim')
+  call dein#add('thinca/vim-quickrun')
+  call dein#add('thinca/vim-themis')
+  call dein#add('tokorom/vim-review')
+  call dein#add('tweekmonster/helpful.vim')
+  call dein#add('tyru/open-browser-github.vim')
+  call dein#add('tyru/open-browser.vim')
+  call dein#add('vim-jp/vimdoc-ja')
+  call dein#add('vim-jp/vital.vim', {'merged': 0})
 
   " end settings
   call dein#end()
@@ -43,8 +81,7 @@ if len(s:removed_plugins) > 0
 endif
 " }}}
 
-" {{{ プラグイン設定
-" {{{ netrwツリー表示を有効にする
+" {{{ netrw
 let g:netrw_liststyle=3
 let g:netrw_banner=0
 let g:netrw_sizestyle='H'
@@ -289,6 +326,39 @@ if filereadable(gh_token_file)
   augroup END
 endif
 " }}}
+
+" {{{ ctrlp
+let g:ctrlp_match_func = {'match': 'ctrlp_matchfuzzy#matcher'}
+let g:ctrlp_custom_ignore = 'node_modules'
+" }}}
+
+" {{{ lightline
+let g:lightline = {
+      \ 'colorscheme': 'tokyonight',
+      \ 'active': {
+      \ 'left': [ ['mode', 'paste'], ['readonly', 'branchName', 'filepath', 'modified'] ]
+      \ },
+      \ 'component_function':{
+      \ 'filepath': 'FilePath',
+      \ },
+      \ }
+
+function! FilePath()
+  if winwidth(0) > 90
+    return expand("%:s")
+  else
+    return expand("%:t")
+  endif
+endfunction
+
+" # show statusbar
+set laststatus=2
+" # hide --INSERT--
+set noshowmode
+" }}}
+
+" {{{ sonictemplate
+let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
 " }}}
 
 " vim: foldmethod=marker
