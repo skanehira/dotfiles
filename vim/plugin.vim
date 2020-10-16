@@ -64,6 +64,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('tyru/open-browser.vim')
   call dein#add('vim-jp/vimdoc-ja')
   call dein#add('vim-jp/vital.vim', {'merged': 0})
+  call dein#add('bronson/vim-trailing-whitespace')
 
   " end settings
   call dein#end()
@@ -200,22 +201,22 @@ let g:lsp_diagnostics_float_cursor = 1
 nmap <Leader>ho <plug>(lsp-hover)
 nnoremap <silent> <C-]> :LspDefinition<CR>
 
-"let g:lsp_settings = {
-"      \ 'gopls': {
-"      \  'workspace_config': {
-"      \    'usePlaceholders': v:true,
-"      \    'analyses': {
-"      \      'fillstruct': v:true,
-"      \    },
-"      \  },
-"      \  'initialization_options': {
-"      \    'usePlaceholders': v:true,
-"      \    'analyses': {
-"      \      'fillstruct': v:true,
-"      \    },
-"      \  },
-"      \ },
-"      \}
+let g:lsp_settings = {
+      \ 'gopls': {
+      \  'workspace_config': {
+      \    'usePlaceholders': v:true,
+      \    'analyses': {
+      \      'fillstruct': v:true,
+      \    },
+      \  },
+      \  'initialization_options': {
+      \    'usePlaceholders': v:true,
+      \    'analyses': {
+      \      'fillstruct': v:true,
+      \    },
+      \  },
+      \ },
+      \}
 
 function! s:on_lsp_buffer_enabled() abort
   setlocal completeopt=menu
@@ -259,6 +260,7 @@ augroup END
 " }}}
 
 " sonictemplate.vim {{{
+let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
 let g:sonictemplate_author = 'skanehira'
 let g:sonictemplate_license = 'MIT'
 let g:sonictemplate_vim_template_dir = expand('~/.vim/sonictemplate')
@@ -357,8 +359,9 @@ set laststatus=2
 set noshowmode
 " }}}
 
-" {{{ sonictemplate
-let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
+" {{{ vim-trailing-whitespace
+let g:extra_whitespace_ignored_filetypes = ['fern', 'markdown']
 " }}}
+
 
 " vim: foldmethod=marker
