@@ -11,17 +11,15 @@ repo = 'prabirshrestha/vim-lsp'
 [[plugins]]
 repo = 'godlygeek/tabular'
 
-# fuzzy finder
 [[plugins]]
-repo = 'junegunn/fzf'
-build_on = '''
-./install
-'''
+repo = 'mattn/ctrlp-matchfuzzy'
 
-# fzf for vim
 [[plugins]]
-repo = 'junegunn/fzf.vim'
-merged = 0
+repo = 'ctrlpvim/ctrlp.vim'
+hook_add = '''
+let g:ctrlp_match_func = {'match': 'ctrlp_matchfuzzy#matcher'}
+let g:ctrlp_custom_ignore = 'node_modules'
+'''
 
 [[plugins]]
 repo = 'previm/previm'
@@ -189,5 +187,6 @@ repo = 'basyura/TweetVim'
 
 [[plugins]]
 repo = 'basyura/twibill.vim'
+
 [[plugins]]
 repo = 'shinespark/vim-list2tree'
