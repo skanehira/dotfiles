@@ -12,6 +12,11 @@ endif
 if dein#load_state(s:dein_dir)
   call dein#begin(s:dein_dir)
 
+  let s:tokenfile = expand('~/.gh-vim')
+  if filereadable(s:tokenfile)
+    let g:dein#install_github_api_token = trim(readfile(s:tokenfile)[0])
+  endif
+
   " .toml file
   let s:rc_dir = expand('~/.vim')
   if !isdirectory(s:rc_dir)

@@ -6,18 +6,17 @@
 "   \/__/    \/_/\/_/\/_/\/_/\/_/ \/____/
 
 let g:mapleader = "\<Space>" " Leaderキーをスペースに設定
+
 " プラグイン設定をロード
 exec 'source' expand('~/.plugin.vim')
-
 syntax enable " シンタックスを有効にする
+filetype plugin indent on " ファイル形式別プラグインとインデントを有効にする
 
 " カラースキームを使う {{{
 "colorscheme iceberg
 let g:tokyonight_disable_italic_comment = 1
 colorscheme tokyonight
 " }}}
-
-filetype plugin indent on " ファイル形式別プラグインとインデントを有効にする
 
 " オプション {{{
 set encoding=utf-8
@@ -532,27 +531,6 @@ function! s:open_git_status_preview() abort
 endfunction
 
 nnoremap <silent> gp :call <SID>open_git_status_preview()<CR>
-" }}}
-
-" {{{ gh.vim
-let gh_token_file = expand('~/.gh-vim')
-if filereadable(gh_token_file)
-  let g:gh_token = trim(readfile(gh_token_file)[0])
-  let g:gh_enable_delete_repository = 0
-endif
-
-function! s:gh_map_apply() abort
-  call gh#map#add('gh-buffer-issue-list', 'map', 'e', '<Plug>(gh_issue_edit)')
-  call gh#map#add('gh-buffer-issue-list', 'map', 'gm', '<Plug>(gh_issue_open_comment)')
-  call gh#map#add('gh-buffer-issue-comment-list', 'map', 'n', '<Plug>(gh_issue_comment_new)')
-  call gh#map#add('gh-buffer-issue-edit', 'map', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
-endfunction
-
-" key mapping
-augroup gh-maps
-  au!
-  au VimEnter * call <SID>gh_map_apply()
-augroup END
 " }}}
 
 " {{{ golangci-lint
