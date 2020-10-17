@@ -24,6 +24,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('andymass/vim-matchup')
   call dein#add('basyura/TweetVim')
   call dein#add('basyura/twibill.vim')
+  call dein#add('bronson/vim-trailing-whitespace')
   call dein#add('cespare/vim-toml')
   call dein#add('cocopon/iceberg.vim')
   call dein#add('cohama/lexima.vim')
@@ -35,6 +36,8 @@ if dein#load_state(s:dein_dir)
   call dein#add('godlygeek/tabular')
   call dein#add('gyim/vim-boxdraw')
   call dein#add('itchyny/lightline.vim')
+  call dein#add('kana/vim-operator-replace')
+  call dein#add('kana/vim-operator-user')
   call dein#add('kshenoy/vim-signature')
   call dein#add('lambdalisue/fern.vim')
   call dein#add('lambdalisue/gina.vim')
@@ -64,7 +67,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('tyru/open-browser.vim')
   call dein#add('vim-jp/vimdoc-ja')
   call dein#add('vim-jp/vital.vim', {'merged': 0})
-  call dein#add('bronson/vim-trailing-whitespace')
 
   " end settings
   call dein#end()
@@ -332,6 +334,10 @@ endif
 " {{{ ctrlp
 let g:ctrlp_match_func = {'match': 'ctrlp_matchfuzzy#matcher'}
 let g:ctrlp_custom_ignore = 'node_modules'
+let g:ctrlp_mruf_default_order = 1
+let g:ctrlp_prompt_mappings = {
+      \ 'MarkToOpen()':         ['<C-z>', '<C-q>'],
+      \ }
 " }}}
 
 " {{{ lightline
@@ -363,5 +369,8 @@ set noshowmode
 let g:extra_whitespace_ignored_filetypes = ['fern', 'markdown']
 " }}}
 
+" {{{ vim-operator-replace
+vmap p <Plug>(operator-replace)
+" }}}
 
 " vim: foldmethod=marker
