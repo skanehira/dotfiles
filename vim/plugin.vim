@@ -344,7 +344,7 @@ let g:ctrlp_prompt_mappings = {
 let g:lightline = {
       \ 'colorscheme': 'tokyonight',
       \ 'active': {
-      \ 'left': [ ['mode', 'paste'], ['readonly', 'branchName', 'filepath', 'modified'] ]
+      \ 'left': [ ['mode', 'paste'], ['readonly', 'filepath', 'modified'] ]
       \ },
       \ 'component_function':{
       \ 'filepath': 'FilePath',
