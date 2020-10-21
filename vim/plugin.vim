@@ -198,7 +198,7 @@ let g:lsp_signs_error = {'text': 'ｳﾎ'}
 let g:lsp_signs_warning = {'text': '🍌'}
 let g:lsp_diagnostics_float_cursor = 1
 "let g:lsp_log_verbose = 1
-"let g:lsp_log_file = expand('~/vim-lsp.log')
+let g:lsp_log_file = expand('~/vim-lsp.log')
 
 nmap <Leader>ho <plug>(lsp-hover)
 nnoremap <silent> <C-]> :LspDefinition<CR>
@@ -218,7 +218,16 @@ let g:lsp_settings = {
       \    },
       \  },
       \ },
+      \ 'eslint-language-server': {
+      \   'allowlist': ['javascript', 'typescript', 'vue'],
+      \ },
+      \ 'efm-langserver': {
+      \   'disabled': 0,
+      \   'allowlist': ['markdown'],
+      \  }
       \}
+
+let g:lsp_settings_filetype_typescript = ['typescript-language-server', 'eslint-language-server']
 
 function! s:on_lsp_buffer_enabled() abort
   setlocal completeopt=menu
@@ -370,7 +379,9 @@ let g:extra_whitespace_ignored_filetypes = ['fern', 'markdown']
 " }}}
 
 " {{{ vim-operator-replace
-vmap p <Plug>(operator-replace)
+if !has('mac')
+  vmap p <Plug>(operator-replace)
+endif
 " }}}
 
 " vim: foldmethod=marker
