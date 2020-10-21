@@ -10,7 +10,7 @@ if &runtimepath !~# '/dein.vim'
 endif
 
 if dein#load_state(s:dein_dir)
-  call dein#begin(s:dein_dir)
+  call dein#begin(s:dein_dir, [expand('~/.plugin.vim')])
 
   let s:tokenfile = expand('~/.gh-vim')
   if filereadable(s:tokenfile)
