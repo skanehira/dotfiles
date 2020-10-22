@@ -67,6 +67,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('tyru/open-browser.vim')
   call dein#add('vim-jp/vimdoc-ja')
   call dein#add('vim-jp/vital.vim', {'merged': 0})
+  call dein#add('obcat/vim-hitspop')
 
   " end settings
   call dein#end()
@@ -197,8 +198,8 @@ nnoremap <C-P> :Files<CR>
 let g:lsp_signs_error = {'text': 'ｳﾎ'}
 let g:lsp_signs_warning = {'text': '🍌'}
 let g:lsp_diagnostics_float_cursor = 1
-"let g:lsp_log_verbose = 1
-let g:lsp_log_file = expand('~/vim-lsp.log')
+"let g:lsp_log_file = expand('~/vim-lsp.log')
+let g:lsp_log_file = ''
 
 nmap <Leader>ho <plug>(lsp-hover)
 nnoremap <silent> <C-]> :LspDefinition<CR>
