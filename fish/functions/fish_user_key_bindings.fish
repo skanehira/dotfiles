@@ -14,7 +14,7 @@ function fish_user_key_bindings
     bind -M $mode \ce end-of-line
     bind -M $mode \cd delete-or-exit
     bind -M $mode \cu backward-kill-line
-    bind -M $mode \ci tmuxpopup
+    bind -M $mode \cq tmuxpopup
 
     # restore fzf keybinding
     # https://github.com/junegunn/fzf/blob/3918c45ceda5e7c57d6832cdeedbfeb8f7a6444e/shell/key-bindings.fish#L94-L96

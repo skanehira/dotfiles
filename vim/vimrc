@@ -579,7 +579,7 @@ command! -nargs=1 ZennCreateArticle call <SID>create_zenn_article(<f-args>)
 " }}}
 
 " {{{ open tmux popup window
-nnoremap <silent> <C-i> :call system('tmuxpopup')<CR>
+nnoremap <silent> <C-q> :call system('tmuxpopup')<CR>
 " }}}
 
 " vim: foldmethod=marker
