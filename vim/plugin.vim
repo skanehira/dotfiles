@@ -67,7 +67,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('tyru/open-browser.vim')
   call dein#add('vim-jp/vimdoc-ja')
   call dein#add('vim-jp/vital.vim', {'merged': 0})
-  call dein#add('obcat/vim-hitspop')
 
   " end settings
   call dein#end()
