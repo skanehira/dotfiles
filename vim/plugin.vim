@@ -169,7 +169,7 @@ nnoremap <Leader>q :QuickRun<CR>
 " }}}
 
 " {{{ code2img.vim
-let g:code2img_line_number = 1
+let g:code2img_line_number = 0
 map gi <Plug>(Code2img)
 xmap gi <Plug>(Code2img)
 " }}}

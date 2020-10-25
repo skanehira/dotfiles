@@ -43,7 +43,7 @@ set showtabline=2 " タブを常に表示
 set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
 if !has('nvim')
   set nrformats+=unsigned " 数値の加減算を考慮
-  set cursorlineopt=number " 描画負担軽減のため、行番号のみハイライト
+  set cursorlineopt=line " 行のみハイライト
   set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
 endif
 if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
