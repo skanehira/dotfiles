@@ -1,7 +1,7 @@
 # env
 set -x GOPATH $HOME/dev/go
 set -x GOBIN $GOPATH/bin
-set -x PATH $PATH $GOBIN
+set -x PATH $PATH $GOBIN /usr/local/go/bin
 set -x XDG_CONFIG_HOME $HOME/.config
 set -x LANG "en_US.UTF-8"
 set -x HOMEBREW_INSTALL_CLEANUP 1
