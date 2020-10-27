@@ -67,6 +67,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('tyru/open-browser.vim')
   call dein#add('vim-jp/vimdoc-ja')
   call dein#add('vim-jp/vital.vim', {'merged': 0})
+  call dein#add('jparise/vim-graphql')
 
   " end settings
   call dein#end()
@@ -321,10 +322,11 @@ nnoremap <silent> <Leader>tm :<C-u>TweetVimMentions<CR>
 " }}}
 
 " {{{ gh.vim
+let g:gh_enable_delete_repository = 0
+let g:gh_open_url_on_create_issue = 1
 let gh_token_file = expand('~/.gh-vim')
 if filereadable(gh_token_file)
   let g:gh_token = trim(readfile(gh_token_file)[0])
-  let g:gh_enable_delete_repository = 0
 
   function! s:gh_map_apply() abort
     call gh#map#add('gh-buffer-issue-list', 'map', 'e', '<Plug>(gh_issue_edit)')
