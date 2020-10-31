@@ -28,7 +28,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('cespare/vim-toml')
   call dein#add('cocopon/iceberg.vim')
   call dein#add('cohama/lexima.vim')
-  call dein#add('ctrlpvim/ctrlp.vim')
   call dein#add('dag/vim-fish')
   call dein#add('fatih/vim-go')
   call dein#add('ghifarit53/tokyonight-vim')
@@ -36,16 +35,19 @@ if dein#load_state(s:dein_dir)
   call dein#add('godlygeek/tabular')
   call dein#add('gyim/vim-boxdraw')
   call dein#add('itchyny/lightline.vim')
+  call dein#add('jparise/vim-graphql')
+  call dein#add('junegunn/fzf', {'merged': 0})
+  call dein#add('junegunn/fzf.vim', {'depends': 'fzf'})
   call dein#add('kana/vim-operator-replace')
   call dein#add('kana/vim-operator-user')
   call dein#add('kshenoy/vim-signature')
   call dein#add('lambdalisue/fern.vim')
   call dein#add('lambdalisue/gina.vim')
   call dein#add('markonm/traces.vim')
-  call dein#add('mattn/ctrlp-matchfuzzy')
   call dein#add('mattn/emmet-vim')
   call dein#add('mattn/gist-vim')
   call dein#add('mattn/sonictemplate-vim')
+  call dein#add('mattn/vim-goimports')
   call dein#add('mattn/vim-lsp-settings', {'merged': 0})
   call dein#add('mattn/vim-maketable')
   call dein#add('mattn/webapi-vim')
@@ -58,6 +60,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('skanehira/code2img.vim')
   call dein#add('skanehira/docker.vim')
   call dein#add('skanehira/preview-markdown.vim')
+  call dein#add('skanehira/preview-uml.vim')
   call dein#add('skanehira/translate.vim')
   call dein#add('thinca/vim-quickrun')
   call dein#add('thinca/vim-themis')
@@ -67,7 +70,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('tyru/open-browser.vim')
   call dein#add('vim-jp/vimdoc-ja')
   call dein#add('vim-jp/vital.vim', {'merged': 0})
-  call dein#add('jparise/vim-graphql')
 
   " end settings
   call dein#end()
@@ -101,7 +103,8 @@ vmap gt <Plug>(VTranslate)
 function! s:fern_init() abort
   let g:fern#disable_viewer_hide_cursor = 1
   nnoremap <buffer> <silent> q :q<CR>
-  map <buffer> <silent> <C-v> <Plug>(fern-action-open:split)
+  map <buffer> <silent> <C-x> <Plug>(fern-action-open:split)
+  map <buffer> <silent> <C-v> <Plug>(fern-action-open:vsplit)
 endfunction
 
 augroup fern-setteings
@@ -176,6 +179,7 @@ xmap gi <Plug>(Code2img)
 " }}}
 
 " vim-go settings {{{
+let g:go_fmt_autosave = 0
 let g:go_fmt_command = 'goimports' " ファイル保存時go importを実行する
 let g:go_gopls_enabled = 0 " goplsを有効化
 let g:go_def_mapping_enabled = 0 " vim-lspを使用するので、vim-goの`Ctrl+]`を無効にする
@@ -189,8 +193,8 @@ augroup END
 " }}}
 
 " fzf settings {{{
-command! -bang -nargs=? -complete=dir Files
-      \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
+let g:fzf_layout = { 'window': 'botright 30new' }
+
 nnoremap <C-P> :Files<CR>
 " }}}
 
@@ -296,6 +300,7 @@ let g:lexima_enable_basic_rules = 1
 
 " {{{ docker.vim
 let g:docker_use_tmux = 1
+let g:docker_plugin_version_check = 0
 " }}}
 
 " {{{ preview.vim

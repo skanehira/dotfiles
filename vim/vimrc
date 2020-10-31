@@ -160,10 +160,6 @@ nnoremap <C-h> gT
 " ターミナルノーマルモード
 tnoremap <C-w>n <C-w>N
 
-" ターミナルでウィンドウ移動
-tnoremap <silent> <C-j> <C-w>:tabnext<CR>
-tnoremap <silent> <C-k> <C-w>:tabprevious<CR>
-
 " <c-g>を<c-w>代わりにする
 tnoremap <C-g> <C-w>.
 " }}}
