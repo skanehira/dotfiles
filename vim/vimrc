@@ -469,7 +469,7 @@ function! s:golangci(...) abort
     let opts = a:000
   else
     let opts = get(g:, 'golangci_opts', ['misspell', 'unparam', 'stylecheck',
-          \ 'gosec', 'prealloc', 'scopelint', 'gocritic', 'gomnd', 'unconvert'])
+          \ 'gosec', 'prealloc', 'gocritic', 'gomnd', 'unconvert'])
   endif
 
   if get(g:, 'golangci_disable_all', 0)
