@@ -59,6 +59,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('simeji/winresizer')
   call dein#add('skanehira/code2img.vim')
   call dein#add('skanehira/docker.vim')
+  call dein#add('skanehira/getpr.vim')
   call dein#add('skanehira/preview-markdown.vim')
   call dein#add('skanehira/preview-uml.vim')
   call dein#add('skanehira/translate.vim')
@@ -389,6 +390,11 @@ let g:extra_whitespace_ignored_filetypes = ['fern', 'markdown']
 if !has('mac')
   vmap p <Plug>(operator-replace)
 endif
+" }}}
+
+" {{{ getpr.vim
+map go <Plug>(getpr-open)
+map gy <Plug>(getpr-yank)
 " }}}
 
 " vim: foldmethod=marker
