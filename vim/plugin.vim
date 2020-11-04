@@ -329,7 +329,7 @@ nnoremap <silent> <Leader>tm :<C-u>TweetVimMentions<CR>
 
 " {{{ gh.vim
 let g:gh_enable_delete_repository = 0
-let g:gh_open_url_on_create_issue = 1
+let g:gh_open_issue_on_create = 1
 let gh_token_file = expand('~/.gh-vim')
 if filereadable(gh_token_file)
   let g:gh_token = trim(readfile(gh_token_file)[0])
