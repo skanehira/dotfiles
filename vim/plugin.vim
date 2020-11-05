@@ -194,8 +194,7 @@ augroup END
 " }}}
 
 " fzf settings {{{
-let g:fzf_layout = { 'window': 'botright 30new' }
-
+let g:fzf_layout = { 'down': '50%' }
 nnoremap <C-P> :Files<CR>
 " }}}
 
