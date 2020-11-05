@@ -20,6 +20,7 @@ colorscheme tokyonight
 
 " オプション {{{
 set encoding=utf-8
+set t_ut=
 set fileencodings=utf-8,iso-2022-jp,euc-jp,sjis
 set fileformats=unix,dos,mac
 set belloff=all " ミュート
