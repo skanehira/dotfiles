@@ -1,0 +1,21 @@
+version: '3.7'
+
+services:
+  ess-ui-minio:
+    image: minio/minio
+    container_name: ess-ui-minio
+    networks:
+      - ess-ui-minio
+    ports:
+      - 9000:9000
+    volumes:
+      - ./api/infra/testdata:/data
+    environment:
+      - "MINIO_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE"
+      - "MINIO_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    command: server /data
+
+networks:
+  ess-ui-minio:
+    name: ess-ui-minio
+
