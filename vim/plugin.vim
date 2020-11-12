@@ -162,6 +162,24 @@ call gina#custom#mapping#nmap(
       \ ':<C-u>bw!<CR>',
       \ {'noremap': 1, 'silent': 1},
       \)
+call gina#custom#mapping#nmap(
+      \ 'blame', '<C-o>',
+      \ ':<C-u>call GinaOpenPR()<CR>',
+      \ {'silent': 1},
+      \)
+
+let s:open = 'open'
+if has('linux')
+  let s:open = 'xdg-open'
+elseif has('win64')
+  let s:open = 'cmd /c start'
+endif
+
+function! GinaOpenPR() abort
+  let can = gina#action#candidates()
+  let url = system(printf('%s %s', 'getpr', can[0].rev))->trim()
+  call system(printf('%s %s', s:open, url))
+endfunction
 
 nnoremap <silent> gs :Gina status -s<CR>
 nnoremap <silent> gl :Gina log<CR>
@@ -327,7 +345,6 @@ nnoremap <silent> <Leader>tm :<C-u>TweetVimMentions<CR>
 " }}}
 
 " {{{ gh.vim
-let g:gh_enable_delete_repository = 0
 let g:gh_open_issue_on_create = 1
 let gh_token_file = expand('~/.gh-vim')
 if filereadable(gh_token_file)
@@ -339,6 +356,7 @@ if filereadable(gh_token_file)
     call gh#map#add('gh-buffer-issue-list', 'map', 'y', '<Plug>(gh_issue_url_yank)')
     call gh#map#add('gh-buffer-issue-comment-list', 'map', 'n', '<Plug>(gh_issue_comment_new)')
     call gh#map#add('gh-buffer-issue-edit', 'map', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
+    call gh#map#add('gh-buffer-pull-list', 'map', 'y', '<Plug>(gh_pull_url_yank)')
   endfunction
 
   augroup gh-maps
