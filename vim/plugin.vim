@@ -336,6 +336,7 @@ if filereadable(gh_token_file)
   function! s:gh_map_apply() abort
     call gh#map#add('gh-buffer-issue-list', 'map', 'e', '<Plug>(gh_issue_edit)')
     call gh#map#add('gh-buffer-issue-list', 'map', 'gm', '<Plug>(gh_issue_open_comment)')
+    call gh#map#add('gh-buffer-issue-list', 'map', 'y', '<Plug>(gh_issue_url_yank)')
     call gh#map#add('gh-buffer-issue-comment-list', 'map', 'n', '<Plug>(gh_issue_comment_new)')
     call gh#map#add('gh-buffer-issue-edit', 'map', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
   endfunction
