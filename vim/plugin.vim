@@ -24,7 +24,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('andymass/vim-matchup')
   call dein#add('basyura/TweetVim')
   call dein#add('basyura/twibill.vim')
-  call dein#add('bronson/vim-trailing-whitespace')
   call dein#add('cespare/vim-toml')
   call dein#add('cocopon/iceberg.vim')
   call dein#add('cohama/lexima.vim')
@@ -400,10 +399,6 @@ set laststatus=2
 set noshowmode
 " }}}
 
-" {{{ vim-trailing-whitespace
-let g:extra_whitespace_ignored_filetypes = ['fern', 'markdown']
-" }}}
-
 " {{{ vim-operator-replace
 if !has('mac')
   vmap p <Plug>(operator-replace)
@@ -413,6 +408,11 @@ endif
 " {{{ getpr.vim
 map go <Plug>(getpr-open)
 map gy <Plug>(getpr-yank)
+" }}}
+
+" {{{ gyazo.vim
+let gyazo_insert_markdown_url = 1
+nmap gup <Plug>(gyazo-upload)
 " }}}
 
 " vim: foldmethod=marker
