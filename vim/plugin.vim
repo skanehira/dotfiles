@@ -33,7 +33,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('glidenote/memolist.vim')
   call dein#add('godlygeek/tabular')
   call dein#add('gyim/vim-boxdraw')
-  call dein#add('itchyny/lightline.vim')
   call dein#add('jparise/vim-graphql')
   call dein#add('junegunn/fzf', {'merged': 0})
   call dein#add('junegunn/fzf.vim', {'depends': 'fzf'})
@@ -372,31 +371,6 @@ let g:ctrlp_mruf_default_order = 1
 let g:ctrlp_prompt_mappings = {
       \ 'MarkToOpen()':         ['<C-z>', '<C-q>'],
       \ }
-" }}}
-
-" {{{ lightline
-let g:lightline = {
-      \ 'colorscheme': 'tokyonight',
-      \ 'active': {
-      \ 'left': [ ['mode', 'paste'], ['readonly', 'filepath', 'modified'] ]
-      \ },
-      \ 'component_function':{
-      \ 'filepath': 'FilePath',
-      \ },
-      \ }
-
-function! FilePath()
-  if winwidth(0) > 90
-    return expand("%:s")
-  else
-    return expand("%:t")
-  endif
-endfunction
-
-" # show statusbar
-set laststatus=2
-" # hide --INSERT--
-set noshowmode
 " }}}
 
 " {{{ vim-operator-replace
