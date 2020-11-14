@@ -40,7 +40,13 @@ set virtualedit=block " 矩形選択時に文字の無いところまで選択�
 set helplang=ja " ヘルプの言語を日本語優先にする
 set autowrite " 他のバッファに移動する時に自動保存
 set noswapfile " swapファイルを作成しない
-set showtabline=2 " タブを常に表示
+set showtabline=0 " タブを表示しない
+set noshowmode
+if has('nvim')
+  set laststatus=0
+else
+  set statusline=
+endif
 set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
 if !has('nvim')
   set nrformats+=unsigned " 数値の加減算を考慮
@@ -396,18 +402,20 @@ augroup END
 
 " {{{ ターミナルバッファ
 " eg. vnew term://bsah でターミナルを実行
-function! s:termopen() abort
-  let name = split(bufname(), '\/\/')
-  if len(name) < 2
-    return
-  endif
-  call execute(printf('term ++curwin ++close ++shell %s', name[1]))
-endfunction
+if !has('nvim')
+  function! s:termopen() abort
+    let name = split(bufname(), '\/\/')
+    if len(name) < 2
+      return
+    endif
+    call execute(printf('term ++curwin ++close ++shell %s', name[1]))
+  endfunction
 
-augroup terminal
-  au!
-  au BufReadCmd term://* call s:termopen()
-augroup END
+  augroup terminal
+    au!
+    au BufReadCmd term://* call s:termopen()
+  augroup END
+endif
 " }}}
 
 " {{{ 画像付きツイート
