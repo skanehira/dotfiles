@@ -374,15 +374,6 @@ if filereadable(gh_token_file)
 endif
 " }}}
 
-" {{{ ctrlp
-let g:ctrlp_match_func = {'match': 'ctrlp_matchfuzzy#matcher'}
-let g:ctrlp_custom_ignore = 'node_modules'
-let g:ctrlp_mruf_default_order = 1
-let g:ctrlp_prompt_mappings = {
-      \ 'MarkToOpen()':         ['<C-z>', '<C-q>'],
-      \ }
-" }}}
-
 " {{{ vim-operator-replace
 if !has('mac')
   vmap p <Plug>(operator-replace)
