@@ -224,8 +224,9 @@ nnoremap <C-P> :Files<CR>
 " lsp settings {{{
 let g:lsp_signs_error = {'text': 'ｳﾎ'}
 let g:lsp_signs_warning = {'text': '🍌'}
-let g:lsp_diagnostics_float_cursor = 1
-"let g:lsp_log_file = expand('~/vim-lsp.log')
+if !has('nvim')
+  let g:lsp_diagnostics_float_cursor = 1
+endif
 let g:lsp_log_file = ''
 
 nmap <Leader>ho <plug>(lsp-hover)
