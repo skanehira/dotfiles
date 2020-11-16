@@ -335,10 +335,6 @@ let g:vimhelpgenerator_defaultlanguage = 'en'
 let g:memolist_fzf = 1
 " }}}
 
-" {{{ lexima
-let g:lexima_enable_basic_rules = 1
-" }}}
-
 " {{{ docker.vim
 let g:docker_use_tmux = 1
 let g:docker_plugin_version_check = 0
@@ -393,7 +389,7 @@ endif
 " }}}
 
 " {{{ vim-operator-replace
-if !has('mac')
+if !has('mac') && !has('nvim')
   vmap p <Plug>(operator-replace)
 endif
 " }}}
