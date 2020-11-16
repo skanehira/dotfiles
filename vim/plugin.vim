@@ -17,61 +17,73 @@ if dein#load_state(s:dein_dir)
     let g:dein#install_github_api_token = trim(readfile(s:tokenfile)[0])
   endif
 
-  " add plugins
-  call dein#add('LeafCage/vimhelpgenerator')
+  " only vim
+  if !has('nvim')
+    call dein#add('kana/vim-operator-replace')
+    call dein#add('kana/vim-operator-user')
+    call dein#add('skanehira/docker.vim')
+    call dein#add('skanehira/preview-uml.vim')
+  endif
+
+  " syntax
+  call dein#add('cespare/vim-toml')
+  call dein#add('dag/vim-fish')
+  call dein#add('jparise/vim-graphql')
+  call dein#add('plasticboy/vim-markdown')
+  call dein#add('posva/vim-vue')
+  call dein#add('tokorom/vim-review')
+
+  " colorscheme
+  call dein#add('cocopon/iceberg.vim')
+  call dein#add('ghifarit53/tokyonight-vim')
+
+  " for development
   call dein#add('Shougo/dein.vim')
   call dein#add('airblade/vim-gitgutter')
   call dein#add('andymass/vim-matchup')
-  call dein#add('basyura/TweetVim')
-  call dein#add('basyura/twibill.vim')
-  call dein#add('cespare/vim-toml')
-  call dein#add('cocopon/iceberg.vim')
   call dein#add('cohama/lexima.vim')
-  call dein#add('dag/vim-fish')
   call dein#add('fatih/vim-go')
-  call dein#add('ghifarit53/tokyonight-vim')
-  call dein#add('glidenote/memolist.vim')
-  call dein#add('godlygeek/tabular')
-  call dein#add('gyim/vim-boxdraw')
-  call dein#add('jparise/vim-graphql')
   call dein#add('junegunn/fzf', {'merged': 0})
   call dein#add('junegunn/fzf.vim', {'depends': 'fzf'})
-  call dein#add('kana/vim-operator-replace')
-  call dein#add('kana/vim-operator-user')
   call dein#add('kshenoy/vim-signature')
   call dein#add('lambdalisue/fern.vim')
   call dein#add('lambdalisue/gina.vim')
   call dein#add('markonm/traces.vim')
   call dein#add('mattn/emmet-vim')
-  call dein#add('mattn/gist-vim')
   call dein#add('mattn/sonictemplate-vim')
   call dein#add('mattn/vim-goimports')
   call dein#add('mattn/vim-lsp-settings', {'merged': 0})
   call dein#add('mattn/vim-maketable')
   call dein#add('mattn/webapi-vim')
-  call dein#add('plasticboy/vim-markdown')
-  call dein#add('posva/vim-vue')
   call dein#add('prabirshrestha/vim-lsp')
   call dein#add('previm/previm')
   call dein#add('shinespark/vim-list2tree')
   call dein#add('simeji/winresizer')
-  if !has('nvim')
-    call dein#add('skanehira/code2img.vim')
-    call dein#add('skanehira/docker.vim')
-    call dein#add('skanehira/getpr.vim')
-    call dein#add('skanehira/preview-markdown.vim')
-    call dein#add('skanehira/preview-uml.vim')
-    call dein#add('skanehira/translate.vim')
-  endif
+  call dein#add('skanehira/code2img.vim')
+  call dein#add('skanehira/translate.vim')
+  call dein#add('skanehira/getpr.vim')
   call dein#add('thinca/vim-quickrun')
-  call dein#add('thinca/vim-themis')
-  call dein#add('tokorom/vim-review')
-  call dein#add('tweekmonster/helpful.vim')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
+
+  " for documentation
+  call dein#add('glidenote/memolist.vim')
+  call dein#add('godlygeek/tabular')
+  call dein#add('gyim/vim-boxdraw')
+  call dein#add('mattn/gist-vim')
+  call dein#add('skanehira/preview-markdown.vim')
+  call dein#add('skanehira/gyazo.vim')
+
+  " for develop vim/neovim plugin
+  call dein#add('LeafCage/vimhelpgenerator')
+  call dein#add('lambdalisue/vital-Whisky', {'merged': 0})
+  call dein#add('tweekmonster/helpful.vim')
   call dein#add('vim-jp/vimdoc-ja')
   call dein#add('vim-jp/vital.vim', {'merged': 0})
-  call dein#add('lambdalisue/vital-Whisky', {'merged': 0})
+
+  " other
+  call dein#add('basyura/TweetVim')
+  call dein#add('basyura/twibill.vim')
 
   " end settings
   call dein#end()
@@ -163,6 +175,11 @@ call gina#custom#mapping#nmap(
       \ {'silent': 1},
       \)
 call gina#custom#mapping#nmap(
+      \ 'branch', 'D',
+      \ '<Plug>(gina-branch-delete)',
+      \ {'silent': 1},
+      \)
+call gina#custom#mapping#nmap(
       \ '/.*', 'q',
       \ ':<C-u>bw!<CR>',
       \ {'noremap': 1, 'silent': 1},
@@ -182,7 +199,7 @@ endif
 
 function! GinaOpenPR() abort
   let can = gina#action#candidates()
-  let url = system(printf('%s %s', 'getpr', can[0].rev))->trim()
+  let url = trim(system(printf('%s %s', 'getpr', can[0].rev)))
   call system(printf('%s %s', s:open, url))
 endfunction
 
