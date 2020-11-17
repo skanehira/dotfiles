@@ -39,7 +39,6 @@ if dein#load_state(s:dein_dir)
 
   " for development
   call dein#add('Shougo/dein.vim')
-  call dein#add('airblade/vim-gitgutter')
   call dein#add('andymass/vim-matchup')
   call dein#add('cohama/lexima.vim')
   call dein#add('fatih/vim-go')
@@ -278,7 +277,6 @@ let g:lsp_settings_filetype_typescript = ['typescript-language-server', 'eslint-
 function! s:on_lsp_buffer_enabled() abort
   setlocal completeopt=menu
   setlocal omnifunc=lsp#complete
-  let g:lsp_settings_root_markers = ['go.mod'] + g:lsp_settings_root_markers
 endfunction
 
 augroup lsp_install
