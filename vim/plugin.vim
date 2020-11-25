@@ -22,7 +22,6 @@ if dein#load_state(s:dein_dir)
     call dein#add('kana/vim-operator-replace')
     call dein#add('kana/vim-operator-user')
     call dein#add('skanehira/docker.vim')
-    call dein#add('skanehira/preview-uml.vim')
   endif
 
   " syntax
@@ -71,6 +70,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('gyim/vim-boxdraw')
   call dein#add('mattn/gist-vim')
   call dein#add('skanehira/preview-markdown.vim')
+  call dein#add('skanehira/preview-uml.vim')
   call dein#add('skanehira/gyazo.vim')
 
   " for develop vim/neovim plugin
