@@ -518,7 +518,7 @@ endfunction
 command! -nargs=1 ZennCreateArticle call <SID>create_zenn_article(<f-args>)
 " }}}
 
-" {{{ filter goimports
+" {{{ goimports
 augroup enterd-go
   function! s:goimports() abort
     let pos = getcurpos()
@@ -528,6 +528,20 @@ augroup enterd-go
   au!
   au! FileType go nnoremap <silent> <Leader>i :call <SID>goimports()<CR>
 augroup END
+" }}}
+
+" {{{ git diff log
+function! s:get_currentline_diff() abort
+  let lnum = getcurpos()[1]
+  let fname = expand('%:p')
+  vnew git-diff
+  set ft=git
+  nnoremap <buffer> <silent> q :bw!<CR>
+  let result = systemlist(printf('git log -L %d,%d:%s', lnum, lnum, fname))
+  call setline(1, result)
+endfunction
+
+command! GitDiffLog call <SID>get_currentline_diff()
 " }}}
 
 " vim: foldmethod=marker
