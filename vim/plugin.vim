@@ -238,7 +238,7 @@ nnoremap <C-P> :Files<CR>
 " }}}
 
 " lsp settings {{{
-let g:lsp_signs_error = {'text': 'ｳﾎ'}
+let g:lsp_signs_error = {'text': '🦍'}
 let g:lsp_signs_warning = {'text': '🍌'}
 if !has('nvim')
   let g:lsp_diagnostics_float_cursor = 1
@@ -377,6 +377,9 @@ if filereadable(gh_token_file)
     call gh#map#add('gh-buffer-issue-comment-list', 'map', 'n', '<Plug>(gh_issue_comment_new)')
     call gh#map#add('gh-buffer-issue-edit', 'map', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
     call gh#map#add('gh-buffer-pull-list', 'map', 'y', '<Plug>(gh_pull_url_yank)')
+    call gh#map#add('gh-buffer-project-list', 'map', 'y', '<Plug>(gh_project_url_yank)')
+    call gh#map#add('gh-buffer-project-column-list', 'map', 'y', '<Plug>(gh_projects_card_url_yank)')
+    call gh#map#add('gh-buffer-project-column-list', 'map', 'o', '<Plug>(gh_projects_card_open)')
   endfunction
 
   augroup gh-maps
