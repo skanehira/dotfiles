@@ -202,10 +202,10 @@ function! GinaOpenPR() abort
   call system(printf('%s %s', s:open, url))
 endfunction
 
-nnoremap <silent> gs :Gina status -s<CR>
-nnoremap <silent> gl :Gina log<CR>
+nnoremap <silent> gs :new \| Gina status -s<CR>
+nnoremap <silent> gl :vnew \| Gina log<CR>
 nnoremap <silent> gm :Gina blame<CR>
-nnoremap <silent> gb :Gina branch<CR>
+nnoremap <silent> gb :new \| Gina branch<CR>
 " }}}
 
 " {{{ quickrun.vim
@@ -283,6 +283,17 @@ augroup lsp_install
   au!
   au User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
 augroup END
+
+augroup vim_lsp_golangci_lint_langserver
+  au!
+  autocmd User lsp_setup call lsp#register_server({
+      \ 'name': 'golangci-lint-langserver',
+      \ 'cmd': {server_info->['golangci-lint-langserver']},
+      \ 'initialization_options': {'command': ['golangci-lint', 'run', '--disable-all', '--enable=isspell,unparam,stylecheck,gosec,prealloc,gocritic,gomnd,unconvert', '--out-format', 'json']},
+      \ 'whitelist': ['go'],
+      \ })
+augroup END
+
 " }}}
 
 " vim-markdown {{{
