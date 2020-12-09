@@ -18,10 +18,16 @@ set -x GO111MODULE auto
 # alias
 alias lg="lazygit"
 alias ll='ls -lahG'
+alias g='git'
 alias gs='git status'
+alias gpl='git pull'
+alias gp='git push'
+alias ga='git add .'
+alias gm='git commit -a'
+alias gma='git commit --amend'
+alias glo='git log --oneline'
 alias gd='git diff'
 alias gl='git log'
-alias gc='git checkout .'
 alias gdc='git diff (git log --pretty=oneline | fzf | awk "{print \$1}")'
 alias www="w3m google.com"
 
