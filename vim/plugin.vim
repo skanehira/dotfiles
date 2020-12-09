@@ -83,6 +83,7 @@ if dein#load_state(s:dein_dir)
   " other
   call dein#add('basyura/TweetVim')
   call dein#add('basyura/twibill.vim')
+  "call dein#add('skanehira/gh.vim')
 
   " end settings
   call dein#end()
@@ -203,7 +204,7 @@ function! GinaOpenPR() abort
 endfunction
 
 nnoremap <silent> gs :new \| Gina status -s<CR>
-nnoremap <silent> gl :vnew \| Gina log<CR>
+nnoremap <silent> gl :new \| Gina log<CR>
 nnoremap <silent> gm :Gina blame<CR>
 nnoremap <silent> gb :new \| Gina branch<CR>
 " }}}
@@ -382,15 +383,17 @@ if filereadable(gh_token_file)
     if !exists('g:loaded_gh')
       return
     endif
-    call gh#map#add('gh-buffer-issue-list', 'map', 'e', '<Plug>(gh_issue_edit)')
-    call gh#map#add('gh-buffer-issue-list', 'map', 'gm', '<Plug>(gh_issue_open_comment)')
-    call gh#map#add('gh-buffer-issue-list', 'map', 'y', '<Plug>(gh_issue_url_yank)')
-    call gh#map#add('gh-buffer-issue-comment-list', 'map', 'n', '<Plug>(gh_issue_comment_new)')
-    call gh#map#add('gh-buffer-issue-edit', 'map', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
-    call gh#map#add('gh-buffer-pull-list', 'map', 'y', '<Plug>(gh_pull_url_yank)')
-    call gh#map#add('gh-buffer-project-list', 'map', 'y', '<Plug>(gh_project_url_yank)')
-    call gh#map#add('gh-buffer-project-column-list', 'map', 'y', '<Plug>(gh_projects_card_url_yank)')
-    call gh#map#add('gh-buffer-project-column-list', 'map', 'o', '<Plug>(gh_projects_card_open)')
+    call gh#map#add('gh-buffer-issue-list', 'nmap', 'e', '<Plug>(gh_issue_edit)')
+    call gh#map#add('gh-buffer-issue-list', 'nmap', 'gm', '<Plug>(gh_issue_open_comment)')
+    call gh#map#add('gh-buffer-issue-list', 'nmap', 'y', '<Plug>(gh_issue_url_yank)')
+    call gh#map#add('gh-buffer-issue-comment-list', 'nmap', 'n', '<Plug>(gh_issue_comment_new)')
+    call gh#map#add('gh-buffer-issue-edit', 'nmap', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
+    call gh#map#add('gh-buffer-pull-list', 'nmap', 'y', '<Plug>(gh_pull_url_yank)')
+    call gh#map#add('gh-buffer-project-list', 'nmap', 'y', '<Plug>(gh_project_url_yank)')
+    call gh#map#add('gh-buffer-project-column-list', 'nmap', 'y', '<Plug>(gh_projects_card_url_yank)')
+    call gh#map#add('gh-buffer-project-column-list', 'nmap', 'o', '<Plug>(gh_projects_card_open)')
+    call gh#map#add('gh-buffer-action-list', 'nmap', 'o', '<Plug>(gh_actions_open_browser)')
+    call gh#map#add('gh-buffer-action-list', 'nmap', 'y', '<Plug>(gh_actions_yank_url)')
   endfunction
 
   augroup gh-maps
