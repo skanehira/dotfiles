@@ -103,8 +103,6 @@ endif
 " }}}
 
 " キーマップ {{{
-imap <C-h> <BS>
-
 " *でカーソルを移動しないようにする
 noremap * *N
 
@@ -188,11 +186,14 @@ nnoremap <C-j> o<ESC>
 nnoremap <C-k> O<ESC>
 nnoremap o A<CR>
 
-" 挿入モードでのカーソル移動
+" Emacs風のキーマップ
+imap <C-h> <BS>
+inoremap <C-k> <C-o>C
+inoremap <C-d> <Delete>
 inoremap <silent> <C-f> <Right>
 inoremap <silent> <C-b> <Left>
-inoremap <silent> <C-e> <Esc>A
-inoremap <silent> <C-a> <Esc>I
+inoremap <silent> <C-e> <C-o>A
+inoremap <silent> <C-a> <C-o>I
 
 " 囲う
 nnoremap <silent> gw[ cw``<Esc>P
@@ -470,7 +471,7 @@ command! -nargs=? -range TweetWithImg call TweetWithImg(<line1>, <line2>, <q-arg
 " }}}
 
 " {{{ lazygit
-nnoremap <silent> gp :call system('tmuxpopup lazygit')<CR>
+nnoremap <silent> gp :call system('tmuxpopup tig')<CR>
 " }}}
 
 " {{{ golangci-lint
