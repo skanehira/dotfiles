@@ -51,15 +51,11 @@ if dein#load_state(s:dein_dir)
   call dein#add('mattn/sonictemplate-vim')
   call dein#add('mattn/vim-goimports')
   call dein#add('mattn/vim-lsp-settings', {'merged': 0})
-  call dein#add('mattn/vim-maketable')
-  call dein#add('mattn/webapi-vim')
   call dein#add('prabirshrestha/vim-lsp')
-  call dein#add('previm/previm')
-  call dein#add('shinespark/vim-list2tree')
   call dein#add('simeji/winresizer')
   call dein#add('skanehira/code2img.vim')
-  call dein#add('skanehira/translate.vim')
   call dein#add('skanehira/getpr.vim')
+  call dein#add('skanehira/translate.vim')
   call dein#add('thinca/vim-quickrun')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
@@ -68,10 +64,11 @@ if dein#load_state(s:dein_dir)
   call dein#add('glidenote/memolist.vim')
   call dein#add('godlygeek/tabular')
   call dein#add('gyim/vim-boxdraw')
-  call dein#add('mattn/gist-vim')
-  call dein#add('skanehira/preview-markdown.vim')
-  call dein#add('skanehira/preview-uml.vim')
+  call dein#add('mattn/vim-maketable')
+  call dein#add('previm/previm')
+  call dein#add('shinespark/vim-list2tree')
   call dein#add('skanehira/gyazo.vim')
+  call dein#add('skanehira/preview-uml.vim')
 
   " for develop vim/neovim plugin
   call dein#add('LeafCage/vimhelpgenerator')
@@ -285,15 +282,15 @@ augroup lsp_install
   au User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
 augroup END
 
-augroup vim_lsp_golangci_lint_langserver
-  au!
-  autocmd User lsp_setup call lsp#register_server({
-      \ 'name': 'golangci-lint-langserver',
-      \ 'cmd': {server_info->['golangci-lint-langserver']},
-      \ 'initialization_options': {'command': ['golangci-lint', 'run', '--disable-all', '--enable=isspell,unparam,stylecheck,gosec,prealloc,gocritic,gomnd,unconvert', '--out-format', 'json']},
-      \ 'whitelist': ['go'],
-      \ })
-augroup END
+"augroup vim_lsp_golangci_lint_langserver
+"  au!
+"  autocmd User lsp_setup call lsp#register_server({
+"      \ 'name': 'golangci-lint-langserver',
+"      \ 'cmd': {server_info->['golangci-lint-langserver']},
+"      \ 'initialization_options': {'command': ['golangci-lint', 'run', '--disable-all', '--enable=isspell,unparam,stylecheck,gosec,prealloc,gocritic,gomnd,unconvert', '--out-format', 'json']},
+"      \ 'whitelist': ['go'],
+"      \ })
+"augroup END
 
 " }}}
 
@@ -394,6 +391,8 @@ if filereadable(gh_token_file)
     call gh#map#add('gh-buffer-project-column-list', 'nmap', 'o', '<Plug>(gh_projects_card_open)')
     call gh#map#add('gh-buffer-action-list', 'nmap', 'o', '<Plug>(gh_actions_open_browser)')
     call gh#map#add('gh-buffer-action-list', 'nmap', 'y', '<Plug>(gh_actions_yank_url)')
+    call gh#map#add('gh-buffer-gist-list', 'nmap', 'e', '<Plug>(gh_gist_edit_file)')
+    call gh#map#add('gh-buffer-gist-list', 'nmap', 'y', '<Plug>(gh_gist_list_yank)')
   endfunction
 
   augroup gh-maps

@@ -545,4 +545,6 @@ endfunction
 command! GitDiffLog call <SID>get_currentline_diff()
 " }}}
 
+inoremap <expr> <C-v> printf('<C-r>%s', has('linux') \|\| has('unix') ? '+' : '*')
+
 " vim: foldmethod=marker
