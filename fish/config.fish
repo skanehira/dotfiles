@@ -14,6 +14,11 @@ set -x EDITOR vim
 set -x LC_CTYPE "en_US.UTF-8"
 set -x GHQ_ROOT $GOPATH/src
 set -x GO111MODULE auto
+set -x GOENV_ROOT $HOME/.goenv
+set -x PATH "$GOENV_ROOT/bin:$PATH"
+set -x DENO_INSTALL "/home/skanehira/.deno"
+set -x PATH "$DENO_INSTALL/bin:$PATH"
+set -x GOENV_DISABLE_GOPATH 1
 
 # alias
 alias lg="lazygit"
@@ -41,3 +46,5 @@ end
 
 # use vi mode in fish
 fish_vi_key_bindings
+
+goenv init - | source
