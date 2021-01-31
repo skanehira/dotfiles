@@ -13,9 +13,10 @@ syntax enable " シンタックスを有効にする
 filetype plugin indent on " ファイル形式別プラグインとインデントを有効にする
 
 " カラースキームを使う {{{
-"colorscheme iceberg
-let g:tokyonight_disable_italic_comment = 1
-colorscheme tokyonight
+colorscheme iceberg
+set background=dark
+"let g:tokyonight_disable_italic_comment = 1
+"colorscheme tokyonight
 " }}}
 
 " オプション {{{
@@ -42,11 +43,8 @@ set autowrite " 他のバッファに移動する時に自動保存
 set noswapfile " swapファイルを作成しない
 set showtabline=0 " タブを表示しない
 set noshowmode
-if has('nvim')
-  set laststatus=0
-else
-  set statusline=
-endif
+set laststatus=0
+set statusline=
 set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
 if !has('nvim')
   set nrformats+=unsigned " 数値の加減算を考慮
@@ -69,6 +67,18 @@ augroup fileTypeIndent
   au FileType json setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType sh setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType fish setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+augroup END
+" }}}
+
+" {{{ シンタックスをクリア
+augroup fileTypeSyntaxClear
+  au!
+  au FileType go syntax clear
+  au FileType vim syntax clear
+  au FileType html syntax clear
+  au FileType javascript syntax clear
+  au FileType typescript syntax clear
+  au FileType vue  syntax clear
 augroup END
 " }}}
 
@@ -189,11 +199,14 @@ nnoremap o A<CR>
 " Emacs風のキーマップ
 imap <C-h> <BS>
 inoremap <C-k> <C-o>C
-inoremap <C-d> <Delete>
 inoremap <silent> <C-f> <Right>
 inoremap <silent> <C-b> <Left>
 inoremap <silent> <C-e> <C-o>A
 inoremap <silent> <C-a> <C-o>I
+
+" C-v でペースト
+inoremap <expr> <C-v> printf('<C-r>%s', has('linux') \|\| has('unix') ? '+' : '*')
+cnoremap <expr> <C-v> printf('<C-r>%s', has('linux') \|\| has('unix') ? '+' : '*')
 
 " 囲う
 nnoremap <silent> gw[ cw``<Esc>P
@@ -544,7 +557,5 @@ endfunction
 
 command! GitDiffLog call <SID>get_currentline_diff()
 " }}}
-
-inoremap <expr> <C-v> printf('<C-r>%s', has('linux') \|\| has('unix') ? '+' : '*')
 
 " vim: foldmethod=marker

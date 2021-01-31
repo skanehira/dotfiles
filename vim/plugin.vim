@@ -12,17 +12,10 @@ endif
 if dein#load_state(s:dein_dir)
   call dein#begin(s:dein_dir, [expand('~/.plugin.vim')])
 
-  let s:tokenfile = expand('~/.gh-vim')
-  if filereadable(s:tokenfile)
-    let g:dein#install_github_api_token = trim(readfile(s:tokenfile)[0])
-  endif
-
   " only vim
-  if !has('nvim')
-    call dein#add('kana/vim-operator-replace')
-    call dein#add('kana/vim-operator-user')
-    call dein#add('skanehira/docker.vim')
-  endif
+  call dein#add('kana/vim-operator-replace')
+  call dein#add('kana/vim-operator-user')
+  call dein#add('skanehira/docker.vim')
 
   " syntax
   call dein#add('cespare/vim-toml')
@@ -372,34 +365,29 @@ nnoremap <silent> <Leader>tm :<C-u>TweetVimMentions<CR>
 
 " {{{ gh.vim
 let g:gh_open_issue_on_create = 1
-let gh_token_file = expand('~/.gh-vim')
-if filereadable(gh_token_file)
-  let g:gh_token = trim(readfile(gh_token_file)[0])
+function! s:gh_map_apply() abort
+  if !exists('g:loaded_gh')
+    return
+  endif
+  call gh#map#add('gh-buffer-issue-list', 'nmap', 'e', '<Plug>(gh_issue_edit)')
+  call gh#map#add('gh-buffer-issue-list', 'nmap', 'gm', '<Plug>(gh_issue_open_comment)')
+  call gh#map#add('gh-buffer-issue-list', 'nmap', 'y', '<Plug>(gh_issue_url_yank)')
+  call gh#map#add('gh-buffer-issue-comment-list', 'nmap', 'n', '<Plug>(gh_issue_comment_new)')
+  call gh#map#add('gh-buffer-issue-edit', 'nmap', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
+  call gh#map#add('gh-buffer-pull-list', 'nmap', 'y', '<Plug>(gh_pull_url_yank)')
+  call gh#map#add('gh-buffer-project-list', 'nmap', 'y', '<Plug>(gh_project_url_yank)')
+  call gh#map#add('gh-buffer-project-column-list', 'nmap', 'y', '<Plug>(gh_projects_card_url_yank)')
+  call gh#map#add('gh-buffer-project-column-list', 'nmap', 'o', '<Plug>(gh_projects_card_open)')
+  call gh#map#add('gh-buffer-action-list', 'nmap', 'o', '<Plug>(gh_actions_open_browser)')
+  call gh#map#add('gh-buffer-action-list', 'nmap', 'y', '<Plug>(gh_actions_yank_url)')
+  call gh#map#add('gh-buffer-gist-list', 'nmap', 'e', '<Plug>(gh_gist_edit_file)')
+  call gh#map#add('gh-buffer-gist-list', 'nmap', 'y', '<Plug>(gh_gist_list_yank)')
+endfunction
 
-  function! s:gh_map_apply() abort
-    if !exists('g:loaded_gh')
-      return
-    endif
-    call gh#map#add('gh-buffer-issue-list', 'nmap', 'e', '<Plug>(gh_issue_edit)')
-    call gh#map#add('gh-buffer-issue-list', 'nmap', 'gm', '<Plug>(gh_issue_open_comment)')
-    call gh#map#add('gh-buffer-issue-list', 'nmap', 'y', '<Plug>(gh_issue_url_yank)')
-    call gh#map#add('gh-buffer-issue-comment-list', 'nmap', 'n', '<Plug>(gh_issue_comment_new)')
-    call gh#map#add('gh-buffer-issue-edit', 'nmap', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
-    call gh#map#add('gh-buffer-pull-list', 'nmap', 'y', '<Plug>(gh_pull_url_yank)')
-    call gh#map#add('gh-buffer-project-list', 'nmap', 'y', '<Plug>(gh_project_url_yank)')
-    call gh#map#add('gh-buffer-project-column-list', 'nmap', 'y', '<Plug>(gh_projects_card_url_yank)')
-    call gh#map#add('gh-buffer-project-column-list', 'nmap', 'o', '<Plug>(gh_projects_card_open)')
-    call gh#map#add('gh-buffer-action-list', 'nmap', 'o', '<Plug>(gh_actions_open_browser)')
-    call gh#map#add('gh-buffer-action-list', 'nmap', 'y', '<Plug>(gh_actions_yank_url)')
-    call gh#map#add('gh-buffer-gist-list', 'nmap', 'e', '<Plug>(gh_gist_edit_file)')
-    call gh#map#add('gh-buffer-gist-list', 'nmap', 'y', '<Plug>(gh_gist_list_yank)')
-  endfunction
-
-  augroup gh-maps
-    au!
-    au VimEnter * call <SID>gh_map_apply()
-  augroup END
-endif
+augroup gh-maps
+  au!
+  au VimEnter * call <SID>gh_map_apply()
+augroup END
 " }}}
 
 " {{{ vim-operator-replace
