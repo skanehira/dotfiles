@@ -373,6 +373,7 @@ function! s:gh_map_apply() abort
   call gh#map#add('gh-buffer-issue-list', 'nmap', 'gm', '<Plug>(gh_issue_open_comment)')
   call gh#map#add('gh-buffer-issue-list', 'nmap', 'y', '<Plug>(gh_issue_url_yank)')
   call gh#map#add('gh-buffer-issue-comment-list', 'nmap', 'n', '<Plug>(gh_issue_comment_new)')
+  call gh#map#add('gh-buffer-issue-comment-list', 'nmap', 'e', '<Plug>(gh_issue_comment_edit)')
   call gh#map#add('gh-buffer-issue-edit', 'nmap', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
   call gh#map#add('gh-buffer-pull-list', 'nmap', 'y', '<Plug>(gh_pull_url_yank)')
   call gh#map#add('gh-buffer-project-list', 'nmap', 'y', '<Plug>(gh_project_url_yank)')
