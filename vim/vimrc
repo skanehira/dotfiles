@@ -558,4 +558,19 @@ endfunction
 command! GitDiffLog call <SID>get_currentline_diff()
 " }}}
 
+function! s:swagger_preview(file) abort
+  if !executable('spr')
+    call echo_err('spr deosn''t installed')
+  endif
+
+  let s:swagger_preview_jobid = job_start(['spr', a:file])
+endfunction
+
+function! s:swagger_preview_stop() abort
+  call job_stop(s:swagger_preview_jobid)
+endfunction
+
+command! -nargs=1 -complete=file SwaggerPreview call <SID>swagger_preview(<f-args>)
+command! SwaggerPreviewStop call <SID>swagger_preview_stop()
+
 " vim: foldmethod=marker
