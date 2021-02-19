@@ -193,10 +193,10 @@ function! GinaOpenPR() abort
   call system(printf('%s %s', s:open, url))
 endfunction
 
-nnoremap <silent> gs :new \| Gina status -s<CR>
-nnoremap <silent> gl :new \| Gina log<CR>
+nnoremap <silent> gs :Gina status -s<CR>
+nnoremap <silent> gl :Gina log<CR>
 nnoremap <silent> gm :Gina blame<CR>
-nnoremap <silent> gb :new \| Gina branch<CR>
+nnoremap <silent> gb :Gina branch<CR>
 " }}}
 
 " {{{ quickrun.vim
@@ -343,6 +343,7 @@ let g:docker_plugin_version_check = 0
 " {{{ preview.vim
 let g:previm_open_cmd = 'open'
 let g:previm_plantuml_imageprefix = 'http://localhost:8888/png/'
+let g:previm_enable_realtime = 1
 " }}}
 
 " {{{ preview-markdown.vim
@@ -383,12 +384,15 @@ function! s:gh_map_apply() abort
   call gh#map#add('gh-buffer-action-list', 'nmap', 'y', '<Plug>(gh_actions_yank_url)')
   call gh#map#add('gh-buffer-gist-list', 'nmap', 'e', '<Plug>(gh_gist_edit_file)')
   call gh#map#add('gh-buffer-gist-list', 'nmap', 'y', '<Plug>(gh_gist_list_yank)')
+  call gh#map#add('gh-buffer-bookmark-list', 'nmap', '<CR>', ':e <C-r>=getline(".")<CR><CR>')
 endfunction
 
 augroup gh-maps
   au!
   au VimEnter * call <SID>gh_map_apply()
 augroup END
+
+nnoremap <silent> gh :new gh://bookmarks<CR>
 " }}}
 
 " {{{ vim-operator-replace

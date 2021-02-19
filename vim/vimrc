@@ -41,7 +41,7 @@ set virtualedit=block " 矩形選択時に文字の無いところまで選択�
 set helplang=ja " ヘルプの言語を日本語優先にする
 set autowrite " 他のバッファに移動する時に自動保存
 set noswapfile " swapファイルを作成しない
-set showtabline=0 " タブを表示しない
+set showtabline=2 " タブを表示しない
 set noshowmode
 set laststatus=0
 set statusline=
@@ -67,6 +67,7 @@ augroup fileTypeIndent
   au FileType json setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType sh setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType fish setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType markdown setlocal tabstop=2 shiftwidth=2
 augroup END
 " }}}
 
