@@ -62,6 +62,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('shinespark/vim-list2tree')
   call dein#add('skanehira/gyazo.vim')
   call dein#add('skanehira/preview-uml.vim')
+  call dein#add('hashivim/vim-terraform')
 
   " for develop vim/neovim plugin
   call dein#add('LeafCage/vimhelpgenerator')
@@ -268,6 +269,13 @@ let g:lsp_settings_filetype_typescript = ['typescript-language-server', 'eslint-
 function! s:on_lsp_buffer_enabled() abort
   setlocal completeopt=menu
   setlocal omnifunc=lsp#complete
+  if executable('terraform-ls')
+    au User lsp_setup call lsp#register_server({
+        \ 'name': 'terraform-ls',
+        \ 'cmd': {server_info->['teffaform-ls', 'serve']},
+        \ 'allowlist': ['tf', 'terraform'],
+        \ })
+  endif
 endfunction
 
 augroup lsp_install
