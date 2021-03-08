@@ -173,16 +173,15 @@ nnoremap <C-l> gt
 nnoremap <C-h> gT
 
 " ターミナル関連 {{{
+tnoremap <Esc> <C-\><C-n>
 if has('nvim')
   augroup neovim-terminal
     au!
     au TermOpen * startinsert
   augroup END
 else
+  set termwinkey=<C-]>
   " ターミナルノーマルモード
-  tnoremap <C-w>n <C-w>N
-  " <c-g>を<c-w>代わりにする
-  tnoremap <C-g> <C-w>.
 endif
 " }}}
 

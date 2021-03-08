@@ -198,10 +198,12 @@ nnoremap <silent> gs :Gina status -s<CR>
 nnoremap <silent> gl :Gina log<CR>
 nnoremap <silent> gm :Gina blame<CR>
 nnoremap <silent> gb :Gina branch<CR>
+nnoremap <silent> gu :Gina browse --exact --yank :<CR>
+vnoremap <silent> gu :Gina browse --exact --yank :<CR>
 " }}}
 
 " {{{ quickrun.vim
-nnoremap <Leader>q :QuickRun<CR>
+nnoremap <Leader>q :Quickrun -runner terminal<CR>
 " }}}
 
 " {{{ code2img.vim
