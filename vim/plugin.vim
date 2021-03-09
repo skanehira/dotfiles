@@ -203,7 +203,7 @@ vnoremap <silent> gu :Gina browse --exact --yank :<CR>
 " }}}
 
 " {{{ quickrun.vim
-nnoremap <Leader>q :Quickrun -runner terminal<CR>
+nnoremap <Leader>q :QuickRun -runner terminal<CR>
 " }}}
 
 " {{{ code2img.vim
