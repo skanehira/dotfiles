@@ -30,6 +30,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('ghifarit53/tokyonight-vim')
 
   " for development
+  call dein#add('t9md/vim-choosewin')
   call dein#add('Shougo/dein.vim')
   call dein#add('andymass/vim-matchup')
   call dein#add('cohama/lexima.vim')
@@ -419,6 +420,10 @@ map gy <Plug>(getpr-yank)
 " {{{ gyazo.vim
 let gyazo_insert_markdown_url = 1
 nmap gup <Plug>(gyazo-upload)
+" }}}
+
+" {{{ vim-choosewin
+nmap <C-w><C-f> <Plug>(choosewin)
 " }}}
 
 " vim: foldmethod=marker
