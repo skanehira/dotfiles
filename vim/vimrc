@@ -205,8 +205,8 @@ inoremap <silent> <C-e> <C-o>A
 inoremap <silent> <C-a> <C-o>I
 
 " C-v でペースト
-inoremap <expr> <C-v> printf('<C-r>%s', has('linux') \|\| has('unix') ? '+' : '*')
-cnoremap <expr> <C-v> printf('<C-r>%s', has('linux') \|\| has('unix') ? '+' : '*')
+inoremap <expr> <C-v> printf('<C-r><C-o>%s', has('linux') \|\| has('unix') ? '+' : '*')
+cnoremap <expr> <C-v> printf('<C-r><C-o>%s', has('linux') \|\| has('unix') ? '+' : '*')
 
 " 囲う
 nnoremap <silent> gw[ cw``<Esc>P
