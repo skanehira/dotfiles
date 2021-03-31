@@ -75,6 +75,7 @@ if dein#load_state(s:dein_dir)
   " other
   call dein#add('basyura/TweetVim')
   call dein#add('basyura/twibill.vim')
+  call dein#add('itchyny/lightline.vim')
   "call dein#add('skanehira/gh.vim')
 
   " end settings
@@ -423,7 +424,27 @@ nmap gup <Plug>(gyazo-upload)
 " }}}
 
 " {{{ vim-choosewin
-nmap <C-w><C-f> <Plug>(choosewin)
+nmap <C-f> <Plug>(choosewin)
+" }}}
+
+" {{{ lightline
+let g:lightline = {
+      \ 'colorscheme': 'wombat',
+      \ 'active': {
+      \ 'left': [ ['mode', 'paste'], ['readonly', 'branchName', 'filepath', 'modified'] ]
+      \ },
+      \ 'component_function':{
+      \ 'filepath': 'FilePath',
+      \ },
+      \ }
+
+function! FilePath()
+  if winwidth(0) > 90
+    return expand("%:s")
+  else
+    return expand("%:t")
+  endif
+endfunction
 " }}}
 
 " vim: foldmethod=marker

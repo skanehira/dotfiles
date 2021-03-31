@@ -43,8 +43,7 @@ set autowrite " 他のバッファに移動する時に自動保存
 set noswapfile " swapファイルを作成しない
 set showtabline=2 " タブを表示しない
 set noshowmode
-set laststatus=0
-set statusline=
+set laststatus=2
 set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
 if !has('nvim')
   set nrformats+=unsigned " 数値の加減算を考慮
