@@ -285,7 +285,7 @@ let g:lsp_settings = {
       \  }
       \}
 
-let g:lsp_settings_filetype_typescript = ['typescript-language-server', 'eslint-language-server']
+let g:lsp_settings_filetype_typescript = ['typescript-language-server', 'eslint-language-server', 'deno']
 
 function! s:on_lsp_buffer_enabled() abort
   setlocal completeopt=menu
