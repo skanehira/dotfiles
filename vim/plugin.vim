@@ -207,6 +207,22 @@ vnoremap <silent> gu :Gina browse --exact --yank :<CR>
 
 " {{{ quickrun.vim
 nnoremap <Leader>q :QuickRun -runner terminal<CR>
+let g:quickrun_config = {
+      \ 'typescript': {
+      \ 'command': 'deno',
+      \ 'cmdopt': '--no-check --allow-all',
+      \ 'exec': ['%C run %o %s'],
+      \ 'type': 'typescript',
+      \ 'runner': 'terminal',
+      \ },
+      \ 'go/bench': {
+      \ 'command': 'go',
+      \ 'tempfile': '%{printf("%s_test.go", tempname())}',
+      \ 'exec': ['%C test -bench . -benchmem'],
+      \ 'type': 'go',
+      \ 'runner': 'terminal',
+      \ },
+      \ }
 " }}}
 
 " {{{ code2img.vim
