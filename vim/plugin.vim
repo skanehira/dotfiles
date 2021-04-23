@@ -76,6 +76,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('basyura/TweetVim')
   call dein#add('basyura/twibill.vim')
   call dein#add('itchyny/lightline.vim')
+  call dein#add('itchyny/vim-winfix')
   "call dein#add('skanehira/gh.vim')
 
   " end settings
