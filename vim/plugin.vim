@@ -309,8 +309,8 @@ augroup END
 "  autocmd User lsp_setup call lsp#register_server({
 "      \ 'name': 'golangci-lint-langserver',
 "      \ 'cmd': {server_info->['golangci-lint-langserver']},
-"      \ 'initialization_options': {'command': ['golangci-lint', 'run', '--disable-all', '--enable=isspell,unparam,stylecheck,gosec,prealloc,gocritic,gomnd,unconvert', '--out-format', 'json']},
-"      \ 'whitelist': ['go'],
+"      \ 'initialization_options': {'command': ['golangci-lint', 'run', 'json']},
+"      \ 'allowlist': ['go'],
 "      \ })
 "augroup END
 
