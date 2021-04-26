@@ -53,6 +53,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('thinca/vim-quickrun')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
+  call dein#add('rust-lang/rust.vim')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -455,6 +456,10 @@ function! FilePath()
     return expand("%:t")
   endif
 endfunction
+" }}}
+
+" {{{ rust.vim
+let g:rustfmt_autosave = 1
 " }}}
 
 " vim: foldmethod=marker
