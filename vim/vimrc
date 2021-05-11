@@ -178,6 +178,7 @@ if has('nvim')
   augroup neovim-terminal
     au!
     au TermOpen * startinsert
+    au BufNewFile te* ++nested call termopen(&shell)
   augroup END
 else
   set termwinkey=<C-]>
