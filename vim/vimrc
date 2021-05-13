@@ -14,6 +14,13 @@ filetype plugin indent on " ファイル形式別プラグインとインデン�
 
 " カラースキームを使う {{{
 colorscheme iceberg
+" icebergはターミナルを16色に設定するのを回避
+if !has('nvim')
+  augroup iceberg
+    au!
+    au ColorScheme * unlet g:terminal_ansi_colors
+  augroup END
+endif
 set background=dark
 "let g:tokyonight_disable_italic_comment = 1
 "colorscheme tokyonight
