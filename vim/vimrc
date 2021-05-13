@@ -219,6 +219,38 @@ augroup terminal
 augroup END
 " }}}
 
+" {{{ コマンドをterminalでそのまま実行
+augroup cmdwin
+  au!
+  au CmdwinEnter * :startinsert
+augroup END
+
+nnoremap <silent> : :call <SID>exec_command()<CR>
+
+function! s:exec_command() abort
+  let in = input(':', '', 'shellcmd')
+  if empty(in)
+    return
+  endif
+  echom ''
+  redraw
+  let parts = split(in, ' ')
+  let cmd = ''
+  if len(parts) == 1
+    let cmd = in
+  else
+    let cmd = parts[0]
+  endif
+
+  if cmd[0] is# '!' || cmd[-1:] is# '!' || exists(':' .. cmd)
+    exe in
+  elseif executable(cmd)
+    call s:term_start(in)
+  endif
+endfunction
+
+" }}}
+
 " review
 augroup review
   au!
