@@ -576,7 +576,7 @@ command! GitDiffLog call <SID>get_currentline_diff()
 
 function! s:swagger_preview(file) abort
   if !executable('spr')
-    call echo_err('spr deosn''t installed')
+    call echo_err('spr deson''t installed')
   endif
 
   let s:swagger_preview_jobid = job_start(['spr', a:file])
