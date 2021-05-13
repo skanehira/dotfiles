@@ -252,8 +252,8 @@ nnoremap <C-P> :Files<CR>
 " }}}
 
 " lsp settings {{{
-let g:lsp_signs_error = {'text': '🦍'}
-let g:lsp_signs_warning = {'text': '🍌'}
+let g:lsp_diagnostics_signs_error = {'text': '🦍'}
+let g:lsp_diagnostics_signs_warning = {'text': '🍌'}
 if !has('nvim')
   let g:lsp_diagnostics_float_cursor = 1
 endif
