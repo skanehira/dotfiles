@@ -175,15 +175,41 @@ nnoremap <C-h> gT
 " ターミナル関連 {{{
 tnoremap <Esc> <C-\><C-n>
 if has('nvim')
+  function! s:term_start(cmd) abort
+    call termopen(a:cmd)
+  endfunction
+else
+  function! s:term_start(cmd) abort
+    exe printf('term ++curwin ++shell %s', a:cmd)
+    nnoremap <buffer> <silent> <CR> :bw<CR>
+  endfunction
+endif
+
+function! s:termopen() abort
+  let bufname = bufname()
+  let parts = split(bufname, ' ')
+  let cmd = &shell
+  if len(parts) > 1
+    " like :new te* [command] [args]
+    let cmd = join(parts[1:], " ")
+  endif
+  call s:term_start(cmd)
+endfunction
+
+if has('nvim')
   augroup neovim-terminal
     au!
     au TermOpen * startinsert
-    au BufNewFile te* ++nested call termopen(&shell)
   augroup END
 else
   set termwinkey=<C-]>
   " ターミナルノーマルモード
 endif
+
+augroup terminal
+  au!
+  au BufNewFile te* ++nested call s:termopen()
+augroup END
 " }}}
 
 " review
@@ -419,24 +445,6 @@ augroup auto-mkdir
   au!
   au BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'))
 augroup END
-" }}}
-
-" {{{ ターミナルバッファ
-" eg. vnew term://bsah でターミナルを実行
-if !has('nvim')
-  function! s:termopen() abort
-    let name = split(bufname(), '\/\/')
-    if len(name) < 2
-      return
-    endif
-    call execute(printf('term ++curwin ++close ++shell %s', name[1]))
-  endfunction
-
-  augroup terminal
-    au!
-    au BufReadCmd term://* call s:termopen()
-  augroup END
-endif
 " }}}
 
 " {{{ 画像付きツイート
