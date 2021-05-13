@@ -211,7 +211,7 @@ nnoremap <Leader>q :QuickRun -runner terminal<CR>
 let g:quickrun_config = {
       \ 'typescript': {
       \ 'command': 'deno',
-      \ 'cmdopt': '--no-check --allow-all',
+      \ 'cmdopt': '--no-check --unstable --allow-all',
       \ 'exec': ['%C run %o %s'],
       \ 'type': 'typescript',
       \ 'runner': 'terminal',
