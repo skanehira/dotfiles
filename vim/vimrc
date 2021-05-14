@@ -187,8 +187,10 @@ if has('nvim')
   endfunction
 else
   function! s:term_start(cmd) abort
+    let old = bufnr()
     exe printf('term ++curwin ++shell %s', a:cmd)
-    nnoremap <buffer> <silent> <CR> :bw<CR>
+    exe "bw!" old
+    nnoremap <buffer> <silent> <CR> :bw!<CR>
   endfunction
 endif
 
