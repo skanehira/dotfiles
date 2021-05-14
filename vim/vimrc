@@ -222,20 +222,28 @@ augroup END
 " }}}
 
 " {{{ コマンドをterminalでそのまま実行
-augroup cmdwin
-  au!
-  au CmdwinEnter * :startinsert
-augroup END
+nnoremap <silent> c: :call <SID>set_exec_keymap()<CR>
 
-nnoremap <silent> : :call <SID>exec_command()<CR>
+function! s:set_exec_keymap() abort
+  botright 1new
+  startinsert
+  setlocal buftype=nofile bufhidden=hide
+        \ noswapfile nonumber nowrap
+  inoremap <silent> <buffer> <CR> <Esc>:call <SID>exec_command()<CR>
+  inoremap <silent> <buffer> <C-c> <Esc>:bw!<CR>
+  nnoremap <silent> <buffer> <C-c> :bw!<CR>
+endfunction
 
 function! s:exec_command() abort
-  let in = input(':', '', 'shellcmd')
+  let in = getbufline(bufnr(), 1)[0]
   if empty(in)
+    bw
     return
   endif
+
   echom ''
   redraw
+
   let parts = split(in, ' ')
   let cmd = ''
   if len(parts) == 1
@@ -244,10 +252,11 @@ function! s:exec_command() abort
     let cmd = parts[0]
   endif
 
-  if cmd[0] is# '!' || cmd[-1:] is# '!' || exists(':' .. cmd)
-    exe in
-  elseif executable(cmd)
-    call s:term_start(in)
+  if executable(cmd)
+    bw!
+    silent exe "tabnew term" in
+  else
+    call s:echo_err('not found ' .. cmd)
   endif
 endfunction
 
