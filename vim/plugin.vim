@@ -131,7 +131,7 @@ nnoremap <silent> <Leader>f :Fern . -drawer<CR>
 " {{{ gina.vim
 call gina#custom#mapping#nmap(
       \ 'status', 'gp',
-      \ ':<C-u>Gina push<CR>',
+      \ ':<C-u>terminal git push',
       \ {'noremap': 1, 'silent': 1},
       \)
 call gina#custom#mapping#nmap(
@@ -184,6 +184,9 @@ call gina#custom#mapping#nmap(
       \ ':<C-u>call GinaOpenPR()<CR>',
       \ {'silent': 1},
       \)
+call gina#custom#command#option('log', '--opener', 'new')
+call gina#custom#command#option('status', '--opener', 'new')
+call gina#custom#command#option('branch', '--opener', 'new')
 
 let s:open = 'open'
 if has('linux')
