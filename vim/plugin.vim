@@ -226,6 +226,13 @@ let g:quickrun_config = {
       \ 'type': 'go',
       \ 'runner': 'terminal',
       \ },
+      \ 'go/test': {
+      \ 'command': 'go',
+      \ 'tempfile': '%{printf("%s_test.go", tempname())}',
+      \ 'exec': ['%C test -v . '],
+      \ 'type': 'go',
+      \ 'runner': 'terminal',
+      \ },
       \ }
 " }}}
 
