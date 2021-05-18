@@ -218,7 +218,7 @@ endif
 
 augroup terminal
   au!
-  au BufNewFile te* ++nested call s:termopen()
+  au BufNewFile term* ++nested call s:termopen()
 augroup END
 " }}}
 
