@@ -131,7 +131,7 @@ nnoremap <silent> <Leader>f :Fern . -drawer<CR>
 " {{{ gina.vim
 call gina#custom#mapping#nmap(
       \ 'status', 'gp',
-      \ ':<C-u>terminal git push',
+      \ ':<C-u>terminal git push<CR>',
       \ {'noremap': 1, 'silent': 1},
       \)
 call gina#custom#mapping#nmap(
