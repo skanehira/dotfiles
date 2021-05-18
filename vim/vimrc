@@ -58,6 +58,7 @@ if !has('nvim')
   set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
 endif
 if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
+set diffopt=vertical
 
 " 拡張子ごとのインデント設定 {{{
 augroup fileTypeIndent
@@ -138,7 +139,7 @@ nnoremap <silent> <Esc><Esc> :nohlsearch<CR>
 
 " vimrcを開く
 nnoremap <Leader>. :new ~/.vimrc<CR>
-nnoremap <Leader>s :source ~/.vimrc<CR>
+nnoremap <Leader>s :exe "source" expand("%")<CR>
 
 " テキストオブジェクトキーマッピング {{{
 onoremap 8 i(
