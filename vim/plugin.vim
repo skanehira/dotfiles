@@ -303,6 +303,17 @@ function! s:on_lsp_buffer_enabled() abort
   setlocal omnifunc=lsp#complete
 endfunction
 
+function! s:autofmt() abort
+  if &ft == 'typescript'
+    LspDocumentFormatSync
+  endif
+endfunction
+
+augroup lsp_autofmt
+  au!
+  au BufWrite * call s:autofmt()
+augroup END
+
 augroup lsp_install
   au!
   au User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
