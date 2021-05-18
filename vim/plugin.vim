@@ -483,4 +483,8 @@ endfunction
 let g:rustfmt_autosave = 1
 " }}}
 
+" {{{ command.vim
+nmap c: <Plug>(command_buffer_open)
+" }}}
+
 " vim: foldmethod=marker
