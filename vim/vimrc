@@ -184,7 +184,7 @@ nnoremap <C-l> gt
 nnoremap <C-h> gT
 
 " ターミナル関連 {{{
-tnoremap <Esc> <C-\><C-n>
+tnoremap <C-]> <C-\><C-n>
 if has('nvim')
   function! s:term_start(cmd) abort
     call termopen(a:cmd)
@@ -506,7 +506,7 @@ command! -nargs=? -range TweetWithImg call TweetWithImg(<line1>, <line2>, <q-arg
 " }}}
 
 " {{{ lazygit
-nnoremap <silent> gp :call system('tmuxpopup tig')<CR>
+nnoremap <silent> gp :call system('fish -c "tmuxpopup lazygit"')<CR>
 " }}}
 
 " {{{ golangci-lint
