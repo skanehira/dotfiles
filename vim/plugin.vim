@@ -317,6 +317,26 @@ if has("nvim")
         \ }
         \})
 
+  let s:fmt_targets = {
+        \ 'typescript': 1,
+        \ 'json': 1,
+        \ 'sql': 1,
+        \ 'bash': 1,
+        \ 'rust': 1,
+        \ 'yaml': 1,
+        \ }
+
+  function! s:autofmt() abort
+    if has_key(s:fmt_targets, &ft)
+      call CocAction('format')
+    endif
+  endfunction
+
+  augroup lsp_autofmt
+    au!
+    au BufWrite * call s:autofmt()
+  augroup END
+
 " vim-lsp
 else
   let g:lsp_diagnostics_signs_error = {'text': '🦍'}
