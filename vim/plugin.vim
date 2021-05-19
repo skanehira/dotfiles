@@ -215,18 +215,31 @@ let g:quickrun_config = {
       \ 'typescript': {
       \ 'command': 'deno',
       \ 'cmdopt': '--no-check --unstable --allow-all',
+      \ 'exec': ['NO_COLOR=1 %C run %o %s'],
+      \ 'type': 'typescript',
+      \ },
+      \ 'deno_test': {
+      \ 'command': 'deno',
+      \ 'cmdopt': '--no-check --unstable --allow-all',
+      \ 'tempfile': '%{printf("%s_test.ts", tempname())}',
+      \ 'exec': ['NO_COLOR=1 %C test %o %s'],
+      \ 'type': 'typescript',
+      \ },
+      \ 'deno_terminal': {
+      \ 'command': 'deno',
+      \ 'cmdopt': '--no-check --unstable --allow-all',
       \ 'exec': ['%C run %o %s'],
       \ 'type': 'typescript',
       \ 'runner': 'terminal',
       \ },
-      \ 'go/bench': {
+      \ 'go_bench': {
       \ 'command': 'go',
       \ 'tempfile': '%{printf("%s_test.go", tempname())}',
       \ 'exec': ['%C test -bench . -benchmem'],
       \ 'type': 'go',
       \ 'runner': 'terminal',
       \ },
-      \ 'go/test': {
+      \ 'go_test': {
       \ 'command': 'go',
       \ 'tempfile': '%{printf("%s_test.go", tempname())}',
       \ 'exec': ['%C test -v . '],
