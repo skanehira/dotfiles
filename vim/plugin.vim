@@ -10,12 +10,20 @@ if &runtimepath !~# '/dein.vim'
 endif
 
 if dein#load_state(s:dein_dir)
-  call dein#begin(s:dein_dir, [expand('~/.plugin.vim')])
+  call dein#begin(s:dein_dir)
 
   " only vim
-  call dein#add('kana/vim-operator-replace')
-  call dein#add('kana/vim-operator-user')
-  call dein#add('skanehira/docker.vim')
+  if has("nvim")
+    call dein#add('neoclide/coc.nvim', {'rev': 'release'})
+  else
+    call dein#add('kana/vim-operator-replace')
+    call dein#add('kana/vim-operator-user')
+    call dein#add('skanehira/docker.vim')
+    call dein#add('vim-jp/vimdoc-ja')
+    call dein#add('prabirshrestha/vim-lsp')
+    call dein#add('mattn/vim-lsp-settings', {'merged': 0})
+    call dein#add('rust-lang/rust.vim')
+  endif
 
   " syntax
   call dein#add('cespare/vim-toml')
@@ -27,7 +35,6 @@ if dein#load_state(s:dein_dir)
 
   " colorscheme
   call dein#add('cocopon/iceberg.vim')
-  call dein#add('ghifarit53/tokyonight-vim')
 
   " for development
   call dein#add('t9md/vim-choosewin')
@@ -44,8 +51,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('mattn/emmet-vim')
   call dein#add('mattn/sonictemplate-vim')
   call dein#add('mattn/vim-goimports')
-  call dein#add('mattn/vim-lsp-settings', {'merged': 0})
-  call dein#add('prabirshrestha/vim-lsp')
   call dein#add('simeji/winresizer')
   call dein#add('skanehira/code2img.vim')
   call dein#add('skanehira/getpr.vim')
@@ -53,7 +58,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('thinca/vim-quickrun')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
-  call dein#add('rust-lang/rust.vim')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -70,7 +74,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('LeafCage/vimhelpgenerator')
   call dein#add('lambdalisue/vital-Whisky', {'merged': 0})
   call dein#add('tweekmonster/helpful.vim')
-  call dein#add('vim-jp/vimdoc-ja')
   call dein#add('vim-jp/vital.vim', {'merged': 0})
 
   " other
@@ -78,7 +81,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('basyura/twibill.vim')
   call dein#add('itchyny/lightline.vim')
   call dein#add('itchyny/vim-winfix')
-  "call dein#add('skanehira/gh.vim')
 
   " end settings
   call dein#end()
@@ -275,73 +277,115 @@ nnoremap <C-P> :Files<CR>
 " }}}
 
 " lsp settings {{{
-let g:lsp_diagnostics_signs_error = {'text': '🦍'}
-let g:lsp_diagnostics_signs_warning = {'text': '🍌'}
-if !has('nvim')
-  let g:lsp_diagnostics_float_cursor = 1
-endif
-let g:lsp_log_file = ''
+" coc.nvim
+if has("nvim")
+  " GoTo code navigation.
+  nmap <silent> <C-]> <Plug>(coc-definition)
+  nmap <silent> <Leader>gi <Plug>(coc-implementation)
+  nmap <silent> <Leader>gr <Plug>(coc-references)
 
-nmap <Leader>ho <plug>(lsp-hover)
-nnoremap <silent> <C-]> :LspDefinition<CR>
+  " Use K to show documentation in preview window.
+  nnoremap <silent> K :call <SID>show_documentation()<CR>
 
-let g:lsp_settings = {
-      \ 'gopls': {
-      \  'workspace_config': {
-      \    'usePlaceholders': v:true,
-      \    'analyses': {
-      \      'fillstruct': v:true,
-      \    },
-      \  },
-      \  'initialization_options': {
-      \    'usePlaceholders': v:true,
-      \    'analyses': {
-      \      'fillstruct': v:true,
-      \    },
-      \  },
-      \ },
-      \ 'eslint-language-server': {
-      \   'allowlist': ['javascript', 'typescript', 'vue'],
-      \ },
-      \ 'efm-langserver': {
-      \   'disabled': 0,
-      \   'allowlist': ['markdown'],
-      \  }
-      \}
+  function! s:show_documentation()
+    if (index(['vim','help'], &filetype) >= 0)
+      execute 'h '.expand('<cword>')
+    elseif (coc#rpc#ready())
+      call CocActionAsync('doHover')
+    else
+      execute '!' . &keywordprg . " " . expand('<cword>')
+    endif
+  endfunction
+  let g:coc_global_extensions = [
+        \ 'coc-yaml',
+        \ 'coc-vimlsp',
+        \ 'coc-vetur',
+        \ 'coc-tsserver',
+        \ 'coc-sql',
+        \ 'coc-sh',
+        \ 'coc-rust-analyzer',
+        \ 'coc-json',
+        \ 'coc-deno',
+        \ ]
 
-let g:lsp_settings_filetype_typescript = ['typescript-language-server', 'eslint-language-server', 'deno']
+  call coc#config('languageserver', {
+        \ 'go': {
+        \   'command': 'gopls',
+        \   'rootPatterns': ['go.mod'],
+        \   'trace.server': 'verbose',
+        \   'filetypes': ['go']
+        \ }
+        \})
 
-function! s:on_lsp_buffer_enabled() abort
-  setlocal completeopt=menu
-  setlocal omnifunc=lsp#complete
-endfunction
-
-function! s:autofmt() abort
-  if &ft == 'typescript'
-    LspDocumentFormatSync
+" vim-lsp
+else
+  let g:lsp_diagnostics_signs_error = {'text': '🦍'}
+  let g:lsp_diagnostics_signs_warning = {'text': '🍌'}
+  if !has('nvim')
+    let g:lsp_diagnostics_float_cursor = 1
   endif
-endfunction
+  let g:lsp_log_file = ''
 
-augroup lsp_autofmt
-  au!
-  au BufWrite * call s:autofmt()
-augroup END
+  nmap <Leader>ho <plug>(lsp-hover)
+  nnoremap <silent> <C-]> :LspDefinition<CR>
 
-augroup lsp_install
-  au!
-  au User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
-augroup END
+  let g:lsp_settings = {
+        \ 'gopls': {
+        \  'workspace_config': {
+        \    'usePlaceholders': v:true,
+        \    'analyses': {
+        \      'fillstruct': v:true,
+        \    },
+        \  },
+        \  'initialization_options': {
+        \    'usePlaceholders': v:true,
+        \    'analyses': {
+        \      'fillstruct': v:true,
+        \    },
+        \  },
+        \ },
+        \ 'eslint-language-server': {
+        \   'allowlist': ['javascript', 'typescript', 'vue'],
+        \ },
+        \ 'efm-langserver': {
+        \   'disabled': 0,
+        \   'allowlist': ['markdown'],
+        \  }
+        \}
 
-"augroup vim_lsp_golangci_lint_langserver
-"  au!
-"  autocmd User lsp_setup call lsp#register_server({
-"      \ 'name': 'golangci-lint-langserver',
-"      \ 'cmd': {server_info->['golangci-lint-langserver']},
-"      \ 'initialization_options': {'command': ['golangci-lint', 'run', 'json']},
-"      \ 'allowlist': ['go'],
-"      \ })
-"augroup END
+  let g:lsp_settings_filetype_typescript = ['typescript-language-server', 'eslint-language-server', 'deno']
 
+  function! s:on_lsp_buffer_enabled() abort
+    setlocal completeopt=menu
+    setlocal omnifunc=lsp#complete
+  endfunction
+
+  function! s:autofmt() abort
+    if &ft == 'typescript'
+      LspDocumentFormatSync
+    endif
+  endfunction
+
+  augroup lsp_autofmt
+    au!
+    au BufWrite * call s:autofmt()
+  augroup END
+
+  augroup lsp_install
+    au!
+    au User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+  augroup END
+
+  "augroup vim_lsp_golangci_lint_langserver
+  "  au!
+  "  autocmd User lsp_setup call lsp#register_server({
+  "      \ 'name': 'golangci-lint-langserver',
+  "      \ 'cmd': {server_info->['golangci-lint-langserver']},
+  "      \ 'initialization_options': {'command': ['golangci-lint', 'run', 'json']},
+  "      \ 'allowlist': ['go'],
+  "      \ })
+  "augroup END
+endif
 " }}}
 
 " vim-markdown {{{
@@ -493,7 +537,9 @@ endfunction
 " }}}
 
 " {{{ rust.vim
-let g:rustfmt_autosave = 1
+if !has("nvim")
+  let g:rustfmt_autosave = 1
+endif
 " }}}
 
 " {{{ command.vim
