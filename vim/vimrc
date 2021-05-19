@@ -203,7 +203,7 @@ function! s:termopen() abort
   let parts = split(bufname, ' ')
   let cmd = &shell
   if len(parts) > 1
-    " like :new te* [command] [args]
+    " like :new term [command] [args]
     let cmd = join(parts[1:], " ")
   endif
   call s:term_start(cmd)
@@ -223,47 +223,6 @@ augroup terminal
   au!
   au BufNewFile term* ++nested call s:termopen()
 augroup END
-" }}}
-
-" {{{ コマンドをterminalでそのまま実行
-nnoremap <silent> c: :call <SID>set_exec_keymap()<CR>
-
-function! s:set_exec_keymap() abort
-  botright 1new
-  startinsert
-  setlocal buftype=nofile bufhidden=hide
-        \ noswapfile nonumber nowrap
-  inoremap <silent> <buffer> <CR> <Esc>:call <SID>exec_command()<CR>
-  inoremap <silent> <buffer> <C-c> <Esc>:bw!<CR>
-  nnoremap <silent> <buffer> <C-c> :bw!<CR>
-endfunction
-
-function! s:exec_command() abort
-  let in = getbufline(bufnr(), 1)[0]
-  if empty(in)
-    bw
-    return
-  endif
-
-  echom ''
-  redraw
-
-  let parts = split(in, ' ')
-  let cmd = ''
-  if len(parts) == 1
-    let cmd = in
-  else
-    let cmd = parts[0]
-  endif
-
-  if executable(cmd)
-    bw!
-    silent exe "tabnew term" in
-  else
-    call s:echo_err('not found ' .. cmd)
-  endif
-endfunction
-
 " }}}
 
 " review
