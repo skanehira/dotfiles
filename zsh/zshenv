@@ -1,0 +1,20 @@
+eval $(/opt/homebrew/bin/brew shellenv)
+export GOPATH=$HOME/dev/go
+export GOBIN=$GOPATH/bin
+export XDG_CONFIG_HOME=$HOME/.config
+export HOMEBREW_INSTALL_CLEANUP=1
+export LANG=en_US.UTF-8
+export FZF_DEFAULT_OPTS="--layout=reverse --inline-info --exit-0 -m"
+export FZF_DEFAULT_COMMAND="ag -g ."
+export LC_CTYPE=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export NODEBREW_ROOT=/opt/homebrew/var/nodebrew
+export GHQ_ROOT=$GOPATH/src
+export PATH=$HOME/.nodebrew/current/bin:$PATH
+export EDITOR=vim
+export GOENV_ROOT=$HOME/.goenv
+export PATH=$GOENV_ROOT/bin:$GOBIN:$PATH
+export GOENV_DISABLE_GOPATH=1
+
+eval "$(goenv init -)"
+
