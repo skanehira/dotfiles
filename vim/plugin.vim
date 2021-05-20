@@ -287,6 +287,9 @@ if has("nvim")
   " Use K to show documentation in preview window.
   nnoremap <silent> K :call <SID>show_documentation()<CR>
 
+  " use manual completion
+  inoremap <silent><expr> <C-x><C-o> coc#refresh()
+
   function! s:show_documentation()
     if (index(['vim','help'], &filetype) >= 0)
       execute 'h '.expand('<cword>')
