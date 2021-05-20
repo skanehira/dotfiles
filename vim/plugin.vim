@@ -296,6 +296,7 @@ if has("nvim")
       execute '!' . &keywordprg . " " . expand('<cword>')
     endif
   endfunction
+
   let g:coc_global_extensions = [
         \ 'coc-yaml',
         \ 'coc-vimlsp',
@@ -306,37 +307,46 @@ if has("nvim")
         \ 'coc-rust-analyzer',
         \ 'coc-json',
         \ 'coc-deno',
+        \ 'coc-eslint',
         \ ]
+
+  call coc#config('diagnostic', {
+        \ 'errorSign': '💩',
+        \ 'warningSign': '🦍',
+        \ })
+
+  call coc#config('coc.preferences.formatOnType', 'true')
+  call coc#config('coc.preferences', {
+        \ 'formatOnSaveFiletypes': [
+          \ 'css',
+          \ 'js',
+          \ 'javascriptreact',
+          \ 'ts',
+          \ 'typescriptreact',
+          \ 'typescript',
+          \ 'html',
+          \ 'scss',
+          \ 'sass',
+          \ 'json',
+          \ 'rust',
+          \ 'sql',
+          \ 'bash',
+          \]})
 
   call coc#config('languageserver', {
         \ 'go': {
-        \   'command': 'gopls',
-        \   'rootPatterns': ['go.mod'],
-        \   'trace.server': 'verbose',
-        \   'filetypes': ['go']
-        \ }
+          \ 'command': 'gopls',
+          \ 'rootPatterns': ['go.mod'],
+          \ 'trace.server': 'verbose',
+          \ 'filetypes': ['go']
+        \ },
+        \ 'efm': {
+          \ 'command': 'efm-langserver',
+          \ 'args': [],
+          \ 'trace.server': 'verbose',
+          \ 'filetypes': ['markdown']
+          \ },
         \})
-
-  let s:fmt_targets = {
-        \ 'typescript': 1,
-        \ 'json': 1,
-        \ 'sql': 1,
-        \ 'bash': 1,
-        \ 'rust': 1,
-        \ 'yaml': 1,
-        \ }
-
-  function! s:autofmt() abort
-    if has_key(s:fmt_targets, &ft)
-      call CocAction('format')
-    endif
-  endfunction
-
-  augroup lsp_autofmt
-    au!
-    au BufWrite * call s:autofmt()
-  augroup END
-
 " vim-lsp
 else
   let g:lsp_diagnostics_signs_error = {'text': '🦍'}
