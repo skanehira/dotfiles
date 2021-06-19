@@ -19,11 +19,11 @@ if dein#load_state(s:dein_dir)
     call dein#add('kana/vim-operator-replace')
     call dein#add('kana/vim-operator-user')
     call dein#add('skanehira/docker.vim')
-    call dein#add('vim-jp/vimdoc-ja')
     call dein#add('prabirshrestha/vim-lsp')
     call dein#add('mattn/vim-lsp-settings', {'merged': 0})
-    call dein#add('rust-lang/rust.vim')
   endif
+  call dein#add('rust-lang/rust.vim')
+  call dein#add('vim-jp/vimdoc-ja')
 
   " syntax
   call dein#add('cespare/vim-toml')
