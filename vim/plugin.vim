@@ -290,6 +290,10 @@ if has("nvim")
   " Use K to show documentation in preview window.
   nnoremap <silent> K :call <SID>show_documentation()<CR>
 
+  command! LspRename :call CocActionAsync('rename')
+  command! LspReferences :call CocActionAsync('jumpReferences')
+  command! LspFormat :call CocActionAsync('format')
+
   " use manual completion
   inoremap <silent><expr> <C-x><C-o> coc#refresh()
 
