@@ -116,13 +116,16 @@ vmap gt <Plug>(VTranslate)
 
 " {{{ fern.vim
 function! s:fern_init() abort
-  let g:fern#disable_viewer_hide_cursor = 1
   nnoremap <buffer> <silent> q :q<CR>
   map <buffer> <silent> <C-x> <Plug>(fern-action-open:split)
   map <buffer> <silent> <C-v> <Plug>(fern-action-open:vsplit)
 endfunction
 
-augroup fern-setteings
+let g:fern#disable_viewer_hide_cursor = 1
+let g:fern#disable_drawer_auto_resize = 1
+let g:fern#drawer_keep = 1
+
+augroup fern-settings
   au!
   au FileType fern call s:fern_init()
 augroup END
