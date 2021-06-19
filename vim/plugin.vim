@@ -318,6 +318,8 @@ if has("nvim")
         \ 'coc-json',
         \ 'coc-deno',
         \ 'coc-eslint',
+        \ 'coc-go',
+        \ 'coc-spell-checker',
         \ ]
 
   call coc#config('diagnostic', {
