@@ -1,7 +1,6 @@
 version: '3.7'
 
 services:
-  # {{_input_:service}}
   {{_input_:service}}:
     image: {{_input_:image}}
     networks:
@@ -15,3 +14,4 @@ services:
 
 networks:
   {{_input_:network}}:
+    name: {{_input_:network}}
