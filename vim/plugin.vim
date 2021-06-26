@@ -352,6 +352,12 @@ if has("nvim")
           \ 'trace.server': 'verbose',
           \ 'filetypes': ['go']
         \ },
+        \ 'terraform': {
+          \ 'command': 'terraform-ls',
+          \ 'trace.server': 'verbose',
+          \ 'filetypes': ['tf', 'terraform'],
+          \ 'args': ['serve'],
+        \ },
         \ 'efm': {
           \ 'command': 'efm-langserver',
           \ 'args': [],
