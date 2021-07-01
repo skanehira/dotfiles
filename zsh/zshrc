@@ -1,12 +1,8 @@
-#function zle-line-init zle-keymap-select {
-#    VIM_NORMAL="%K{208}%F{black}%k%f%K{208}%F{white} % NORMAL %k%f%K{black}%F{208}%k%f"
-#    VIM_INSERT="%K{075}%F{black}%k%f%K{075}%F{white} % INSERT %k%f%K{black}%F{075}%k%f"
-#    RPS1="${${KEYMAP/vicmd/$VIM_NORMAL}/(main|viins)/$VIM_INSERT}"
-#    RPS2=$RPS1
-#    zle reset-prompt
-#}
-#zle -N zle-line-init
-#zle -N zle-keymap-select
+export NVM_DIR="$HOME/.config/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
 bindkey -M viins '\er' history-incremental-pattern-search-forward
 bindkey -M viins '^?'  backward-delete-char
@@ -41,3 +37,20 @@ alias lg=lazygit
 alias gs="git status"
 alias gl="git log"
 alias ll="ls -la"
+alias tm="tmuximum"
+alias ls="lsd"
+alias ll='lsd -la'
+alias diff="delta"
+alias k="kubectl"
+alias d="docker-compose"
+alias v="nvim"
+alias t="terraform"
+
+# enable prompt color
+autoload -U colors && colors
+export PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[green]%}%m%{$fg_bold[yellow]%} %3~ %{$reset_color%}$ "
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+export YVM_DIR=/Users/skanehira/.yvm
+[ -r $YVM_DIR/yvm.sh ] && . $YVM_DIR/yvm.sh

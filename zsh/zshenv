@@ -1,3 +1,17 @@
+# Do not load /etc/profile which override $PATH
+# Ref: http://karur4n.hatenablog.com/entry/2016/01/18/100000
+setopt no_global_rcs
+setopt share_history
+setopt hist_expand
+setopt hist_ignore_dups
+setopt append_history
+
+HISTFILE=${HOME}/.zsh_history
+HISTSIZE=2000
+SAVEHIST=1000
+
+export PATH=/usr/local/bin:$PATH
+
 eval $(/opt/homebrew/bin/brew shellenv)
 export GOPATH=$HOME/dev/go
 export GOBIN=$GOPATH/bin
@@ -8,13 +22,16 @@ export FZF_DEFAULT_OPTS="--layout=reverse --inline-info --exit-0 -m"
 export FZF_DEFAULT_COMMAND="ag -g ."
 export LC_CTYPE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
-export NODEBREW_ROOT=/opt/homebrew/var/nodebrew
 export GHQ_ROOT=$GOPATH/src
-export PATH=$HOME/.nodebrew/current/bin:$PATH
-export EDITOR=vim
+#export PATH=$HOME/.nodebrew/current/bin:$PATH
+#export GO111MODULE=auto
+export EDITOR=nvim
 export GOENV_ROOT=$HOME/.goenv
 export PATH=$GOENV_ROOT/bin:$GOBIN:$PATH
+export PATH=/opt/homebrew/opt/make/libexec/gnubin/:$PATH
 export GOENV_DISABLE_GOPATH=1
+export PATH="$PATH:/Users/skanehira/.yarn/bin"
+export PATH="$PATH:/Users/skanehira/.deno/bin"
 
 eval "$(goenv init -)"
-
+source "$HOME/.cargo/env"
