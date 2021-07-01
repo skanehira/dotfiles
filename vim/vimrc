@@ -186,10 +186,12 @@ nnoremap <C-h> gT
 " ターミナル関連 {{{
 tnoremap <C-]> <C-\><C-n>
 if has('nvim')
+  nnoremap <Leader>tm :new term<CR>
   function! s:term_start(cmd) abort
     call termopen(a:cmd)
   endfunction
 else
+  nnoremap <Leader>tm :term<CR>
   function! s:term_start(cmd) abort
     let old = bufnr()
     exe printf('term ++curwin ++shell %s', a:cmd)

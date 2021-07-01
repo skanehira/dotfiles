@@ -510,7 +510,6 @@ let g:tweetvim_display_time = 1
 let g:tweetvim_open_buffer_cmd = 'tabnew'
 nnoremap <silent> <Leader>th :<C-u>TweetVimHomeTimeline<CR>
 nnoremap <silent> <Leader>ts :<C-u>TweetVimSay<CR>
-nnoremap <silent> <Leader>tm :<C-u>TweetVimMentions<CR>
 " }}}
 
 " {{{ gh.vim
