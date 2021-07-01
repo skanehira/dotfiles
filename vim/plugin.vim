@@ -122,7 +122,6 @@ function! s:fern_init() abort
 endfunction
 
 let g:fern#disable_viewer_hide_cursor = 1
-let g:fern#disable_drawer_auto_resize = 1
 let g:fern#drawer_keep = 1
 
 augroup fern-settings
