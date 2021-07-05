@@ -28,6 +28,7 @@ set background=dark
 
 " オプション {{{
 set encoding=utf-8
+set termguicolors
 set t_ut=
 set fileencodings=utf-8,iso-2022-jp,euc-jp,sjis
 set fileformats=unix,dos,mac
@@ -59,6 +60,8 @@ if !has('nvim')
 endif
 if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
 set diffopt=vertical
+
+set tabstop=2 shiftwidth=2 softtabstop=2 expandtab
 
 " 拡張子ごとのインデント設定 {{{
 augroup fileTypeIndent
@@ -122,6 +125,7 @@ endif
 " }}}
 
 " キーマップ {{{
+
 " ^と0を0に統一
 nnoremap <expr> 0 getline('.')[0 : col('.') - 2] =~# '^\s\+$' ? '0' : '^'
 
