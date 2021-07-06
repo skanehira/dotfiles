@@ -28,7 +28,6 @@ set background=dark
 
 " オプション {{{
 set encoding=utf-8
-set termguicolors
 set t_ut=
 set fileencodings=utf-8,iso-2022-jp,euc-jp,sjis
 set fileformats=unix,dos,mac
@@ -203,6 +202,7 @@ else
     nnoremap <buffer> <silent> <CR> :bw!<CR>
   endfunction
 endif
+nnoremap <Leader>ttm :tabnew term<CR>
 
 function! s:termopen() abort
   let bufname = bufname()
