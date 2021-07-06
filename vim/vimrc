@@ -40,7 +40,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('dag/vim-fish')
   call dein#add('jparise/vim-graphql')
   call dein#add('plasticboy/vim-markdown')
-  call dein#add('posva/vim-vue')
   call dein#add('tokorom/vim-review')
 
   " colorscheme
@@ -110,13 +109,6 @@ function! DeinClean() abort
 endfunction
 
 command! CleanPlugins call DeinClean()
-" }}}
-
-" {{{ netrw
-let g:netrw_liststyle=3
-let g:netrw_banner=0
-let g:netrw_sizestyle='H'
-let g:netrw_timefmt='%Y/%m/%d(%a) %H:%M:%S'
 " }}}
 
 " {{{ translate.vim
@@ -467,15 +459,6 @@ augroup emmet
 augroup END
 " }}}
 
-" vim-vue {{{
-" https://github.com/posva/vim-vue#my-syntax-highlighting-stops-working-randomly
-" vueファイルのシンタックスが効かなくなる問題対応
-augroup VueSyntax
-  au!
-  au FileType vue syntax sync fromstart
-augroup END
-" }}}
-
 " sonictemplate.vim {{{
 let g:sonictemplate_vim_template_dir = ["~/.vim/template"]
 let g:sonictemplate_author = 'skanehira'
@@ -566,7 +549,7 @@ map gy <Plug>(getpr-yank)
 " }}}
 
 " {{{ gyazo.vim
-let gyazo_insert_markdown_url = 1
+let g:gyazo_insert_markdown_url = 1
 nmap gup <Plug>(gyazo-upload)
 " }}}
 
@@ -827,12 +810,6 @@ augroup terminal
 augroup END
 " }}}
 
-" review
-augroup review
-  au!
-  au FileType review vnoremap <silent> <buffer> <Leader>hi c@<cursor>{<c-r>"}<esc>
-augroup END
-
 " 改行
 nnoremap <C-j> o<ESC>
 nnoremap <C-k> O<ESC>
@@ -914,8 +891,6 @@ augroup auto-mkdir
   au!
   au BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'))
 augroup END
-" }}}
-
 " }}}
 
 " {{{ lazygit
