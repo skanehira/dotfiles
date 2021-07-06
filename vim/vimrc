@@ -263,16 +263,13 @@ xmap gi <Plug>(Code2img)
 
 " vim-go settings {{{
 let g:go_fmt_autosave = 0
+let g:go_imports_autosave = 0
 let g:go_fmt_command = 'goimports' " ファイル保存時go importを実行する
 let g:go_gopls_enabled = 0 " goplsを有効化
 let g:go_def_mapping_enabled = 0 " vim-lspを使用するので、vim-goの`Ctrl+]`を無効にする
 let g:go_template_autocreate = 0 " テンプレート作成を無効化
 let g:go_def_reuse_buffer = 1 " すでに開いているバッファに定義ジャンプする
-let g:go_fold_enable = ['block', 'import', 'varconst', 'package_comment']
-augroup vim-go-fold
-  au!
-  au FileType go set foldmethod=syntax
-augroup END
+"let g:go_fold_enable = ['block', 'import', 'varconst', 'package_comment']
 " }}}
 
 " fzf settings {{{
@@ -329,7 +326,6 @@ if has("nvim")
         \ })
 
   call coc#config('coc.preferences.formatOnType', 'true')
-  call coc#config('coc.preferences.jumpCommand', 'split')
   call coc#config('coc.preferences.useQuickfixForLocations', 'true')
   call coc#config('coc.preferences', {
         \ 'formatOnSaveFiletypes': [
