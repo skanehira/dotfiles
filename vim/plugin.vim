@@ -327,6 +327,8 @@ if has("nvim")
         \ })
 
   call coc#config('coc.preferences.formatOnType', 'true')
+  call coc#config('coc.preferences.jumpCommand', 'split')
+  call coc#config('coc.preferences.useQuickfixForLocations', 'true')
   call coc#config('coc.preferences', {
         \ 'formatOnSaveFiletypes': [
           \ 'css',
