@@ -141,6 +141,11 @@ call gina#custom#mapping#nmap(
       \ {'noremap': 1, 'silent': 1},
       \)
 call gina#custom#mapping#nmap(
+      \ 'status', 'gl',
+      \ ':<C-u>terminal git pull<CR>',
+      \ {'noremap': 1, 'silent': 1},
+      \)
+call gina#custom#mapping#nmap(
       \ 'status', 'cm',
       \ ':<C-u>Gina commit<CR>',
       \ {'noremap': 1, 'silent': 1},
@@ -282,6 +287,7 @@ nnoremap <C-P> :Files<CR>
 if has("nvim")
   " GoTo code navigation.
   nmap <silent> <C-]> <Plug>(coc-definition)
+  nmap <silent> <C-t> :<C-u>call CocActionAsync('jumpDefinition', 'vsplit')<CR>
   nmap <silent> <Leader>gi <Plug>(coc-implementation)
   nmap <silent> <Leader>gr <Plug>(coc-references)
 
@@ -325,6 +331,7 @@ if has("nvim")
         \ 'warningSign': '💩',
         \ })
 
+  "call coc#config('coc.preferences.jumpCommand', 'vsplit')
   call coc#config('coc.preferences.formatOnType', 'true')
   call coc#config('coc.preferences.useQuickfixForLocations', 'true')
   call coc#config('coc.preferences', {
