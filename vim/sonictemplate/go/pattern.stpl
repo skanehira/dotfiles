@@ -82,9 +82,6 @@ logf\.\(\S\+\)$
 printf\.\(\S\+\)$
 	fmt.Printf("%#+v\n", {{$1}})
 
-p\.\(\S\+\)$
-	fmt.Println({{$1}})
-
 ^main$
 	package main
 	
@@ -191,11 +188,16 @@ f\.\(\S.*\)
 	func {{$1}}({{_cursor_}}) {
 	}
 
-test.\(\S.*\)$
-	func {{$1}}(t *testing.T) {
+test.\(.*\)$
+	func Test{{$1}}(t *testing.T) {
 		{{_cursor_}}
 	}
 
 test\.run$
 	t.Run("{{_cursor_}}", func(t *testing.T) {
 	})
+
+int\.\(.*\)$
+	type interface {{$1}} {
+		{{_cursor_}}
+	}

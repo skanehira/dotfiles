@@ -120,3 +120,8 @@ for\.of.\(.*\)\.\(.*\)
 getid.\(.*\)
 	const {{$1}} = document.getElementById("{{$1}}")
 	{{_cursor_}}
+
+int.\(.*\)
+	interface {{$1}} {
+	  {{_cursor_}}
+	}
