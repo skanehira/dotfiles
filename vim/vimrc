@@ -28,12 +28,12 @@ if dein#load_state(s:dein_dir)
   else
     call dein#add('kana/vim-operator-replace')
     call dein#add('kana/vim-operator-user')
-    call dein#add('skanehira/docker.vim')
     call dein#add('prabirshrestha/vim-lsp')
     call dein#add('mattn/vim-lsp-settings', {'merged': 0})
   endif
   call dein#add('rust-lang/rust.vim')
   call dein#add('vim-jp/vimdoc-ja')
+  call dein#add('mbbill/undotree')
 
   " syntax
   call dein#add('cespare/vim-toml')
@@ -123,8 +123,9 @@ function! s:fern_init() abort
   map <buffer> <silent> <C-v> <Plug>(fern-action-open:vsplit)
 endfunction
 
-let g:fern#disable_viewer_hide_cursor = 1
 let g:fern#drawer_keep = 1
+let g:fern#default_hidden = 1
+let g:fern#default_exclude = '.git$'
 
 augroup fern-settings
   au!
@@ -139,6 +140,16 @@ call gina#custom#mapping#nmap(
       \ 'status', 'gp',
       \ ':<C-u>terminal git push<CR>',
       \ {'noremap': 1, 'silent': 1},
+      \)
+call gina#custom#mapping#nmap(
+      \ 'status', 'gP',
+      \ ':<C-u>terminal git pull<CR>',
+      \ {'silent': 1},
+      \)
+call gina#custom#mapping#nmap(
+      \ 'status', 'gr',
+      \ ':<C-u>terminal gh pr create<CR>',
+      \ {'silent': 1},
       \)
 call gina#custom#mapping#nmap(
       \ 'status', 'gl',
@@ -231,7 +242,7 @@ let g:quickrun_config = {
       \ },
       \ 'deno_test': {
       \ 'command': 'deno',
-      \ 'cmdopt': '--no-check --unstable --allow-all',
+      \ 'cmdopt': 'test --no-check --unstable --allow-all',
       \ 'tempfile': '%{printf("%s_test.ts", tempname())}',
       \ 'exec': ['NO_COLOR=1 %C test %o %s'],
       \ 'type': 'typescript',
@@ -255,7 +266,6 @@ let g:quickrun_config = {
       \ 'tempfile': '%{printf("%s_test.go", tempname())}',
       \ 'exec': ['%C test -v . '],
       \ 'type': 'go',
-      \ 'runner': 'terminal',
       \ },
       \ }
 " }}}
@@ -352,12 +362,6 @@ if has("nvim")
           \]})
 
   call coc#config('languageserver', {
-        \ 'go': {
-          \ 'command': 'gopls',
-          \ 'rootPatterns': ['go.mod'],
-          \ 'trace.server': 'verbose',
-          \ 'filetypes': ['go']
-        \ },
         \ 'terraform': {
           \ 'command': 'terraform-ls',
           \ 'trace.server': 'verbose',
@@ -643,7 +647,7 @@ if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | end
 set diffopt=vertical
 
 " 拡張子ごとのインデント設定 {{{
-set tabstop=2 shiftwidth=2 softtabstop=2 expandtab
+set tabstop=2 shiftwidth=2 softtabstop=2
 
 augroup fileTypeIndent
   au!
