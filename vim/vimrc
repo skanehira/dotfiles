@@ -39,7 +39,6 @@ if dein#load_state(s:dein_dir)
 
   " syntax
   call dein#add('cespare/vim-toml')
-  call dein#add('dag/vim-fish')
   call dein#add('jparise/vim-graphql')
   call dein#add('plasticboy/vim-markdown')
   call dein#add('tokorom/vim-review')
