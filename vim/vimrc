@@ -128,6 +128,7 @@ function! s:fern_init() abort
   nnoremap <buffer> <silent> q :q<CR>
   map <buffer> <silent> <C-x> <Plug>(fern-action-open:split)
   map <buffer> <silent> <C-v> <Plug>(fern-action-open:vsplit)
+  map <buffer> <silent> <C-t> <Plug>(fern-action-tcd)
 endfunction
 
 let g:fern#drawer_keep = 1
