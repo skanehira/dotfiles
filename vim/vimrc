@@ -9,7 +9,11 @@ let g:mapleader = "\<Space>" " Leaderキーをスペースに設定
 
 " プラグイン設定 {{{
 " {{{ dein.vim settings
-let s:dein_dir = expand('~/.cache/dein')
+if has('nvim')
+  let s:dein_dir = expand('~/.cache/dein/nvim')
+else
+  let s:dein_dir = expand('~/.cache/dein/vim')
+endif
 let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
 if &runtimepath !~# '/dein.vim'
@@ -22,18 +26,16 @@ endif
 if dein#load_state(s:dein_dir)
   call dein#begin(s:dein_dir)
 
+  call dein#add('kana/vim-operator-replace')
+  call dein#add('kana/vim-operator-user')
+
   " only vim
   if has("nvim")
     call dein#add('neoclide/coc.nvim', {'rev': 'release'})
   else
-    call dein#add('kana/vim-operator-replace')
-    call dein#add('kana/vim-operator-user')
     call dein#add('prabirshrestha/vim-lsp')
     call dein#add('mattn/vim-lsp-settings', {'merged': 0})
   endif
-  call dein#add('rust-lang/rust.vim')
-  call dein#add('vim-jp/vimdoc-ja')
-  call dein#add('mbbill/undotree')
 
   " syntax
   call dein#add('cespare/vim-toml')
@@ -67,6 +69,8 @@ if dein#load_state(s:dein_dir)
   call dein#add('thinca/vim-quickrun')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
+  call dein#add('mbbill/undotree')
+  call dein#add('rust-lang/rust.vim')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -78,6 +82,9 @@ if dein#load_state(s:dein_dir)
   call dein#add('skanehira/gyazo.vim')
   call dein#add('skanehira/preview-uml.vim')
   call dein#add('hashivim/vim-terraform')
+  call dein#add('tyru/eskk.vim')
+  call dein#add('tyru/skkdict.vim')
+  call dein#add('vim-jp/vimdoc-ja')
 
   " for develop vim/neovim plugin
   call dein#add('LeafCage/vimhelpgenerator')
