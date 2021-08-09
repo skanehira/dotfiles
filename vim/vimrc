@@ -348,9 +348,10 @@ if has("nvim")
         \ 'warningSign': '💩',
         \ })
 
-  "call coc#config('coc.preferences.jumpCommand', 'vsplit')
   call coc#config('coc.preferences.formatOnType', 'true')
   call coc#config('coc.preferences.useQuickfixForLocations', 'true')
+  " disable auto completion
+  call coc#config('suggest.autoTrigger', 'none')
   call coc#config('coc.preferences', {
         \ 'formatOnSaveFiletypes': [
           \ 'css',
