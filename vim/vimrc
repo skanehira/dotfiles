@@ -988,4 +988,16 @@ command! -nargs=1 -complete=file SwaggerPreview call <SID>swagger_preview(<f-arg
 command! SwaggerPreviewStop call <SID>swagger_preview_stop()
 " }}}
 
+" {{{ eskk.vim
+let g:eskk#kakutei_when_unique_candidate = 1 "漢字変換した時に候補が1つの場合、自動的に確定する
+let g:eskk#enable_completion = 0             "neocompleteを入れないと、1にすると動作しなくなるため0推奨
+let g:eskk#egg_like_newline = 1              "漢字変換を確定しても改行しない。
+
+let g:eskk#directory = "~/.eskk"
+let g:eskk#large_dictionary = {
+      \ 'path': "~/.eskk/SKK-JISYO.L",
+      \ 'sorted': 1,
+      \ }
+" }}}
+
 " vim: foldmethod=marker
