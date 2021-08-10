@@ -62,7 +62,9 @@ if dein#load_state(s:dein_dir)
   call dein#add('mattn/sonictemplate-vim')
   call dein#add('mattn/vim-goimports')
   call dein#add('simeji/winresizer')
-  call dein#add('skanehira/code2img.vim')
+  call dein#add('skanehira/command.vim')
+  call dein#add('skanehira/denops-germanium.vim')
+  call dein#add('skanehira/denops-docker.vim')
   call dein#add('skanehira/getpr.vim')
   call dein#add('skanehira/translate.vim')
   call dein#add('thinca/vim-quickrun')
@@ -278,10 +280,9 @@ let g:quickrun_config = {
       \ }
 " }}}
 
-" {{{ code2img.vim
-let g:code2img_line_number = 0
-map gi <Plug>(Code2img)
-xmap gi <Plug>(Code2img)
+" {{{ germanium.vim
+map gi <Plug>(Germanium)
+xmap gi <Plug>(Germanium)
 " }}}
 
 " vim-go settings {{{
