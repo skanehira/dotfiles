@@ -70,6 +70,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('tyru/open-browser.vim')
   call dein#add('mbbill/undotree')
   call dein#add('rust-lang/rust.vim')
+  call dein#add('airblade/vim-gitgutter')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
