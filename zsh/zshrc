@@ -45,6 +45,7 @@ alias k="kubectl"
 alias d="docker-compose"
 alias v="nvim"
 alias t="terraform"
+alias tl="tmux a -t \$(tmux ls | fzf | cut -d \" \" -f 1)"
 
 # enable prompt color
 autoload -U colors && colors
@@ -54,3 +55,5 @@ export PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[green]%}%m%{$fg_bold[yellow]
 
 export YVM_DIR=/Users/skanehira/.yvm
 [ -r $YVM_DIR/yvm.sh ] && . $YVM_DIR/yvm.sh
+
+eval "$(zoxide init zsh)"
