@@ -158,7 +158,7 @@ call gina#custom#mapping#nmap(
       \)
 call gina#custom#mapping#nmap(
       \ 'status', 'gr',
-      \ ':<C-u>terminal gh pr create<CR>',
+      \ ':<C-u>terminal gh pr create -d<CR>',
       \ {'silent': 1},
       \)
 call gina#custom#mapping#nmap(
@@ -278,6 +278,10 @@ let g:quickrun_config = {
       \ 'type': 'go',
       \ },
       \ }
+augroup quickrun-config
+  au!
+  au FileType quickrun nnoremap <buffer> q :bw!<CR>
+augroup END
 " }}}
 
 " {{{ germanium.vim
