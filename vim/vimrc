@@ -360,6 +360,7 @@ if has("nvim")
   call coc#config('coc.preferences.useQuickfixForLocations', 'true')
   " disable auto completion
   call coc#config('suggest.autoTrigger', 'none')
+  call coc#config('diagnostic.enable', 'false')
   call coc#config('coc.preferences', {
         \ 'formatOnSaveFiletypes': [
           \ 'css',
