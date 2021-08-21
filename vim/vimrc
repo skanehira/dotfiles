@@ -947,10 +947,10 @@ command! -nargs=* GolangCI call <SID>golangci(<f-args>)
 " {{{ grep
 function! s:grep(word) abort
   let cmd = printf('ag %s', a:word)
-  lex system(cmd) | lw
+  lgete system(cmd) | lw
 endfunction
 
-command! -nargs=1 Grep call <SID>grep(<q-args>)
+command! -nargs=1 -complete=file Grep call <SID>grep(<q-args>)
 " }}}
 
 " {{{ zenn
