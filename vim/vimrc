@@ -42,6 +42,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('jparise/vim-graphql')
   call dein#add('plasticboy/vim-markdown')
   call dein#add('tokorom/vim-review')
+  call dein#add('mg979/vim-xtabline')
 
   " colorscheme
   call dein#add('cocopon/iceberg.vim')
@@ -73,6 +74,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('mbbill/undotree')
   call dein#add('rust-lang/rust.vim')
   call dein#add('airblade/vim-gitgutter')
+  call dein#add('gelguy/wilder.nvim')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -1003,6 +1005,20 @@ let g:eskk#large_dictionary = {
       \ 'path': "~/.eskk/SKK-JISYO.L",
       \ 'sorted': 1,
       \ }
+" }}}
+
+" {{{ wilder.nvim
+call wilder#setup({
+      \ 'modes': [':', '/'],
+      \ 'next_key': '<C-n>',
+      \ 'previous_key': '<C-p>',
+      \ 'accept_key': '<Down>',
+      \ 'reject_key': '<Up>',
+      \ })
+
+call wilder#set_option('renderer', wilder#popupmenu_renderer({
+      \ 'highlighter': wilder#basic_highlighter(),
+      \ }))
 " }}}
 
 " vim: foldmethod=marker
