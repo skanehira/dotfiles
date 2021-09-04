@@ -42,7 +42,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('jparise/vim-graphql')
   call dein#add('plasticboy/vim-markdown')
   call dein#add('tokorom/vim-review')
-  call dein#add('mg979/vim-xtabline')
+  "call dein#add('mg979/vim-xtabline')
 
   " colorscheme
   call dein#add('cocopon/iceberg.vim')
@@ -66,7 +66,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('simeji/winresizer')
   call dein#add('skanehira/command.vim')
   call dein#add('skanehira/denops-germanium.vim')
-  call dein#add('skanehira/denops-docker.vim')
+  "call dein#add('skanehira/denops-docker.vim')
   call dein#add('skanehira/getpr.vim')
   call dein#add('skanehira/translate.vim')
   call dein#add('thinca/vim-quickrun')
@@ -153,11 +153,6 @@ call gina#custom#mapping#nmap(
       \ 'status', 'gp',
       \ ':<C-u>terminal git push<CR>',
       \ {'noremap': 1, 'silent': 1},
-      \)
-call gina#custom#mapping#nmap(
-      \ 'status', 'gP',
-      \ ':<C-u>terminal git pull<CR>',
-      \ {'silent': 1},
       \)
 call gina#custom#mapping#nmap(
       \ 'status', 'gr',
@@ -655,6 +650,9 @@ set noswapfile " swapファイルを作成しない
 set showtabline=2 " タブを表示しない
 set noshowmode
 set laststatus=2
+"set noequalalways " ウィンドウが同じサイズにならないようにする
+"set winfixheight " ウィンドウの高さを保つ
+"set winfixwidth " ウィンドウの幅を保つ
 set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
 if !has('nvim')
   set nrformats+=unsigned " 数値の加減算を考慮
@@ -1018,9 +1016,9 @@ call wilder#setup({
       \ 'reject_key': '<Up>',
       \ })
 
-call wilder#set_option('renderer', wilder#popupmenu_renderer({
-      \ 'highlighter': wilder#basic_highlighter(),
-      \ }))
+"call wilder#set_option('renderer', wilder#popupmenu_renderer({
+"      \ 'highlighter': wilder#basic_highlighter(),
+"      \ }))
 " }}}
 
 " vim: foldmethod=marker
