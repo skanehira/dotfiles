@@ -9,11 +9,7 @@ let g:mapleader = "\<Space>" " Leaderキーをスペースに設定
 
 " プラグイン設定 {{{
 " {{{ dein.vim settings
-if has('nvim')
-  let s:dein_dir = expand('~/.cache/dein/nvim')
-else
-  let s:dein_dir = expand('~/.cache/dein/vim')
-endif
+let s:dein_dir = has('nvim') ? expand('~/.cache/dein/nvim') : expand('~/.cache/dein/vim')
 let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
 if &runtimepath !~# '/dein.vim'
@@ -42,7 +38,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('jparise/vim-graphql')
   call dein#add('plasticboy/vim-markdown')
   call dein#add('tokorom/vim-review')
-  "call dein#add('mg979/vim-xtabline')
 
   " colorscheme
   call dein#add('cocopon/iceberg.vim')
@@ -52,7 +47,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('Shougo/dein.vim')
   call dein#add('andymass/vim-matchup')
   call dein#add('cohama/lexima.vim')
-  call dein#add('fatih/vim-go')
+  call dein#add('vim-test/vim-test')
   call dein#add('junegunn/fzf', {'merged': 0})
   call dein#add('junegunn/fzf.vim', {'depends': 'fzf'})
   call dein#add('kshenoy/vim-signature')
@@ -66,14 +61,12 @@ if dein#load_state(s:dein_dir)
   call dein#add('simeji/winresizer')
   call dein#add('skanehira/command.vim')
   call dein#add('skanehira/denops-germanium.vim')
-  "call dein#add('skanehira/denops-docker.vim')
   call dein#add('skanehira/getpr.vim')
   call dein#add('skanehira/translate.vim')
   call dein#add('thinca/vim-quickrun')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
   call dein#add('mbbill/undotree')
-  call dein#add('rust-lang/rust.vim')
   call dein#add('airblade/vim-gitgutter')
   call dein#add('gelguy/wilder.nvim')
 
@@ -85,10 +78,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('previm/previm')
   call dein#add('shinespark/vim-list2tree')
   call dein#add('skanehira/gyazo.vim')
-  call dein#add('skanehira/preview-uml.vim')
   call dein#add('hashivim/vim-terraform')
-  call dein#add('tyru/eskk.vim')
-  call dein#add('tyru/skkdict.vim')
   call dein#add('vim-jp/vimdoc-ja')
 
   " for develop vim/neovim plugin
@@ -101,7 +91,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('basyura/TweetVim')
   call dein#add('basyura/twibill.vim')
   call dein#add('itchyny/lightline.vim')
-  call dein#add('itchyny/vim-winfix')
 
   " end settings
   call dein#end()
@@ -287,17 +276,6 @@ map gi <Plug>(Germanium)
 xmap gi <Plug>(Germanium)
 " }}}
 
-" vim-go settings {{{
-let g:go_fmt_autosave = 0
-let g:go_imports_autosave = 0
-let g:go_fmt_command = 'goimports' " ファイル保存時go importを実行する
-let g:go_gopls_enabled = 0 " goplsを有効化
-let g:go_def_mapping_enabled = 0 " vim-lspを使用するので、vim-goの`Ctrl+]`を無効にする
-let g:go_template_autocreate = 0 " テンプレート作成を無効化
-let g:go_def_reuse_buffer = 1 " すでに開いているバッファに定義ジャンプする
-"let g:go_fold_enable = ['block', 'import', 'varconst', 'package_comment']
-" }}}
-
 " fzf settings {{{
 let g:fzf_layout = { 'down': '50%' }
 nnoremap <C-P> :Files<CR>
@@ -318,6 +296,8 @@ if has("nvim")
   command! LspRename :call CocActionAsync('rename')
   command! LspReferences :call CocActionAsync('jumpReferences')
   command! LspFormat :call CocActionAsync('format')
+  command! GoTagAdd :CocCommand go.tags.add.prompt<CR>
+  command! GoTagRemove :CocCommand go.tags.remove.prompt<CR>
 
   " use manual completion
   inoremap <silent><expr> <C-x><C-o> coc#refresh()
@@ -354,6 +334,14 @@ if has("nvim")
 
   call coc#config('coc.preferences.formatOnType', 'true')
   call coc#config('coc.preferences.useQuickfixForLocations', 'true')
+  call coc#config('codeLens.enable', v:true)
+  call coc#config('go.goplsPath', 'gopls')
+  call coc#config('go.goplsOptions', {
+        \ 'completeUnimported': v:true,
+        \ 'codelenses': {
+          \ 'test': v:true,
+          \ },
+          \ })
   " disable auto completion
   call coc#config('suggest.autoTrigger', 'none')
   call coc#config('diagnostic.enable', 'false')
@@ -406,6 +394,7 @@ else
         \    'usePlaceholders': v:true,
         \    'analyses': {
         \      'fillstruct': v:true,
+        \      'test': v:true,
         \    },
         \  },
         \  'initialization_options': {
@@ -498,27 +487,6 @@ let g:vimhelpgenerator_defaultlanguage = 'en'
 let g:memolist_fzf = 1
 " }}}
 
-" {{{ docker.vim
-let g:docker_use_tmux = 1
-let g:docker_plugin_version_check = 0
-" }}}
-
-" {{{ preview.vim
-let g:previm_open_cmd = 'open'
-let g:previm_plantuml_imageprefix = 'http://localhost:8888/png/'
-let g:previm_enable_realtime = 1
-" }}}
-
-" {{{ preview-markdown.vim
-let g:preview_markdown_vertical = 1
-let g:preview_markdown_auto_update = 1
-" }}}
-
-"{{{ gist-vim
-let g:gist_post_private = 1
-let g:gist_list_vsplit = 1
-"}}}
-
 " {{{ tweetvim
 let g:tweetvim_display_time = 1
 let g:tweetvim_open_buffer_cmd = 'tabnew'
@@ -558,9 +526,7 @@ nnoremap <silent> gh :new gh://bookmarks<CR>
 " }}}
 
 " {{{ vim-operator-replace
-if !has('mac') && !has('nvim')
-  vmap p <Plug>(operator-replace)
-endif
+vmap p <Plug>(operator-replace)
 " }}}
 
 " {{{ getpr.vim
@@ -597,15 +563,8 @@ function! FilePath()
 endfunction
 " }}}
 
-" {{{ rust.vim
-if !has("nvim")
-  let g:rustfmt_autosave = 1
-endif
-" }}}
-
 " {{{ command.vim
 nmap c: <Plug>(command_buffer_open)
-" }}}
 " }}}
 
 syntax enable " シンタックスを有効にする
@@ -621,8 +580,6 @@ if !has('nvim')
   augroup END
 endif
 set background=dark
-"let g:tokyonight_disable_italic_comment = 1
-"colorscheme tokyonight
 " }}}
 
 " オプション {{{
@@ -850,10 +807,6 @@ inoremap <silent> <C-a> <C-o>I
 inoremap <expr> <C-v> printf('<C-r><C-o>%s', has('linux') \|\| has('unix') ? '+' : '*')
 cnoremap <expr> <C-v> printf('<C-r><C-o>%s', has('linux') \|\| has('unix') ? '+' : '*')
 
-" 囲う
-nnoremap <silent> gw[ cw``<Esc>P
-vnoremap <silent> gw[ c``<Esc>P
-
 " ヘルプ
 augroup help-mapping
   au!
@@ -862,9 +815,9 @@ augroup END
 " }}}
 
 " コマンドラインで単語移動 {{{
-cnoremap <c-b> <Left>
-cnoremap <c-f> <Right>
-cnoremap <c-a> <Home>
+cnoremap <C-b> <Left>
+cnoremap <C-f> <Right>
+cnoremap <C-a> <Home>
 " }}}
 
 " Better <C-n>/<C-p> in Command {{{
@@ -995,18 +948,6 @@ command! -nargs=1 -complete=file SwaggerPreview call <SID>swagger_preview(<f-arg
 command! SwaggerPreviewStop call <SID>swagger_preview_stop()
 " }}}
 
-" {{{ eskk.vim
-let g:eskk#kakutei_when_unique_candidate = 1 "漢字変換した時に候補が1つの場合、自動的に確定する
-let g:eskk#enable_completion = 0             "neocompleteを入れないと、1にすると動作しなくなるため0推奨
-let g:eskk#egg_like_newline = 1              "漢字変換を確定しても改行しない。
-
-let g:eskk#directory = "~/.eskk"
-let g:eskk#large_dictionary = {
-      \ 'path': "~/.eskk/SKK-JISYO.L",
-      \ 'sorted': 1,
-      \ }
-" }}}
-
 " {{{ wilder.nvim
 call wilder#setup({
       \ 'modes': [':', '/'],
@@ -1019,6 +960,13 @@ call wilder#setup({
 "call wilder#set_option('renderer', wilder#popupmenu_renderer({
 "      \ 'highlighter': wilder#basic_highlighter(),
 "      \ }))
+" }}}
+
+" {{{ vim-test
+let test#javascript#denotest#options = {
+    \ 'all': '--unstable -A'
+    \ }
+nnoremap <silent> <space>tn <cmd>TestNearest<CR>
 " }}}
 
 " vim: foldmethod=marker
