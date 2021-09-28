@@ -1003,4 +1003,13 @@ let test#javascript#denotest#options = {
 nnoremap <silent> <space>tn <cmd>TestNearest<CR>
 " }}}
 
+function! OpenURL()
+  let uri = matchstr(getline("."), '[a-z]*:\/\/[^ >,;]*')
+  echom uri
+  if uri != ""
+    call system(printf('%s %s', s:open, uri))
+  endif
+endfunction
+nnoremap gu :call OpenURL()<cr>
+
 " vim: foldmethod=marker
