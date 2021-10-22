@@ -68,10 +68,9 @@ if dein#load_state(s:dein_dir)
   endif
 
   " syntax
-  call dein#add('cespare/vim-toml')
   call dein#add('jparise/vim-graphql')
   call dein#add('plasticboy/vim-markdown')
-  call dein#add('tokorom/vim-review')
+  "call dein#add('tokorom/vim-review')
 
   " colorscheme
   call dein#add('cocopon/iceberg.vim')
@@ -93,16 +92,16 @@ if dein#load_state(s:dein_dir)
   call dein#add('mattn/sonictemplate-vim')
   call dein#add('mattn/vim-goimports')
   call dein#add('simeji/winresizer')
+  call dein#add('vim-denops/denops.vim')
   call dein#add('skanehira/command.vim')
   call dein#add('skanehira/denops-germanium.vim')
   call dein#add('skanehira/getpr.vim')
-  call dein#add('skanehira/translate.vim')
   call dein#add('thinca/vim-quickrun')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
   call dein#add('mbbill/undotree')
   call dein#add('airblade/vim-gitgutter')
-  call dein#add('gelguy/wilder.nvim')
+  "call dein#add('gelguy/wilder.nvim')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -330,8 +329,8 @@ if has("nvim")
   command! LspRename :call CocActionAsync('rename')
   command! LspReferences :call CocActionAsync('jumpReferences')
   command! LspFormat :call CocActionAsync('format')
-  command! GoTagAdd :CocCommand go.tags.add.prompt<CR>
-  command! GoTagRemove :CocCommand go.tags.remove.prompt<CR>
+  command! GoTagAdd :CocCommand go.tags.add.prompt
+  command! GoTagRemove :CocCommand go.tags.remove.prompt
 
   " use manual completion
   inoremap <silent><expr> <C-x><C-o> coc#refresh()
@@ -614,6 +613,8 @@ if !has('nvim')
   augroup END
 endif
 set background=dark
+" visual modeのhighlight変更
+hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
 " }}}
 
 " オプション {{{
@@ -670,7 +671,7 @@ augroup fileTypeIndent
   au FileType sh setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType fish setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType rust setlocal tabstop=4 softtabstop=4 shiftwidth=4 expandtab
-  au FileType markdown setlocal tabstop=2 shiftwidth=2
+  au FileType markdown setlocal tabstop=2 shiftwidth=2 expandtab
 augroup END
 " }}}
 
