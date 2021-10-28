@@ -96,6 +96,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('skanehira/command.vim')
   call dein#add('skanehira/denops-germanium.vim')
   call dein#add('skanehira/getpr.vim')
+  call dein#add('skanehira/qfopen.vim')
   call dein#add('thinca/vim-quickrun')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
@@ -108,11 +109,11 @@ if dein#load_state(s:dein_dir)
   call dein#add('godlygeek/tabular')
   call dein#add('gyim/vim-boxdraw')
   call dein#add('mattn/vim-maketable')
-  call dein#add('previm/previm')
   call dein#add('shinespark/vim-list2tree')
   call dein#add('skanehira/gyazo.vim')
   call dein#add('hashivim/vim-terraform')
   call dein#add('vim-jp/vimdoc-ja')
+  call dein#add('kat0h/bufpreview.vim', {'merged': 0})
 
   " for develop vim/neovim plugin
   call dein#add('LeafCage/vimhelpgenerator')
@@ -298,6 +299,7 @@ let g:quickrun_config = {
       \ 'type': 'go',
       \ },
       \ }
+
 augroup quickrun-config
   au!
   au FileType quickrun nnoremap <buffer> q :bw!<CR>
@@ -1004,13 +1006,26 @@ let test#javascript#denotest#options = {
 nnoremap <silent> <space>tn <cmd>TestNearest<CR>
 " }}}
 
-function! OpenURL()
-  let uri = matchstr(getline("."), '[a-z]*:\/\/[^ >,;]*')
-  echom uri
-  if uri != ""
-    call system(printf('%s %s', s:open, uri))
-  endif
-endfunction
-nnoremap gu :call OpenURL()<cr>
+" {{{ denops-mysql.vim
+map gq <Plug>(mysql-query)
+vmap gq <Plug>(mysql-query)
+" }}}
+
+" {{{ open-browser.vim
+nmap gu <Plug>(openbrowser-open)
+" }}}
+
+" {{{ qfopen.vim
+augroup qfopen-bufenter
+  function! s:qfopen_keymap() abort
+    nmap <buffer> a <Plug>(qfopen-action)
+    nmap <buffer> <C-v> <Plug>(qfopen-open-vsplit)
+    nmap <buffer> <C-x> <Plug>(qfopen-open-split)
+    nmap <buffer> <C-t> <Plug>(qfopen-open-tab)
+  endfunction
+  au!
+  au FileType qf call s:qfopen_keymap()
+augroup END
+" }}}
 
 " vim: foldmethod=marker
