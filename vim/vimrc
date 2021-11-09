@@ -90,7 +90,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('markonm/traces.vim')
   call dein#add('mattn/emmet-vim')
   call dein#add('mattn/sonictemplate-vim')
-  call dein#add('mattn/vim-goimports')
   call dein#add('simeji/winresizer')
   call dein#add('vim-denops/denops.vim')
   call dein#add('skanehira/command.vim')
@@ -138,6 +137,7 @@ endif
 function! DeinClean() abort
   let s:removed_plugins = dein#check_clean()
   if len(s:removed_plugins) > 0
+    echom s:removed_plugins
     call map(s:removed_plugins, "delete(v:val, 'rf')")
     call dein#recache_runtimepath()
   endif
@@ -254,7 +254,7 @@ function! GinaOpenPR() abort
   call system(printf('%s %s', s:open, url))
 endfunction
 
-nnoremap <silent> gs :Gina status -s<CR>
+nnoremap <silent> gs :Gina status<CR>
 nnoremap <silent> gl :Gina log<CR>
 nnoremap <silent> gm :Gina blame<CR>
 nnoremap <silent> gb :Gina branch<CR>
@@ -319,20 +319,23 @@ nnoremap <C-P> :Files<CR>
 " lsp settings {{{
 " coc.nvim
 if has("nvim")
-  " GoTo code navigation.
-  nmap <silent> <C-]> <Plug>(coc-definition)
-  nmap <silent> <C-t> :<C-u>call CocActionAsync('jumpDefinition', 'vsplit')<CR>
-  nmap <silent> <Leader>gi <Plug>(coc-implementation)
-  nmap <silent> <Leader>gr <Plug>(coc-references)
-
-  " Use K to show documentation in preview window.
-  nnoremap <silent> K :call <SID>show_documentation()<CR>
-
   command! LspRename :call CocActionAsync('rename')
   command! LspReferences :call CocActionAsync('jumpReferences')
   command! LspFormat :call CocActionAsync('format')
+  command! LspImport :call CocAction('runCommand', 'editor.action.organizeImport')
   command! GoTagAdd :CocCommand go.tags.add.prompt
   command! GoTagRemove :CocCommand go.tags.remove.prompt
+
+  " GoTo code navigation.
+  nmap <silent> <C-]> <Plug>(coc-definition)
+  nnoremap <silent> <C-t> :<C-u>call CocActionAsync('jumpDefinition', 'vsplit')<CR>
+  nnoremap <silent> <Leader>gi :<C-u>call CocActionAsync('jumpImplementation', 'split')<CR>
+  nnoremap <silent> <Leader>gr :<C-u>call CocActionAsync('jumpReferences', 'split')<CR>
+
+  nnoremap <silent> <Leader>i :LspImport<CR>
+
+  " Use K to show documentation in preview window.
+  nnoremap <silent> K :call <SID>show_documentation()<CR>
 
   " use manual completion
   inoremap <silent><expr> <C-x><C-o> coc#refresh()
@@ -382,6 +385,7 @@ if has("nvim")
   call coc#config('diagnostic.enable', 'false')
   call coc#config('coc.preferences', {
         \ 'formatOnSaveFiletypes': [
+          \ 'go',
           \ 'css',
           \ 'js',
           \ 'javascriptreact',
@@ -956,15 +960,15 @@ command! -nargs=1 ZennCreateArticle call <SID>create_zenn_article(<f-args>)
 " }}}
 
 " {{{ goimports
-augroup goimports
-  function! s:goimports() abort
-    let pos = getcurpos()
-    %!goimports
-    call setpos('.', pos)
-  endfunction
-  au!
-  au! FileType go nnoremap <silent> <Leader>i :call <SID>goimports()<CR>
-augroup END
+" augroup goimports
+"   function! s:goimports() abort
+"     let pos = getcurpos()
+"     %!goimports
+"     call setpos('.', pos)
+"   endfunction
+"   au!
+"   au! FileType go nnoremap <silent> <Leader>i :call <SID>goimports()<CR>
+" augroup END
 " }}}
 
 " {{{ preview swagger
@@ -1016,16 +1020,27 @@ nmap gu <Plug>(openbrowser-open)
 " }}}
 
 " {{{ qfopen.vim
-augroup qfopen-bufenter
+augroup qfopen-settings
   function! s:qfopen_keymap() abort
     nmap <buffer> a <Plug>(qfopen-action)
     nmap <buffer> <C-v> <Plug>(qfopen-open-vsplit)
     nmap <buffer> <C-x> <Plug>(qfopen-open-split)
     nmap <buffer> <C-t> <Plug>(qfopen-open-tab)
+    nnoremap <buffer> <silent> q :q<CR>
   endfunction
   au!
   au FileType qf call s:qfopen_keymap()
 augroup END
+" }}}
+
+" {{{ for dlv
+function! Get_breakpoint_line() abort
+  let line = printf("break %s:%s", expand("%:p"), line("."))
+  call setreg("*", line)
+  echom line
+endfunction
+
+nnoremap gdy :call Get_breakpoint_line()<CR>
 " }}}
 
 " vim: foldmethod=marker
