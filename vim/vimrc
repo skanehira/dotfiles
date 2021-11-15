@@ -1043,4 +1043,26 @@ endfunction
 nnoremap gdy :call Get_breakpoint_line()<CR>
 " }}}
 
+" {{{ denops-delve.vim
+map gdb <Plug>(dlv-breakpoint)
+map gdr <Plug>(dlv-breakpoint-clear)
+map gds <Plug>(dlv-breakpoints)
+map gdc <Plug>(dlv-continue)
+map gdn <Plug>(dlv-next)
+map gdi <Plug>(dlv-step)
+map gdo <Plug>(dlv-stepout)
+map gdp <Plug>(dlv-print)
+" }}}
+
+function! ActiveBrowserTab(line) abort
+  let id = a:line[1:match(a:line, "\]", 0, 1)-1]
+  call system(["open", "/Applications/Sidekick.app"])
+  call system(["chrome-cli", "activate", "-t", id])
+endfunction
+
+nnoremap <silent> gdt :call fzf#run({
+      \ "source": systemlist(["chrome-cli", "list", "tabs"]),
+      \ "window": 'botright 10new',
+      \ "sink": function("ActiveBrowserTab")})<CR>
+
 " vim: foldmethod=marker
