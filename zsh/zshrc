@@ -27,15 +27,15 @@ zle -N ghq-fzf
 bindkey '^g' ghq-fzf
 
 function tmuxpopup() {
-	local width='90%'
-	local height='90%'
-	local name=$(tmux display-message -p -F "#{session_name}")
-	if [[ $name =~ 'popup' ]];
-	then
-		tmux detach-client
-	else
-		tmux popup -d '#{pane_current_path}' -xC -yC -w$width -h$height -E "tmux attach -t popup || tmux new -s popup"
-	fi
+  local width='90%'
+  local height='90%'
+  local name=$(tmux display-message -p -F "#{session_name}")
+  if [[ $name =~ 'popup' ]];
+  then
+    tmux detach-client
+  else
+    tmux popup -d '#{pane_current_path}' -xC -yC -w$width -h$height -E "tmux attach -t popup || tmux new -s popup"
+  fi
 }
 zle -N tmuxpopup
 
