@@ -94,14 +94,15 @@ if dein#load_state(s:dein_dir)
   call dein#add('vim-denops/denops.vim')
   call dein#add('skanehira/command.vim')
   call dein#add('skanehira/denops-germanium.vim')
+  call dein#add('skanehira/denops-docker.vim')
   call dein#add('skanehira/getpr.vim')
   call dein#add('skanehira/qfopen.vim')
+  call dein#add('skanehira/gh.vim')
   call dein#add('thinca/vim-quickrun')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
   call dein#add('mbbill/undotree')
   call dein#add('airblade/vim-gitgutter')
-  call dein#add('gelguy/wilder.nvim')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -110,6 +111,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('mattn/vim-maketable')
   call dein#add('shinespark/vim-list2tree')
   call dein#add('skanehira/gyazo.vim')
+  call dein#add('skanehira/denops-translate.vim')
   call dein#add('hashivim/vim-terraform')
   call dein#add('vim-jp/vimdoc-ja')
   call dein#add('kat0h/bufpreview.vim', {'merged': 0})
@@ -322,7 +324,7 @@ if has("nvim")
   command! LspRename :call CocActionAsync('rename')
   command! LspReferences :call CocActionAsync('jumpReferences')
   command! LspFormat :call CocActionAsync('format')
-  command! LspImport :call CocAction('runCommand', 'editor.action.organizeImport')
+  command! LspImport :call CocActionAsync('runCommand', 'editor.action.organizeImport')
   command! GoTagAdd :CocCommand go.tags.add.prompt
   command! GoTagRemove :CocCommand go.tags.remove.prompt
 
@@ -987,20 +989,6 @@ endfunction
 
 command! -nargs=1 -complete=file SwaggerPreview call <SID>swagger_preview(<f-args>)
 command! SwaggerPreviewStop call <SID>swagger_preview_stop()
-" }}}
-
-" {{{ wilder.nvim
-call wilder#setup({
-      \ 'modes': [':', '/'],
-      \ 'next_key': '<C-n>',
-      \ 'previous_key': '<C-p>',
-      \ 'accept_key': '<Down>',
-      \ 'reject_key': '<Up>',
-      \ })
-
-"call wilder#set_option('renderer', wilder#popupmenu_renderer({
-"      \ 'highlighter': wilder#basic_highlighter(),
-"      \ }))
 " }}}
 
 " {{{ vim-test

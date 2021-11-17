@@ -1,41 +1,36 @@
-# Do not load /etc/profile which override $PATH
-# Ref: http://karur4n.hatenablog.com/entry/2016/01/18/100000
-setopt no_global_rcs
-setopt share_history
-setopt hist_expand
-setopt hist_ignore_dups
-setopt append_history
-
-HISTFILE=${HOME}/.zsh_history
-HISTSIZE=2000
-SAVEHIST=1000
-
-# remove duplicates path
-# https://nonylene.hatenablog.jp/entry/2018/07/05/061533
-# https://tech.serhatteker.com/post/2019-12/remove-duplicates-in-path-zsh/
-typeset -gU PATH
-
-export PATH=/usr/local/bin:$PATH
-export GOPATH=$HOME/dev/go
-export GOBIN=$GOPATH/bin
-export XDG_CONFIG_HOME=$HOME/.config
+# homebrew settings
 export HOMEBREW_INSTALL_CLEANUP=1
-export LANG=en_US.UTF-8
+
+# asdf settings
+. /opt/homebrew/opt/asdf/libexec/asdf.sh
+
+# GHQ settings
+export GHQ_ROOT=$HOME/dev
+
+# Go settings
+export GOBIN=$HOME/go/bin
+export PATH=$GOBIN:$PATH
+
+# path settings
+export PATH=/usr/local/bin:$HOME/.deno/bin:$PATH
+export XDG_CONFIG_HOME=$HOME/.config
+
+# fzf settings
 export FZF_DEFAULT_OPTS="--layout=reverse --inline-info --exit-0 -m"
 export FZF_DEFAULT_COMMAND="ag -g ."
+
+# Rust settings
+export CARGO_HOME=/Users/skanehira/.asdf/installs/rust/1.56.1
+export PATH=$CARGO_HOME/bin:$PATH
+
+# others
+export LANG=en_US.UTF-8
 export LC_CTYPE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
-export GHQ_ROOT=$GOPATH/src
 export EDITOR=nvim
-export GOENV_ROOT=$HOME/.goenv
-export PATH=$GOENV_ROOT/bin:$GOBIN:$PATH
-export PATH=/opt/homebrew/opt/make/libexec/gnubin/:$PATH
-export GOENV_DISABLE_GOPATH=1
-export PATH="$PATH:/Users/skanehira/.yarn/bin"
-export PATH="$PATH:/Users/skanehira/.deno/bin"
-export PATH="/Users/skanehira/.local/bin:$PATH"
 
-eval $(/opt/homebrew/bin/brew shellenv)
-eval "$(goenv init -)"
-
-source "$HOME/.cargo/env"
+# homebrew curl
+export PATH="/opt/homebrew/opt/curl/bin:$PATH"
+export LDFLAGS="-L/opt/homebrew/opt/curl/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/curl/include"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/curl/lib/pkgconfig"

@@ -1,9 +1,3 @@
-export NVM_DIR="$HOME/.config/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
-
 bindkey -M viins '\er' history-incremental-pattern-search-forward
 bindkey -M viins '^?'  backward-delete-char
 bindkey -M viins '^A'  beginning-of-line
@@ -30,19 +24,30 @@ function ghq-fzf() {
   zle -R -c
 }
 zle -N ghq-fzf
-
 bindkey '^g' ghq-fzf
+
+function tmuxpopup() {
+	local width='90%'
+	local height='90%'
+	local name=$(tmux display-message -p -F "#{session_name}")
+	if [[ $name =~ 'popup' ]];
+	then
+		tmux detach-client
+	else
+		tmux popup -d '#{pane_current_path}' -xC -yC -w$width -h$height -E "tmux attach -t popup || tmux new -s popup"
+	fi
+}
+zle -N tmuxpopup
 
 alias lg=lazygit
 alias gs="git status"
 alias gl="git log"
 alias ll="ls -la"
-alias tm="tmuximum"
 alias ls="lsd"
 alias ll='lsd -la'
 alias diff="delta"
 alias k="kubectl"
-alias d="docker-compose"
+alias d="docker compose"
 alias v="nvim"
 alias t="terraform"
 alias tl="tmux a -t \$(tmux ls | fzf | cut -d \" \" -f 1)"
@@ -52,8 +57,3 @@ autoload -U colors && colors
 export PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[green]%}%m%{$fg_bold[yellow]%} %3~ %{$reset_color%}$ "
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-
-export YVM_DIR=/Users/skanehira/.yvm
-[ -r $YVM_DIR/yvm.sh ] && . $YVM_DIR/yvm.sh
-
-eval "$(zoxide init zsh)"
