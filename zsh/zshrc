@@ -29,6 +29,12 @@ bindkey '^g' ghq-fzf
 function tmuxpopup() {
   local width='90%'
   local height='90%'
+
+  if [ -n "$1" ];then
+    tmux popup -d '#{pane_current_path}' -xC -yC -w$width -h$height -E $1
+    return
+  fi
+
   local name=$(tmux display-message -p -F "#{session_name}")
   if [[ $name =~ 'popup' ]];
   then
@@ -57,3 +63,4 @@ autoload -U colors && colors
 export PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[green]%}%m%{$fg_bold[yellow]%} %3~ %{$reset_color%}$ "
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+eval "$(zoxide init zsh)"

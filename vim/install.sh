@@ -1,6 +1,6 @@
 #!/bin/bash
 path=~/.vim
-nvim_path=$XDG_CONFIG_HOME/nvim
+nvim_path=~/.config/nvim
 
 if [ ! -e $path ]; then
   mkdir -p $path

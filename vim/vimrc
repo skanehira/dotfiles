@@ -68,9 +68,7 @@ if dein#load_state(s:dein_dir)
   endif
 
   " syntax
-  call dein#add('jparise/vim-graphql')
   call dein#add('plasticboy/vim-markdown')
-  "call dein#add('tokorom/vim-review')
 
   " colorscheme
   call dein#add('cocopon/iceberg.vim')
@@ -101,7 +99,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('thinca/vim-quickrun')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
-  call dein#add('mbbill/undotree')
   call dein#add('airblade/vim-gitgutter')
 
   " for documentation
@@ -112,7 +109,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('shinespark/vim-list2tree')
   call dein#add('skanehira/gyazo.vim')
   call dein#add('skanehira/denops-translate.vim')
-  call dein#add('hashivim/vim-terraform')
   call dein#add('vim-jp/vimdoc-ja')
   call dein#add('kat0h/bufpreview.vim', {'merged': 0})
 
@@ -375,7 +371,7 @@ if has("nvim")
   call coc#config('coc.preferences.formatOnType', 'true')
   call coc#config('coc.preferences.useQuickfixForLocations', 'true')
   call coc#config('codeLens.enable', v:true)
-  call coc#config('go.goplsPath', 'gopls')
+  "call coc#config('go.goplsPath', 'gopls')
   call coc#config('go.goplsOptions', {
         \ 'completeUnimported': v:true,
         \ 'codelenses': {
@@ -914,7 +910,7 @@ augroup END
 " }}}
 
 " {{{ lazygit
-nnoremap <silent> gp :call system('fish -c "tmuxpopup lazygit"')<CR>
+nnoremap <silent> gp :call system('source ~/.zshrc && tmuxpopup lazygit')<CR>
 " }}}
 
 " {{{ golangci-lint
@@ -974,34 +970,11 @@ command! -nargs=1 ZennCreateArticle call <SID>create_zenn_article(<f-args>)
 " augroup END
 " }}}
 
-" {{{ preview swagger
-function! s:swagger_preview(file) abort
-  if !executable('spr')
-    call s:echo_err('spr does not installed')
-    return
-  endif
-
-  let s:swagger_preview_jobid = job_start(['spr', a:file])
-endfunction
-
-function! s:swagger_preview_stop() abort
-  call job_stop(s:swagger_preview_jobid)
-endfunction
-
-command! -nargs=1 -complete=file SwaggerPreview call <SID>swagger_preview(<f-args>)
-command! SwaggerPreviewStop call <SID>swagger_preview_stop()
-" }}}
-
 " {{{ vim-test
 let test#javascript#denotest#options = {
     \ 'all': '--unstable -A'
     \ }
 nnoremap <silent> <space>tn <cmd>TestNearest<CR>
-" }}}
-
-" {{{ denops-mysql.vim
-map gq <Plug>(mysql-query)
-vmap gq <Plug>(mysql-query)
 " }}}
 
 " {{{ open-browser.vim
@@ -1053,5 +1026,33 @@ nnoremap <silent> gdt :call fzf#run({
       \ "source": systemlist(["chrome-cli", "list", "tabs"]),
       \ "window": 'botright 10new',
       \ "sink": function("ActiveBrowserTab")})<CR>
+
+" {{{ markdown
+let s:clipboard_register = has('linux') || has('unix') ? '+' : '*'
+function! InsertMarkdownLink() abort
+  " use register `9`
+  let old = getreg('9')
+  let link = trim(getreg(s:clipboard_register))
+  if link !~# '^http.*'
+    normal! gvp
+    return
+  endif
+
+  " replace `[text](link)` to selected text
+  normal! gv"9y
+  let word = getreg(9)
+  let newtext = printf('[%s](%s)', word, link)
+  call setreg(9, newtext)
+  normal! gv"9p
+
+  " restore old data
+  call setreg(9, old)
+endfunction
+
+augroup markdown-insert-link
+  au!
+  au FileType markdown vnoremap <buffer> <silent> p :call InsertMarkdownLink()<CR>
+augroup END
+" }}}
 
 " vim: foldmethod=marker
