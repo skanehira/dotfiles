@@ -8,6 +8,7 @@ export HOMEBREW_INSTALL_CLEANUP=1
 export GHQ_ROOT=$HOME/dev
 
 # Go settings
+export GOPATH=$HOME/go # for download modules when use asdf-golang
 export GOBIN=$HOME/go/bin
 export PATH=$GOBIN:$PATH
 
