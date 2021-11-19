@@ -119,8 +119,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('vim-jp/vital.vim', {'merged': 0})
 
   " other
-  call dein#add('basyura/TweetVim')
-  call dein#add('basyura/twibill.vim')
   call dein#add('itchyny/lightline.vim')
 
   " end settings
@@ -371,7 +369,6 @@ if has("nvim")
         \ 'coc-deno',
         \ 'coc-eslint',
         \ 'coc-go',
-        \ 'coc-spell-checker',
         \ ]
 
   call coc#config('diagnostic', {
