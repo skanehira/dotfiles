@@ -150,11 +150,22 @@ vmap gt <Plug>(VTranslate)
 " }}}
 
 " {{{ fern.vim
+function! FernMoveFileTrash() abort
+  let paths = map(fern#helper#new().sync.get_selected_nodes(), { _, v -> v._path })
+  if input("The following files will be trashed\n" .. join(paths, "\n") .. "\nAre you sure to continue (y/n): ") =~ "^y"
+    for path in paths
+      call system(printf('mv "%s" ~/.Trash', path))
+    endfor
+    Fern . -drawer
+  endif
+endfunction
+
 function! s:fern_init() abort
   nnoremap <buffer> <silent> q :q<CR>
   map <buffer> <silent> <C-x> <Plug>(fern-action-open:split)
   map <buffer> <silent> <C-v> <Plug>(fern-action-open:vsplit)
   map <buffer> <silent> <C-t> <Plug>(fern-action-tcd)
+  nnoremap <buffer> <silent>  D :call FernMoveFileTrash()<CR>
 endfunction
 
 let g:fern#drawer_keep = 1
