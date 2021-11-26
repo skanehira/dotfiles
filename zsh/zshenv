@@ -1,9 +1,3 @@
-# homebrew settings
-export HOMEBREW_INSTALL_CLEANUP=1
-
-# asdf settings
-. /opt/homebrew/opt/asdf/libexec/asdf.sh
-
 # GHQ settings
 export GHQ_ROOT=$HOME/dev
 
@@ -30,8 +24,18 @@ export LC_CTYPE=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 export EDITOR=nvim
 
-# homebrew curl
-export PATH="/opt/homebrew/opt/curl/bin:$PATH"
-export LDFLAGS="-L/opt/homebrew/opt/curl/lib"
-export CPPFLAGS="-I/opt/homebrew/opt/curl/include"
-export PKG_CONFIG_PATH="/opt/homebrew/opt/curl/lib/pkgconfig"
+case $( uname -s ) in
+  Linux) break;;
+  Darwin)
+    # homebrew settings
+    export HOMEBREW_INSTALL_CLEANUP=1
+    # asdf settings
+    . /opt/homebrew/opt/asdf/libexec/asdf.sh
+    # homebrew curl
+    export PATH="/opt/homebrew/opt/curl/bin:$PATH"
+    export LDFLAGS="-L/opt/homebrew/opt/curl/lib"
+    export CPPFLAGS="-I/opt/homebrew/opt/curl/include"
+    export PKG_CONFIG_PATH="/opt/homebrew/opt/curl/lib/pkgconfig"
+    # chrome-cli
+    export CHROME_BUNDLE_IDENTIFIER="com.pushplaylabs.sidekick"
+esac

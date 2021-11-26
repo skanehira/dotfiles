@@ -64,3 +64,10 @@ export PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[green]%}%m%{$fg_bold[yellow]
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 eval "$(zoxide init zsh)"
+
+case $( uname -s ) in
+  Linux) break;;
+  Darwin)
+    # homebrew
+    export PATH="/opt/homebrew/bin:$PATH"
+esac
