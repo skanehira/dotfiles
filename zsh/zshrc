@@ -45,6 +45,16 @@ function tmuxpopup() {
 }
 zle -N tmuxpopup
 
+function gify() {
+  if [ "$1" = "" ];then
+    return
+  fi
+  local file=$1
+  ffmpeg -i $file -r 10 -vf scale=1080:-1 ${file%.*}.gif
+}
+
+zle -N gify
+
 alias lg=lazygit
 alias gs="git status"
 alias gl="git log"
