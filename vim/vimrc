@@ -100,6 +100,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
   call dein#add('airblade/vim-gitgutter')
+  call dein#add('jparise/vim-graphql')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -148,22 +149,11 @@ vmap gt <Plug>(VTranslate)
 " }}}
 
 " {{{ fern.vim
-function! FernMoveFileTrash() abort
-  let paths = map(fern#helper#new().sync.get_selected_nodes(), { _, v -> v._path })
-  if input("The following files will be trashed\n" .. join(paths, "\n") .. "\nAre you sure to continue (y/n): ") =~ "^y"
-    for path in paths
-      call system(printf('mv "%s" ~/.Trash', path))
-    endfor
-    Fern . -drawer
-  endif
-endfunction
-
 function! s:fern_init() abort
   nnoremap <buffer> <silent> q :q<CR>
   map <buffer> <silent> <C-x> <Plug>(fern-action-open:split)
   map <buffer> <silent> <C-v> <Plug>(fern-action-open:vsplit)
   map <buffer> <silent> <C-t> <Plug>(fern-action-tcd)
-  nnoremap <buffer> <silent>  D :call FernMoveFileTrash()<CR>
 endfunction
 
 let g:fern#drawer_keep = 1
@@ -530,13 +520,6 @@ let g:vimhelpgenerator_defaultlanguage = 'en'
 
 " {{{ MemoList
 let g:memolist_fzf = 1
-" }}}
-
-" {{{ tweetvim
-let g:tweetvim_display_time = 1
-let g:tweetvim_open_buffer_cmd = 'tabnew'
-nnoremap <silent> <Leader>th :<C-u>TweetVimHomeTimeline<CR>
-nnoremap <silent> <Leader>ts :<C-u>TweetVimSay<CR>
 " }}}
 
 " {{{ gh.vim
@@ -986,7 +969,7 @@ nnoremap <silent> <space>tn <cmd>TestNearest<CR>
 " }}}
 
 " {{{ open-browser.vim
-nmap gu <Plug>(openbrowser-open)
+nmap gop <Plug>(openbrowser-open)
 " }}}
 
 " {{{ qfopen.vim
