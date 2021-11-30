@@ -101,6 +101,11 @@ if dein#load_state(s:dein_dir)
   call dein#add('tyru/open-browser.vim')
   call dein#add('airblade/vim-gitgutter')
   call dein#add('jparise/vim-graphql')
+  call dein#add('Shougo/ddc.vim')
+  call dein#add('Shougo/ddc-matcher_head')
+  call dein#add('Shougo/ddc-sorter_rank')
+  call dein#add('Shougo/ddc-around')
+  call dein#add('matsui54/denops-popup-preview.vim')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -1009,12 +1014,12 @@ map gdp <Plug>(dlv-print)
 
 function! ActiveBrowserTab(line) abort
   let id = a:line[1:match(a:line, "\]", 0, 1)-1]
-  call system(["open", "/Applications/Sidekick.app"])
-  call system(["chrome-cli", "activate", "-t", id])
+  call system("open -b $CHROME_BUNDLE_IDENTIFIER")
+  call system("chrome-cli activate -t " .. id)
 endfunction
 
 nnoremap <silent> gdt :call fzf#run({
-      \ "source": systemlist(["chrome-cli", "list", "tabs"]),
+      \ "source": systemlist("chrome-cli list tabs"),
       \ "window": 'botright 10new',
       \ "sink": function("ActiveBrowserTab")})<CR>
 
@@ -1044,6 +1049,34 @@ augroup markdown-insert-link
   au!
   au FileType markdown vnoremap <buffer> <silent> p :call InsertMarkdownLink()<CR>
 augroup END
+" }}}
+
+" {{{ ddc.vim
+" Use matcher_head and sorter_rank.
+" https://github.com/Shougo/ddc-matcher_head
+" https://github.com/Shougo/ddc-sorter_rank
+call ddc#custom#patch_global('sourceOptions', {
+      \ '_': {
+      \   'matchers': ['matcher_head'],
+      \   'sorters': ['sorter_rank']},
+      \ })
+
+" add sources
+" call ddc#custom#patch_global('sources', ['around'])
+call ddc#custom#patch_global('sources', ['gh_issues'])
+call ddc#custom#patch_global('sourceOptions', {
+      \ 'gh_issues': {'matcherKey': 'menu'},
+      \ })
+
+" Change source options
+inoremap <silent><expr> <TAB>
+\ pumvisible() ? '<C-n>' :
+\ (col('.') <= 1 <Bar><Bar> getline('.')[col('.') - 2] =~# '\s') ?
+\ '<TAB>' : ddc#map#manual_complete()
+
+" <S-TAB>: completion back.
+inoremap <expr><S-TAB>  pumvisible() ? '<C-p>' : '<C-h>'
+call ddc#enable()
 " }}}
 
 " vim: foldmethod=marker
