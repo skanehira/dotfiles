@@ -25,7 +25,7 @@ export LC_ALL=en_US.UTF-8
 export EDITOR=nvim
 
 case $( uname -s ) in
-  Linux) break;;
+  Linux) ;;
   Darwin)
     # homebrew settings
     export HOMEBREW_INSTALL_CLEANUP=1
@@ -37,5 +37,5 @@ case $( uname -s ) in
     export CPPFLAGS="-I/opt/homebrew/opt/curl/include"
     export PKG_CONFIG_PATH="/opt/homebrew/opt/curl/lib/pkgconfig"
     # chrome-cli
-    export CHROME_BUNDLE_IDENTIFIER="com.pushplaylabs.sidekick"
+    export CHROME_BUNDLE_IDENTIFIER="com.vivaldi.Vivaldi"
 esac

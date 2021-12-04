@@ -74,11 +74,14 @@ export PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[green]%}%m%{$fg_bold[yellow]
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-eval "$(zoxide init zsh)"
-
 case $( uname -s ) in
-  Linux) break;;
+  Linux)
+    . $HOME/.asdf/asdf.sh
+    fpath=(${ASDF_DIR}/completions $fpath)
+    autoload -Uz compinit && compinit
+    ;;
   Darwin)
+    eval "$(zoxide init zsh)"
     # homebrew
     export PATH="/opt/homebrew/bin:$PATH"
 
