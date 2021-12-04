@@ -309,8 +309,8 @@ augroup END
 " }}}
 
 " {{{ germanium.vim
-map gi <Plug>(Germanium)
-xmap gi <Plug>(Germanium)
+map <silent> gi :<C-u>Germanium -f="Cica-Regular"<CR>
+xmap <silent> gi :Germanium -f="Cica-Regular"<CR>
 " }}}
 
 " fzf settings {{{
@@ -1047,7 +1047,7 @@ endfunction
 
 augroup markdown-insert-link
   au!
-  au FileType markdown vnoremap <buffer> <silent> p :call InsertMarkdownLink()<CR>
+  au FileType markdown xnoremap <buffer> <silent> p :<C-u>call InsertMarkdownLink()<CR>
 augroup END
 " }}}
 
