@@ -95,7 +95,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('skanehira/denops-docker.vim')
   call dein#add('skanehira/getpr.vim')
   call dein#add('skanehira/qfopen.vim')
-  call dein#add('skanehira/gh.vim')
   call dein#add('thinca/vim-quickrun')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
@@ -237,7 +236,7 @@ call gina#custom#mapping#nmap(
 call gina#custom#mapping#nmap(
       \ 'blame', '<C-o>',
       \ ':<C-u>call GinaOpenPR()<CR>',
-      \ {'silent': 1},
+      \ {'noremap': 1, 'silent': 1},
       \)
 call gina#custom#command#option('log', '--opener', 'new')
 call gina#custom#command#option('status', '--opener', 'new')
@@ -328,9 +327,31 @@ if has("nvim")
   command! GoTagAdd :CocCommand go.tags.add.prompt
   command! GoTagRemove :CocCommand go.tags.remove.prompt
 
+  " [
+  "   {"text": "(e)dit", "value": "edit"}
+  "   {"text": "(n)ew", "value": "new"}
+  " ]
+  " NOTE: text must contains '()' to detect input and its must be 1 character
+  function! ChoseAction(actions) abort
+    call gh#_message(join(map(copy(a:actions), { _, v -> v.text }), ", ") .. ": ")
+    let result = getcharstr()
+    let result = filter(a:actions, { _, v -> v.text =~# printf(".*\(%s\).*", result)})
+    echo '' | redraw
+    return len(result) ? result[0].value : ""
+  endfunction
+
+  function! CocJumpAction() abort
+    let actions = [
+          \ {"text": "(s)plit", "value": "split"},
+          \ {"text": "(v)slit", "value": "vsplit"},
+          \ {"text": "(t)ab", "value": "tabedit"},
+          \ ]
+    return ChoseAction(actions)
+  endfunction
+
   " GoTo code navigation.
   nmap <silent> <C-]> <Plug>(coc-definition)
-  nnoremap <silent> <C-t> :<C-u>call CocActionAsync('jumpDefinition', 'vsplit')<CR>
+  nnoremap <silent> <C-t> :<C-u>call CocActionAsync('jumpDefinition', CocJumpAction())<CR>
   nnoremap <silent> <Leader>gi :<C-u>call CocActionAsync('jumpImplementation', 'split')<CR>
   nnoremap <silent> <Leader>gr :<C-u>call CocActionAsync('jumpReferences', 'split')<CR>
 
@@ -528,34 +549,49 @@ let g:memolist_fzf = 1
 " }}}
 
 " {{{ gh.vim
-let g:gh_open_issue_on_create = 1
-function! s:gh_map_apply() abort
-  if !exists('g:loaded_gh')
-    return
-  endif
-  call gh#map#add('gh-buffer-issue-list', 'nmap', 'e', '<Plug>(gh_issue_edit)')
-  call gh#map#add('gh-buffer-issue-list', 'nmap', 'gm', '<Plug>(gh_issue_open_comment)')
-  call gh#map#add('gh-buffer-issue-list', 'nmap', 'y', '<Plug>(gh_issue_url_yank)')
-  call gh#map#add('gh-buffer-issue-comment-list', 'nmap', 'n', '<Plug>(gh_issue_comment_new)')
-  call gh#map#add('gh-buffer-issue-comment-list', 'nmap', 'e', '<Plug>(gh_issue_comment_edit)')
-  call gh#map#add('gh-buffer-issue-edit', 'nmap', 'gm', '<Plug>(gh_issue_comment_open_on_issue)')
-  call gh#map#add('gh-buffer-pull-list', 'nmap', 'y', '<Plug>(gh_pull_url_yank)')
-  call gh#map#add('gh-buffer-project-list', 'nmap', 'y', '<Plug>(gh_project_url_yank)')
-  call gh#map#add('gh-buffer-project-column-list', 'nmap', 'y', '<Plug>(gh_projects_card_url_yank)')
-  call gh#map#add('gh-buffer-project-column-list', 'nmap', 'o', '<Plug>(gh_projects_card_open)')
-  call gh#map#add('gh-buffer-action-list', 'nmap', 'o', '<Plug>(gh_actions_open_browser)')
-  call gh#map#add('gh-buffer-action-list', 'nmap', 'y', '<Plug>(gh_actions_yank_url)')
-  call gh#map#add('gh-buffer-gist-list', 'nmap', 'e', '<Plug>(gh_gist_edit_file)')
-  call gh#map#add('gh-buffer-gist-list', 'nmap', 'y', '<Plug>(gh_gist_list_yank)')
-  call gh#map#add('gh-buffer-bookmark-list', 'nmap', '<CR>', ':e <C-r>=getline(".")<CR><CR>')
-endfunction
-
-augroup gh-maps
+augroup gh_autocmd
   au!
-  au VimEnter * call <SID>gh_map_apply()
+  au User gh_open_issue call EnableAutoCompletionForIssue()
+  au User gh_open_issues_search call EnableAutoCompletionForSearchIssue()
 augroup END
 
-nnoremap <silent> gh :new gh://bookmarks<CR>
+function! EnableAutoCompletionForSearchIssue() abort
+  call ddc#custom#patch_buffer('sources', ['gh_issues_search'])
+  call ddc#custom#patch_buffer('specialBufferCompletion', v:true)
+  call ddc#custom#patch_buffer('sourceOptions', {
+        \ 'gh_issues_search': {
+          \  'minAutoCompleteLength': 1,
+        \ }})
+  call ddc#custom#patch_buffer({'keywordPattern': 
+        \ "[a-zA-Z0-9_À-ÿ\u30a0-\u30ff\u3040-\u309f\u3005-\u3006\u30e0-\u9fcf]*"})
+
+  " If matsui54/denops-popup-preview.vim is installed,
+  " you can preview issue body's info.
+  call popup_preview#enable()
+
+  " remove 'preview' from completeopt
+  set completeopt-=preview
+endfunction
+
+function! EnableAutoCompletionForIssue() abort
+  " Enable source 'gh_issues' to current buffer.
+  call ddc#custom#patch_buffer('sources', ['gh_issues'])
+  call ddc#custom#patch_buffer('sourceOptions', {
+        \ 'gh_issues': {
+          \  'matcherKey': 'menu',
+          \  'minAutoCompleteLength': 1,
+        \ }})
+  call ddc#custom#patch_buffer({'keywordPattern': 
+        \ "[a-zA-Z0-9_À-ÿ\u30a0-\u30ff\u3040-\u309f\u3005-\u3006\u30e0-\u9fcf]*"})
+  call ddc#custom#patch_buffer('specialBufferCompletion', v:true)
+
+  " If matsui54/denops-popup-preview.vim is installed,
+  " you can preview issue body's info.
+  call popup_preview#enable()
+
+  " remove 'preview' from completeopt
+  set completeopt-=preview
+endfunction
 " }}}
 
 " {{{ vim-operator-replace
@@ -840,8 +876,9 @@ inoremap <silent> <C-e> <C-o>A
 inoremap <silent> <C-a> <C-o>I
 
 " C-v でペースト
-inoremap <expr> <C-v> printf('<C-r><C-o>%s', has('linux') \|\| has('unix') ? '+' : '*')
-cnoremap <expr> <C-v> printf('<C-r><C-o>%s', has('linux') \|\| has('unix') ? '+' : '*')
+let g:clipboard_register = has('linux') || has('unix') ? '+' : '*'
+inoremap <expr> <C-v> printf('<C-r><C-o>%s', g:clipboard_register)
+cnoremap <expr> <C-v> printf('<C-r><C-o>%s', g:clipboard_register)
 
 " ヘルプ
 augroup help-mapping
@@ -1024,11 +1061,10 @@ nnoremap <silent> gdt :call fzf#run({
       \ "sink": function("ActiveBrowserTab")})<CR>
 
 " {{{ markdown
-let s:clipboard_register = has('linux') || has('unix') ? '+' : '*'
 function! InsertMarkdownLink() abort
   " use register `9`
   let old = getreg('9')
-  let link = trim(getreg(s:clipboard_register))
+  let link = trim(getreg(g:clipboard_register))
   if link !~# '^http.*'
     normal! gvp
     return
@@ -1052,20 +1088,10 @@ augroup END
 " }}}
 
 " {{{ ddc.vim
-" Use matcher_head and sorter_rank.
-" https://github.com/Shougo/ddc-matcher_head
-" https://github.com/Shougo/ddc-sorter_rank
+call ddc#custom#patch_global('sources', ['around'])
 call ddc#custom#patch_global('sourceOptions', {
       \ '_': {
-      \   'matchers': ['matcher_head'],
       \   'sorters': ['sorter_rank']},
-      \ })
-
-" add sources
-" call ddc#custom#patch_global('sources', ['around'])
-call ddc#custom#patch_global('sources', ['gh_issues'])
-call ddc#custom#patch_global('sourceOptions', {
-      \ 'gh_issues': {'matcherKey': 'menu'},
       \ })
 
 " Change source options
@@ -1076,7 +1102,6 @@ inoremap <silent><expr> <TAB>
 
 " <S-TAB>: completion back.
 inoremap <expr><S-TAB>  pumvisible() ? '<C-p>' : '<C-h>'
-call ddc#enable()
 " }}}
 
 " vim: foldmethod=marker
