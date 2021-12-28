@@ -756,6 +756,10 @@ endif
 
 " キーマップ {{{
 
+if has('nvim')
+  unmap Y
+endif
+
 " ^と0を0に統一
 nnoremap <expr> 0 getline('.')[0 : col('.') - 2] =~# '^\s\+$' ? '0' : '^'
 
@@ -1103,5 +1107,19 @@ inoremap <silent><expr> <TAB>
 " <S-TAB>: completion back.
 inoremap <expr><S-TAB>  pumvisible() ? '<C-p>' : '<C-h>'
 " }}}
+
+function! s:select_type() abort
+  let line = substitute(getline('.'), '^#\s*', '', 'g')
+  let title = printf('%s: ', split(line, ' ')[0])
+
+  silent! normal! "_dip
+  silent! put! =title
+  silent! startinsert!
+endfunction
+
+augroup git-commit
+  au!
+  au FileType gina-commit nnoremap <buffer> <CR><CR> <Cmd>call <SID>select_type()<CR>
+augroup END
 
 " vim: foldmethod=marker
