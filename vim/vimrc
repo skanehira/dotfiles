@@ -105,6 +105,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('Shougo/ddc-sorter_rank')
   call dein#add('Shougo/ddc-around')
   call dein#add('matsui54/denops-popup-preview.vim')
+  call dein#add('tani/ddc-fuzzy')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -351,7 +352,7 @@ if has("nvim")
 
   " GoTo code navigation.
   nmap <silent> <C-]> <Plug>(coc-definition)
-  nnoremap <silent> <C-t> :<C-u>call CocActionAsync('jumpDefinition', CocJumpAction())<CR>
+  nnoremap <silent> ; :<C-u>call CocActionAsync('jumpDefinition', CocJumpAction())<CR>
   nnoremap <silent> <Leader>gi :<C-u>call CocActionAsync('jumpImplementation', 'split')<CR>
   nnoremap <silent> <Leader>gr :<C-u>call CocActionAsync('jumpReferences', 'split')<CR>
 
@@ -395,7 +396,6 @@ if has("nvim")
   call coc#config('coc.preferences.formatOnType', 'true')
   call coc#config('coc.preferences.useQuickfixForLocations', 'true')
   call coc#config('codeLens.enable', v:true)
-  "call coc#config('go.goplsPath', 'gopls')
   call coc#config('go.goplsOptions', {
         \ 'completeUnimported': v:true,
         \ 'codelenses': {
@@ -403,8 +403,8 @@ if has("nvim")
           \ },
           \ })
   " disable auto completion
-  call coc#config('suggest.autoTrigger', 'none')
-  call coc#config('diagnostic.enable', 'false')
+  "call coc#config('suggest.autoTrigger', 'none')
+  call coc#config('diagnostic.enable', 'true')
   call coc#config('coc.preferences', {
         \ 'formatOnSaveFiletypes': [
           \ 'go',
@@ -1092,11 +1092,13 @@ augroup END
 " }}}
 
 " {{{ ddc.vim
-call ddc#custom#patch_global('sources', ['around'])
 call ddc#custom#patch_global('sourceOptions', {
-      \ '_': {
-      \   'sorters': ['sorter_rank']},
-      \ })
+  \   '_': {
+  \     'matchers': ['matcher_fuzzy'],
+  \     'sorters': ['sorter_fuzzy'],
+  \     'converters': ['converter_fuzzy']
+  \   }
+  \ })
 
 " Change source options
 inoremap <silent><expr> <TAB>
