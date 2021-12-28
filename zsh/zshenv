@@ -11,8 +11,8 @@ export PATH=/usr/local/bin:$HOME/.deno/bin:$PATH
 export XDG_CONFIG_HOME=$HOME/.config
 
 # fzf settings
-export FZF_DEFAULT_OPTS="--layout=reverse --inline-info --exit-0 -m"
-export FZF_DEFAULT_COMMAND="ag -g ."
+export FZF_DEFAULT_OPTS='--layout=reverse --inline-info --exit-0 -m --preview "bat  --color=always --style=header,grid --line-range :100 {}"'
+export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*"'
 
 # Rust settings
 export CARGO_HOME=/Users/skanehira/.asdf/installs/rust/1.56.1
