@@ -106,6 +106,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('Shougo/ddc-around')
   call dein#add('matsui54/denops-popup-preview.vim')
   call dein#add('tani/ddc-fuzzy')
+  call dein#add('mattn/vim-goimports')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
