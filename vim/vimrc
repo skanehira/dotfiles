@@ -551,46 +551,41 @@ let g:memolist_fzf = 1
 " {{{ gh.vim
 augroup gh_autocmd
   au!
-  au User gh_open_issue call EnableAutoCompletionForIssue()
-  au User gh_open_issues_search call EnableAutoCompletionForSearchIssue()
+  au User gh_open_issue call EnableAutoCompletionForGh('gh_issues')
+  au User gh_open_issue_assignees call EnableAutoCompletionForGh('gh_issues_assginees')
+  au User gh_open_issue_labels call EnableAutoCompletionForGh('gh_issues_labels')
+  au User gh_open_issues_search call EnableAutoCompletionForGh('gh_issues_search')
 augroup END
 
-function! EnableAutoCompletionForSearchIssue() abort
-  call ddc#custom#patch_buffer('sources', ['gh_issues_search'])
+function! EnableAutoCompletionForGh(kind) abort
+  call ddc#custom#patch_buffer('sources', [a:kind])
   call ddc#custom#patch_buffer('specialBufferCompletion', v:true)
-  call ddc#custom#patch_buffer('sourceOptions', {
-        \ 'gh_issues_search': {
-          \  'minAutoCompleteLength': 1,
-        \ }})
-  call ddc#custom#patch_buffer({'keywordPattern': 
+  call ddc#custom#patch_buffer({'keywordPattern':
         \ "[a-zA-Z0-9_À-ÿ\u30a0-\u30ff\u3040-\u309f\u3005-\u3006\u30e0-\u9fcf]*"})
 
-  " If matsui54/denops-popup-preview.vim is installed,
-  " you can preview issue body's info.
+  if a:kind ==# 'gh_issues'
+    call ddc#custom#patch_buffer('sourceOptions', {
+          \ 'gh_issues': {
+            \  'matcherKey': 'menu',
+            \  'minAutoCompleteLength': 1,
+            \ }})
+  elseif a:kind ==# 'gh_issues_search'
+    call ddc#custom#patch_buffer('sourceOptions', {
+          \ 'gh_issues_search': {
+            \  'minAutoCompleteLength': 1,
+            \ }})
+  elseif a:kind ==# 'gh_issues_assginees'
+    call ddc#custom#patch_buffer('sourceOptions', {
+          \ 'gh_issues_assginees': {
+            \  'minAutoCompleteLength': 1,
+            \ }})
+  elseif a:kind ==# 'gh_issues_labels'
+    call ddc#custom#patch_buffer('sourceOptions', {
+          \ 'gh_issues_labels': {
+            \  'minAutoCompleteLength': 1,
+            \ }})
+  endif
   call popup_preview#enable()
-
-  " remove 'preview' from completeopt
-  set completeopt-=preview
-endfunction
-
-function! EnableAutoCompletionForIssue() abort
-  " Enable source 'gh_issues' to current buffer.
-  call ddc#custom#patch_buffer('sources', ['gh_issues'])
-  call ddc#custom#patch_buffer('sourceOptions', {
-        \ 'gh_issues': {
-          \  'matcherKey': 'menu',
-          \  'minAutoCompleteLength': 1,
-        \ }})
-  call ddc#custom#patch_buffer({'keywordPattern': 
-        \ "[a-zA-Z0-9_À-ÿ\u30a0-\u30ff\u3040-\u309f\u3005-\u3006\u30e0-\u9fcf]*"})
-  call ddc#custom#patch_buffer('specialBufferCompletion', v:true)
-
-  " If matsui54/denops-popup-preview.vim is installed,
-  " you can preview issue body's info.
-  call popup_preview#enable()
-
-  " remove 'preview' from completeopt
-  set completeopt-=preview
 endfunction
 " }}}
 
@@ -689,6 +684,7 @@ if !has('nvim')
 endif
 if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
 set diffopt=vertical
+set completeopt-=preview " disable preview window
 
 " 拡張子ごとのインデント設定 {{{
 set tabstop=2 shiftwidth=2 softtabstop=2
@@ -743,7 +739,11 @@ augroup END
 
 " undoの保存先 {{{
 if has('persistent_undo')
-  let undo_path = expand('~/.vim/undo')
+  if has('nvim')
+    let undo_path = expand('~/.config/nvim/undo')
+  else
+    let undo_path = expand('~/.vim/undo')
+  endif
   " ディレクトリが存在しない場合は作成
   if !isdirectory(undo_path)
     call mkdir(undo_path, 'p')
@@ -1092,6 +1092,18 @@ augroup END
 " }}}
 
 " {{{ ddc.vim
+" disable auto completion
+function! DdcAutoCompletionDisable() abort
+  call ddc#custom#patch_global('autoCompleteEvents', [])
+  call ddc#custom#patch_global('completionMode', 'manual')
+endfunction
+
+" enabel auto completion
+function! DdcAutoCompletionEnable() abort
+  call ddc#custom#patch_global('autoCompleteEvents', ["InsertEnter", "TextChangedI", "TextChangedP"])
+  call ddc#custom#patch_global('completionMode', 'popupmenu')
+endfunction
+
 call ddc#custom#patch_global('sourceOptions', {
   \   '_': {
   \     'matchers': ['matcher_fuzzy'],
@@ -1108,6 +1120,9 @@ inoremap <silent><expr> <TAB>
 
 " <S-TAB>: completion back.
 inoremap <expr><S-TAB>  pumvisible() ? '<C-p>' : '<C-h>'
+
+call DdcAutoCompletionDisable()
+call ddc#enable()
 " }}}
 
 function! s:select_type() abort
