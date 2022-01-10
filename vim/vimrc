@@ -8,12 +8,12 @@
 let g:mapleader = "\<Space>" " Leaderキーをスペースに設定
 
 if has('nvim')
+  let g:loaded_python_provider   = 0
   let g:loaded_python3_provider  = 0
   let g:loaded_shada_plugin      = 1
 endif
 
 " Disable unnecessary default plugins
-"
 let g:loaded_spellfile_plugin   = 1
 let g:loaded_tutor_mode_plugin  = 1
 let g:loaded_gzip               = 1
@@ -44,7 +44,6 @@ let g:plug_shallow = 0
 " {{{ dein.vim settings
 let s:dein_dir = has('nvim') ? expand('~/.cache/dein/nvim') : expand('~/.cache/dein/vim')
 let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
-let g:dein#lazy_rplugins = 1
 
 if &runtimepath !~# '/dein.vim'
   if !isdirectory(s:dein_repo_dir)
@@ -59,21 +58,12 @@ if dein#load_state(s:dein_dir)
   call dein#add('kana/vim-operator-replace')
   call dein#add('kana/vim-operator-user')
 
-  " only vim
-  if has("nvim")
-    call dein#add('neoclide/coc.nvim', {'rev': 'release'})
-  else
-    call dein#add('prabirshrestha/vim-lsp')
-    call dein#add('mattn/vim-lsp-settings', {'merged': 0})
-  endif
-
   " syntax
   call dein#add('plasticboy/vim-markdown')
-
-  " colorscheme
   call dein#add('cocopon/iceberg.vim')
 
   " for development
+  call dein#add('neoclide/coc.nvim', {'rev': 'release'})
   call dein#add('t9md/vim-choosewin')
   call dein#add('Shougo/dein.vim')
   call dein#add('andymass/vim-matchup')
@@ -86,7 +76,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('lambdalisue/gina.vim')
   call dein#add('lambdalisue/guise.vim')
   call dein#add('markonm/traces.vim')
-  call dein#add('mattn/emmet-vim')
+  call dein#add('mattn/emmet-vim', {'merged': 0})
   call dein#add('mattn/sonictemplate-vim')
   call dein#add('simeji/winresizer')
   call dein#add('vim-denops/denops.vim')
@@ -101,9 +91,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('airblade/vim-gitgutter')
   call dein#add('jparise/vim-graphql')
   call dein#add('Shougo/ddc.vim')
-  call dein#add('Shougo/ddc-matcher_head')
-  call dein#add('Shougo/ddc-sorter_rank')
-  call dein#add('Shougo/ddc-around')
   call dein#add('matsui54/denops-popup-preview.vim')
   call dein#add('tani/ddc-fuzzy')
   call dein#add('mattn/vim-goimports')
@@ -111,9 +98,9 @@ if dein#load_state(s:dein_dir)
   " for documentation
   call dein#add('glidenote/memolist.vim')
   call dein#add('godlygeek/tabular')
-  call dein#add('gyim/vim-boxdraw')
+  call dein#add('gyim/vim-boxdraw', {'merged': 0})
   call dein#add('mattn/vim-maketable')
-  call dein#add('shinespark/vim-list2tree')
+  call dein#add('shinespark/vim-list2tree', {'merged': 0})
   call dein#add('skanehira/gyazo.vim')
   call dein#add('skanehira/denops-translate.vim')
   call dein#add('vim-jp/vimdoc-ja')
@@ -319,195 +306,131 @@ let g:fzf_layout = { 'down': '50%' }
 nnoremap <C-P> :Files<CR>
 " }}}
 
-" lsp settings {{{
-" coc.nvim
-if has("nvim")
-  command! LspRename :call CocActionAsync('rename')
-  command! LspReferences :call CocActionAsync('jumpReferences')
-  command! LspFormat :call CocActionAsync('format')
-  command! LspImport :call CocActionAsync('runCommand', 'editor.action.organizeImport')
-  command! GoTagAdd :CocCommand go.tags.add.prompt
-  command! GoTagRemove :CocCommand go.tags.remove.prompt
+" coc.nvim {{{
+command! LspRename :call CocActionAsync('rename')
+command! LspReferences :call CocActionAsync('jumpReferences')
+command! LspFormat :call CocActionAsync('format')
+command! LspImport :call CocActionAsync('runCommand', 'editor.action.organizeImport')
+command! GoTagAdd :CocCommand go.tags.add.prompt
+command! GoTagRemove :CocCommand go.tags.remove.prompt
 
-  " [
-  "   {"text": "(e)dit", "value": "edit"}
-  "   {"text": "(n)ew", "value": "new"}
-  " ]
-  " NOTE: text must contains '()' to detect input and its must be 1 character
-  function! ChoseAction(actions) abort
-    call gh#_message(join(map(copy(a:actions), { _, v -> v.text }), ", ") .. ": ")
-    let result = getcharstr()
-    let result = filter(a:actions, { _, v -> v.text =~# printf(".*\(%s\).*", result)})
-    echo '' | redraw
-    return len(result) ? result[0].value : ""
-  endfunction
+" [
+"   {"text": "(e)dit", "value": "edit"}
+"   {"text": "(n)ew", "value": "new"}
+" ]
+" NOTE: text must contains '()' to detect input and its must be 1 character
+function! ChoseAction(actions) abort
+  call gh#_message(join(map(copy(a:actions), { _, v -> v.text }), ", ") .. ": ")
+  let result = getcharstr()
+  let result = filter(a:actions, { _, v -> v.text =~# printf(".*\(%s\).*", result)})
+  echo '' | redraw
+  return len(result) ? result[0].value : ""
+endfunction
 
-  function! CocJumpAction() abort
-    let actions = [
-          \ {"text": "(s)plit", "value": "split"},
-          \ {"text": "(v)slit", "value": "vsplit"},
-          \ {"text": "(t)ab", "value": "tabedit"},
-          \ ]
-    return ChoseAction(actions)
-  endfunction
-
-  " GoTo code navigation.
-  nmap <silent> <C-]> <Plug>(coc-definition)
-  nnoremap <silent> ; :<C-u>call CocActionAsync('jumpDefinition', CocJumpAction())<CR>
-  nnoremap <silent> <Leader>gi :<C-u>call CocActionAsync('jumpImplementation', 'split')<CR>
-  nnoremap <silent> <Leader>gr :<C-u>call CocActionAsync('jumpReferences', 'split')<CR>
-
-  nnoremap <silent> <Leader>i :LspImport<CR>
-
-  " Use K to show documentation in preview window.
-  nnoremap <silent> K :call <SID>show_documentation()<CR>
-
-  " use manual completion
-  inoremap <silent><expr> <C-x><C-o> coc#refresh()
-
-  function! s:show_documentation()
-    if (index(['vim','help'], &filetype) >= 0)
-      execute 'h '.expand('<cword>')
-    elseif (coc#rpc#ready())
-      call CocActionAsync('doHover')
-    else
-      execute '!' . &keywordprg . " " . expand('<cword>')
-    endif
-  endfunction
-
-  let g:coc_global_extensions = [
-        \ 'coc-yaml',
-        \ 'coc-vimlsp',
-        \ 'coc-vetur',
-        \ 'coc-tsserver',
-        \ 'coc-sql',
-        \ 'coc-sh',
-        \ 'coc-rust-analyzer',
-        \ 'coc-json',
-        \ 'coc-deno',
-        \ 'coc-eslint',
-        \ 'coc-go',
+function! CocJumpAction() abort
+  let actions = [
+        \ {"text": "(s)plit", "value": "split"},
+        \ {"text": "(v)slit", "value": "vsplit"},
+        \ {"text": "(t)ab", "value": "tabedit"},
         \ ]
+  return ChoseAction(actions)
+endfunction
 
-  call coc#config('diagnostic', {
-        \ 'errorSign': '🦍',
-        \ 'warningSign': '💩',
-        \ })
+" GoTo code navigation.
+nmap <silent> <C-]> <Plug>(coc-definition)
+nnoremap <silent> <Leader>gj :<C-u>call CocActionAsync('jumpDefinition', CocJumpAction())<CR>
+nnoremap <silent> <Leader>gi :<C-u>call CocActionAsync('jumpImplementation', 'split')<CR>
+nnoremap <silent> <Leader>gr :<C-u>call CocActionAsync('jumpReferences', 'split')<CR>
 
-  call coc#config('coc.preferences.formatOnType', 'true')
-  call coc#config('coc.preferences.useQuickfixForLocations', 'true')
-  call coc#config('codeLens.enable', v:true)
-  call coc#config('go.goplsOptions', {
-        \ 'completeUnimported': v:true,
-        \ 'codelenses': {
-          \ 'test': v:true,
-          \ },
-          \ })
-  " disable auto completion
-  "call coc#config('suggest.autoTrigger', 'none')
-  call coc#config('diagnostic.enable', 'true')
-  call coc#config('coc.preferences', {
-        \ 'formatOnSaveFiletypes': [
-          \ 'go',
-          \ 'css',
-          \ 'js',
-          \ 'javascriptreact',
-          \ 'ts',
-          \ 'typescriptreact',
-          \ 'typescript',
-          \ 'html',
-          \ 'scss',
-          \ 'sass',
-          \ 'json',
-          \ 'rust',
-          \ 'sql',
-          \ 'bash',
-          \]})
+nnoremap <silent> <Leader>i :LspImport<CR>
 
-  call coc#config('languageserver', {
-        \ 'terraform': {
-          \ 'command': 'terraform-ls',
-          \ 'trace.server': 'verbose',
-          \ 'filetypes': ['tf', 'terraform'],
-          \ 'args': ['serve'],
-        \ },
-        \ 'efm': {
-          \ 'command': 'efm-langserver',
-          \ 'args': [],
-          \ 'trace.server': 'verbose',
-          \ 'filetypes': ['markdown']
-          \ },
-        \})
-" vim-lsp
-else
-  let g:lsp_diagnostics_signs_error = {'text': '🦍'}
-  let g:lsp_diagnostics_signs_warning = {'text': '🍌'}
-  if !has('nvim')
-    let g:lsp_diagnostics_float_cursor = 1
+" Use K to show documentation in preview window.
+nnoremap <silent> K :call <SID>show_documentation()<CR>
+
+" use manual completion
+inoremap <silent><expr> <C-x><C-o> coc#refresh()
+
+function! s:show_documentation()
+  if (index(['vim','help'], &filetype) >= 0)
+    execute 'h '.expand('<cword>')
+  elseif (coc#rpc#ready())
+    call CocActionAsync('doHover')
+  else
+    execute '!' . &keywordprg . " " . expand('<cword>')
   endif
-  let g:lsp_log_file = ''
+endfunction
 
-  nmap <Leader>ho <plug>(lsp-hover)
-  nnoremap <silent> <C-]> :LspDefinition<CR>
+let g:coc_global_extensions = [
+      \ 'coc-yaml',
+      \ 'coc-vimlsp',
+      \ 'coc-vetur',
+      \ 'coc-tsserver',
+      \ 'coc-sql',
+      \ 'coc-sh',
+      \ 'coc-rust-analyzer',
+      \ 'coc-json',
+      \ 'coc-deno',
+      \ 'coc-eslint',
+      \ 'coc-go',
+      \ ]
 
-  let g:lsp_settings = {
-        \ 'gopls': {
-        \  'workspace_config': {
-        \    'usePlaceholders': v:true,
-        \    'analyses': {
-        \      'fillstruct': v:true,
-        \      'test': v:true,
-        \    },
-        \  },
-        \  'initialization_options': {
-        \    'usePlaceholders': v:true,
-        \    'analyses': {
-        \      'fillstruct': v:true,
-        \    },
-        \  },
+call coc#config('diagnostic', {
+      \ 'errorSign': '🦍',
+      \ 'warningSign': '💩',
+      \ 'infoSign': '🍌',
+      \ 'hintSign': '🧐',
+      \ 'virtualText': 1,
+      \ })
+
+call coc#config('coc.preferences.formatOnType', 'true')
+call coc#config('coc.preferences.useQuickfixForLocations', 'true')
+call coc#config('codeLens.enable', v:true)
+call coc#config('go.goplsOptions', {
+      \ 'completeUnimported': v:true,
+      \ 'codelenses': {
+        \ 'test': v:true,
         \ },
-        \ 'eslint-language-server': {
-        \   'allowlist': ['javascript', 'typescript', 'vue'],
+        \ })
+" disable auto completion
+"call coc#config('suggest.autoTrigger', 'none')
+call coc#config('coc.preferences', {
+      \ 'formatOnSaveFiletypes': [
+        \ 'go',
+        \ 'css',
+        \ 'js',
+        \ 'javascriptreact',
+        \ 'ts',
+        \ 'typescriptreact',
+        \ 'typescript',
+        \ 'html',
+        \ 'scss',
+        \ 'sass',
+        \ 'json',
+        \ 'rust',
+        \ 'sql',
+        \ 'bash',
+        \]})
+
+call coc#config('languageserver', {
+      \ 'terraform': {
+        \ 'command': 'terraform-ls',
+        \ 'trace.server': 'verbose',
+        \ 'filetypes': ['tf', 'terraform'],
+        \ 'args': ['serve'],
+      \ },
+      \ 'efm': {
+        \ 'command': 'efm-langserver',
+        \ 'args': [],
+        \ 'trace.server': 'verbose',
+        \ 'filetypes': ['markdown']
         \ },
-        \ 'efm-langserver': {
-        \   'disabled': 0,
-        \   'allowlist': ['markdown'],
-        \  }
-        \}
-
-  let g:lsp_settings_filetype_typescript = ['typescript-language-server', 'eslint-language-server', 'deno']
-
-  function! s:on_lsp_buffer_enabled() abort
-    setlocal completeopt=menu
-    setlocal omnifunc=lsp#complete
-  endfunction
-
-  function! s:autofmt() abort
-    if &ft == 'typescript'
-      LspDocumentFormatSync
-    endif
-  endfunction
-
-  augroup lsp_autofmt
-    au!
-    au BufWrite * call s:autofmt()
-  augroup END
-
-  augroup lsp_install
-    au!
-    au User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
-  augroup END
-
-  "augroup vim_lsp_golangci_lint_langserver
-  "  au!
-  "  autocmd User lsp_setup call lsp#register_server({
-  "      \ 'name': 'golangci-lint-langserver',
-  "      \ 'cmd': {server_info->['golangci-lint-langserver']},
-  "      \ 'initialization_options': {'command': ['golangci-lint', 'run', 'json']},
-  "      \ 'allowlist': ['go'],
-  "      \ })
-  "augroup END
-endif
+      \ 'golangci-lint-languageserver': {
+        \ 'command': 'golangci-lint-langserver',
+        \ 'filetypes': ['go'],
+        \ 'initializationOptions': {
+        \   'command': ['golangci-lint', 'run', '--enable-all', '--disable', 'lll', '--out-format', 'json']
+        \ }}
+      \})
 " }}}
 
 " vim-markdown {{{
@@ -756,7 +679,6 @@ endif
 " }}}
 
 " キーマップ {{{
-
 if has('nvim')
   unmap Y
 endif
@@ -795,8 +717,6 @@ onoremap a8 a(
 onoremap a2 a"
 onoremap a7 a'
 onoremap a@ a`
-onoremap a[ a[
-onoremap a{ a{
 
 " visual
 nnoremap v8 vi(
@@ -810,8 +730,6 @@ nnoremap va8 va(
 nnoremap va2 va"
 nnoremap va7 va'
 nnoremap va@ va`
-nnoremap va[ va[
-nnoremap va{ va{
 " }}}
 
 " 行先頭と行末
@@ -824,22 +742,6 @@ nnoremap <C-h> gT
 
 " ターミナル関連 {{{
 tnoremap <C-]> <C-\><C-n>
-if has('nvim')
-  nnoremap <Leader>tm :new term<CR>
-  function! s:term_start(cmd) abort
-    call termopen(a:cmd)
-  endfunction
-else
-  nnoremap <Leader>tm :term<CR>
-  function! s:term_start(cmd) abort
-    let old = bufnr()
-    exe printf('term ++curwin ++shell %s', a:cmd)
-    exe "bw!" old
-    nnoremap <buffer> <silent> <CR> :bw!<CR>
-  endfunction
-endif
-nnoremap <Leader>ttm :tabnew term<CR>
-
 function! s:termopen() abort
   let bufname = bufname()
   let parts = split(bufname, ' ')
@@ -848,18 +750,13 @@ function! s:termopen() abort
     " like :new term [command] [args]
     let cmd = join(parts[1:], " ")
   endif
-  call s:term_start(cmd)
+  call termopen(a:cmd)
 endfunction
 
-if has('nvim')
-  augroup neovim-terminal
-    au!
-    au TermOpen * startinsert
-  augroup END
-else
-  set termwinkey=<C-]>
-  " ターミナルノーマルモード
-endif
+augroup neovim-terminal
+  au!
+  au TermOpen * startinsert
+augroup END
 
 augroup terminal
   au!
@@ -905,36 +802,6 @@ cnoremap <Up> <C-p>
 cnoremap <Down> <C-n>
 " }}}
 
-" {{{ リポジトリに移動
-function! s:cd_repo(shell, repo) abort
-  exe 'lcd' trim(system('ghq root')) .. '/' .. a:repo
-  pwd
-endfunction
-
-function! s:repo(cb) abort
-  if executable('ghq') && exists('*fzf#run()') && executable('fzf')
-    call fzf#run({
-          \ 'source': systemlist('ghq list'),
-          \ 'sink': a:cb,
-          \ 'down': '40%'},
-          \ )
-  else
-    echo "doesn't installed ghq or fzf.vim(require fzf)"
-  endif
-endfunction
-
-command! Repo call s:repo(function('s:cd_repo', [&shell]))
-" }}}
-
-" {{{ エラーメッセージ出力
-function! s:echo_err(message) abort
-  echohl ErrorMsg
-  redraw
-  echo a:message
-  echohl None
-endfunction
-" }}}
-
 " {{{ ディレクトリ自動生成
 function! s:auto_mkdir(dir)
   if !isdirectory(a:dir)
@@ -951,33 +818,9 @@ augroup END
 nnoremap <silent> gp :call system('source ~/.zshrc && tmuxpopup lazygit')<CR>
 " }}}
 
-" {{{ golangci-lint
-function! s:golangci(...) abort
-  if !executable('golangci-lint')
-    call s:echo_err('golangci-lint does not installed')
-    return
-  endif
-
-  if a:0 > 0
-    let opts = a:000
-  else
-    let opts = get(g:, 'golangci_opts', ['misspell', 'unparam', 'stylecheck',
-          \ 'gosec', 'prealloc', 'gocritic', 'gomnd', 'unconvert'])
-  endif
-
-  if get(g:, 'golangci_disable_all', 0)
-    let cmd = printf('golangci-lint run --disable-all --print-issued-lines=false --enable=%s', join(opts, ','))
-  else
-    let cmd = printf('golangci-lint run --print-issued-lines=false --enable=%s', join(opts, ','))
-  endif
-  cexpr system(cmd) | cw
-endfunction
-command! -nargs=* GolangCI call <SID>golangci(<f-args>)
-" }}}
-
 " {{{ grep
 function! s:grep(word) abort
-  let cmd = printf('ag %s', a:word)
+  let cmd = printf('rg --vimgrep --hidden %s', a:word)
   lgete system(cmd) | lw
 endfunction
 
@@ -994,18 +837,6 @@ function! s:create_zenn_article(article_name) abort
 endfunction
 
 command! -nargs=1 ZennCreateArticle call <SID>create_zenn_article(<f-args>)
-" }}}
-
-" {{{ goimports
-" augroup goimports
-"   function! s:goimports() abort
-"     let pos = getcurpos()
-"     %!goimports
-"     call setpos('.', pos)
-"   endfunction
-"   au!
-"   au! FileType go nnoremap <silent> <Leader>i :call <SID>goimports()<CR>
-" augroup END
 " }}}
 
 " {{{ vim-test
@@ -1041,17 +872,6 @@ function! Get_breakpoint_line() abort
 endfunction
 
 nnoremap gdy :call Get_breakpoint_line()<CR>
-" }}}
-
-" {{{ denops-delve.vim
-map gdb <Plug>(dlv-breakpoint)
-map gdr <Plug>(dlv-breakpoint-clear)
-map gds <Plug>(dlv-breakpoints)
-map gdc <Plug>(dlv-continue)
-map gdn <Plug>(dlv-next)
-map gdi <Plug>(dlv-step)
-map gdo <Plug>(dlv-stepout)
-map gdp <Plug>(dlv-print)
 " }}}
 
 function! ActiveBrowserTab(line) abort
@@ -1126,18 +946,26 @@ call DdcAutoCompletionDisable()
 call ddc#enable()
 " }}}
 
-function! s:select_type() abort
+"{{{ git message
+function! s:select_commit_message_type() abort
   let line = substitute(getline('.'), '^#\s*', '', 'g')
   let title = printf('%s: ', split(line, ' ')[0])
-
   silent! normal! "_dip
   silent! put! =title
   silent! startinsert!
 endfunction
+function! s:git_commit_keymap() abort
+  let messagefile = system('git rev-parse --show-toplevel') . "/.gitmessage"
+  if !filereadable(messagefile)
+    return
+  endif
+  
+  nnoremap <buffer> <CR><CR> <Cmd> <SID>select_commit_message_type()<CR>
+endfunction
 
 augroup git-commit
   au!
-  au FileType gina-commit nnoremap <buffer> <CR><CR> <Cmd>call <SID>select_type()<CR>
+  au FileType gina-commit call <SID>git_commit_keymap()
 augroup END
 
-" vim: foldmethod=marker
+" vim: foldmethod=marker set tabstop=2 shiftwidth=2 softtabstop=2
