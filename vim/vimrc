@@ -956,12 +956,12 @@ function! s:select_commit_message_type() abort
   silent! startinsert!
 endfunction
 function! s:git_commit_keymap() abort
-  let messagefile = system('git rev-parse --show-toplevel') . "/.gitmessage"
+  let messagefile = trim(system('git rev-parse --show-toplevel')) . "/.gitmessage"
   if !filereadable(messagefile)
     return
   endif
   
-  nnoremap <buffer> <CR><CR> <Cmd> <SID>select_commit_message_type()<CR>
+  nnoremap <buffer> <CR><CR> <Cmd>call <SID>select_commit_message_type()<CR>
 endfunction
 
 augroup git-commit
