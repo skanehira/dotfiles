@@ -375,6 +375,7 @@ let g:coc_global_extensions = [
       \ ]
 
 call coc#config('diagnostic', {
+      \ 'enableMessage': 'never',
       \ 'errorSign': '🦍',
       \ 'warningSign': '💩',
       \ 'infoSign': '🍌',
@@ -428,7 +429,7 @@ call coc#config('languageserver', {
         \ 'command': 'golangci-lint-langserver',
         \ 'filetypes': ['go'],
         \ 'initializationOptions': {
-        \   'command': ['golangci-lint', 'run', '--enable-all', '--disable', 'lll', '--out-format', 'json']
+        \   'command': ['golangci-lint', 'run', '--out-format', 'json']
         \ }}
       \})
 " }}}
@@ -750,7 +751,7 @@ function! s:termopen() abort
     " like :new term [command] [args]
     let cmd = join(parts[1:], " ")
   endif
-  call termopen(a:cmd)
+  call termopen(cmd)
 endfunction
 
 augroup neovim-terminal
@@ -968,4 +969,4 @@ augroup git-commit
   au FileType gina-commit call <SID>git_commit_keymap()
 augroup END
 
-" vim: foldmethod=marker set tabstop=2 shiftwidth=2 softtabstop=2
+" vim: foldmethod=marker
