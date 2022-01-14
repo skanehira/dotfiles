@@ -86,6 +86,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('skanehira/getpr.vim')
   call dein#add('skanehira/qfopen.vim')
   call dein#add('thinca/vim-quickrun')
+  call dein#add('skanehira/quickrun-neoterm.vim')
   call dein#add('tyru/open-browser-github.vim')
   call dein#add('tyru/open-browser.vim')
   call dein#add('airblade/vim-gitgutter')
@@ -256,37 +257,46 @@ vnoremap <silent> gu :Gina browse --exact --yank :<CR>
 nnoremap <Leader>q :QuickRun -runner terminal<CR>
 let g:quickrun_config = {
       \ 'typescript': {
-      \ 'command': 'deno',
-      \ 'cmdopt': '--no-check --unstable --allow-all',
-      \ 'exec': ['NO_COLOR=1 %C run %o %s'],
-      \ 'type': 'typescript',
+        \ 'command': 'deno',
+        \ 'tempfile': '%{printf("%s.ts", tempname())}',
+        \ 'cmdopt': '--no-check --unstable --allow-all',
+        \ 'exec': ['NO_COLOR=1 %C run %o %s'],
+        \ 'type': 'typescript',
       \ },
-      \ 'deno_test': {
-      \ 'command': 'deno',
-      \ 'cmdopt': 'test --no-check --unstable --allow-all',
-      \ 'tempfile': '%{printf("%s_test.ts", tempname())}',
-      \ 'exec': ['NO_COLOR=1 %C test %o %s'],
-      \ 'type': 'typescript',
+      \ 'deno/test': {
+        \ 'command': 'deno',
+        \ 'cmdopt': 'test --no-check --unstable --allow-all',
+        \ 'tempfile': '%{printf("%s_test.ts", tempname())}',
+        \ 'exec': ['NO_COLOR=1 %C %o %s'],
+        \ 'type': 'typescript',
       \ },
-      \ 'deno_terminal': {
-      \ 'command': 'deno',
-      \ 'cmdopt': '--no-check --unstable --allow-all',
-      \ 'exec': ['%C run %o %s'],
-      \ 'type': 'typescript',
-      \ 'runner': 'terminal',
+      \ 'deno/terminal': {
+        \ 'command': 'deno',
+        \ 'tempfile': '%{printf("%s.ts", tempname())}',
+        \ 'cmdopt': '--no-check --unstable --allow-all',
+        \ 'exec': ['%C run %o %s'],
+        \ 'type': 'typescript',
+        \ 'runner': 'neoterm',
       \ },
-      \ 'go_bench': {
-      \ 'command': 'go',
-      \ 'tempfile': '%{printf("%s_test.go", tempname())}',
-      \ 'exec': ['%C test -bench . -benchmem'],
-      \ 'type': 'go',
-      \ 'runner': 'terminal',
+      \ 'go': {
+        \ 'command': 'go',
+        \ 'tempfile': '%{printf("%s.go", tempname())}',
+        \ 'exec': ['go mod init tmp; %C run %s'],
+        \ 'type': 'go',
+        \ 'runner': 'neoterm',
       \ },
-      \ 'go_test': {
-      \ 'command': 'go',
-      \ 'tempfile': '%{printf("%s_test.go", tempname())}',
-      \ 'exec': ['%C test -v . '],
-      \ 'type': 'go',
+      \ 'go/bench': {
+        \ 'command': 'go',
+        \ 'tempfile': '%{printf("%s_test.go", tempname())}',
+        \ 'exec': ['go mod init tmp; %C test -bench %s -benchmem'],
+        \ 'type': 'go',
+        \ 'runner': 'neoterm',
+      \ },
+      \ 'go/test': {
+        \ 'command': 'go',
+        \ 'tempfile': '%{printf("%s_test.go", tempname())}',
+        \ 'exec': ['go mod init tmp; %C test -v %s'],
+        \ 'type': 'go',
       \ },
       \ }
 
@@ -960,7 +970,7 @@ function! s:git_commit_keymap() abort
   if !filereadable(messagefile)
     return
   endif
-  
+
   nnoremap <buffer> <CR><CR> <Cmd>call <SID>select_commit_message_type()<CR>
 endfunction
 
