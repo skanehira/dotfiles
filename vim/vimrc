@@ -95,6 +95,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('matsui54/denops-popup-preview.vim')
   call dein#add('tani/ddc-fuzzy')
   call dein#add('mattn/vim-goimports')
+  call dein#add('hrsh7th/vim-searchx')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -764,10 +765,12 @@ function! s:termopen() abort
   call termopen(cmd)
 endfunction
 
-augroup neovim-terminal
-  au!
-  au TermOpen * startinsert
-augroup END
+if has('nvim')
+  augroup neovim-terminal
+    au!
+    au TermOpen * startinsert
+  augroup END
+endif
 
 augroup terminal
   au!
@@ -965,6 +968,7 @@ function! s:select_commit_message_type() abort
   silent! put! =title
   silent! startinsert!
 endfunction
+
 function! s:git_commit_keymap() abort
   let messagefile = trim(system('git rev-parse --show-toplevel')) . "/.gitmessage"
   if !filereadable(messagefile)
@@ -978,5 +982,18 @@ augroup git-commit
   au!
   au FileType gina-commit call <SID>git_commit_keymap()
 augroup END
+
+" {{{ vim-searchx
+nnoremap / <Cmd>call searchx#start({ 'dir': 1 })<CR>
+cnoremap <C-k> <Cmd>call searchx#prev()<CR>
+cnoremap <C-j> <Cmd>call searchx#next()<CR>
+
+let g:searchx = {
+      \ 'auto_accept': v:true,
+      \ 'scrolloff': &scrolloff,
+      \ 'scrolltime': 500,
+      \ 'markers': split('ABCDEFGHIJKLMNOPQRSTUVWXYZ', '.\zs'),
+      \ }
+" }}}
 
 " vim: foldmethod=marker
