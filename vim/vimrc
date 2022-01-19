@@ -347,7 +347,8 @@ function! CocJumpAction() abort
 endfunction
 
 " GoTo code navigation.
-nmap <silent> <C-]> <Plug>(coc-definition)
+" use tagstack
+set tagfunc=CocTagFunc
 nnoremap <silent> <Leader>gj :<C-u>call CocActionAsync('jumpDefinition', CocJumpAction())<CR>
 nnoremap <silent> <Leader>gi :<C-u>call CocActionAsync('jumpImplementation', 'split')<CR>
 nnoremap <silent> <Leader>gr :<C-u>call CocActionAsync('jumpReferences', 'split')<CR>
