@@ -95,7 +95,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('matsui54/denops-popup-preview.vim')
   call dein#add('tani/ddc-fuzzy')
   call dein#add('mattn/vim-goimports')
-  call dein#add('hrsh7th/vim-searchx')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -982,18 +981,5 @@ augroup git-commit
   au!
   au FileType gina-commit call <SID>git_commit_keymap()
 augroup END
-
-" {{{ vim-searchx
-nnoremap / <Cmd>call searchx#start({ 'dir': 1 })<CR>
-cnoremap <C-k> <Cmd>call searchx#prev()<CR>
-cnoremap <C-j> <Cmd>call searchx#next()<CR>
-
-let g:searchx = {
-      \ 'auto_accept': v:true,
-      \ 'scrolloff': &scrolloff,
-      \ 'scrolltime': 500,
-      \ 'markers': split('ABCDEFGHIJKLMNOPQRSTUVWXYZ', '.\zs'),
-      \ }
-" }}}
 
 " vim: foldmethod=marker
