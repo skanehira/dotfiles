@@ -960,7 +960,7 @@ call DdcAutoCompletionDisable()
 call ddc#enable()
 " }}}
 
-"{{{ git message
+" {{{ git message
 function! s:select_commit_message_type() abort
   let line = substitute(getline('.'), '^#\s*', '', 'g')
   let title = printf('%s: ', split(line, ' ')[0])
@@ -982,5 +982,20 @@ augroup git-commit
   au!
   au FileType gina-commit call <SID>git_commit_keymap()
 augroup END
+" }}}
+
+" {{{ LanguageTool
+function! s:languagetool_lint() abort
+  let fname = expand('%')
+  if !filereadable(fname) || &modified
+    let fname = tempname()
+    call writefile(getline(1, '$'), fname)
+  endif
+  let cmd = printf('languagetool-lint %s', fname)
+  lgete system(cmd) | lw
+endfunction
+
+command! LanguageToolLint call <SID>languagetool_lint()
+" }}}
 
 " vim: foldmethod=marker
