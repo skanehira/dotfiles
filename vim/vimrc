@@ -77,7 +77,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('lambdalisue/guise.vim')
   call dein#add('markonm/traces.vim')
   call dein#add('mattn/emmet-vim', {'merged': 0})
-  call dein#add('mattn/sonictemplate-vim')
+  call dein#add('mattn/vim-sonictemplate')
   call dein#add('simeji/winresizer')
   call dein#add('vim-denops/denops.vim')
   call dein#add('skanehira/command.vim')
@@ -776,6 +776,8 @@ augroup terminal
   au!
   au BufNewFile term* ++nested call s:termopen()
 augroup END
+
+nnoremap <Leader>tm :new term<CR>
 " }}}
 
 " 改行
@@ -996,6 +998,10 @@ function! s:languagetool_lint() abort
 endfunction
 
 command! LanguageToolLint call <SID>languagetool_lint()
+" }}}
+
+" {{{ jumpcursor.vim
+nmap [j <Plug>(jumpcursor-jump)
 " }}}
 
 " vim: foldmethod=marker
