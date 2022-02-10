@@ -73,6 +73,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('junegunn/fzf.vim', {'depends': 'fzf'})
   call dein#add('kshenoy/vim-signature')
   call dein#add('lambdalisue/fern.vim')
+  call dein#add('lambdalisue/fern-hijack.vim')
   call dein#add('lambdalisue/gina.vim')
   call dein#add('lambdalisue/guise.vim')
   call dein#add('markonm/traces.vim')
@@ -585,6 +586,7 @@ hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
 " }}}
 
 " オプション {{{
+set noequalalways
 set encoding=utf-8
 set t_ut=
 set fileencodings=utf-8,iso-2022-jp,euc-jp,sjis
