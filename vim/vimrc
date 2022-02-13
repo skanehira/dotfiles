@@ -279,7 +279,7 @@ let g:quickrun_config = {
         \ 'type': 'typescript',
         \ 'runner': 'neoterm',
       \ },
-      \ 'go': {
+      \ 'go/terminal': {
         \ 'command': 'go',
         \ 'tempfile': '%{printf("%s.go", tempname())}',
         \ 'exec': ['go mod init tmp; %C run %s'],
@@ -289,7 +289,7 @@ let g:quickrun_config = {
       \ 'go/bench': {
         \ 'command': 'go',
         \ 'tempfile': '%{printf("%s_test.go", tempname())}',
-        \ 'exec': ['go mod init tmp; %C test -bench %s -benchmem'],
+        \ 'exec': ['go mod init tmp; %C test -v -bench . -benchmem'],
         \ 'type': 'go',
         \ 'runner': 'neoterm',
       \ },
@@ -1004,6 +1004,10 @@ command! LanguageToolLint call <SID>languagetool_lint()
 
 " {{{ jumpcursor.vim
 nmap [j <Plug>(jumpcursor-jump)
+" }}}
+
+" {{{ lexima.vim
+set backspace=indent,eol,start
 " }}}
 
 " vim: foldmethod=marker
