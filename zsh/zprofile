@@ -1,5 +1,6 @@
 case $( uname -s ) in
-  Linux) break;;
+  Linux)
+    ;;
   Darwin)
     eval "$(/opt/homebrew/bin/brew shellenv)"
 esac
