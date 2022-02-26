@@ -74,6 +74,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('kshenoy/vim-signature')
   call dein#add('lambdalisue/fern.vim')
   call dein#add('lambdalisue/fern-hijack.vim')
+  call dein#add('lambdalisue/fern-git-status.vim')
   call dein#add('lambdalisue/gina.vim')
   call dein#add('lambdalisue/guise.vim')
   call dein#add('markonm/traces.vim')
@@ -96,6 +97,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('matsui54/denops-popup-preview.vim')
   call dein#add('tani/ddc-fuzzy')
   call dein#add('mattn/vim-goimports')
+  call dein#add('kyoh86/vim-ripgrep')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -542,6 +544,7 @@ nmap gup <Plug>(gyazo-upload)
 
 " {{{ vim-choosewin
 nmap <C-f> <Plug>(choosewin)
+let g:choosewin_overlay_enable = 1
 " }}}
 
 " {{{ lightline
@@ -756,16 +759,6 @@ nnoremap <C-h> gT
 
 " ターミナル関連 {{{
 tnoremap <C-]> <C-\><C-n>
-function! s:termopen() abort
-  let bufname = bufname()
-  let parts = split(bufname, ' ')
-  let cmd = &shell
-  if len(parts) > 1
-    " like :new term [command] [args]
-    let cmd = join(parts[1:], " ")
-  endif
-  call termopen(cmd)
-endfunction
 
 if has('nvim')
   augroup neovim-terminal
@@ -774,12 +767,7 @@ if has('nvim')
   augroup END
 endif
 
-augroup terminal
-  au!
-  au BufNewFile term* ++nested call s:termopen()
-augroup END
-
-nnoremap <Leader>tm :new term<CR>
+nnoremap <Leader>tm :new \| terminal<CR>
 " }}}
 
 " 改行
@@ -832,17 +820,11 @@ augroup auto-mkdir
 augroup END
 " }}}
 
-" {{{ lazygit
-nnoremap <silent> gp :call system('source ~/.zshrc && tmuxpopup lazygit')<CR>
-" }}}
-
 " {{{ grep
-function! s:grep(word) abort
-  let cmd = printf('rg --vimgrep --hidden %s', a:word)
-  lgete system(cmd) | lw
+function! s:ripgrep(args) abort
+  call ripgrep#search("-w " .. a:args)
 endfunction
-
-command! -nargs=1 -complete=file Grep call <SID>grep(<q-args>)
+command! -nargs=* -complete=file Grep call <SID>ripgrep(<q-args>)
 " }}}
 
 " {{{ zenn
