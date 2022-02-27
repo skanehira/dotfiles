@@ -29,8 +29,6 @@ case $( uname -s ) in
   Darwin)
     # homebrew settings
     export HOMEBREW_INSTALL_CLEANUP=1
-    # asdf settings
-    . /opt/homebrew/opt/asdf/libexec/asdf.sh
     # homebrew curl
     export PATH="/opt/homebrew/opt/curl/bin:$PATH"
     export LDFLAGS="-L/opt/homebrew/opt/curl/lib"

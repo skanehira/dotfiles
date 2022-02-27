@@ -81,16 +81,18 @@ case $( uname -s ) in
     autoload -Uz compinit && compinit
     ;;
   Darwin)
-    eval "$(zoxide init zsh)"
     # homebrew
     export PATH="/opt/homebrew/bin:$PATH"
+
+    # asdf settings
+    . $(brew --prefix)/opt/asdf/libexec/asdf.sh
 
     # enable zsh-autosuggestions
     source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 
     # colors: https://coderwall.com/p/pb1uzq/z-shell-colors
     #export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=009"
-    export SH_AUTOSUGGEST_STRATEGY=(completion history)
+    #export ZSH_AUTOSUGGEST_STRATEGY=(completion history)
 
     # add homebrew site-functions for completion
     fpath=($(brew --prefix)/share/zsh/site-functions "${fpath[@]}")
