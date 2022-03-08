@@ -98,6 +98,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('tani/ddc-fuzzy')
   call dein#add('mattn/vim-goimports')
   call dein#add('kyoh86/vim-ripgrep')
+  call dein#add('previm/previm')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -108,7 +109,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('skanehira/gyazo.vim')
   call dein#add('skanehira/denops-translate.vim')
   call dein#add('vim-jp/vimdoc-ja')
-  call dein#add('kat0h/bufpreview.vim', {'merged': 0})
 
   " for develop vim/neovim plugin
   call dein#add('LeafCage/vimhelpgenerator')
@@ -544,7 +544,6 @@ nmap gup <Plug>(gyazo-upload)
 
 " {{{ vim-choosewin
 nmap <C-f> <Plug>(choosewin)
-let g:choosewin_overlay_enable = 1
 " }}}
 
 " {{{ lightline
@@ -767,7 +766,7 @@ if has('nvim')
   augroup END
 endif
 
-nnoremap <Leader>tm :new \| terminal<CR>
+nnoremap <silent> <Leader>tm :new \| terminal<CR>
 " }}}
 
 " 改行
