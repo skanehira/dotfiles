@@ -588,6 +588,8 @@ hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
 " }}}
 
 " オプション {{{
+set history=200
+set shortmess^=I
 set noequalalways
 set encoding=utf-8
 set t_ut=
