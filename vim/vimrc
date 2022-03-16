@@ -377,6 +377,7 @@ endfunction
 
 let g:coc_global_extensions = [
       \ 'coc-yaml',
+      \ 'coc-markmap',
       \ 'coc-vimlsp',
       \ 'coc-vetur',
       \ 'coc-tsserver',
@@ -401,6 +402,7 @@ call coc#config('diagnostic', {
 call coc#config('coc.preferences.formatOnType', 'true')
 call coc#config('coc.preferences.useQuickfixForLocations', 'true')
 call coc#config('codeLens.enable', v:true)
+call coc#config('go.goplsPath', 'gopls')
 call coc#config('go.goplsOptions', {
       \ 'completeUnimported': v:true,
       \ 'codelenses': {
