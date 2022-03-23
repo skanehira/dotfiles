@@ -579,12 +579,18 @@ filetype plugin indent on " ファイル形式別プラグインとインデン�
 " カラースキームを使う {{{
 colorscheme iceberg
 " icebergはターミナルを16色に設定するのを回避
-if !has('nvim')
-  augroup iceberg
-    au!
-    au ColorScheme * unlet g:terminal_ansi_colors
-  augroup END
-endif
+function s:initColorscheme() abort
+  hi clear VertSplit
+  if !has('nvim')
+    unlet g:terminal_ansi_colors
+  endif
+endfunction
+
+augroup iceberg
+  au!
+  au ColorScheme * call <SID>initColorscheme()
+augroup END
+
 set background=dark
 " visual modeのhighlight変更
 hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
@@ -617,7 +623,7 @@ set autowrite " 他のバッファに移動する時に自動保存
 set noswapfile " swapファイルを作成しない
 set showtabline=2 " タブを表示しない
 set noshowmode
-set laststatus=2
+set laststatus=3
 "set noequalalways " ウィンドウが同じサイズにならないようにする
 "set winfixheight " ウィンドウの高さを保つ
 "set winfixwidth " ウィンドウの幅を保つ
