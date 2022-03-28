@@ -668,6 +668,7 @@ augroup fileTypeSyntaxClear
   au FileType javascript syntax clear
   au FileType typescript syntax clear
   au FileType vue  syntax clear
+  au FileType rust  syntax clear
 augroup END
 " }}}
 

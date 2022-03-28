@@ -15,8 +15,10 @@ export FZF_DEFAULT_OPTS='--layout=reverse --inline-info --exit-0 -m --preview "b
 export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*"'
 
 # Rust settings
-export CARGO_HOME=/Users/skanehira/.asdf/installs/rust/1.56.1
-export PATH=$CARGO_HOME/bin:$PATH
+export RUSTUP_HOME=$HOME/.rustup
+if [ -f $HOME/.cargo/env ]; then
+  source $HOME/.cargo/env
+fi
 
 # others
 export LANG=en_US.UTF-8
