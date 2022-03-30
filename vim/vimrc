@@ -813,8 +813,8 @@ cnoremap <C-a> <Home>
 " }}}
 
 " Better <C-n>/<C-p> in Command {{{
-cnoremap <C-p> <Up>
-cnoremap <C-n> <Down>
+cnoremap <expr> <C-p> pumvisible() ? '<C-p>' : '<Up>'
+cnoremap <expr> <C-n> pumvisible() ? '<C-n>' : '<Down>'
 cnoremap <Up> <C-p>
 cnoremap <Down> <C-n>
 " }}}
