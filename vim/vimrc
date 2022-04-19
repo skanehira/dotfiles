@@ -57,6 +57,7 @@ if dein#load_state(s:dein_dir)
 
   call dein#add('kana/vim-operator-replace')
   call dein#add('kana/vim-operator-user')
+  call dein#add('kana/vim-textobj-user')
 
   " syntax
   call dein#add('plasticboy/vim-markdown')
@@ -1001,6 +1002,16 @@ nmap [j <Plug>(jumpcursor-jump)
 
 " {{{ lexima.vim
 set backspace=indent,eol,start
+" }}}
+
+" {{{ textobj-user.vim
+call textobj#user#plugin('markdown', {
+      \   'link': {
+        \   'pattern': '\[[^\]]\+]([^)]\+)',
+        \   'select': ['il'],
+        \ },
+        \ })
+omap il <Plug>(textobj-markdown-link)
 " }}}
 
 " vim: foldmethod=marker
