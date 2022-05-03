@@ -676,6 +676,7 @@ augroup fileTypeSyntaxClear
   au FileType typescript syntax clear
   au FileType vue  syntax clear
   au FileType rust  syntax clear
+  au FileType markdown syntax clear
 augroup END
 " }}}
 
@@ -718,6 +719,9 @@ if has('nvim')
   unmap Y
 endif
 
+" 仮想置換モードのみを使う
+nnoremap R gR
+
 " ^と0を0に統一
 nnoremap <expr> 0 getline('.')[0 : col('.') - 2] =~# '^\s\+$' ? '0' : '^'
 
@@ -728,7 +732,7 @@ noremap * *N
 nnoremap <Leader>w :w<CR>
 
 " 検索
-nnoremap <C-G><C-G> :Grep <C-R><C-W><CR>
+nnoremap <C-G><C-G> :Ripgrep <C-R><C-W><CR>
 
 " 置換
 nnoremap <Leader>re :%s;\<<C-R><C-W>\>;g<Left><Left>;
@@ -752,6 +756,9 @@ onoremap a8 a(
 onoremap a2 a"
 onoremap a7 a'
 onoremap a@ a`
+
+onoremap i: :normal! T*vt*<CR>
+onoremap a: :normal! F*vf*<CR>
 
 " visual
 nnoremap v8 vi(
@@ -836,13 +843,6 @@ augroup auto-mkdir
   au!
   au BufWritePre * call s:auto_mkdir(expand('<afile>:p:h'))
 augroup END
-" }}}
-
-" {{{ grep
-function! s:ripgrep(args) abort
-  call ripgrep#search("-w " .. a:args)
-endfunction
-command! -nargs=* -complete=file Grep call <SID>ripgrep(<q-args>)
 " }}}
 
 " {{{ zenn
