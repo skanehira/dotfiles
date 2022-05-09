@@ -98,7 +98,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('matsui54/denops-popup-preview.vim')
   call dein#add('tani/ddc-fuzzy')
   call dein#add('mattn/vim-goimports')
-  call dein#add('kyoh86/vim-ripgrep')
+  call dein#add('skanehira/denops-ripgrep.vim')
   call dein#add('previm/previm')
   call dein#add('lambdalisue/compl-local-filename.vim')
 
@@ -629,8 +629,8 @@ set laststatus=3
 "set winfixheight " ウィンドウの高さを保つ
 "set winfixwidth " ウィンドウの幅を保つ
 set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
+set nrformats+=unsigned " 数値の加減算を考慮
 if !has('nvim')
-  set nrformats+=unsigned " 数値の加減算を考慮
   set cursorlineopt=line " 行のみハイライト
   set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
 endif
