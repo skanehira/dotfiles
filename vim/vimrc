@@ -626,23 +626,23 @@ set autowrite " 他のバッファに移動する時に自動保存
 set noswapfile " swapファイルを作成しない
 set showtabline=2 " タブを表示しない
 set noshowmode
-if has('nvim')
-  set laststatus=3
-else
-  set laststatus=2
-endif
 "set noequalalways " ウィンドウが同じサイズにならないようにする
 "set winfixheight " ウィンドウの高さを保つ
 "set winfixwidth " ウィンドウの幅を保つ
 set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
 set nrformats+=unsigned " 数値の加減算を考慮
 if !has('nvim')
+  set laststatus=2
   set cursorlineopt=line " 行のみハイライト
+  set wildoptions+=pum
   set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
+else
+  set laststatus=3
 endif
 if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
 set diffopt=vertical
 set completeopt-=preview " disable preview window
+set wildcharm=<Tab> " cnnoremap <expr> で <Tab> を有効にする
 
 " 拡張子ごとのインデント設定 {{{
 set tabstop=2 shiftwidth=2 softtabstop=2
@@ -831,6 +831,8 @@ cnoremap <expr> <C-p> pumvisible() ? '<C-p>' : '<Up>'
 cnoremap <expr> <C-n> pumvisible() ? '<C-n>' : '<Down>'
 cnoremap <Up> <C-p>
 cnoremap <Down> <C-n>
+
+cnoremap <expr> <Tab> pumvisible() ? '<C-y><Tab>' : '<Tab>'
 " }}}
 
 " {{{ ディレクトリ自動生成
