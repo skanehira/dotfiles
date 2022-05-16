@@ -15,6 +15,11 @@ bindkey -M viins '^U'  backward-kill-line
 bindkey -M viins '^W'  backward-kill-word
 bindkey -M viins '^Y'  yank
 
+function editor() {
+  $EDITOR
+}
+zle -N editor; bindkey -M viins '^V' editor
+
 function ghq-fzf() {
   local src=$(ghq list | fzf --preview "bat --color=always --style=grid $(ghq root)/{}/README.*")
   if [ -n "$src" ]; then
@@ -79,6 +84,7 @@ case $( uname -s ) in
     . $HOME/.asdf/asdf.sh
     fpath=(${ASDF_DIR}/completions $fpath)
     autoload -Uz compinit && compinit
+    export PATH="/home/ubuntu/.local/bin:$PATH"
     ;;
   Darwin)
     # homebrew
