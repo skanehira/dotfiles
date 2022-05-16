@@ -101,6 +101,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('tani/ddc-fuzzy')
   call dein#add('mattn/vim-goimports')
   call dein#add('skanehira/denops-ripgrep.vim')
+  call dein#add('skanehira/denops-graphql.vim')
   call dein#add('previm/previm')
   call dein#add('lambdalisue/compl-local-filename.vim')
 
@@ -1020,6 +1021,13 @@ call textobj#user#plugin('markdown', {
         \ },
         \ })
 omap il <Plug>(textobj-markdown-link)
+" }}}
+
+" {{{ graphql.vim
+augroup graphql
+  au!
+  au FileType graphql nmap gp <Plug>(graphql-execute)
+augroup END
 " }}}
 
 " vim: foldmethod=marker
