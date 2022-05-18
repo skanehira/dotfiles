@@ -392,6 +392,7 @@ let g:coc_global_extensions = [
       \ 'coc-deno',
       \ 'coc-eslint',
       \ 'coc-go',
+      \ 'coc-diagnostic',
       \ ]
 
 call coc#config('diagnostic', {
@@ -403,6 +404,12 @@ call coc#config('diagnostic', {
       \ 'virtualText': 1,
       \ })
 
+call coc#config('diagnostic-languageserver.filetypes', {
+      \ 'sh': 'shellcheck',
+      \ })
+call coc#config('diagnostic-languageserver.formatFiletypes', {
+      \ 'sh': 'shfmt',
+      \ })
 call coc#config('coc.preferences.formatOnType', 'true')
 call coc#config('coc.preferences.useQuickfixForLocations', 'true')
 call coc#config('codeLens.enable', v:true)
@@ -603,7 +610,6 @@ hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
 " オプション {{{
 set history=200
 set shortmess^=I
-set noequalalways
 set encoding=utf-8
 set t_ut=
 set fileencodings=utf-8,iso-2022-jp,euc-jp,sjis
