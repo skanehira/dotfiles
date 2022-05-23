@@ -393,6 +393,7 @@ let g:coc_global_extensions = [
       \ 'coc-eslint',
       \ 'coc-go',
       \ 'coc-diagnostic',
+      \ 'coc-graphql',
       \ ]
 
 call coc#config('diagnostic', {
@@ -401,6 +402,8 @@ call coc#config('diagnostic', {
       \ 'infoSign': '🍌',
       \ 'hintSign': '🧐',
       \ })
+
+call coc#config('graphql.filetypes', ['graphql'])
 call coc#config('diagnostic-languageserver.filetypes', {
       \ 'sh': 'shellcheck',
       \ })
@@ -632,13 +635,11 @@ set noshowmode
 "set winfixwidth " ウィンドウの幅を保つ
 set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
 set nrformats+=unsigned " 数値の加減算を考慮
+set laststatus=2
 if !has('nvim')
-  set laststatus=2
   set cursorlineopt=line " 行のみハイライト
   set wildoptions+=pum
   set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
-else
-  set laststatus=3
 endif
 if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
 set diffopt=vertical
