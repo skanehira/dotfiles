@@ -396,19 +396,13 @@ let g:coc_global_extensions = [
       \ ]
 
 call coc#config('diagnostic', {
-      \ 'enableMessage': 'never',
-      \ 'errorSign': '🦍',
-      \ 'warningSign': '💩',
+      \ 'errorSign': '💩',
+      \ 'warningSign': '🦍',
       \ 'infoSign': '🍌',
       \ 'hintSign': '🧐',
-      \ 'virtualText': 1,
       \ })
-
 call coc#config('diagnostic-languageserver.filetypes', {
       \ 'sh': 'shellcheck',
-      \ })
-call coc#config('diagnostic-languageserver.formatFiletypes', {
-      \ 'sh': 'shfmt',
       \ })
 call coc#config('coc.preferences.formatOnType', 'true')
 call coc#config('coc.preferences.useQuickfixForLocations', 'true')
@@ -437,7 +431,7 @@ call coc#config('coc.preferences', {
         \ 'json',
         \ 'rust',
         \ 'sql',
-        \ 'bash',
+        \ 'sh',
         \]})
 
 call coc#config('languageserver', {
