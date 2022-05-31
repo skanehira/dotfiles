@@ -513,29 +513,33 @@ function! EnableAutoCompletionForGh(kind) abort
   call ddc#custom#patch_buffer({'keywordPattern':
         \ "[a-zA-Z0-9_À-ÿ\u30a0-\u30ff\u3040-\u309f\u3005-\u3006\u30e0-\u9fcf]*"})
 
+  let option = {}
   if a:kind ==# 'gh_issues'
-    call ddc#custom#patch_buffer('sourceOptions', {
+    let option = {
           \ 'gh_issues': {
             \  'matcherKey': 'menu',
             \  'minAutoCompleteLength': 1,
-            \ }})
+            \ }}
   elseif a:kind ==# 'gh_issues_search'
-    call ddc#custom#patch_buffer('sourceOptions', {
+    let option = {
           \ 'gh_issues_search': {
             \  'minAutoCompleteLength': 1,
-            \ }})
+            \ }}
   elseif a:kind ==# 'gh_issues_assginees'
-    call ddc#custom#patch_buffer('sourceOptions', {
+    let option = {
           \ 'gh_issues_assginees': {
             \  'minAutoCompleteLength': 1,
-            \ }})
+            \ }}
   elseif a:kind ==# 'gh_issues_labels'
-    call ddc#custom#patch_buffer('sourceOptions', {
+    let option =  {
           \ 'gh_issues_labels': {
             \  'minAutoCompleteLength': 1,
-            \ }})
+            \ }}
   endif
-  call popup_preview#enable()
+  call ddc#custom#patch_buffer('sourceOptions', option)
+  if !popup_preview#is_enabled()
+    call popup_preview#enable()
+  endif
 endfunction
 " }}}
 
@@ -588,7 +592,7 @@ filetype plugin indent on " ファイル形式別プラグインとインデン�
 colorscheme iceberg
 " icebergはターミナルを16色に設定するのを回避
 function s:initColorscheme() abort
-  hi clear VertSplit
+  "hi clear VertSplit
   if !has('nvim')
     unlet g:terminal_ansi_colors
   endif
@@ -863,7 +867,7 @@ command! -nargs=1 ZennCreateArticle call <SID>create_zenn_article(<f-args>)
 
 " {{{ vim-test
 let test#javascript#denotest#options = {
-    \ 'all': '--unstable -A'
+    \ 'all': '--jobs 10 --unstable -A'
     \ }
 nnoremap <silent> <space>tn <cmd>TestNearest<CR>
 " }}}
