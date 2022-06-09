@@ -320,7 +320,7 @@ xmap <silent> gi :Germanium -f="Cica-Regular"<CR>
 " }}}
 
 " fzf settings {{{
-let g:fzf_layout = { 'down': '50%' }
+"let g:fzf_layout = { 'down': '50%' }
 nnoremap <C-P> :Files<CR>
 " }}}
 
@@ -501,13 +501,14 @@ let g:memolist_fzf = 1
 " {{{ gh.vim
 augroup gh_autocmd
   au!
-  au User gh_open_issue call EnableAutoCompletionForGh('gh_issues')
-  au User gh_open_issue_assignees call EnableAutoCompletionForGh('gh_issues_assginees')
-  au User gh_open_issue_labels call EnableAutoCompletionForGh('gh_issues_labels')
-  au User gh_open_issues_search call EnableAutoCompletionForGh('gh_issues_search')
+  au User gh_open_issue call <SID>enableAutoCompletionForGhGh('gh_issues')
+  au User gh_open_issue_assignees call <SID>enableAutoCompletionForGhGh('gh_issues_assginees')
+  au User gh_open_issue_labels call <SID>enableAutoCompletionForGhGh('gh_issues_labels')
+  au User gh_open_issue_search call <SID>enableAutoCompletionForGhGh('gh_issues_search')
+  au User gh_open_issue_comment call <SID>enableAutoCompletionForGhGh('gh_issues')
 augroup END
 
-function! EnableAutoCompletionForGh(kind) abort
+function! s:enableAutoCompletionForGhGh(kind) abort
   call ddc#custom#patch_buffer('sources', [a:kind])
   call ddc#custom#patch_buffer('specialBufferCompletion', v:true)
   call ddc#custom#patch_buffer({'keywordPattern':
@@ -535,6 +536,9 @@ function! EnableAutoCompletionForGh(kind) abort
           \ 'gh_issues_labels': {
             \  'minAutoCompleteLength': 1,
             \ }}
+  else
+    echoerr("invalid ddc type")
+    return
   endif
   call ddc#custom#patch_buffer('sourceOptions', option)
   if !popup_preview#is_enabled()
@@ -1032,6 +1036,26 @@ omap il <Plug>(textobj-markdown-link)
 augroup graphql
   au!
   au FileType graphql nmap gp <Plug>(graphql-execute)
+augroup END
+" }}}
+
+" {{{ twihi.vim
+nnoremap <silent> <C-g><C-n> :TwihiTweet<CR>
+nnoremap <silent> <C-g><C-f> :TwihiTweet --clipboard<CR>
+nnoremap <silent> <C-g><C-m> :TwihiMentions<CR>
+nnoremap <silent> <C-g><C-h> :TwihiHome<CR>
+
+function! s:twihi_keymap() abort
+  nmap <buffer> <silent> <C-g>y <Plug>(twihi:tweet:yank)
+  nmap <buffer> <silent> <C-g><C-l> <Plug>(twihi:tweet:like)
+  nmap <buffer> <silent> <C-o> <Plug>(twihi:tweet:open)
+  nmap <buffer> <silent> <C-p> <Plug>(twihi:reply)
+  nmap <buffer> <silent> <C-r> <Plug>(twihi:retweet:comment)
+endfunction
+
+augroup twihi_keymap
+  au!
+  au FileType twihi-timeline call <SID>twihi_keymap()
 augroup END
 " }}}
 
