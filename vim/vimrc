@@ -62,6 +62,7 @@ if dein#load_state(s:dein_dir)
   " syntax
   call dein#add('plasticboy/vim-markdown')
   call dein#add('cocopon/iceberg.vim')
+  call dein#add('sainnhe/edge')
 
   " for development
   call dein#add('neoclide/coc.nvim', {'rev': 'release'})
@@ -104,6 +105,8 @@ if dein#load_state(s:dein_dir)
   call dein#add('skanehira/denops-graphql.vim')
   call dein#add('previm/previm')
   call dein#add('lambdalisue/compl-local-filename.vim')
+  call dein#add('thinca/vim-prettyprint')
+  call dein#add('mattn/vim-findroot')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -499,7 +502,7 @@ let g:memolist_fzf = 1
 " }}}
 
 " {{{ gh.vim
-augroup gh_autocmd
+augroup gh_ddc
   au!
   au User gh_open_issue call <SID>enableAutoCompletionForGhGh('gh_issues')
   au User gh_open_issue_assignees call <SID>enableAutoCompletionForGhGh('gh_issues_assginees')
@@ -562,12 +565,22 @@ nmap gup <Plug>(gyazo-upload)
 " }}}
 
 " {{{ vim-choosewin
-nmap <C-f> <Plug>(choosewin)
+if has('nvim')
+  function! s:choosewin() abort
+    let ls = &laststatus
+    set laststatus=2
+    call choosewin#start(range(1, winnr('$')))
+    exe 'set laststatus=' .. ls
+  endfunction
+  nnoremap <C-f> :<C-u>call <SID>choosewin()<CR>
+else
+  nmap <C-f> <Plug>(choosewin)
+endif
 " }}}
 
 " {{{ lightline
 let g:lightline = {
-      \ 'colorscheme': 'wombat',
+      \ 'colorscheme': 'edge',
       \ 'active': {
       \ 'left': [ ['mode', 'paste'], ['readonly', 'branchName', 'filepath', 'modified'] ]
       \ },
@@ -593,12 +606,13 @@ syntax enable " シンタックスを有効にする
 filetype plugin indent on " ファイル形式別プラグインとインデントを有効にする
 
 " カラースキームを使う {{{
-colorscheme iceberg
+"colorscheme iceberg
+colorscheme edge
 " icebergはターミナルを16色に設定するのを回避
 function s:initColorscheme() abort
   "hi clear VertSplit
   if !has('nvim')
-    unlet g:terminal_ansi_colors
+    "unlet g:terminal_ansi_colors
   endif
 endfunction
 
@@ -612,7 +626,7 @@ set background=dark
 hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
 " }}}
 
-" オプション {{{
+" options {{{
 set history=200
 set shortmess^=I
 set encoding=utf-8
@@ -645,9 +659,13 @@ set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
 set nrformats+=unsigned " 数値の加減算を考慮
 set laststatus=2
 if !has('nvim')
+  set laststatus=2
   set cursorlineopt=line " 行のみハイライト
   set wildoptions+=pum
   set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
+else
+  set laststatus=3
+  "set cmdheight=0
 endif
 if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
 set diffopt=vertical
@@ -1029,7 +1047,14 @@ call textobj#user#plugin('markdown', {
         \   'select': ['il'],
         \ },
         \ })
+call textobj#user#plugin('help', {
+      \ 'tag': {
+        \ 'pattern': '|\zs\w\{-}\ze|',
+        \ 'select': ['i\'],
+        \ }
+      \ })
 omap il <Plug>(textobj-markdown-link)
+omap i\ <Plug>(textobj-help-tag)
 " }}}
 
 " {{{ graphql.vim
@@ -1045,18 +1070,28 @@ nnoremap <silent> <C-g><C-f> :TwihiTweet --clipboard<CR>
 nnoremap <silent> <C-g><C-m> :TwihiMentions<CR>
 nnoremap <silent> <C-g><C-h> :TwihiHome<CR>
 
-function! s:twihi_keymap() abort
+function! s:twihi_timeline_keymap() abort
   nmap <buffer> <silent> <C-g>y <Plug>(twihi:tweet:yank)
+  nmap <buffer> <silent> R <Plug>(twihi:retweet)
   nmap <buffer> <silent> <C-g><C-l> <Plug>(twihi:tweet:like)
   nmap <buffer> <silent> <C-o> <Plug>(twihi:tweet:open)
-  nmap <buffer> <silent> <C-p> <Plug>(twihi:reply)
-  nmap <buffer> <silent> <C-r> <Plug>(twihi:retweet:comment)
+  nmap <buffer> <silent> <C-r> <Plug>(twihi:reply)
+endfunction
+
+function! s:twihi_media_keymap() abort
+  nmap <buffer> <silent> <C-g><C-m> <Plug>(twihi:media:add:clipboard)
+  nmap <buffer> <silent> <C-g>d <Plug>(twihi:media:remove)
 endfunction
 
 augroup twihi_keymap
   au!
-  au FileType twihi-timeline call <SID>twihi_keymap()
+  au FileType twihi-timeline call <SID>twihi_timeline_keymap()
+  au FileType twihi-tweet call <SID>twihi_media_keymap()
+  au FileType twihi-reply call <SID>twihi_media_keymap()
+  au FileType twihi-retweet call <SID>twihi_media_keymap()
 augroup END
+" }}}
+
 " }}}
 
 " vim: foldmethod=marker
