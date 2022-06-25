@@ -126,6 +126,9 @@ if dein#load_state(s:dein_dir)
 
   " other
   call dein#add('itchyny/lightline.vim')
+  call dein#add('lambdalisue/fern-renderer-nerdfont.vim')
+  call dein#add('lambdalisue/nerdfont.vim')
+  call dein#add('sainnhe/everforest')
 
   " end settings
   call dein#end()
@@ -154,6 +157,7 @@ vmap gt <Plug>(VTranslate)
 " }}}
 
 " {{{ fern.vim
+let g:fern#renderer = "nerdfont"
 function! s:fern_init() abort
   nnoremap <buffer> <silent> q :q<CR>
   map <buffer> <silent> <C-x> <Plug>(fern-action-open:split)
@@ -421,7 +425,7 @@ call coc#config('go.goplsOptions', {
         \ },
         \ })
 " disable auto completion
-"call coc#config('suggest.autoTrigger', 'none')
+call coc#config('suggest.autoTrigger', 'none')
 call coc#config('coc.preferences', {
       \ 'formatOnSaveFiletypes': [
         \ 'go',
@@ -580,7 +584,7 @@ endif
 
 " {{{ lightline
 let g:lightline = {
-      \ 'colorscheme': 'edge',
+      \ 'colorscheme': 'everforest',
       \ 'active': {
       \ 'left': [ ['mode', 'paste'], ['readonly', 'branchName', 'filepath', 'modified'] ]
       \ },
@@ -606,8 +610,7 @@ syntax enable " シンタックスを有効にする
 filetype plugin indent on " ファイル形式別プラグインとインデントを有効にする
 
 " カラースキームを使う {{{
-"colorscheme iceberg
-colorscheme edge
+colorscheme everforest
 " icebergはターミナルを16色に設定するのを回避
 function s:initColorscheme() abort
   "hi clear VertSplit
@@ -623,7 +626,7 @@ augroup END
 
 set background=dark
 " visual modeのhighlight変更
-hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
+"hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
 " }}}
 
 " options {{{
@@ -659,13 +662,9 @@ set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
 set nrformats+=unsigned " 数値の加減算を考慮
 set laststatus=2
 if !has('nvim')
-  set laststatus=2
   set cursorlineopt=line " 行のみハイライト
   set wildoptions+=pum
   set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
-else
-  set laststatus=3
-  "set cmdheight=0
 endif
 if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
 set diffopt=vertical
@@ -695,17 +694,17 @@ augroup END
 " }}}
 
 " {{{ シンタックスをクリア
-augroup fileTypeSyntaxClear
-  au!
-  au FileType go syntax clear
-  au FileType vim syntax clear
-  au FileType html syntax clear
-  au FileType javascript syntax clear
-  au FileType typescript syntax clear
-  au FileType vue  syntax clear
-  au FileType rust  syntax clear
-  au FileType markdown syntax clear
-augroup END
+"augroup fileTypeSyntaxClear
+"  au!
+"  au FileType go syntax clear
+"  au FileType vim syntax clear
+"  au FileType html syntax clear
+"  au FileType javascript syntax clear
+"  au FileType typescript syntax clear
+"  au FileType vue  syntax clear
+"  au FileType rust  syntax clear
+"  au FileType markdown syntax clear
+"augroup END
 " }}}
 
 " grepした結果をquickfixに表示する {{{
@@ -989,9 +988,8 @@ inoremap <silent><expr> <TAB>
 
 " <S-TAB>: completion back.
 inoremap <expr><S-TAB>  pumvisible() ? '<C-p>' : '<C-h>'
-
-call DdcAutoCompletionDisable()
-call ddc#enable()
+"call DdcAutoCompletionDisable()
+call ddc#disable()
 " }}}
 
 " {{{ git message
@@ -1080,7 +1078,8 @@ endfunction
 
 function! s:twihi_media_keymap() abort
   nmap <buffer> <silent> <C-g><C-m> <Plug>(twihi:media:add:clipboard)
-  nmap <buffer> <silent> <C-g>d <Plug>(twihi:media:remove)
+  nmap <buffer> <silent> <C-g><C-d> <Plug>(twihi:media:remove)
+  nmap <buffer> <silent> <C-g><C-o> <Plug>(twihi:media:open)
 endfunction
 
 augroup twihi_keymap
