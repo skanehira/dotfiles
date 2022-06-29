@@ -62,7 +62,6 @@ if dein#load_state(s:dein_dir)
   " syntax
   call dein#add('plasticboy/vim-markdown')
   call dein#add('cocopon/iceberg.vim')
-  call dein#add('sainnhe/edge')
 
   " for development
   call dein#add('neoclide/coc.nvim', {'rev': 'release'})
@@ -128,7 +127,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('itchyny/lightline.vim')
   call dein#add('lambdalisue/fern-renderer-nerdfont.vim')
   call dein#add('lambdalisue/nerdfont.vim')
-  call dein#add('sainnhe/everforest')
 
   " end settings
   call dein#end()
@@ -165,7 +163,6 @@ function! s:fern_init() abort
   map <buffer> <silent> <C-t> <Plug>(fern-action-tcd)
 endfunction
 
-let g:fern#drawer_keep = 1
 let g:fern#default_hidden = 1
 let g:fern#default_exclude = '.git$'
 
@@ -584,7 +581,7 @@ endif
 
 " {{{ lightline
 let g:lightline = {
-      \ 'colorscheme': 'everforest',
+      \ 'colorscheme': 'iceberg',
       \ 'active': {
       \ 'left': [ ['mode', 'paste'], ['readonly', 'branchName', 'filepath', 'modified'] ]
       \ },
@@ -610,10 +607,12 @@ syntax enable " シンタックスを有効にする
 filetype plugin indent on " ファイル形式別プラグインとインデントを有効にする
 
 " カラースキームを使う {{{
-colorscheme everforest
+set termguicolors
+colorscheme iceberg
 " icebergはターミナルを16色に設定するのを回避
 function s:initColorscheme() abort
-  "hi clear VertSplit
+  hi clear VertSplit
+  hi VertSplit ctermfg=232 guifg=#202023
   if !has('nvim')
     "unlet g:terminal_ansi_colors
   endif
