@@ -122,6 +122,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('lambdalisue/vital-Whisky', {'merged': 0})
   call dein#add('tweekmonster/helpful.vim')
   call dein#add('vim-jp/vital.vim', {'merged': 0})
+  call dein#add('thinca/vim-themis')
 
   " other
   call dein#add('itchyny/lightline.vim')
@@ -266,7 +267,6 @@ vnoremap <silent> gu :Gina browse --exact --yank :<CR>
 " }}}
 
 " {{{ quickrun.vim
-nnoremap <Leader>q :QuickRun -runner terminal<CR>
 let g:quickrun_config = {
       \ 'typescript': {
         \ 'command': 'deno',
@@ -309,6 +309,17 @@ let g:quickrun_config = {
         \ 'tempfile': '%{printf("%s_test.go", tempname())}',
         \ 'exec': ['go mod init tmp; %C test -v %s'],
         \ 'type': 'go',
+      \ },
+      \ 'rust/test': {
+        \ 'command': 'cargo',
+        \ 'type': 'rust',
+        \ 'exec': '%C test %s',
+        \ 'runner': 'neoterm',
+      \ },
+      \ 'rust': {
+        \ 'command': 'cargo',
+        \ 'type': 'rust',
+        \ 'exec': '%C run --quiet %s %a',
       \ },
       \ }
 
@@ -385,7 +396,6 @@ endfunction
 
 let g:coc_global_extensions = [
       \ 'coc-yaml',
-      \ 'coc-markmap',
       \ 'coc-vimlsp',
       \ 'coc-vetur',
       \ 'coc-tsserver',
@@ -1062,17 +1072,20 @@ augroup END
 " }}}
 
 " {{{ twihi.vim
+let g:twihi_mention_check_interval = 60000 * 10
 nnoremap <silent> <C-g><C-n> :TwihiTweet<CR>
 nnoremap <silent> <C-g><C-f> :TwihiTweet --clipboard<CR>
 nnoremap <silent> <C-g><C-m> :TwihiMentions<CR>
 nnoremap <silent> <C-g><C-h> :TwihiHome<CR>
 
 function! s:twihi_timeline_keymap() abort
-  nmap <buffer> <silent> <C-g>y <Plug>(twihi:tweet:yank)
+  nmap <buffer> <silent> <C-g><C-y> <Plug>(twihi:tweet:yank)
   nmap <buffer> <silent> R <Plug>(twihi:retweet)
   nmap <buffer> <silent> <C-g><C-l> <Plug>(twihi:tweet:like)
   nmap <buffer> <silent> <C-o> <Plug>(twihi:tweet:open)
   nmap <buffer> <silent> <C-r> <Plug>(twihi:reply)
+  nmap <buffer> <silent> <C-j> <Plug>(twihi:tweet:next)
+  nmap <buffer> <silent> <C-k> <Plug>(twihi:tweet:prev)
 endfunction
 
 function! s:twihi_media_keymap() abort
