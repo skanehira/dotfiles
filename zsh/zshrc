@@ -1,3 +1,23 @@
+# enable prompt color
+autoload -U colors && colors
+export PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[green]%}%m%{$fg_bold[yellow]%} %3~ %{$reset_color%}$ "
+
+# alias
+alias lg=lazygit
+alias gs="git status"
+alias gl="git log"
+alias ll="ls -la"
+alias ls="lsd"
+alias ll='lsd -la'
+alias diff="delta"
+alias k="kubectl"
+alias d="docker compose"
+alias v="nvim"
+alias t="terraform"
+alias crun="cargo run --quiet"
+
+# custom keybindings
+bindkey -v
 bindkey -M viins '\er' history-incremental-pattern-search-forward
 bindkey -M viins '^?'  backward-delete-char
 bindkey -M viins '^A'  beginning-of-line
@@ -15,10 +35,44 @@ bindkey -M viins '^U'  backward-kill-line
 bindkey -M viins '^W'  backward-kill-word
 bindkey -M viins '^Y'  yank
 
-function editor() {
-  $EDITOR
-}
-zle -N editor; bindkey -M viins '^V' editor
+
+case $( uname -s ) in
+  Linux)
+    . $HOME/.asdf/asdf.sh
+    ;;
+  Darwin)
+    # enable auto completion
+    autoload -Uz compinit && compinit
+
+    # asdf settings
+    . $(brew --prefix)/opt/asdf/libexec/asdf.sh
+
+    # add homebrew site-functions for completion
+    fpath=($(brew --prefix)/share/zsh/site-functions "${fpath[@]}")
+
+    # enable zsh-autosuggestions
+    source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+
+    # colors: https://coderwall.com/p/pb1uzq/z-shell-colors
+    #export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=009"
+    #export ZSH_AUTOSUGGEST_STRATEGY=(completion history)
+
+    # add docker completion
+    if [ ! -d /usr/local/share/zsh/site-functions ]; then
+      sudo mkdir -p /usr/local/share/zsh/site-functions
+    fi
+    if [ ! -L /usr/local/share/zsh/site-functions/_docker ];then
+      sudo ln -s /Applications/Docker.app/Contents/Resources/etc/docker.zsh-completion /usr/local/share/zsh/site-functions/_docker
+      sudo ln -s /Applications/Docker.app/Contents/Resources/etc/docker-compose.zsh-completion /usr/local/share/zsh/site-functions/_docker-compose
+    fi
+    ;;
+esac
+
+# fzf auto complete
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# k8s auto complete
+source <(kubectl completion zsh)
 
 function ghq-fzf() {
   local src=$(ghq list | fzf --preview "bat --color=always --style=grid $(ghq root)/{}/README.*")
@@ -59,59 +113,3 @@ function gify() {
 }
 
 zle -N gify
-
-alias lg=lazygit
-alias gs="git status"
-alias gl="git log"
-alias ll="ls -la"
-alias ls="lsd"
-alias ll='lsd -la'
-alias diff="delta"
-alias k="kubectl"
-alias d="docker compose"
-alias v="nvim"
-alias t="terraform"
-alias tl="tmux a -t \$(tmux ls | fzf | cut -d \" \" -f 1)"
-
-# enable prompt color
-autoload -U colors && colors
-export PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[green]%}%m%{$fg_bold[yellow]%} %3~ %{$reset_color%}$ "
-
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-
-case $( uname -s ) in
-  Linux)
-    . $HOME/.asdf/asdf.sh
-    fpath=(${ASDF_DIR}/completions $fpath)
-    autoload -Uz compinit && compinit
-    export PATH="/home/ubuntu/.local/bin:$PATH"
-    ;;
-  Darwin)
-    # homebrew
-    export PATH="/opt/homebrew/bin:$PATH"
-
-    # asdf settings
-    . $(brew --prefix)/opt/asdf/libexec/asdf.sh
-
-    # enable zsh-autosuggestions
-    source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-
-    # colors: https://coderwall.com/p/pb1uzq/z-shell-colors
-    #export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=009"
-    #export ZSH_AUTOSUGGEST_STRATEGY=(completion history)
-
-    # add homebrew site-functions for completion
-    fpath=($(brew --prefix)/share/zsh/site-functions "${fpath[@]}")
-
-    # add docker completion
-    if [ ! -d /usr/local/share/zsh/site-functions ]; then
-      sudo mkdir -p /usr/local/share/zsh/site-functions
-    fi
-    if [ ! -L /usr/local/share/zsh/site-functions/_docker ];then
-      sudo ln -s /Applications/Docker.app/Contents/Resources/etc/docker.zsh-completion /usr/local/share/zsh/site-functions/_docker
-      sudo ln -s /Applications/Docker.app/Contents/Resources/etc/docker-compose.zsh-completion /usr/local/share/zsh/site-functions/_docker-compose
-    fi
-
-    # enable completion
-    autoload -Uz compinit && compinit
-esac

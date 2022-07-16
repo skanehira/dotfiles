@@ -1,6 +1,60 @@
+# disable duplicate PATH
+typeset -gU PATH
+
+# others
+export PATH=/usr/local/bin:$PATH
+export XDG_CONFIG_HOME=$HOME/.config
+export LANG=en_US.UTF-8
+export LC_CTYPE=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export EDITOR=nvim
+export HISTFILE=$HOME/.zsh_history
+export HISTSIZE=1000
+export SAVEHIST=1000
+setopt appendhistory
+
 case $( uname -s ) in
   Linux)
+    export SHELL=/usr/bin/zsh
     ;;
   Darwin)
+    export SHELL=/bin/zsh
+    # homebrew settings
+    export HOMEBREW_INSTALL_CLEANUP=1
+    # chrome-cli
+    export CHROME_BUNDLE_IDENTIFIER="com.vivaldi.Vivaldi"
+    # add homebrew paths
     eval "$(/opt/homebrew/bin/brew shellenv)"
+
+    # homebrew curl
+    export PATH="/opt/homebrew/opt/curl/bin:$PATH"
 esac
+
+# GHQ
+export GHQ_ROOT=$HOME/dev
+
+# Go
+export GOPATH=$HOME/go # for download modules when use asdf-golang
+export GOBIN=$HOME/go/bin
+export PATH=$GOBIN:$PATH
+
+# Deno
+export PATH=$HOME/.deno/bin:$PATH
+
+# fzf settings
+export FZF_DEFAULT_OPTS='--layout=reverse --inline-info --exit-0 -m --preview "bat  --color=always --style=header,grid --line-range :100 {}"'
+export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*"'
+
+# Rust settings
+export RUSTUP_HOME=$HOME/.rustup
+if [ -f $HOME/.cargo/env ]; then
+  source $HOME/.cargo/env
+fi
+
+# shellspec
+shellspecbin=$HOME/.local/bin
+if [ -d $shellspecbin ]; then
+  export PATH=$shellspecbin:$PATH
+fi
+
+# vim:ft=zsh
