@@ -378,6 +378,10 @@ nnoremap <silent> <Leader>gr :<C-u>call CocActionAsync('jumpReferences', 'split'
 
 nnoremap <silent> <Leader>i :LspImport<CR>
 
+" scroll popup window
+nnoremap <silent><nowait><expr> <C-d> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-d>"
+nnoremap <silent><nowait><expr> <C-u> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-u>"
+
 " Use K to show documentation in preview window.
 nnoremap <silent> K :call <SID>show_documentation()<CR>
 
