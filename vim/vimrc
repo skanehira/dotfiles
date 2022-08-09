@@ -105,7 +105,8 @@ if dein#load_state(s:dein_dir)
   call dein#add('previm/previm')
   call dein#add('lambdalisue/compl-local-filename.vim')
   call dein#add('thinca/vim-prettyprint')
-  call dein#add('mattn/vim-findroot')
+  call dein#add('lambdalisue/file-protocol.vim')
+  call dein#add('wellle/context.vim')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -151,8 +152,9 @@ command! CleanPlugins call DeinClean()
 " }}}
 
 " {{{ translate.vim
+let g:translate_endpoint = 'https://api-free.deepl.com/v2/translate'
 nmap gr <Plug>(Translate)
-vmap gt <Plug>(VTranslate)
+vmap gr <Plug>(Translate)
 " }}}
 
 " {{{ fern.vim
@@ -372,6 +374,14 @@ endfunction
 " GoTo code navigation.
 " use tagstack
 set tagfunc=CocTagFunc
+
+" define autocmd to detect filetype
+" because cannot detect filetype when using tagfunc
+augroup coc-ft-detect
+  au!
+  au BufEnter deno:/* filetype detect
+augroup END
+
 nnoremap <silent> <Leader>gj :<C-u>call CocActionAsync('jumpDefinition', CocJumpAction())<CR>
 nnoremap <silent> <Leader>gi :<C-u>call CocActionAsync('jumpImplementation', 'split')<CR>
 nnoremap <silent> <Leader>gr :<C-u>call CocActionAsync('jumpReferences', 'split')<CR>
@@ -402,6 +412,8 @@ let g:coc_global_extensions = [
       \ 'coc-yaml',
       \ 'coc-vimlsp',
       \ 'coc-vetur',
+      \ 'coc-prettier',
+      \ 'coc-toml',
       \ 'coc-tsserver',
       \ 'coc-sql',
       \ 'coc-sh',
@@ -420,32 +432,25 @@ call coc#config('diagnostic', {
       \ 'infoSign': '🍌',
       \ 'hintSign': '🧐',
       \ })
-
+call coc#config('diagnostic.messageDelay', 0)
 call coc#config('graphql.filetypes', ['graphql'])
 call coc#config('diagnostic-languageserver.filetypes', {
       \ 'sh': 'shellcheck',
       \ })
 call coc#config('coc.preferences.formatOnType', 'true')
 call coc#config('coc.preferences.useQuickfixForLocations', 'true')
-call coc#config('codeLens.enable', v:true)
-call coc#config('go.goplsPath', 'gopls')
-call coc#config('go.goplsOptions', {
-      \ 'completeUnimported': v:true,
-      \ 'codelenses': {
-        \ 'test': v:true,
-        \ },
-        \ })
+call coc#config('suggest.noselect', 'true')
+"call coc#config('codeLens.enable', v:true)
 " disable auto completion
-call coc#config('suggest.autoTrigger', 'none')
+"call coc#config('suggest.autoTrigger', 'none')
 call coc#config('coc.preferences', {
       \ 'formatOnSaveFiletypes': [
         \ 'go',
         \ 'css',
-        \ 'js',
+        \ 'javascript',
         \ 'javascriptreact',
-        \ 'ts',
-        \ 'typescriptreact',
         \ 'typescript',
+        \ 'typescriptreact',
         \ 'html',
         \ 'scss',
         \ 'sass',
@@ -475,6 +480,19 @@ call coc#config('languageserver', {
         \   'command': ['golangci-lint', 'run', '--out-format', 'json']
         \ }}
       \})
+
+" gopls configuration
+call coc#config('go.goplsPath', 'gopls')
+call coc#config('go.goplsOptions', {
+      \ 'completeUnimported': v:true,
+      \ 'codelenses': {
+        \ 'test': v:true,
+        \ },
+        \ })
+
+" rust-analyzer configuration
+call coc#config('rust-analyzer.diagnostics.experimental.enable', v:true)
+
 " }}}
 
 " vim-markdown {{{
@@ -482,6 +500,7 @@ let g:vim_markdown_folding_disabled = 1
 " }}}
 
 " emmet {{{
+let g:emmet_html5 = 0
 let g:user_emmet_install_global = 0
 let g:user_emmet_settings = {
       \   'variables': {
@@ -492,8 +511,7 @@ let g:user_emmet_leader_key = '<C-g>'
 
 augroup emmet
   au!
-  au FileType vue,html,css EmmetInstall
-  au FileType vue,html,css imap <buffer> <C-f> <plug>(emmet-expand-abbr)
+  au FileType vue,html,css,typescriptreact EmmetInstall
 augroup END
 " }}}
 
@@ -693,8 +711,8 @@ augroup fileTypeIndent
   au FileType vim setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType php setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType html setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-  au FileType javascript setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
-  au FileType typescript setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType javascript,javascriptreact setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+  au FileType typescript,typescriptreact setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType vue  setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType yaml setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
   au FileType json setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab
@@ -709,14 +727,7 @@ augroup END
 " {{{ シンタックスをクリア
 "augroup fileTypeSyntaxClear
 "  au!
-"  au FileType go syntax clear
-"  au FileType vim syntax clear
-"  au FileType html syntax clear
-"  au FileType javascript syntax clear
-"  au FileType typescript syntax clear
-"  au FileType vue  syntax clear
-"  au FileType rust  syntax clear
-"  au FileType markdown syntax clear
+"  au FileType go,vim,html,javascript,javascriptreact,typescript,typescriptreact,vue,rust,markdown syntax clear
 "augroup END
 " }}}
 
@@ -872,7 +883,7 @@ cnoremap <expr> <C-n> pumvisible() ? '<C-n>' : '<Down>'
 cnoremap <Up> <C-p>
 cnoremap <Down> <C-n>
 
-cnoremap <expr> <Tab> pumvisible() ? '<C-y><Tab>' : '<Tab>'
+"cnoremap <expr> <Tab> pumvisible() ? '<C-y><Tab>' : '<Tab>'
 " }}}
 
 " {{{ ディレクトリ自動生成
@@ -994,13 +1005,13 @@ call ddc#custom#patch_global('sourceOptions', {
   \ })
 
 " Change source options
-inoremap <silent><expr> <TAB>
-\ pumvisible() ? '<C-n>' :
-\ (col('.') <= 1 <Bar><Bar> getline('.')[col('.') - 2] =~# '\s') ?
-\ '<TAB>' : ddc#map#manual_complete()
+"inoremap <silent><expr> <TAB>
+"\ pumvisible() ? '<C-n>' :
+"\ (col('.') <= 1 <Bar><Bar> getline('.')[col('.') - 2] =~# '\s') ?
+"\ '<TAB>' : ddc#map#manual_complete()
 
 " <S-TAB>: completion back.
-inoremap <expr><S-TAB>  pumvisible() ? '<C-p>' : '<C-h>'
+"inoremap <expr><S-TAB>  pumvisible() ? '<C-p>' : '<C-h>'
 "call DdcAutoCompletionDisable()
 call ddc#disable()
 " }}}
@@ -1077,10 +1088,9 @@ augroup END
 
 " {{{ twihi.vim
 let g:twihi_mention_check_interval = 60000 * 10
-nnoremap <silent> <C-g><C-n> :TwihiTweet<CR>
-nnoremap <silent> <C-g><C-f> :TwihiTweet --clipboard<CR>
-nnoremap <silent> <C-g><C-m> :TwihiMentions<CR>
-nnoremap <silent> <C-g><C-h> :TwihiHome<CR>
+nnoremap <silent> <C-g>n :TwihiTweet<CR>
+nnoremap <silent> <C-g>m :TwihiMentions<CR>
+nnoremap <silent> <C-g>h :TwihiHome<CR>
 
 function! s:twihi_timeline_keymap() abort
   nmap <buffer> <silent> <C-g><C-y> <Plug>(twihi:tweet:yank)
@@ -1093,9 +1103,9 @@ function! s:twihi_timeline_keymap() abort
 endfunction
 
 function! s:twihi_media_keymap() abort
-  nmap <buffer> <silent> <C-g><C-m> <Plug>(twihi:media:add:clipboard)
-  nmap <buffer> <silent> <C-g><C-d> <Plug>(twihi:media:remove)
-  nmap <buffer> <silent> <C-g><C-o> <Plug>(twihi:media:open)
+  nmap <buffer> <silent> <C-g>m <Plug>(twihi:media:add:clipboard)
+  nmap <buffer> <silent> <C-g>d <Plug>(twihi:media:remove)
+  nmap <buffer> <silent> <C-g>o <Plug>(twihi:media:open)
 endfunction
 
 augroup twihi_keymap
