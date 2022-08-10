@@ -113,3 +113,7 @@ function gify() {
 }
 
 zle -N gify
+
+if [ -x $(which starship) ]; then
+  eval "$(starship init zsh)"
+fi
