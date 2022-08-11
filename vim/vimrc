@@ -398,6 +398,26 @@ nnoremap <silent> K :call <SID>show_documentation()<CR>
 " use manual completion
 inoremap <silent><expr> <C-x><C-o> coc#refresh()
 
+" NOTE: leximaが初回insert時に<CR>を上書きするため、ここで一度init() を呼び出す
+call lexima#init()
+
+" NOTE: coc#pum#visible 以外を <CR>
+" にマッピングした場合、起動時にメッセージが出るため、ダミーのマッピングを用意
+inoremap <silent><expr> <CR> coc#pum#visible() ? <nop> : <nop>
+
+function! s:coc_pum_lexima_enter() abort
+  let key = lexima#expand('<CR>', 'i')
+  call coc#on_enter()
+  return "\<C-g>u" . key
+endfunction
+
+" NOTE: leximaを使っている場合、<CR>がマッピングされるため
+" coc用のマッピングを上書きする
+augroup coc-pum-enter
+  au!
+  au InsertEnter * inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm() : <SID>coc_pum_lexima_enter()
+augroup END
+
 function! s:show_documentation()
   if (index(['vim','help'], &filetype) >= 0)
     execute 'h '.expand('<cword>')
