@@ -677,7 +677,7 @@ augroup END
 
 set background=dark
 " visual modeのhighlight変更
-"hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
+hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
 " }}}
 
 " options {{{
@@ -903,7 +903,7 @@ cnoremap <expr> <C-n> pumvisible() ? '<C-n>' : '<Down>'
 cnoremap <Up> <C-p>
 cnoremap <Down> <C-n>
 
-"cnoremap <expr> <Tab> pumvisible() ? '<C-y><Tab>' : '<Tab>'
+cnoremap <expr> <Tab> pumvisible() ? '<C-y><Tab>' : '<Tab>'
 " }}}
 
 " {{{ ディレクトリ自動生成
