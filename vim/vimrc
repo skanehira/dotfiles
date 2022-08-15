@@ -73,7 +73,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('junegunn/fzf', {'merged': 0})
   call dein#add('junegunn/fzf.vim', {'depends': 'fzf'})
   call dein#add('kshenoy/vim-signature')
-  call dein#add('lambdalisue/fern.vim')
+  call dein#add('lambdalisue/fern.vim', {'branch': 'main'})
   call dein#add('lambdalisue/fern-hijack.vim')
   call dein#add('lambdalisue/fern-git-status.vim')
   call dein#add('lambdalisue/gina.vim')
@@ -106,7 +106,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('lambdalisue/compl-local-filename.vim')
   call dein#add('thinca/vim-prettyprint')
   call dein#add('lambdalisue/file-protocol.vim')
-  call dein#add('wellle/context.vim')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -129,6 +128,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('itchyny/lightline.vim')
   call dein#add('lambdalisue/fern-renderer-nerdfont.vim')
   call dein#add('lambdalisue/nerdfont.vim')
+  call dein#add('skanehira/denops-twihi.vim')
 
   " end settings
   call dein#end()
@@ -152,7 +152,7 @@ command! CleanPlugins call DeinClean()
 " }}}
 
 " {{{ translate.vim
-let g:translate_endpoint = 'https://api-free.deepl.com/v2/translate'
+"let g:translate_endpoint = 'https://api-free.deepl.com/v2/translate'
 nmap gr <Plug>(Translate)
 vmap gr <Plug>(Translate)
 " }}}
@@ -395,6 +395,8 @@ nnoremap <silent><nowait><expr> <C-u> coc#float#has_scroll() ? coc#float#scroll(
 " Use K to show documentation in preview window.
 nnoremap <silent> K :call <SID>show_documentation()<CR>
 
+map <silent> ga <plug>(coc-codelens-action)
+
 " use manual completion
 inoremap <silent><expr> <C-x><C-o> coc#refresh()
 
@@ -460,7 +462,7 @@ call coc#config('diagnostic-languageserver.filetypes', {
 call coc#config('coc.preferences.formatOnType', 'true')
 call coc#config('coc.preferences.useQuickfixForLocations', 'true')
 call coc#config('suggest.noselect', 'true')
-"call coc#config('codeLens.enable', v:true)
+call coc#config('codeLens.enable', v:true)
 " disable auto completion
 "call coc#config('suggest.autoTrigger', 'none')
 call coc#config('coc.preferences', {
@@ -505,10 +507,21 @@ call coc#config('languageserver', {
 call coc#config('go.goplsPath', 'gopls')
 call coc#config('go.goplsOptions', {
       \ 'completeUnimported': v:true,
-      \ 'codelenses': {
+      \ 'allExperiments': v:true,
+      \ 'codelenses': { 
         \ 'test': v:true,
-        \ },
-        \ })
+        \ 'run_vulncheck_exp': v:true,
+        \ 'tidy': v:true,
+      \ },
+      \ 'hints': {
+        \ 'assignVariableTypes': v:true,
+        \ 'compositeLiteralFields': v:true,
+        \ 'constantValues': v:true,
+        \ 'functionTypeParameters': v:true,
+        \ 'parameterNames': v:true,
+        \ 'rangeVariableTypes': v:true,
+        \ }
+      \ })
 
 " rust-analyzer configuration
 call coc#config('rust-analyzer.diagnostics.experimental.enable', v:true)
@@ -716,6 +729,9 @@ if !has('nvim')
   set cursorlineopt=line " 行のみハイライト
   set wildoptions+=pum
   set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
+else
+  set laststatus=3
+  set winbar=%#MoreMsg#%f%m
 endif
 if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
 set diffopt=vertical
@@ -1108,6 +1124,7 @@ augroup END
 
 " {{{ twihi.vim
 let g:twihi_mention_check_interval = 60000 * 10
+let g:twihi_notify_ui = 'system'
 nnoremap <silent> <C-g>n :TwihiTweet<CR>
 nnoremap <silent> <C-g>m :TwihiMentions<CR>
 nnoremap <silent> <C-g>h :TwihiHome<CR>
