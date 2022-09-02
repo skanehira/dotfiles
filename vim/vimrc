@@ -65,7 +65,6 @@ if dein#load_state(s:dein_dir)
 
   " for development
   call dein#add('neoclide/coc.nvim', {'rev': 'release'})
-  call dein#add('t9md/vim-choosewin')
   call dein#add('Shougo/dein.vim')
   call dein#add('andymass/vim-matchup')
   call dein#add('cohama/lexima.vim')
@@ -88,7 +87,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('skanehira/command.vim')
   call dein#add('skanehira/denops-germanium.vim')
   call dein#add('skanehira/denops-docker.vim')
-  call dein#add('skanehira/getpr.vim')
   call dein#add('skanehira/qfopen.vim')
   call dein#add('thinca/vim-quickrun')
   call dein#add('skanehira/quickrun-neoterm.vim')
@@ -106,6 +104,8 @@ if dein#load_state(s:dein_dir)
   call dein#add('lambdalisue/compl-local-filename.vim')
   call dein#add('thinca/vim-prettyprint')
   call dein#add('lambdalisue/file-protocol.vim')
+  call dein#add('skanehira/k8s.vim')
+  call dein#add('skanehira/winselector.vim')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -123,6 +123,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('tweekmonster/helpful.vim')
   call dein#add('vim-jp/vital.vim', {'merged': 0})
   call dein#add('thinca/vim-themis')
+  call dein#add('tyru/capture.vim')
 
   " other
   call dein#add('itchyny/lightline.vim')
@@ -159,6 +160,7 @@ vmap gr <Plug>(Translate)
 
 " {{{ fern.vim
 let g:fern#renderer = "nerdfont"
+let g:fern#window_selector_use_popup = 1
 function! s:fern_init() abort
   nnoremap <buffer> <silent> q :q<CR>
   map <buffer> <silent> <C-x> <Plug>(fern-action-open:split)
@@ -348,6 +350,11 @@ command! LspFormat :call CocActionAsync('format')
 command! LspImport :call CocActionAsync('runCommand', 'editor.action.organizeImport')
 command! GoTagAdd :CocCommand go.tags.add.prompt
 command! GoTagRemove :CocCommand go.tags.remove.prompt
+
+augroup rust_coc_maps
+  au!
+  au FileType rust nnoremap <buffer> <silent> <C-g>o :CocCommand rust-analyzer.openDocs<CR>
+augroup END
 
 " [
 "   {"text": "(e)dit", "value": "edit"}
@@ -630,18 +637,8 @@ let g:gyazo_insert_markdown_url = 1
 nmap gup <Plug>(gyazo-upload)
 " }}}
 
-" {{{ vim-choosewin
-if has('nvim')
-  function! s:choosewin() abort
-    let ls = &laststatus
-    set laststatus=2
-    call choosewin#start(range(1, winnr('$')))
-    exe 'set laststatus=' .. ls
-  endfunction
-  nnoremap <C-f> :<C-u>call <SID>choosewin()<CR>
-else
-  nmap <C-f> <Plug>(choosewin)
-endif
+" {{{ winselector.vim
+nmap <C-f> <Plug>(winselector)
 " }}}
 
 " {{{ lightline
@@ -717,7 +714,7 @@ set virtualedit=block " 矩形選択時に文字の無いところまで選択�
 set helplang=ja " ヘルプの言語を日本語優先にする
 set autowrite " 他のバッファに移動する時に自動保存
 set noswapfile " swapファイルを作成しない
-set showtabline=2 " タブを表示しない
+set showtabline=1 " タブを表示しない
 set noshowmode
 "set noequalalways " ウィンドウが同じサイズにならないようにする
 "set winfixheight " ウィンドウの高さを保つ
@@ -1154,6 +1151,64 @@ augroup twihi_keymap
 augroup END
 " }}}
 
+" {{{ k8s.vim
+function! s:k8s_pods_keymap() abort
+  nmap <buffer> <CR> <Plug>(k8s:pods:containers)
+  nmap <buffer> <C-g><C-l> <Plug>(k8s:pods:logs)
+  nmap <buffer> <C-g><C-d> <Plug>(k8s:pods:describe)
+  nmap <buffer> D <Plug>(k8s:pods:delete)
+  nmap <buffer> K <Plug>(k8s:pods:kill)
+  nmap <buffer> <C-g><C-y> <Plug>(k8s:pods:yaml)
+  nmap <buffer> <C-e> <Plug>(k8s:pods:events)
+  nmap <buffer> s <Plug>(k8s:pods:shell)
+  nmap <buffer> e <Plug>(k8s:pods:exec)
+  nmap <buffer> E <Plug>(k8s:pods:edit)
+endfunction
+
+function! s:k8s_nodes_keymap() abort
+  nmap <buffer> <C-g><C-d> <Plug>(k8s:nodes:describe)
+  nmap <buffer> <C-g><C-y> <Plug>(k8s:nodes:yaml)
+  nmap <buffer> <CR> <Plug>(k8s:nodes:pods)
+  nmap <buffer> E <Plug>(k8s:nodes:edit)
+endfunction
+
+function! s:k8s_containers_keymap() abort
+  nmap <buffer> s <Plug>(k8s:pods:containers:shell)
+  nmap <buffer> e <Plug>(k8s:pods:containers:exec)
+endfunction
+
+function! s:k8s_deployments_keymap() abort
+  nmap <buffer> <C-g><C-d> <Plug>(k8s:deployments:describe)
+  nmap <buffer> <C-g><C-y> <Plug>(k8s:deployments:yaml)
+  nmap <buffer> E <Plug>(k8s:deployments:edit)
+  nmap <buffer> <CR> <Plug>(k8s:deployments:pods)
+  nmap <buffer> D <Plug>(k8s:deployments:delete)
+endfunction
+
+function! s:k8s_services_keymap() abort
+  nmap <buffer> <CR> <Plug>(k8s:svcs:pods)
+  nmap <buffer> <C-g><C-d> <Plug>(k8s:svcs:describe)
+  nmap <buffer> D <Plug>(k8s:svcs:delete)
+  nmap <buffer> <C-g><C-y> <Plug>(k8s:svcs:yaml)
+  nmap <buffer> E <Plug>(k8s:svcs:edit)
+endfunction
+
+function! s:k8s_secrets_keymap() abort
+  nmap <buffer> <C-g><C-d> <Plug>(k8s:secrets:describe)
+  nmap <buffer> <C-g><C-y> <Plug>(k8s:secrets:yaml)
+  nmap <buffer> E <Plug>(k8s:secrets:edit)
+  nmap <buffer> D <Plug>(k8s:secrets:delete)
+endfunction
+
+augroup k8s-keymap
+  au!
+  au FileType k8s-pods call s:k8s_pods_keymap()
+  au FileType k8s-nodes call s:k8s_nodes_keymap()
+  au FileType k8s-containers call s:k8s_containers_keymap()
+  au FileType k8s-deployments call s:k8s_deployments_keymap()
+  au FileType k8s-services call s:k8s_services_keymap()
+  au FileType k8s-secrets call s:k8s_secrets_keymap()
+augroup END
 " }}}
 
 " vim: foldmethod=marker
