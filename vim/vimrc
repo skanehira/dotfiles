@@ -85,7 +85,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('simeji/winresizer')
   call dein#add('vim-denops/denops.vim')
   call dein#add('skanehira/command.vim')
-  call dein#add('skanehira/denops-germanium.vim')
+  call dein#add('skanehira/denops-silicon.vim')
   call dein#add('skanehira/denops-docker.vim')
   call dein#add('skanehira/qfopen.vim')
   call dein#add('thinca/vim-quickrun')
@@ -331,11 +331,6 @@ augroup quickrun-config
   au!
   au FileType quickrun nnoremap <buffer> q :bw!<CR>
 augroup END
-" }}}
-
-" {{{ germanium.vim
-map <silent> gi :<C-u>Germanium -f="Cica-Regular"<CR>
-xmap <silent> gi :Germanium -f="Cica-Regular"<CR>
 " }}}
 
 " fzf settings {{{
@@ -726,6 +721,7 @@ if !has('nvim')
   set cursorlineopt=line " 行のみハイライト
   set wildoptions+=pum
   set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
+  set mouse=
 else
   set laststatus=3
   set winbar=%#MoreMsg#%f%m
@@ -1209,6 +1205,17 @@ augroup k8s-keymap
   au FileType k8s-services call s:k8s_services_keymap()
   au FileType k8s-secrets call s:k8s_secrets_keymap()
 augroup END
+" }}}
+
+" {{{ silicon.vim
+let g:silicon_options = {
+      \  'no_line_number': v:true,
+      \  'background_color': '#CCCCCC',
+      \  'theme': 'GitHub',
+      \ }
+
+nmap <silent> gi <Plug>(silicon-generate)
+xmap <silent> gi <Plug>(silicon-generate)
 " }}}
 
 " vim: foldmethod=marker
