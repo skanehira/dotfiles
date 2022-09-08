@@ -660,9 +660,6 @@ endfunction
 nmap c: <Plug>(command_buffer_open)
 " }}}
 
-syntax enable " シンタックスを有効にする
-filetype plugin indent on " ファイル形式別プラグインとインデントを有効にする
-
 " カラースキームを使う {{{
 set termguicolors
 colorscheme iceberg
@@ -686,6 +683,8 @@ hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
 " }}}
 
 " options {{{
+syntax enable " シンタックスを有効にする
+filetype plugin indent on " ファイル形式別プラグインとインデントを有効にする
 set history=200
 set shortmess^=I
 set encoding=utf-8
@@ -721,8 +720,8 @@ if !has('nvim')
   set cursorlineopt=line " 行のみハイライト
   set wildoptions+=pum
   set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
-  set mouse=
 else
+  set mouse=
   set laststatus=3
   set winbar=%#MoreMsg#%f%m
 endif
@@ -1209,9 +1208,10 @@ augroup END
 
 " {{{ silicon.vim
 let g:silicon_options = {
-      \  'no_line_number': v:true,
-      \  'background_color': '#CCCCCC',
-      \  'theme': 'GitHub',
+      \ 'no_line_number': v:true,
+      \ 'background_color': '#434C5E',
+      \ 'no_window_controls': v:true,
+      \ 'theme': 'Nord',
       \ }
 
 nmap <silent> gi <Plug>(silicon-generate)
