@@ -95,8 +95,8 @@ local lsp_on_attach = function(client, bufnr)
   end
 end
 
+-- rust-tools.nvim
 local rust_tools_config = function()
-  -- rust-tools.nvim
   local rt = require("rust-tools")
   rt.setup({
     server = {
@@ -289,17 +289,22 @@ require('packer').startup(function(use)
   }
 
   -- lsp
-  use 'neovim/nvim-lspconfig'
   use {
-    'williamboman/mason.nvim',
-    config = function() require("mason").setup() end,
+    'williamboman/mason-lspconfig.nvim',
+    requires = {
+      { 'neovim/nvim-lspconfig' },
+      {
+        'williamboman/mason.nvim',
+        config = function() require("mason").setup() end,
+      },
+    }
   }
-  use 'williamboman/mason-lspconfig.nvim'
-  -- use 'jose-elias-alvarez/null-ls.nvim'
+
   use {
     'j-hui/fidget.nvim',
     config = function() require('fidget').setup() end,
   }
+
   use {
     'kkharji/lspsaga.nvim',
     config = function()
@@ -406,6 +411,72 @@ require('packer').startup(function(use)
   end
 end)
 
+-- lsp config
+require('mason-lspconfig').setup({
+  automatic_installation = {
+    exclude = {
+      'gopls',
+      'denols',
+    }
+  }
+})
+
+local lspconfig = require("lspconfig")
+
+local ls = {
+  -- 'sumneko_lua',
+  -- 'tsserver',
+  -- 'denols',
+  'golangci_lint_ls',
+  'eslint',
+  'graphql',
+  'bashls',
+  'yamlls',
+  'gopls',
+  'jsonls',
+  'vimls',
+}
+
+for i = 1, #ls do
+  lspconfig[ls[i]].setup({
+    on_attach = lsp_on_attach
+  })
+end
+
+lspconfig.denols.setup({
+  root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json'),
+  init_options = {
+    lint = true,
+    unstable = true
+  },
+  on_attach = lsp_on_attach,
+})
+
+lspconfig.tsserver.setup({
+  root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
+  on_attach = lsp_on_attach,
+})
+
+lspconfig.sumneko_lua.setup({
+  settings = {
+    Lua = {
+      runtime = {
+        version = 'LuaJIT'
+      },
+      diagnostics = {
+        -- Get the language server to recognize the `vim` global
+        globals = { "vim" },
+      },
+      workspace = {
+        -- Make the server aware of Neovim runtime files
+        library = vim.api.nvim_get_runtime_file("", true),
+      },
+    },
+  },
+  on_attach = lsp_on_attach,
+})
+
+
 -- options
 vim.cmd('syntax enable')
 vim.cmd('filetype plugin indent on')
@@ -442,21 +513,31 @@ vim.opt.clipboard:append({ vim.fn.has('mac') == true and 'unnamed' or 'unnamedpl
 
 -- file indent
 local filetype_indent_group = vim.api.nvim_create_augroup('fileTypeIndent', { clear = true })
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = { 'go' },
-  command = 'setlocal tabstop=4 shiftwidth=4',
-  group = filetype_indent_group
-})
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = { 'rust' },
-  command = 'setlocal tabstop=4 softtabstop=4 shiftwidth=4 expandtab',
-  group = filetype_indent_group
-})
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = { 'javascript', 'typescriptreact', 'typescript', 'vim', 'lua', 'yaml', 'json', 'sh', 'zsh', 'markdown' },
-  command = 'setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab',
-  group = filetype_indent_group
-})
+local file_indents = {
+  {
+    pattern = 'go',
+    command = 'setlocal tabstop=4 shiftwidth=4'
+  },
+  {
+    pattern = 'rust',
+    command = 'setlocal tabstop=4 softtabstop=4 shiftwidth=4 expandtab'
+  },
+  {
+    pattern = { 'javascript', 'typescriptreact', 'typescript', 'vim', 'lua', 'yaml', 'json', 'sh', 'zsh', 'markdown' },
+    command = 'setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab'
+  },
+}
+
+for i = 1, #file_indents do
+  local indent = file_indents[i]
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = indent.pattern,
+    command = indent.command,
+    group = filetype_indent_group
+  })
+end
+
+-- grep window
 vim.api.nvim_create_autocmd('QuickFixCmdPost', {
   pattern = '*grep*',
   command = 'cwindow',
@@ -589,71 +670,6 @@ vim.keymap.set('c', '<C-p>', function()
   return vim.fn.pumvisible() == 1 and '<C-p>' or '<Up>'
 end, { expr = true })
 
--- lsp settings
-require('mason-lspconfig').setup({
-  automatic_installation = {
-    exclude = {
-      'gopls',
-      'denols',
-    }
-  }
-})
-
-local lspconfig = require("lspconfig")
-
-local ls = {
-  -- 'sumneko_lua',
-  -- 'tsserver',
-  -- 'denols',
-  'golangci_lint_ls',
-  'eslint',
-  'graphql',
-  'bashls',
-  'yamlls',
-  'gopls',
-  'jsonls',
-  'vimls',
-}
-
-for i = 1, #ls do
-  lspconfig[ls[i]].setup({
-    on_attach = lsp_on_attach
-  })
-end
-
-lspconfig.denols.setup({
-  root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json'),
-  init_options = {
-    lint = true,
-    unstable = true
-  },
-  on_attach = lsp_on_attach,
-})
-
-lspconfig.tsserver.setup({
-  root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
-  on_attach = lsp_on_attach,
-})
-
-lspconfig.sumneko_lua.setup({
-  settings = {
-    Lua = {
-      runtime = {
-        version = 'LuaJIT'
-      },
-      diagnostics = {
-        -- Get the language server to recognize the `vim` global
-        globals = { "vim" },
-      },
-      workspace = {
-        -- Make the server aware of Neovim runtime files
-        library = vim.api.nvim_get_runtime_file("", true),
-      },
-    },
-  },
-  on_attach = lsp_on_attach,
-})
-
 -- translate.vim
 vim.keymap.set('n', 'gr', '<Plug>(Translate)')
 vim.keymap.set('v', 'gr', '<Plug>(Translate)')
@@ -737,7 +753,6 @@ vim.api.nvim_create_user_command('ZennCreateArticle',
   function(opts)
     local date = vim.fn.strftime('%Y-%m-%d')
     local slug = date .. '-' .. opts.args
-    print(slug)
     local cmd = 'npx zenn new:article --emoji 🦍 --slug ' .. slug
     os.execute(cmd)
     vim.cmd('edit ' .. string.format('articles/%s.md', slug))
