@@ -240,6 +240,28 @@ local telescope_config = function()
   }
 end
 
+
+-- fern.vim
+local fern_config = function()
+  vim.g['fern#renderer'] = 'nerdfont'
+  vim.g['fern#window_selector_use_popup'] = true
+  vim.g['fern#default_hidden'] = 1
+  vim.g['fern#default_exclude'] = '.git$'
+
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'fern',
+    callback = function()
+      vim.keymap.set('n', 'q', ':q<CR>', { silent = true, buffer = true })
+      vim.keymap.set('n', '<C-x>', '<Plug>(fern-action-open:split)', { silent = true, buffer = true })
+      vim.keymap.set('n', '<C-v>', '<Plug>(fern-action-open:vsplit)', { silent = true, buffer = true })
+      vim.keymap.set('n', '<C-t>', '<Plug>(fern-action-tcd)', { silent = true, buffer = true })
+    end,
+    group = vim.api.nvim_create_augroup('fernInit', { clear = true }),
+  })
+
+  vim.keymap.set('n', '<Leader>f', ':Fern . -drawer<CR>', { silent = true })
+end
+
 -- plugin settings
 local ensure_packer = function()
   local install_path = vim.fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
@@ -321,7 +343,8 @@ require('packer').startup(function(use)
       { 'lambdalisue/fern-git-status.vim' },
       { 'lambdalisue/nerdfont.vim' },
       { 'lambdalisue/fern-renderer-nerdfont.vim' }
-    }
+    },
+    config = fern_config,
   }
   use {
     'lambdalisue/gina.vim',
@@ -634,25 +657,6 @@ lspconfig.sumneko_lua.setup({
 -- translate.vim
 vim.keymap.set('n', 'gr', '<Plug>(Translate)')
 vim.keymap.set('v', 'gr', '<Plug>(Translate)')
-
--- fern.vim
-vim.g['fern#renderer'] = 'nerdfont'
-vim.g['fern#window_selector_use_popup'] = true
-vim.g['fern#default_hidden'] = 1
-vim.g['fern#default_exclude'] = '.git$'
-
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'fern',
-  callback = function()
-    vim.keymap.set('n', 'q', ':q<CR>', { silent = true, buffer = true })
-    vim.keymap.set('n', '<C-x>', '<Plug>(fern-action-open:split)', { silent = true, buffer = true })
-    vim.keymap.set('n', '<C-v>', '<Plug>(fern-action-open:vsplit)', { silent = true, buffer = true })
-    vim.keymap.set('n', '<C-t>', '<Plug>(fern-action-tcd)', { silent = true, buffer = true })
-  end,
-  group = vim.api.nvim_create_augroup('fernInit', { clear = true }),
-})
-
-vim.keymap.set('n', '<Leader>f', ':Fern . -drawer<CR>', { silent = true })
 
 -- quickrun.vim
 vim.g['quickrun_config'] = {
