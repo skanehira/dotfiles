@@ -77,7 +77,7 @@ Lsp_on_attach = function(client, bufnr)
   vim.keymap.set('n', '<Leader>gr', vim.lsp.buf.references, bufopts)
   vim.keymap.set('n', '<Leader>rn', vim.lsp.buf.rename, bufopts)
   vim.keymap.set('n', '<C-]>', vim.lsp.buf.definition, bufopts)
-  vim.keymap.set('n', 'ga', vim.lsp.buf.code_action, bufopts)
+  vim.keymap.set('n', 'ma', vim.lsp.buf.code_action, bufopts)
   vim.keymap.set('n', '<Leader>gl', vim.lsp.codelens.run, bufopts)
 
   -- auto format when save the file
@@ -322,6 +322,38 @@ local treesitter_config = function()
   })
 end
 
+-- gitsigns.nvim
+local gitsigns_config = function()
+  require('gitsigns').setup({
+    on_attach = function(bufnr)
+      local gs = package.loaded.gitsigns
+      local map = function(mode, l, r, opts)
+        opts = opts or {}
+        opts.buffer = bufnr
+        vim.keymap.set(mode, l, r, opts)
+      end
+
+      -- Navigation
+      map('n', ']c', function()
+        if vim.wo.diff then return ']c' end
+        vim.schedule(function() gs.next_hunk() end)
+        return '<Ignore>'
+      end, { expr = true })
+
+      map('n', '[c', function()
+        if vim.wo.diff then return '[c' end
+        vim.schedule(function() gs.prev_hunk() end)
+        return '<Ignore>'
+      end, { expr = true })
+
+      -- Actions
+      map({ 'n', 'v' }, 'g]', ':Gitsigns stage_hunk<CR>')
+      map({ 'n', 'v' }, 'g[', ':Gitsigns undo_stage_hunk<CR>')
+      map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>')
+    end
+  })
+end
+
 -- plugin settings
 local ensure_packer = function()
   local install_path = vim.fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
@@ -338,6 +370,13 @@ local packer_bootstrap = ensure_packer()
 require('packer').startup(function(use)
   use { 'wbthomason/packer.nvim' }
 
+  -- git signs
+  use {
+    'lewis6991/gitsigns.nvim',
+    config = gitsigns_config
+  }
+
+  -- status line
   use {
     'nvim-lualine/lualine.nvim',
     requires = 'kyazdani42/nvim-web-devicons',
