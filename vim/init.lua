@@ -492,6 +492,7 @@ end)
 vim.cmd([[
 PackerClean
 PackerInstall
+PackerCompile
 ]])
 
 -- options
