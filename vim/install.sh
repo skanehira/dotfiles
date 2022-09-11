@@ -1,6 +1,6 @@
 #!/bin/bash
 path=~/.vim
-nvim_path=~/.config/nvim
+nvim_path=$XDG_CONFIG_HOME/nvim
 
 if [ ! -e $path ]; then
   mkdir -p $path
@@ -18,6 +18,6 @@ if [[ ! -e $path/sonictemplate ]]; then
   ln -s $PWD/sonictemplate $path/sonictemplate
 fi
 
-if [[ ! -e $nvim_path/init.vim ]]; then
-  ln -s $HOME/.vimrc $nvim_path/init.vim
+if [[ ! -e $nvim_path/init.lua ]]; then
+  ln -s $PWD/init.lua $nvim_path/init.lua
 fi
