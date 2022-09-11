@@ -370,6 +370,14 @@ local packer_bootstrap = ensure_packer()
 require('packer').startup(function(use)
   use { 'wbthomason/packer.nvim' }
 
+  -- lsp_signature
+  use {
+    'ray-x/lsp_signature.nvim',
+    config = function()
+      require('lsp_signature').setup({})
+    end
+  }
+
   -- git signs
   use {
     'lewis6991/gitsigns.nvim',
@@ -528,11 +536,12 @@ require('packer').startup(function(use)
   end
 end)
 
-vim.cmd([[
-PackerClean
-PackerInstall
-PackerCompile
-]])
+-- update config when install, clean, update the plugins
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'PackerComplete',
+  command = 'PackerCompile',
+  group = vim.api.nvim_create_augroup('packerComplete', { clear = true }),
+})
 
 -- options
 vim.cmd('syntax enable')
@@ -700,9 +709,7 @@ vim.keymap.set('c', '<C-v>', paste_rhs, { expr = true })
 vim.keymap.set('n', 'ms', function()
   vim.cmd([[
   luafile ~/.config/nvim/init.lua
-  PackerClean
   PackerInstall
-  PackerCompile
   ]])
 end)
 vim.keymap.set('n', '<Leader>.', ':tabnew ~/.config/nvim/init.lua<CR>')
