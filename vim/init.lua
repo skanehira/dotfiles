@@ -412,6 +412,9 @@ require('packer').startup(function(use)
     config = treesitter_config
   }
 
+  -- better quickfix
+  use { 'kevinhwang91/nvim-bqf', ft = 'qf' }
+
   -- lsp
   use {
     'williamboman/mason-lspconfig.nvim',
