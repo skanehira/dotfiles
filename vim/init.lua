@@ -83,7 +83,7 @@ lsp_on_attach = function(client, bufnr)
   -- auto format when save the file
   local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
   if client.supports_method("textDocument/formatting") then
-    vim.keymap.set('n', 'mf', vim.lsp.buf.format, { buffer = bufnr })
+    vim.keymap.set('n', ';f', vim.lsp.buf.format, { buffer = bufnr })
     vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
     vim.api.nvim_create_autocmd("BufWritePre", {
       group = augroup,
@@ -200,7 +200,9 @@ end
 -- telescope.vim
 local telescope_config = function()
   vim.keymap.set('n', '<C-p>', '<Cmd>Telescope find_files<CR>')
-  vim.keymap.set('n', '<C-g><C-g>', '<Cmd>Telescope grep_string<CR>')
+  vim.keymap.set('n', 'mg', '<Cmd>Telescope live_grep<CR>')
+  vim.keymap.set('n', 'md', '<Cmd>Telescope diagnostics<CR>')
+  vim.keymap.set('n', 'mf', '<Cmd>Telescope current_buffer_fuzzy_find<CR>')
 
   require('telescope').setup {
     pickers = {
@@ -308,6 +310,22 @@ local lsp_config = function()
   })
 end
 
+-- treesitter config
+local treesitter_config = function()
+  require('nvim-treesitter.configs').setup({
+    ensure_installed = {
+      'lua', 'rust', 'typescript', 'tsx',
+      'go', 'gomod', 'sql', 'toml', 'yaml',
+      'html', 'javascript', 'graphql',
+      'markdown', 'markdown_inline'
+    },
+    auto_install = true,
+    highlight = {
+      enable = true,
+    }
+  })
+end
+
 -- plugin settings
 local ensure_packer = function()
   local install_path = vim.fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
@@ -332,6 +350,11 @@ require('packer').startup(function(use)
   use {
     'itchyny/lightline.vim',
     config = lightline_config,
+  }
+  use {
+    'nvim-treesitter/nvim-treesitter',
+    run = ':TSUpdate',
+    config = treesitter_config
   }
 
   -- lsp
@@ -627,6 +650,7 @@ vim.keymap.set('n', 'ms', function()
   PackerCompile
   ]])
 end)
+vim.keymap.set('n', '<Leader>.', ':tabnew ~/.config/nvim/init.lua<CR>')
 vim.keymap.set('n', 'Y', 'Y')
 vim.keymap.set('n', 'R', 'gR')
 vim.keymap.set('n', '*', '*N')
@@ -650,6 +674,13 @@ end, { expr = true })
 vim.keymap.set('c', '<C-p>', function()
   return vim.fn.pumvisible() == 1 and '<C-p>' or '<Up>'
 end, { expr = true })
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'qf',
+  callback = function()
+    vim.keymap.set('n', 'q', '<Cmd>q<CR>', { silent = true, buffer = true })
+  end,
+  group = vim.api.nvim_create_augroup("qfInit", { clear = true }),
+})
 
 -- translate.vim
 vim.keymap.set('n', 'gr', '<Plug>(Translate)')
