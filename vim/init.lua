@@ -142,27 +142,23 @@ local iceberg_config = function()
   })
 end
 
--- lightline.vim
-local lightline_config = function()
-  vim.cmd([[
-function! FilePath()
-  if winwidth(0) > 90
-    return expand("%:s")
-  else
-    return expand("%:t")
-  endif
-endfunction
-]] )
-
-  vim.g.lightline = {
-    colorscheme = 'iceberg',
-    active = {
-      left = { { 'mode', 'paste' }, { 'readonly', 'branchName', 'filepath', 'modified' } },
-    },
-    component_function = {
-      filepath = 'FilePath',
-    },
-  }
+-- bufferline.nvim
+local bufferline_config = function()
+  require('bufferline').setup({
+    options = {
+      mode = 'tabs',
+      hover = {
+        enabled = true,
+        delay = 200,
+        reveal = { 'close' }
+      },
+      diagnostics = 'nvim_lsp',
+      diagnostics_indicator = function(count, level)
+        local icon = level:match("error") and " " or ""
+        return ' ' .. icon .. count
+      end
+    }
+  })
 end
 
 -- gina.vim
@@ -340,16 +336,28 @@ end
 local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
-  use 'wbthomason/packer.nvim'
+  use { 'wbthomason/packer.nvim' }
+
+  use {
+    'nvim-lualine/lualine.nvim',
+    requires = 'kyazdani42/nvim-web-devicons',
+    config = function()
+      require('lualine').setup({})
+    end
+  }
+
+  -- tabpage
+  use {
+    'akinsho/bufferline.nvim',
+    tag = "v2.*",
+    requires = 'kyazdani42/nvim-web-devicons',
+    config = bufferline_config
+  }
 
   -- colorscheme
   use {
     'cocopon/iceberg.vim',
     config = iceberg_config,
-  }
-  use {
-    'itchyny/lightline.vim',
-    config = lightline_config,
   }
   use {
     'nvim-treesitter/nvim-treesitter',
@@ -481,6 +489,11 @@ require('packer').startup(function(use)
   end
 end)
 
+vim.cmd([[
+PackerClean
+PackerInstall
+]])
+
 -- options
 vim.cmd('syntax enable')
 vim.cmd('filetype plugin indent on')
@@ -495,7 +508,7 @@ vim.opt.hlsearch = true
 vim.opt.smartindent = true
 vim.opt.virtualedit = "block"
 vim.opt.showtabline = 1
-vim.opt.winbar = "%#MoreMsg#%f%m"
+-- vim.opt.winbar = "%#MoreMsg#%f%m"
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.softtabstop = 2
@@ -647,6 +660,8 @@ vim.keymap.set('c', '<C-v>', paste_rhs, { expr = true })
 vim.keymap.set('n', 'ms', function()
   vim.cmd([[
   luafile ~/.config/nvim/init.lua
+  PackerClean
+  PackerInstall
   PackerCompile
   ]])
 end)
