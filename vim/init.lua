@@ -43,7 +43,7 @@ local nvim_cmp_config = function()
       ["<C-p>"] = cmp.mapping.select_prev_item(),
       ["<C-n>"] = cmp.mapping.select_next_item(),
       ['<Tab>'] = cmp.mapping.complete(),
-      ['<C-e>'] = cmp.mapping.confirm({ select = true }),
+      ['<CR>'] = cmp.mapping.confirm({ select = true }),
     }),
     sources = {
       { name = 'nvim_lsp' },
@@ -68,7 +68,7 @@ local nvim_cmp_config = function()
 end
 
 -- lsp on attach
-local lsp_on_attach = function(client, bufnr)
+lsp_on_attach = function(client, bufnr)
   -- Enable completion triggered by <c-x><c-o>
   vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
   local bufopts = { silent = true, buffer = bufnr }
@@ -101,30 +101,10 @@ local rust_tools_config = function()
   rt.setup({
     server = {
       on_attach = function(client, bufnr)
-        -- Hover actions
         local bufopts = { silent = true, buffer = bufnr }
-        vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
+        lsp_on_attach(client, bufnr)
         vim.keymap.set('n', 'K', rt.hover_actions.hover_actions, bufopts)
-        vim.keymap.set('n', '<Leader>gi', vim.lsp.buf.implementation, bufopts)
-        vim.keymap.set('n', '<Leader>gr', vim.lsp.buf.references, bufopts)
-        vim.keymap.set('n', '<Leader>rn', vim.lsp.buf.rename, bufopts)
-        vim.keymap.set('n', '<C-]>', vim.lsp.buf.definition, bufopts)
-        vim.keymap.set('n', 'ga', vim.lsp.buf.code_action, bufopts)
         vim.keymap.set('n', '<Leader>gl', rt.code_action_group.code_action_group, bufopts)
-
-        -- auto format when save the file
-        local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
-        if client.supports_method("textDocument/formatting") then
-          vim.keymap.set('n', 'mf', vim.lsp.buf.format)
-          vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
-          vim.api.nvim_create_autocmd("BufWritePre", {
-            group = augroup,
-            buffer = bufnr,
-            callback = function()
-              vim.lsp.buf.format()
-            end,
-          })
-        end
       end,
       standalone = true,
     },
@@ -188,22 +168,22 @@ end
 -- gina.vim
 local gina_config = function()
   local gina_keymaps = {
-    { map = 'nmap', buffer = 'status', lhs = 'gp', rhs = '<Cmd>terminal git push<CR>', opt = { silent = true } },
-    { map = 'nmap', buffer = 'status', lhs = 'gr', rhs = '<Cmd>terminal gh pr create -d<CR>', opt = { silent = true } },
-    { map = 'nmap', buffer = 'status', lhs = 'gl', rhs = '<Cmd>terminal git pull<CR>', opt = { silent = true } },
-    { map = 'nmap', buffer = 'status', lhs = 'cm', rhs = '<Cmd>Gina commit<CR>', opt = { silent = true } },
-    { map = 'nmap', buffer = 'status', lhs = 'ca', rhs = '<Cmd>Gina commit --amend<CR>', opt = { silent = true } },
-    { map = 'nmap', buffer = 'status', lhs = 'dp', rhs = '<Plug>(gina-patch-oneside-tab)', opt = { silent = true } },
-    { map = 'nmap', buffer = 'status', lhs = 'ga', rhs = '--', opt = { silent = true } },
-    { map = 'vmap', buffer = 'status', lhs = 'ga', rhs = '--', opt = { silent = true } },
-    { map = 'nmap', buffer = 'log', lhs = 'dd', rhs = '<Plug>(gina-changes-of)', opt = { silent = true } },
-    { map = 'nmap', buffer = 'branch', lhs = 'n', rhs = '<Plug>(gina-branch-new)', opt = { silent = true } },
-    { map = 'nmap', buffer = 'branch', lhs = 'D', rhs = '<Plug>(gina-branch-delete)', opt = { silent = true } },
-    { map = 'nmap', buffer = '/.*', lhs = 'q', rhs = '<Cmd>bw<CR>', opt = { silent = true } },
+    { map = 'nmap', buffer = 'status', lhs = 'gp', rhs = '<Cmd>terminal git push<CR>' },
+    { map = 'nmap', buffer = 'status', lhs = 'gr', rhs = '<Cmd>terminal gh pr create -d<CR>' },
+    { map = 'nmap', buffer = 'status', lhs = 'gl', rhs = '<Cmd>terminal git pull<CR>' },
+    { map = 'nmap', buffer = 'status', lhs = 'cm', rhs = '<Cmd>Gina commit<CR>' },
+    { map = 'nmap', buffer = 'status', lhs = 'ca', rhs = '<Cmd>Gina commit --amend<CR>' },
+    { map = 'nmap', buffer = 'status', lhs = 'dp', rhs = '<Plug>(gina-patch-oneside-tab)' },
+    { map = 'nmap', buffer = 'status', lhs = 'ga', rhs = '--' },
+    { map = 'vmap', buffer = 'status', lhs = 'ga', rhs = '--' },
+    { map = 'nmap', buffer = 'log', lhs = 'dd', rhs = '<Plug>(gina-changes-of)' },
+    { map = 'nmap', buffer = 'branch', lhs = 'n', rhs = '<Plug>(gina-branch-new)' },
+    { map = 'nmap', buffer = 'branch', lhs = 'D', rhs = '<Plug>(gina-branch-delete)' },
+    { map = 'nmap', buffer = '/.*', lhs = 'q', rhs = '<Cmd>bw<CR>' },
   }
   for i = 1, #gina_keymaps do
     local m = gina_keymaps[i]
-    vim.fn['gina#custom#mapping#' .. m.map](m.buffer, m.lhs, m.rhs, m.opt)
+    vim.fn['gina#custom#mapping#' .. m.map](m.buffer, m.lhs, m.rhs, { silent = true })
   end
 
   vim.fn['gina#custom#command#option']('log', '--opener', 'new')
@@ -240,7 +220,6 @@ local telescope_config = function()
   }
 end
 
-
 -- fern.vim
 local fern_config = function()
   vim.g['fern#renderer'] = 'nerdfont'
@@ -260,6 +239,73 @@ local fern_config = function()
   })
 
   vim.keymap.set('n', '<Leader>f', ':Fern . -drawer<CR>', { silent = true })
+end
+
+-- lsp config
+local lsp_config = function()
+  require('mason-lspconfig').setup({
+    automatic_installation = {
+      exclude = {
+        'gopls',
+        'denols',
+      }
+    }
+  })
+
+  local lspconfig = require("lspconfig")
+
+  local ls = {
+    -- 'sumneko_lua',
+    -- 'tsserver',
+    -- 'denols',
+    'golangci_lint_ls',
+    'eslint',
+    'graphql',
+    'bashls',
+    'yamlls',
+    'gopls',
+    'jsonls',
+    'vimls',
+  }
+
+  for i = 1, #ls do
+    lspconfig[ls[i]].setup({
+      on_attach = lsp_on_attach
+    })
+  end
+
+  lspconfig.denols.setup({
+    root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json'),
+    init_options = {
+      lint = true,
+      unstable = true
+    },
+    on_attach = lsp_on_attach,
+  })
+
+  lspconfig.tsserver.setup({
+    root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
+    on_attach = lsp_on_attach,
+  })
+
+  lspconfig.sumneko_lua.setup({
+    settings = {
+      Lua = {
+        runtime = {
+          version = 'LuaJIT'
+        },
+        diagnostics = {
+          -- Get the language server to recognize the `vim` global
+          globals = { "vim" },
+        },
+        workspace = {
+          -- Make the server aware of Neovim runtime files
+          library = vim.api.nvim_get_runtime_file("", true),
+        },
+      },
+    },
+    on_attach = lsp_on_attach,
+  })
 end
 
 -- plugin settings
@@ -297,7 +343,8 @@ require('packer').startup(function(use)
         'williamboman/mason.nvim',
         config = function() require("mason").setup() end,
       },
-    }
+    },
+    config = lsp_config,
   }
 
   use {
@@ -410,72 +457,6 @@ require('packer').startup(function(use)
     require('packer').sync()
   end
 end)
-
--- lsp config
-require('mason-lspconfig').setup({
-  automatic_installation = {
-    exclude = {
-      'gopls',
-      'denols',
-    }
-  }
-})
-
-local lspconfig = require("lspconfig")
-
-local ls = {
-  -- 'sumneko_lua',
-  -- 'tsserver',
-  -- 'denols',
-  'golangci_lint_ls',
-  'eslint',
-  'graphql',
-  'bashls',
-  'yamlls',
-  'gopls',
-  'jsonls',
-  'vimls',
-}
-
-for i = 1, #ls do
-  lspconfig[ls[i]].setup({
-    on_attach = lsp_on_attach
-  })
-end
-
-lspconfig.denols.setup({
-  root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json'),
-  init_options = {
-    lint = true,
-    unstable = true
-  },
-  on_attach = lsp_on_attach,
-})
-
-lspconfig.tsserver.setup({
-  root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
-  on_attach = lsp_on_attach,
-})
-
-lspconfig.sumneko_lua.setup({
-  settings = {
-    Lua = {
-      runtime = {
-        version = 'LuaJIT'
-      },
-      diagnostics = {
-        -- Get the language server to recognize the `vim` global
-        globals = { "vim" },
-      },
-      workspace = {
-        -- Make the server aware of Neovim runtime files
-        library = vim.api.nvim_get_runtime_file("", true),
-      },
-    },
-  },
-  on_attach = lsp_on_attach,
-})
-
 
 -- options
 vim.cmd('syntax enable')
@@ -802,19 +783,21 @@ vim.keymap.set('n', '<C-g>m', '<Cmd>TwihiMentions<CR>', { silent = true })
 vim.keymap.set('n', '<C-g>h', '<Cmd>TwihiHome<CR>', { silent = true })
 
 local twihi_timeline_keymap = function()
-  vim.keymap.set('n', '<C-g><C-y>', '<Plug>(twihi:tweet:yank)', { buffer = true, silent = true })
-  vim.keymap.set('n', 'R', '<Plug>(twihi:retweet)', { buffer = true, silent = true })
-  vim.keymap.set('n', '<C-g><C-l>', '<C-g><C-l> <Plug>(twihi:tweet:like)', { buffer = true, silent = true })
-  vim.keymap.set('n', '<C-o>', '<Plug>(twihi:tweet:open)', { buffer = true, silent = true })
-  vim.keymap.set('n', '<C-r>', '<Plug>(twihi:reply)', { buffer = true, silent = true })
-  vim.keymap.set('n', '<C-j>', '<Plug>(twihi:tweet:next)', { buffer = true, silent = true })
-  vim.keymap.set('n', '<C-k>', '<Plug>(twihi:tweet:prev)', { buffer = true, silent = true })
+  local opt = { buffer = true, silent = true }
+  vim.keymap.set('n', '<C-g><C-y>', '<Plug>(twihi:tweet:yank)', opt)
+  vim.keymap.set('n', 'R', '<Plug>(twihi:retweet)', opt)
+  vim.keymap.set('n', '<C-g><C-l>', '<C-g><C-l> <Plug>(twihi:tweet:like)', opt)
+  vim.keymap.set('n', '<C-o>', '<Plug>(twihi:tweet:open)', opt)
+  vim.keymap.set('n', '<C-r>', '<Plug>(twihi:reply)', opt)
+  vim.keymap.set('n', '<C-j>', '<Plug>(twihi:tweet:next)', opt)
+  vim.keymap.set('n', '<C-k>', '<Plug>(twihi:tweet:prev)', opt)
 end
 
 local twihi_media_keymap = function()
-  vim.keymap.set('n', '<C-g>m', '<Plug>(twihi:media:add:clipboard)', { buffer = true, silent = true })
-  vim.keymap.set('n', '<C-g>d', '<Plug>(twihi:media:remove)', { buffer = true, silent = true })
-  vim.keymap.set('n', '<C-g>o', '<Plug>(twihi:media:open)', { buffer = true, silent = true })
+  local opt = { buffer = true, silent = true }
+  vim.keymap.set('n', '<C-g>m', '<Plug>(twihi:media:add:clipboard)', opt)
+  vim.keymap.set('n', '<C-g>d', '<Plug>(twihi:media:remove)', opt)
+  vim.keymap.set('n', '<C-g>o', '<Plug>(twihi:media:open)', opt)
 end
 
 local twihi_init_group = vim.api.nvim_create_augroup("twihiInit", { clear = true })
