@@ -33,6 +33,213 @@ for i = 1, #disable_plugins do
   vim.g[disable_plugins[i]] = true
 end
 
+-- nvim-cmp
+local nvim_cmp_config = function()
+  local cmp = require('cmp')
+  cmp.setup({
+    mapping = cmp.mapping.preset.insert({
+      ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+      ['<C-f>'] = cmp.mapping.scroll_docs(4),
+      ["<C-p>"] = cmp.mapping.select_prev_item(),
+      ["<C-n>"] = cmp.mapping.select_next_item(),
+      ['<Tab>'] = cmp.mapping.complete(),
+      ['<C-e>'] = cmp.mapping.confirm({ select = true }),
+    }),
+    sources = {
+      { name = 'nvim_lsp' },
+      { name = 'vsnip' },
+      { name = 'buffer', option = {
+        get_bufnrs = function()
+          local bufs = {}
+          for _, win in ipairs(vim.api.nvim_list_wins()) do
+            bufs[vim.api.nvim_win_get_buf(win)] = true
+          end
+          return vim.tbl_keys(bufs)
+        end
+      } },
+      { name = 'path' },
+    },
+    snippet = {
+      expand = function(args)
+        vim.fn['vsnip#anonymous'](args.body)
+      end
+    },
+  })
+end
+
+-- lsp on attach
+local lsp_on_attach = function(client, bufnr)
+  -- Enable completion triggered by <c-x><c-o>
+  vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
+  local bufopts = { silent = true, buffer = bufnr }
+  vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
+  vim.keymap.set('n', '<Leader>gi', vim.lsp.buf.implementation, bufopts)
+  vim.keymap.set('n', '<Leader>gr', vim.lsp.buf.references, bufopts)
+  vim.keymap.set('n', '<Leader>rn', vim.lsp.buf.rename, bufopts)
+  vim.keymap.set('n', '<C-]>', vim.lsp.buf.definition, bufopts)
+  vim.keymap.set('n', 'ga', vim.lsp.buf.code_action, bufopts)
+  vim.keymap.set('n', '<Leader>gl', vim.lsp.codelens.run, bufopts)
+
+  -- auto format when save the file
+  local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
+  if client.supports_method("textDocument/formatting") then
+    vim.keymap.set('n', 'mf', vim.lsp.buf.format, { buffer = bufnr })
+    vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
+    vim.api.nvim_create_autocmd("BufWritePre", {
+      group = augroup,
+      buffer = bufnr,
+      callback = function()
+        vim.lsp.buf.format()
+      end,
+    })
+  end
+end
+
+local rust_tools_config = function()
+  -- rust-tools.nvim
+  local rt = require("rust-tools")
+  rt.setup({
+    server = {
+      on_attach = function(client, bufnr)
+        -- Hover actions
+        local bufopts = { silent = true, buffer = bufnr }
+        vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
+        vim.keymap.set('n', 'K', rt.hover_actions.hover_actions, bufopts)
+        vim.keymap.set('n', '<Leader>gi', vim.lsp.buf.implementation, bufopts)
+        vim.keymap.set('n', '<Leader>gr', vim.lsp.buf.references, bufopts)
+        vim.keymap.set('n', '<Leader>rn', vim.lsp.buf.rename, bufopts)
+        vim.keymap.set('n', '<C-]>', vim.lsp.buf.definition, bufopts)
+        vim.keymap.set('n', 'ga', vim.lsp.buf.code_action, bufopts)
+        vim.keymap.set('n', '<Leader>gl', rt.code_action_group.code_action_group, bufopts)
+
+        -- auto format when save the file
+        local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
+        if client.supports_method("textDocument/formatting") then
+          vim.keymap.set('n', 'mf', vim.lsp.buf.format)
+          vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
+          vim.api.nvim_create_autocmd("BufWritePre", {
+            group = augroup,
+            buffer = bufnr,
+            callback = function()
+              vim.lsp.buf.format()
+            end,
+          })
+        end
+      end,
+      standalone = true,
+    },
+    tools = {
+      hover_actions = {
+        border = {
+          { '╭', 'NormalFloat' },
+          { '─', 'NormalFloat' },
+          { '╮', 'NormalFloat' },
+          { '│', 'NormalFloat' },
+          { '╯', 'NormalFloat' },
+          { '─', 'NormalFloat' },
+          { '╰', 'NormalFloat' },
+          { '│', 'NormalFloat' },
+        },
+        auto_focus = true,
+      },
+    }
+  })
+end
+
+-- iceberg.vim
+local iceberg_config = function()
+  vim.opt.termguicolors = true
+  vim.cmd('colorscheme iceberg')
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = '*',
+    callback = function()
+      vim.cmd([[
+      hi clear VertSplit
+      hi VertSplit ctermfg=232 guifg=#202023
+    ]] )
+    end,
+    group = vim.api.nvim_create_augroup('icebergGroup', { clear = true }),
+  })
+end
+
+-- lightline.vim
+local lightline_config = function()
+  vim.cmd([[
+function! FilePath()
+  if winwidth(0) > 90
+    return expand("%:s")
+  else
+    return expand("%:t")
+  endif
+endfunction
+]] )
+
+  vim.g.lightline = {
+    colorscheme = 'iceberg',
+    active = {
+      left = { { 'mode', 'paste' }, { 'readonly', 'branchName', 'filepath', 'modified' } },
+    },
+    component_function = {
+      filepath = 'FilePath',
+    },
+  }
+end
+
+-- gina.vim
+local gina_config = function()
+  local gina_keymaps = {
+    { map = 'nmap', buffer = 'status', lhs = 'gp', rhs = '<Cmd>terminal git push<CR>', opt = { silent = true } },
+    { map = 'nmap', buffer = 'status', lhs = 'gr', rhs = '<Cmd>terminal gh pr create -d<CR>', opt = { silent = true } },
+    { map = 'nmap', buffer = 'status', lhs = 'gl', rhs = '<Cmd>terminal git pull<CR>', opt = { silent = true } },
+    { map = 'nmap', buffer = 'status', lhs = 'cm', rhs = '<Cmd>Gina commit<CR>', opt = { silent = true } },
+    { map = 'nmap', buffer = 'status', lhs = 'ca', rhs = '<Cmd>Gina commit --amend<CR>', opt = { silent = true } },
+    { map = 'nmap', buffer = 'status', lhs = 'dp', rhs = '<Plug>(gina-patch-oneside-tab)', opt = { silent = true } },
+    { map = 'nmap', buffer = 'status', lhs = 'ga', rhs = '--', opt = { silent = true } },
+    { map = 'vmap', buffer = 'status', lhs = 'ga', rhs = '--', opt = { silent = true } },
+    { map = 'nmap', buffer = 'log', lhs = 'dd', rhs = '<Plug>(gina-changes-of)', opt = { silent = true } },
+    { map = 'nmap', buffer = 'branch', lhs = 'n', rhs = '<Plug>(gina-branch-new)', opt = { silent = true } },
+    { map = 'nmap', buffer = 'branch', lhs = 'D', rhs = '<Plug>(gina-branch-delete)', opt = { silent = true } },
+    { map = 'nmap', buffer = '/.*', lhs = 'q', rhs = '<Cmd>bw<CR>', opt = { silent = true } },
+  }
+  for i = 1, #gina_keymaps do
+    local m = gina_keymaps[i]
+    vim.fn['gina#custom#mapping#' .. m.map](m.buffer, m.lhs, m.rhs, m.opt)
+  end
+
+  vim.fn['gina#custom#command#option']('log', '--opener', 'new')
+  vim.fn['gina#custom#command#option']('status', '--opener', 'new')
+  vim.fn['gina#custom#command#option']('branch', '--opener', 'new')
+  vim.keymap.set('n', 'gs', '<Cmd>Gina status<CR>')
+  vim.keymap.set('n', 'gl', '<Cmd>Gina log<CR>')
+  vim.keymap.set('n', 'gm', '<Cmd>Gina glame<CR>')
+  vim.keymap.set('n', 'gb', '<Cmd>Gina branch<CR>')
+  vim.keymap.set('n', 'gu', '<Cmd>Gina browse --exact --yank :<CR>')
+  vim.keymap.set('v', 'gu', '<Cmd>Gina browse --exact --yank :<CR>')
+end
+
+-- telescope.vim
+local telescope_config = function()
+  vim.keymap.set('n', '<C-p>', '<Cmd>Telescope find_files<CR>')
+  vim.keymap.set('n', '<C-g><C-g>', '<Cmd>Telescope grep_string<CR>')
+
+  require('telescope').setup {
+    pickers = {
+      find_files = {
+        mappings = {
+          i = {
+            ['<C-j>'] = 'move_selection_next',
+            ['<C-k>'] = 'move_selection_previous',
+            ['<C-s>'] = 'select_horizontal',
+            ['<C-v>'] = 'select_vertical',
+            ['<C-t>'] = 'select_tab',
+            ['<C-e>'] = 'select_drop',
+          }
+        }
+      }
+    }
+  }
+end
+
 -- plugin settings
 local ensure_packer = function()
   local install_path = vim.fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
@@ -50,16 +257,38 @@ require('packer').startup(function(use)
   use 'wbthomason/packer.nvim'
 
   -- colorscheme
-  use 'cocopon/iceberg.vim'
-  use 'itchyny/lightline.vim'
+  use {
+    'cocopon/iceberg.vim',
+    config = iceberg_config,
+  }
+  use {
+    'itchyny/lightline.vim',
+    config = lightline_config,
+  }
 
   -- lsp
   use 'neovim/nvim-lspconfig'
-  use 'williamboman/mason.nvim'
+  use {
+    'williamboman/mason.nvim',
+    config = function() require("mason").setup() end,
+  }
   use 'williamboman/mason-lspconfig.nvim'
   -- use 'jose-elias-alvarez/null-ls.nvim'
-  use 'j-hui/fidget.nvim'
-  use 'kkharji/lspsaga.nvim'
+  use {
+    'j-hui/fidget.nvim',
+    config = function() require('fidget').setup() end,
+  }
+  use {
+    'kkharji/lspsaga.nvim',
+    config = function()
+      require('lspsaga').setup({
+        error_sign = '💩',
+        warn_sign = '🦍',
+        hint_sign = "",
+        infor_sign = "",
+      })
+    end,
+  }
 
   -- complete
   use {
@@ -71,11 +300,17 @@ require('packer').startup(function(use)
       'hrsh7th/cmp-vsnip',
       'hrsh7th/vim-vsnip',
       'hrsh7th/vim-vsnip-integ',
-    }
+    },
+    config = nvim_cmp_config,
   }
 
   -- for development
-  use 'windwp/nvim-autopairs'
+  use {
+    'windwp/nvim-autopairs',
+    config = function()
+      require("nvim-autopairs").setup({ map_c_h = true })
+    end,
+  }
   use 'kshenoy/vim-signature'
   use 'vim-test/vim-test'
   use {
@@ -88,7 +323,10 @@ require('packer').startup(function(use)
       { 'lambdalisue/fern-renderer-nerdfont.vim' }
     }
   }
-  use 'lambdalisue/gina.vim'
+  use {
+    'lambdalisue/gina.vim',
+    config = gina_config,
+  }
   use 'lambdalisue/guise.vim'
   use 'mattn/emmet-vim'
   use 'mattn/vim-sonictemplate'
@@ -111,9 +349,13 @@ require('packer').startup(function(use)
   use 'skanehira/winselector.vim'
   use {
     'nvim-telescope/telescope.nvim',
-    requires = { { 'nvim-lua/plenary.nvim' } }
+    requires = { { 'nvim-lua/plenary.nvim' } },
+    config = telescope_config,
   }
-  use 'simrat39/rust-tools.nvim'
+  use {
+    'simrat39/rust-tools.nvim',
+    config = rust_tools_config,
+  }
 
   -- for documentation
   use 'glidenote/memolist.vim'
@@ -324,49 +566,7 @@ vim.keymap.set('c', '<C-p>', function()
   return vim.fn.pumvisible() == 1 and '<C-p>' or '<Up>'
 end, { expr = true })
 
--- nvim-cmp
-local cmp = require('cmp')
-cmp.setup({
-  mapping = cmp.mapping.preset.insert({
-    ['<C-b>'] = cmp.mapping.scroll_docs(-4),
-    ['<C-f>'] = cmp.mapping.scroll_docs(4),
-    ["<C-p>"] = cmp.mapping.select_prev_item(),
-    ["<C-n>"] = cmp.mapping.select_next_item(),
-    ['<Tab>'] = cmp.mapping.complete(),
-    ['<C-e>'] = cmp.mapping.abort(),
-    ['<CR>'] = cmp.mapping.confirm({ select = true }),
-  }),
-  sources = {
-    { name = 'nvim_lsp' },
-    { name = 'vsnip' },
-    { name = 'buffer', option = {
-      get_bufnrs = function()
-        local bufs = {}
-        for _, win in ipairs(vim.api.nvim_list_wins()) do
-          bufs[vim.api.nvim_win_get_buf(win)] = true
-        end
-        return vim.tbl_keys(bufs)
-      end
-    } },
-    { name = 'path' },
-  },
-  snippet = {
-    expand = function(args)
-      vim.fn['vsnip#anonymous'](args.body)
-    end
-  },
-})
-
 -- lsp settings
-require('fidget').setup()
-require('lspsaga').setup({
-  error_sign = '💩',
-  warn_sign = '🦍',
-  hint_sign = "",
-  infor_sign = "",
-})
-
-require("mason").setup()
 require('mason-lspconfig').setup({
   automatic_installation = {
     exclude = {
@@ -375,33 +575,6 @@ require('mason-lspconfig').setup({
     }
   }
 })
-
-local on_attach = function(client, bufnr)
-  -- Enable completion triggered by <c-x><c-o>
-  vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
-  local bufopts = { silent = true, buffer = bufnr }
-  vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
-  vim.keymap.set('n', '<Leader>gi', vim.lsp.buf.implementation, bufopts)
-  vim.keymap.set('n', '<Leader>gr', vim.lsp.buf.references, bufopts)
-  vim.keymap.set('n', '<Leader>rn', vim.lsp.buf.rename, bufopts)
-  vim.keymap.set('n', '<C-]>', vim.lsp.buf.definition, bufopts)
-  vim.keymap.set('n', 'ga', vim.lsp.buf.code_action, bufopts)
-  vim.keymap.set('n', '<Leader>gl', vim.lsp.codelens.run, bufopts)
-
-  -- auto format when save the file
-  local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
-  if client.supports_method("textDocument/formatting") then
-    vim.keymap.set('n', 'mf', vim.lsp.buf.format)
-    vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
-    vim.api.nvim_create_autocmd("BufWritePre", {
-      group = augroup,
-      buffer = bufnr,
-      callback = function()
-        vim.lsp.buf.format()
-      end,
-    })
-  end
-end
 
 local lspconfig = require("lspconfig")
 
@@ -415,14 +588,13 @@ local ls = {
   'bashls',
   'yamlls',
   'gopls',
-  'rust_analyzer',
   'jsonls',
   'vimls',
 }
 
 for i = 1, #ls do
   lspconfig[ls[i]].setup({
-    on_attach = on_attach
+    on_attach = lsp_on_attach
   })
 end
 
@@ -432,12 +604,12 @@ lspconfig.denols.setup({
     lint = true,
     unstable = true
   },
-  on_attach = on_attach,
+  on_attach = lsp_on_attach,
 })
 
 lspconfig.tsserver.setup({
   root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
-  on_attach = on_attach,
+  on_attach = lsp_on_attach,
 })
 
 lspconfig.sumneko_lua.setup({
@@ -456,76 +628,8 @@ lspconfig.sumneko_lua.setup({
       },
     },
   },
-  on_attach = on_attach,
+  on_attach = lsp_on_attach,
 })
-
--- iceberg.vim
-vim.opt.termguicolors = true
-vim.cmd('colorscheme iceberg')
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = '*',
-  callback = function()
-    vim.cmd([[
-      hi clear VertSplit
-      hi VertSplit ctermfg=232 guifg=#202023
-    ]])
-  end,
-  group = vim.api.nvim_create_augroup('icebergGroup', { clear = true }),
-})
-
--- rust-tools.nvim
-local rt = require("rust-tools")
-rt.setup({
-  server = {
-    on_attach = function(client, bufnr)
-      on_attach(client, bufnr)
-      -- Hover actions
-      local bufopts = { silent = true, buffer = bufnr }
-      vim.keymap.set('n', 'K', rt.hover_actions.hover_actions, bufopts)
-      vim.keymap.set('n', '<Leader>gl', rt.code_action_group.code_action_group, bufopts)
-    end,
-    standalone = true,
-  },
-  tools = {
-    hover_actions = {
-      border = {
-        { '╭', 'NormalFloat' },
-        { '─', 'NormalFloat' },
-        { '╮', 'NormalFloat' },
-        { '│', 'NormalFloat' },
-        { '╯', 'NormalFloat' },
-        { '─', 'NormalFloat' },
-        { '╰', 'NormalFloat' },
-        { '│', 'NormalFloat' },
-      },
-      auto_focus = true,
-    },
-  }
-})
-
--- nvim-dap
-require('dap-go').setup()
-
--- lightline.vim
-vim.cmd([[
-function! FilePath()
-  if winwidth(0) > 90
-    return expand("%:s")
-  else
-    return expand("%:t")
-  endif
-endfunction
-]])
-
-vim.g.lightline = {
-  colorscheme = 'iceberg',
-  active = {
-    left = { { 'mode', 'paste' }, { 'readonly', 'branchName', 'filepath', 'modified' } },
-  },
-  component_function = {
-    filepath = 'FilePath',
-  },
-}
 
 -- translate.vim
 vim.keymap.set('n', 'gr', '<Plug>(Translate)')
@@ -549,41 +653,6 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 vim.keymap.set('n', '<Leader>f', ':Fern . -drawer<CR>', { silent = true })
-
--- nvim-autopairs
-require("nvim-autopairs").setup({
-  map_c_h = true
-})
-
--- gina.vim
-local gina_keymaps = {
-  { map = 'nmap', buffer = 'status', lhs = 'gp', rhs = '<Cmd>terminal git push<CR>', opt = { silent = true } },
-  { map = 'nmap', buffer = 'status', lhs = 'gr', rhs = '<Cmd>terminal gh pr create -d<CR>', opt = { silent = true } },
-  { map = 'nmap', buffer = 'status', lhs = 'gl', rhs = '<Cmd>terminal git pull<CR>', opt = { silent = true } },
-  { map = 'nmap', buffer = 'status', lhs = 'cm', rhs = '<Cmd>Gina commit<CR>', opt = { silent = true } },
-  { map = 'nmap', buffer = 'status', lhs = 'ca', rhs = '<Cmd>Gina commit --amend<CR>', opt = { silent = true } },
-  { map = 'nmap', buffer = 'status', lhs = 'dp', rhs = '<Plug>(gina-patch-oneside-tab)', opt = { silent = true } },
-  { map = 'nmap', buffer = 'status', lhs = 'ga', rhs = '--', opt = { silent = true } },
-  { map = 'vmap', buffer = 'status', lhs = 'ga', rhs = '--', opt = { silent = true } },
-  { map = 'nmap', buffer = 'log', lhs = 'dd', rhs = '<Plug>(gina-changes-of)', opt = { silent = true } },
-  { map = 'nmap', buffer = 'branch', lhs = 'n', rhs = '<Plug>(gina-branch-new)', opt = { silent = true } },
-  { map = 'nmap', buffer = 'branch', lhs = 'D', rhs = '<Plug>(gina-branch-delete)', opt = { silent = true } },
-  { map = 'nmap', buffer = '/.*', lhs = 'q', rhs = '<Cmd>bw<CR>', opt = { silent = true } },
-}
-for i = 1, #gina_keymaps do
-  local m = gina_keymaps[i]
-  vim.fn['gina#custom#mapping#' .. m.map](m.buffer, m.lhs, m.rhs, m.opt)
-end
-
-vim.fn['gina#custom#command#option']('log', '--opener', 'new')
-vim.fn['gina#custom#command#option']('status', '--opener', 'new')
-vim.fn['gina#custom#command#option']('branch', '--opener', 'new')
-vim.keymap.set('n', 'gs', '<Cmd>Gina status<CR>')
-vim.keymap.set('n', 'gl', '<Cmd>Gina log<CR>')
-vim.keymap.set('n', 'gm', '<Cmd>Gina glame<CR>')
-vim.keymap.set('n', 'gb', '<Cmd>Gina branch<CR>')
-vim.keymap.set('n', 'gu', '<Cmd>Gina browse --exact --yank :<CR>')
-vim.keymap.set('v', 'gu', '<Cmd>Gina browse --exact --yank :<CR>')
 
 -- quickrun.vim
 vim.g['quickrun_config'] = {
@@ -614,27 +683,6 @@ vim.api.nvim_create_autocmd('FileType', {
   end,
   group = vim.api.nvim_create_augroup('quickrunInit', { clear = true }),
 })
-
--- telescope.vim
-vim.keymap.set('n', '<C-p>', '<Cmd>Telescope find_files<CR>')
-vim.keymap.set('n', '<C-g><C-g>', '<Cmd>Telescope grep_string<CR>')
-
-require('telescope').setup {
-  pickers = {
-    find_files = {
-      mappings = {
-        i = {
-          ['<C-j>'] = 'move_selection_next',
-          ['<C-k>'] = 'move_selection_previous',
-          ['<C-s>'] = 'select_horizontal',
-          ['<C-v>'] = 'select_vertical',
-          ['<C-t>'] = 'select_tab',
-          ['<C-e>'] = 'select_drop',
-        }
-      }
-    }
-  }
-}
 
 -- emmet
 vim.g['emmet_html5'] = false
