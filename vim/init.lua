@@ -68,7 +68,7 @@ local nvim_cmp_config = function()
 end
 
 -- lsp on attach
-lsp_on_attach = function(client, bufnr)
+Lsp_on_attach = function(client, bufnr)
   -- Enable completion triggered by <c-x><c-o>
   vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
   local bufopts = { silent = true, buffer = bufnr }
@@ -102,7 +102,7 @@ local rust_tools_config = function()
     server = {
       on_attach = function(client, bufnr)
         local bufopts = { silent = true, buffer = bufnr }
-        lsp_on_attach(client, bufnr)
+        Lsp_on_attach(client, bufnr)
         vim.keymap.set('n', 'K', rt.hover_actions.hover_actions, bufopts)
         vim.keymap.set('n', '<Leader>gl', rt.code_action_group.code_action_group, bufopts)
       end,
@@ -268,7 +268,7 @@ local lsp_config = function()
 
   for i = 1, #ls do
     lspconfig[ls[i]].setup({
-      on_attach = lsp_on_attach
+      on_attach = Lsp_on_attach
     })
   end
 
@@ -278,12 +278,12 @@ local lsp_config = function()
       lint = true,
       unstable = true
     },
-    on_attach = lsp_on_attach,
+    on_attach = Lsp_on_attach,
   })
 
   lspconfig.tsserver.setup({
     root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
-    on_attach = lsp_on_attach,
+    on_attach = Lsp_on_attach,
   })
 
   lspconfig.sumneko_lua.setup({
@@ -302,7 +302,7 @@ local lsp_config = function()
         },
       },
     },
-    on_attach = lsp_on_attach,
+    on_attach = Lsp_on_attach,
   })
 end
 
