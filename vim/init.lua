@@ -33,6 +33,17 @@ for i = 1, #disable_plugins do
   vim.g[disable_plugins[i]] = true
 end
 
+-- helper functions
+_G['map'] = function(mode, lhs, rhs, opt)
+  vim.keymap.set(mode, lhs, rhs, opt or { silent = true })
+end
+
+for _, mode in pairs({'n', 'v', 'i', 'o', 'c', 't', 'x', 't'}) do
+  _G[mode..'map'] = function (lhs, rhs, opt)
+    vim.keymap.set(mode, lhs, rhs, opt)
+  end
+end
+
 -- nvim-cmp
 local nvim_cmp_config = function()
   local cmp = require('cmp')
@@ -72,25 +83,27 @@ Lsp_on_attach = function(client, bufnr)
   -- Enable completion triggered by <c-x><c-o>
   vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
   local bufopts = { silent = true, buffer = bufnr }
-  vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
-  vim.keymap.set('n', '<Leader>gi', vim.lsp.buf.implementation, bufopts)
-  vim.keymap.set('n', '<Leader>gr', vim.lsp.buf.references, bufopts)
-  vim.keymap.set('n', '<Leader>rn', vim.lsp.buf.rename, bufopts)
-  vim.keymap.set('n', '<C-]>', vim.lsp.buf.definition, bufopts)
-  vim.keymap.set('n', 'ma', vim.lsp.buf.code_action, bufopts)
-  vim.keymap.set('n', '<Leader>gl', vim.lsp.codelens.run, bufopts)
+  nmap('K', vim.lsp.buf.hover, bufopts)
+  nmap('<Leader>gi', vim.lsp.buf.implementation, bufopts)
+  nmap('<Leader>gr', vim.lsp.buf.references, bufopts)
+  nmap('<Leader>rn', vim.lsp.buf.rename, bufopts)
+  nmap('<C-]>', vim.lsp.buf.definition, bufopts)
+  nmap('ma', vim.lsp.buf.code_action, bufopts)
+  nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
 
   -- auto format when save the file
-  local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
+  local augroup = vim.api.nvim_create_augroup("LspFormatting", { clear = false })
   if client.supports_method("textDocument/formatting") then
-    vim.keymap.set('n', ';f', vim.lsp.buf.format, { buffer = bufnr })
-    vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
+    nmap(';f', vim.lsp.buf.format, { buffer = bufnr })
+    if client.name == 'sumneko_lua' then
+      return
+    end
     vim.api.nvim_create_autocmd("BufWritePre", {
-      group = augroup,
-      buffer = bufnr,
       callback = function()
         vim.lsp.buf.format()
       end,
+      group = augroup,
+      buffer = bufnr,
     })
   end
 end
@@ -103,8 +116,8 @@ local rust_tools_config = function()
       on_attach = function(client, bufnr)
         local bufopts = { silent = true, buffer = bufnr }
         Lsp_on_attach(client, bufnr)
-        vim.keymap.set('n', 'K', rt.hover_actions.hover_actions, bufopts)
-        vim.keymap.set('n', '<Leader>gl', rt.code_action_group.code_action_group, bufopts)
+        nmap('K', rt.hover_actions.hover_actions, bufopts)
+        nmap('<Leader>gl', rt.code_action_group.code_action_group, bufopts)
       end,
       standalone = true,
     },
@@ -185,20 +198,20 @@ local gina_config = function()
   vim.fn['gina#custom#command#option']('log', '--opener', 'new')
   vim.fn['gina#custom#command#option']('status', '--opener', 'new')
   vim.fn['gina#custom#command#option']('branch', '--opener', 'new')
-  vim.keymap.set('n', 'gs', '<Cmd>Gina status<CR>')
-  vim.keymap.set('n', 'gl', '<Cmd>Gina log<CR>')
-  vim.keymap.set('n', 'gm', '<Cmd>Gina glame<CR>')
-  vim.keymap.set('n', 'gb', '<Cmd>Gina branch<CR>')
-  vim.keymap.set('n', 'gu', '<Cmd>Gina browse --exact --yank :<CR>')
-  vim.keymap.set('v', 'gu', '<Cmd>Gina browse --exact --yank :<CR>')
+  nmap('gs', '<Cmd>Gina status<CR>')
+  nmap('gl', '<Cmd>Gina log<CR>')
+  nmap('gm', '<Cmd>Gina glame<CR>')
+  nmap('gb', '<Cmd>Gina branch<CR>')
+  nmap('gu', ':Gina browse --exact --yank :<CR>')
+  vmap('gu', ':Gina browse --exact --yank :<CR>')
 end
 
 -- telescope.vim
 local telescope_config = function()
-  vim.keymap.set('n', '<C-p>', '<Cmd>Telescope find_files<CR>')
-  vim.keymap.set('n', 'mg', '<Cmd>Telescope live_grep<CR>')
-  vim.keymap.set('n', 'md', '<Cmd>Telescope diagnostics<CR>')
-  vim.keymap.set('n', 'mf', '<Cmd>Telescope current_buffer_fuzzy_find<CR>')
+  nmap('<C-p>', '<Cmd>Telescope find_files<CR>')
+  nmap('mg', '<Cmd>Telescope live_grep<CR>')
+  nmap('md', '<Cmd>Telescope diagnostics<CR>')
+  nmap('mf', '<Cmd>Telescope current_buffer_fuzzy_find<CR>')
 
   require('telescope').setup {
     pickers = {
@@ -228,15 +241,15 @@ local fern_config = function()
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'fern',
     callback = function()
-      vim.keymap.set('n', 'q', ':q<CR>', { silent = true, buffer = true })
-      vim.keymap.set('n', '<C-x>', '<Plug>(fern-action-open:split)', { silent = true, buffer = true })
-      vim.keymap.set('n', '<C-v>', '<Plug>(fern-action-open:vsplit)', { silent = true, buffer = true })
-      vim.keymap.set('n', '<C-t>', '<Plug>(fern-action-tcd)', { silent = true, buffer = true })
+      nmap('q', ':q<CR>', { silent = true, buffer = true })
+      nmap('<C-x>', '<Plug>(fern-action-open:split)', { silent = true, buffer = true })
+      nmap('<C-v>', '<Plug>(fern-action-open:vsplit)', { silent = true, buffer = true })
+      nmap('<C-t>', '<Plug>(fern-action-tcd)', { silent = true, buffer = true })
     end,
     group = vim.api.nvim_create_augroup('fernInit', { clear = true }),
   })
 
-  vim.keymap.set('n', '<Leader>f', ':Fern . -drawer<CR>', { silent = true })
+  nmap('<Leader>f', ':Fern . -drawer<CR>')
 end
 
 -- lsp config
@@ -327,11 +340,6 @@ local gitsigns_config = function()
   require('gitsigns').setup({
     on_attach = function(bufnr)
       local gs = package.loaded.gitsigns
-      local map = function(mode, l, r, opts)
-        opts = opts or {}
-        opts.buffer = bufnr
-        vim.keymap.set(mode, l, r, opts)
-      end
 
       -- Navigation
       map('n', ']c', function()
@@ -346,10 +354,15 @@ local gitsigns_config = function()
         return '<Ignore>'
       end, { expr = true })
 
+      local opts = {
+        buffer = bufnr,
+        silent = true
+      }
       -- Actions
-      map({ 'n', 'v' }, 'g]', ':Gitsigns stage_hunk<CR>')
-      map({ 'n', 'v' }, 'g[', ':Gitsigns undo_stage_hunk<CR>')
-      map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>')
+      map({ 'n', 'x' }, 'g]', ':Gitsigns stage_hunk<CR>', opts)
+      map({ 'n', 'x' }, 'g[', ':Gitsigns undo_stage_hunk<CR>', opts)
+      map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>', opts)
+      map({ 'n', 'x' }, 'mp', ':Gitsigns preview_hunk<CR>', opts)
     end
   })
 end
@@ -359,7 +372,7 @@ local ensure_packer = function()
   local install_path = vim.fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
   if vim.fn.empty(vim.fn.glob(install_path)) == 1 then
     vim.fn.system({ 'git', 'clone', '--depth', '1', 'https://github.com/wbthomason/packer.nvim', install_path })
-    vim.cmd [[packadd packer.nvim]]
+    vim.cmd('packadd packer.nvim')
     return true
   end
   return false
@@ -579,6 +592,7 @@ vim.opt.shiftwidth = 2
 vim.opt.softtabstop = 2
 vim.opt.expandtab = true
 vim.opt.clipboard:append({ vim.fn.has('mac') == true and 'unnamed' or 'unnamedplus' })
+vim.opt.grepprg = 'rg --vimgrep'
 
 -- file indent
 local filetype_indent_group = vim.api.nvim_create_augroup('fileTypeIndent', { clear = true })
@@ -662,34 +676,34 @@ vim.api.nvim_create_autocmd('BufWritePre', {
 -- key mappings
 
 -- text object
-vim.keymap.set('o', '8', 'i(')
-vim.keymap.set('o', '2', 'i"')
-vim.keymap.set('o', '7', 'i\'')
-vim.keymap.set('o', '@', 'i`')
-vim.keymap.set('o', '[', 'i[')
-vim.keymap.set('o', '{', 'i{')
-vim.keymap.set('o', 'a8', 'a(')
-vim.keymap.set('o', 'a2', 'a"')
-vim.keymap.set('o', 'a7', 'a\'')
-vim.keymap.set('o', 'a@', 'a`')
+omap('8', 'i(')
+omap('2', 'i"')
+omap('7', 'i\'')
+omap('@', 'i`')
+omap('[', 'i[')
+omap('{', 'i{')
+omap('a8', 'a(')
+omap('a2', 'a"')
+omap('a7', 'a\'')
+omap('a@', 'a`')
 
-vim.keymap.set('n', 'v8', 'vi(')
-vim.keymap.set('n', 'v2', 'vi"')
-vim.keymap.set('n', 'v7', 'vi\'')
-vim.keymap.set('n', 'v@', 'vi`')
-vim.keymap.set('n', 'v[', 'vi[')
-vim.keymap.set('n', 'v{', 'vi{')
-vim.keymap.set('n', 'va8', 'va(')
-vim.keymap.set('n', 'va2', 'va"')
-vim.keymap.set('n', 'va7', 'va\'')
-vim.keymap.set('n', 'va@', 'va`')
+nmap('v8', 'vi(')
+nmap('v2', 'vi"')
+nmap('v7', 'vi\'')
+nmap('v@', 'vi`')
+nmap('v[', 'vi[')
+nmap('v{', 'vi{')
+nmap('va8', 'va(')
+nmap('va2', 'va"')
+nmap('va7', 'va\'')
+nmap('va@', 'va`')
 
 -- emacs like
-vim.keymap.set('i', '<C-k>', '<C-o>C')
-vim.keymap.set('i', '<C-f>', '<Right>')
-vim.keymap.set('i', '<C-b>', '<Left>')
-vim.keymap.set('i', '<C-e>', '<C-o>A')
-vim.keymap.set('i', '<C-a>', '<C-o>I')
+imap('<C-k>', '<C-o>C')
+imap('<C-f>', '<Right>')
+imap('<C-b>', '<Left>')
+imap('<C-e>', '<C-o>A')
+imap('<C-a>', '<C-o>I')
 
 -- help
 vim.api.nvim_create_autocmd("FileType", {
@@ -699,57 +713,57 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 -- command line
-vim.keymap.set('c', '<C-b>', '<Left>')
-vim.keymap.set('c', '<C-f>', '<Right>')
-vim.keymap.set('c', '<C-a>', '<Home>')
-
--- paste with <C-v>
-local paste_rhs = 'printf("<C-r><C-o>%s", v:register)'
-vim.keymap.set('i', '<C-v>', paste_rhs, { expr = true })
-vim.keymap.set('c', '<C-v>', paste_rhs, { expr = true })
-
--- other keymap
-vim.keymap.set('n', 'ms', function()
-  vim.cmd([[
-  luafile ~/.config/nvim/init.lua
-  PackerInstall
-  ]])
-end)
-vim.keymap.set('n', '<Leader>.', ':tabnew ~/.config/nvim/init.lua<CR>')
-vim.keymap.set('n', 'Y', 'Y')
-vim.keymap.set('n', 'R', 'gR')
-vim.keymap.set('n', '*', '*N')
-vim.keymap.set('n', '<Esc><Esc>', '<Cmd>nohlsearch<CR>')
-vim.keymap.set('n', 'H', '^')
-vim.keymap.set('n', 'L', 'g_')
-vim.keymap.set('v', 'H', '^')
-vim.keymap.set('v', 'L', 'g_')
-vim.keymap.set('n', '<C-j>', 'o<Esc>')
-vim.keymap.set('n', '<C-k>', 'O<Esc>')
-vim.keymap.set('n', 'o', 'A<CR>')
-vim.keymap.set('n', '<C-l>', 'gt')
-vim.keymap.set('n', '<C-h>', 'gT')
-vim.keymap.set('t', '<C-]>', [[<C-\><C-n>]])
-vim.keymap.set('n', '<Leader>tm', [[:new | terminal<CR>]])
-vim.keymap.set('c', '<Up>', '<C-p>')
-vim.keymap.set('c', '<Down>', '<C-n>')
-vim.keymap.set('c', '<C-n>', function()
+-- cmap defaults silent to true, but passes an empty setting because the cursor is not updated
+cmap('<C-b>', '<Left>', {})
+cmap('<C-f>', '<Right>', {})
+cmap('<C-a>', '<Home>', {})
+cmap('<Up>', '<C-p>')
+cmap('<Down>', '<C-n>')
+cmap('<C-n>', function()
   return vim.fn.pumvisible() == 1 and '<C-n>' or '<Down>'
 end, { expr = true })
-vim.keymap.set('c', '<C-p>', function()
+cmap('<C-p>', function()
   return vim.fn.pumvisible() == 1 and '<C-p>' or '<Up>'
 end, { expr = true })
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'qf',
   callback = function()
-    vim.keymap.set('n', 'q', '<Cmd>q<CR>', { silent = true, buffer = true })
+    nmap('q', '<Cmd>q<CR>', { silent = true, buffer = true })
   end,
   group = vim.api.nvim_create_augroup("qfInit", { clear = true }),
 })
 
+-- paste with <C-v>
+local paste_rhs = 'printf("<C-r><C-o>%s", v:register)'
+map({'c', 'i'}, '<C-v>', paste_rhs, { expr = true })
+
+-- other keymap
+nmap('ms', function()
+  vim.cmd([[
+  luafile ~/.config/nvim/init.lua
+  PackerInstall
+  ]])
+end)
+nmap('<Leader>.', ':tabnew ~/.config/nvim/init.lua<CR>')
+nmap('Y', 'Y')
+nmap('R', 'gR')
+nmap('*', '*N')
+nmap('<Esc><Esc>', '<Cmd>nohlsearch<CR>')
+nmap('H', '^')
+nmap('L', 'g_')
+nmap('<C-j>', 'o<Esc>')
+nmap('<C-k>', 'O<Esc>')
+nmap('o', 'A<CR>')
+nmap('<C-l>', 'gt')
+nmap('<C-h>', 'gT')
+nmap('<Leader>tm', [[:new | terminal<CR>]])
+tmap('<C-]>', [[<C-\><C-n>]])
+vmap('H', '^')
+vmap('L', 'g_')
+
 -- translate.vim
-vim.keymap.set('n', 'gr', '<Plug>(Translate)')
-vim.keymap.set('v', 'gr', '<Plug>(Translate)')
+nmap('gr', '<Plug>(Translate)')
+vmap('gr', '<Plug>(Translate)')
 
 -- quickrun.vim
 vim.g['quickrun_config'] = {
@@ -776,7 +790,7 @@ vim.g['quickrun_config'] = {
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'quickrun',
   callback = function()
-    vim.keymap.set('n', 'q', '<Cmd>bw!<CR>', { silent = true, buffer = true })
+    nmap('q', '<Cmd>bw!<CR>', { silent = true, buffer = true })
   end,
   group = vim.api.nvim_create_augroup('quickrunInit', { clear = true }),
 })
@@ -800,7 +814,7 @@ vim.api.nvim_create_autocmd('FileType', {
 vim.g['sonictemplate_author'] = 'skanehira'
 vim.g['sonictemplate_license'] = 'MIT'
 vim.g['sonictemplate_vim_template_dir'] = vim.fn.expand('~/.vim/sonictemplate')
-vim.keymap.set('i', '<C-l>', '<plug>(sonictemplate-postfix)', { silent = true })
+imap('<C-l>', '<plug>(sonictemplate-postfix)', { silent = true })
 
 -- vimhelpgenerator
 vim.g['vimhelpgenerator_version'] = ''
@@ -810,20 +824,20 @@ vim.g['vimhelpgenerator_defaultlanguage'] = 'en'
 
 -- gyazo.vim
 vim.g['gyazo_insert_markdown'] = true
-vim.keymap.set('n', 'gup', '<Plug>(gyazo-upload)')
+nmap('gup', '<Plug>(gyazo-upload)')
 
 -- winselector.vim
-vim.keymap.set('n', '<C-f>', '<Plug>(winselector)')
+nmap('<C-f>', '<Plug>(winselector)')
 
 -- change visual highlight
 vim.cmd('hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851')
 
 -- test.vim
 vim.g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
-vim.keymap.set('n', '<Leader>tn', '<Cmd>TestNearest<CR>', { silent = true })
+nmap('<Leader>tn', '<Cmd>TestNearest<CR>', { silent = true })
 
 -- open-browser.vim
-vim.keymap.set('n', 'gop', '<Plug>(openbrowser-open)')
+nmap('gop', '<Plug>(openbrowser-open)')
 
 -- create zenn article
 vim.api.nvim_create_user_command('ZennCreateArticle',
@@ -854,7 +868,7 @@ end
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'markdown',
   callback = function()
-    vim.keymap.set('x', 'p', function()
+    map('x', 'p', function()
       insert_markdown_link()
     end, { silent = true, buffer = true })
   end,
@@ -865,7 +879,7 @@ vim.api.nvim_create_autocmd('FileType', {
 vim.api.nvim_create_autocmd('FileType', {
   pattern = 'graphql',
   callback = function()
-    vim.keymap.set('n', 'gp', '<Plug>(graphql-execute)', { buffer = true })
+    nmap('gp', '<Plug>(graphql-execute)')
   end,
   group = vim.api.nvim_create_augroup("graphqlInit", { clear = true }),
 })
@@ -874,26 +888,26 @@ vim.api.nvim_create_autocmd('FileType', {
 vim.g['twihi_mention_check_interval'] = 30000 * 10
 vim.g['twihi_notify_ui'] = 'system'
 
-vim.keymap.set('n', '<C-g>n', '<Cmd>TwihiTweet<CR>', { silent = true })
-vim.keymap.set('n', '<C-g>m', '<Cmd>TwihiMentions<CR>', { silent = true })
-vim.keymap.set('n', '<C-g>h', '<Cmd>TwihiHome<CR>', { silent = true })
+nmap('<C-g>n', '<Cmd>TwihiTweet<CR>')
+nmap('<C-g>m', '<Cmd>TwihiMentions<CR>')
+nmap('<C-g>h', '<Cmd>TwihiHome<CR>')
 
 local twihi_timeline_keymap = function()
   local opt = { buffer = true, silent = true }
-  vim.keymap.set('n', '<C-g><C-y>', '<Plug>(twihi:tweet:yank)', opt)
-  vim.keymap.set('n', 'R', '<Plug>(twihi:retweet)', opt)
-  vim.keymap.set('n', '<C-g><C-l>', '<C-g><C-l> <Plug>(twihi:tweet:like)', opt)
-  vim.keymap.set('n', '<C-o>', '<Plug>(twihi:tweet:open)', opt)
-  vim.keymap.set('n', '<C-r>', '<Plug>(twihi:reply)', opt)
-  vim.keymap.set('n', '<C-j>', '<Plug>(twihi:tweet:next)', opt)
-  vim.keymap.set('n', '<C-k>', '<Plug>(twihi:tweet:prev)', opt)
+  nmap('<C-g><C-y>', '<Plug>(twihi:tweet:yank)', opt)
+  nmap('R', '<Plug>(twihi:retweet)', opt)
+  nmap('<C-g><C-l>', '<C-g><C-l> <Plug>(twihi:tweet:like)', opt)
+  nmap('<C-o>', '<Plug>(twihi:tweet:open)', opt)
+  nmap('<C-r>', '<Plug>(twihi:reply)', opt)
+  nmap('<C-j>', '<Plug>(twihi:tweet:next)', opt)
+  nmap('<C-k>', '<Plug>(twihi:tweet:prev)', opt)
 end
 
 local twihi_media_keymap = function()
   local opt = { buffer = true, silent = true }
-  vim.keymap.set('n', '<C-g>m', '<Plug>(twihi:media:add:clipboard)', opt)
-  vim.keymap.set('n', '<C-g>d', '<Plug>(twihi:media:remove)', opt)
-  vim.keymap.set('n', '<C-g>o', '<Plug>(twihi:media:open)', opt)
+  nmap('<C-g>m', '<Plug>(twihi:media:add:clipboard)', opt)
+  nmap('<C-g>d', '<Plug>(twihi:media:remove)', opt)
+  nmap('<C-g>o', '<Plug>(twihi:media:open)', opt)
 end
 
 local twihi_init_group = vim.api.nvim_create_augroup("twihiInit", { clear = true })
@@ -921,56 +935,56 @@ vim.g['silicon_options'] = {
   theme = 'Nord',
 }
 
-vim.keymap.set('n', 'gi', '<Plug>(silicon-generate)', { silent = true })
-vim.keymap.set('x', 'gi', '<Plug>(silicon-generate)', { silent = true })
+nmap('gi', '<Plug>(silicon-generate)')
+xmap('gi', '<Plug>(silicon-generate)')
 
 -- k8s.vim
 local k8s_pods_keymap = function()
-  vim.keymap.set('n', '<CR>', '<Plug>(k8s:pods:containers)', { buffer = true })
-  vim.keymap.set('n', '<C-g><C-l>', '<Plug>(k8s:pods:logs)', { buffer = true })
-  vim.keymap.set('n', '<C-g><C-d>', '<Plug>(k8s:pods:describe)', { buffer = true })
-  vim.keymap.set('n', 'D', '<Plug>(k8s:pods:delete)', { buffer = true })
-  vim.keymap.set('n', 'K', '<Plug>(k8s:pods:kill)', { buffer = true })
-  vim.keymap.set('n', '<C-g><C-y>', '<Plug>(k8s:pods:yaml)', { buffer = true })
-  vim.keymap.set('n', '<C-e>', '<Plug>(k8s:pods:events)', { buffer = true })
-  vim.keymap.set('n', 's', '<Plug>(k8s:pods:shell)', { buffer = true })
-  vim.keymap.set('n', 'e', '<Plug>(k8s:pods:exec)', { buffer = true })
-  vim.keymap.set('n', 'E', '<Plug>(k8s:pods:edit)', { buffer = true })
+  nmap('<CR>', '<Plug>(k8s:pods:containers)', { buffer = true })
+  nmap('<C-g><C-l>', '<Plug>(k8s:pods:logs)', { buffer = true })
+  nmap('<C-g><C-d>', '<Plug>(k8s:pods:describe)', { buffer = true })
+  nmap('D', '<Plug>(k8s:pods:delete)', { buffer = true })
+  nmap('K', '<Plug>(k8s:pods:kill)', { buffer = true })
+  nmap('<C-g><C-y>', '<Plug>(k8s:pods:yaml)', { buffer = true })
+  nmap('<C-e>', '<Plug>(k8s:pods:events)', { buffer = true })
+  nmap('s', '<Plug>(k8s:pods:shell)', { buffer = true })
+  nmap('e', '<Plug>(k8s:pods:exec)', { buffer = true })
+  nmap('E', '<Plug>(k8s:pods:edit)', { buffer = true })
 end
 
 local k8s_nodes_keymap = function()
-  vim.keymap.set('n', '<C-g><C-d>', '<Plug>(k8s:nodes:describe)', { buffer = true })
-  vim.keymap.set('n', '<C-g><C-y>', '<Plug>(k8s:nodes:yaml)', { buffer = true })
-  vim.keymap.set('n', '<CR>', '<Plug>(k8s:nodes:pods)', { buffer = true })
-  vim.keymap.set('n', 'E', '<Plug>(k8s:nodes:edit)', { buffer = true })
+  nmap('<C-g><C-d>', '<Plug>(k8s:nodes:describe)', { buffer = true })
+  nmap('<C-g><C-y>', '<Plug>(k8s:nodes:yaml)', { buffer = true })
+  nmap('<CR>', '<Plug>(k8s:nodes:pods)', { buffer = true })
+  nmap('E', '<Plug>(k8s:nodes:edit)', { buffer = true })
 end
 
 local k8s_containers_keymap = function()
-  vim.keymap.set('n', 's', '<Plug>(k8s:pods:containers:shell)', { buffer = true })
-  vim.keymap.set('n', 'e', '<Plug>(k8s:pods:containers:exec)', { buffer = true })
+  nmap('s', '<Plug>(k8s:pods:containers:shell)', { buffer = true })
+  nmap('e', '<Plug>(k8s:pods:containers:exec)', { buffer = true })
 end
 
 local k8s_deployments_keymap = function()
-  vim.keymap.set('n', '<C-g><C-d>', '<Plug>(k8s:deployments:describe)', { buffer = true })
-  vim.keymap.set('n', '<C-g><C-y>', '<Plug>(k8s:deployments:yaml)', { buffer = true })
-  vim.keymap.set('n', 'E', '<Plug>(k8s:deployments:edit)', { buffer = true })
-  vim.keymap.set('n', '<CR>', '<Plug>(k8s:deployments:pods)', { buffer = true })
-  vim.keymap.set('n', 'D', '<Plug>(k8s:deployments:delete)', { buffer = true })
+  nmap('<C-g><C-d>', '<Plug>(k8s:deployments:describe)', { buffer = true })
+  nmap('<C-g><C-y>', '<Plug>(k8s:deployments:yaml)', { buffer = true })
+  nmap('E', '<Plug>(k8s:deployments:edit)', { buffer = true })
+  nmap('<CR>', '<Plug>(k8s:deployments:pods)', { buffer = true })
+  nmap('D', '<Plug>(k8s:deployments:delete)', { buffer = true })
 end
 
 local k8s_services_keymap = function()
-  vim.keymap.set('n', '<CR>', '<Plug>(k8s:svcs:pods)', { buffer = true })
-  vim.keymap.set('n', '<C-g><C-d>', '<Plug>(k8s:svcs:describe)', { buffer = true })
-  vim.keymap.set('n', 'D', '<Plug>(k8s:svcs:delete)', { buffer = true })
-  vim.keymap.set('n', '<C-g><C-y>', '<Plug>(k8s:svcs:yaml)', { buffer = true })
-  vim.keymap.set('n', 'E', '<Plug>(k8s:svcs:edit)', { buffer = true })
+  nmap('<CR>', '<Plug>(k8s:svcs:pods)', { buffer = true })
+  nmap('<C-g><C-d>', '<Plug>(k8s:svcs:describe)', { buffer = true })
+  nmap('D', '<Plug>(k8s:svcs:delete)', { buffer = true })
+  nmap('<C-g><C-y>', '<Plug>(k8s:svcs:yaml)', { buffer = true })
+  nmap('E', '<Plug>(k8s:svcs:edit)', { buffer = true })
 end
 
 local k8s_secrets_keymap = function()
-  vim.keymap.set('n', '<C-g><C-d>', '<Plug>(k8s:secrets:describe)', { buffer = true })
-  vim.keymap.set('n', '<C-g><C-y>', '<Plug>(k8s:secrets:yaml)', { buffer = true })
-  vim.keymap.set('n', 'E', '<Plug>(k8s:secrets:edit)', { buffer = true })
-  vim.keymap.set('n', 'D', '<Plug>(k8s:secrets:delete)', { buffer = true })
+  nmap('<C-g><C-d>', '<Plug>(k8s:secrets:describe)', { buffer = true })
+  nmap('<C-g><C-y>', '<Plug>(k8s:secrets:yaml)', { buffer = true })
+  nmap('E', '<Plug>(k8s:secrets:edit)', { buffer = true })
+  nmap('D', '<Plug>(k8s:secrets:delete)', { buffer = true })
 end
 
 local k8s_keymaps = {
