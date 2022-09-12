@@ -29,8 +29,8 @@ local disable_plugins = {
   "skip_loading_mswin",
 }
 
-for i = 1, #disable_plugins do
-  vim.g[disable_plugins[i]] = true
+for _, name in pairs(disable_plugins) do
+  vim.g[name] = true
 end
 
 -- helper functions
@@ -38,8 +38,8 @@ _G['map'] = function(mode, lhs, rhs, opt)
   vim.keymap.set(mode, lhs, rhs, opt or { silent = true })
 end
 
-for _, mode in pairs({'n', 'v', 'i', 'o', 'c', 't', 'x', 't'}) do
-  _G[mode..'map'] = function (lhs, rhs, opt)
+for _, mode in pairs({ 'n', 'v', 'i', 'o', 'c', 't', 'x', 't' }) do
+  _G[mode .. 'map'] = function(lhs, rhs, opt)
     vim.keymap.set(mode, lhs, rhs, opt)
   end
 end
@@ -190,8 +190,7 @@ local gina_config = function()
     { map = 'nmap', buffer = 'branch', lhs = 'D', rhs = '<Plug>(gina-branch-delete)' },
     { map = 'nmap', buffer = '/.*', lhs = 'q', rhs = '<Cmd>bw<CR>' },
   }
-  for i = 1, #gina_keymaps do
-    local m = gina_keymaps[i]
+  for _, m in pairs(gina_keymaps) do
     vim.fn['gina#custom#mapping#' .. m.map](m.buffer, m.lhs, m.rhs, { silent = true })
   end
 
@@ -279,8 +278,8 @@ local lsp_config = function()
     'vimls',
   }
 
-  for i = 1, #ls do
-    lspconfig[ls[i]].setup({
+  for _, s in pairs(ls) do
+    lspconfig[s].setup({
       on_attach = Lsp_on_attach
     })
   end
@@ -611,8 +610,7 @@ local file_indents = {
   },
 }
 
-for i = 1, #file_indents do
-  local indent = file_indents[i]
+for _, indent in pairs(file_indents) do
   vim.api.nvim_create_autocmd('FileType', {
     pattern = indent.pattern,
     command = indent.command,
@@ -735,7 +733,7 @@ vim.api.nvim_create_autocmd('FileType', {
 
 -- paste with <C-v>
 local paste_rhs = 'printf("<C-r><C-o>%s", v:register)'
-map({'c', 'i'}, '<C-v>', paste_rhs, { expr = true })
+map({ 'c', 'i' }, '<C-v>', paste_rhs, { expr = true })
 
 -- other keymap
 nmap('ms', function()
@@ -999,8 +997,7 @@ local k8s_keymaps = {
 
 local k8s_keymap_group = vim.api.nvim_create_augroup("k8sInit", { clear = true })
 
-for i = 1, #k8s_keymaps do
-  local m = k8s_keymaps[i]
+for _, m in pairs(k8s_keymaps) do
   vim.api.nvim_create_autocmd('FileType', {
     pattern = m.ft,
     callback = m.fn,
