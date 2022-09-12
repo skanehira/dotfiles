@@ -853,8 +853,9 @@ vim.api.nvim_create_user_command('ZennCreateArticle',
 local insert_markdown_link = function()
   local old = vim.fn.getreg(9)
   local link = vim.fn.trim(vim.fn.getreg())
-  if string.match(link, '^http.*') == '' then
-    vim.cmd('normal! gvp')
+  print(link:match('^http.*'))
+  if link:match('^http.*') == nil then
+    vim.cmd('normal! p')
     return
   end
   vim.cmd('normal! "9y')
