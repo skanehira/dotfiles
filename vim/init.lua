@@ -1,3 +1,4 @@
+---@diagnostic disable: need-check-nil
 -- disable default plugins
 local disable_plugins = {
   "loaded_gzip",
@@ -382,6 +383,18 @@ local packer_bootstrap = ensure_packer()
 require('packer').startup(function(use)
   use { 'wbthomason/packer.nvim' }
 
+  use {
+    'pwntester/octo.nvim',
+    requires = {
+      'nvim-lua/plenary.nvim',
+      'nvim-telescope/telescope.nvim',
+      'kyazdani42/nvim-web-devicons',
+    },
+    config = function()
+      require('octo').setup()
+    end
+  }
+
   -- lsp_signature
   use {
     'ray-x/lsp_signature.nvim',
@@ -478,14 +491,13 @@ require('packer').startup(function(use)
       require("nvim-autopairs").setup({ map_c_h = true })
     end,
   }
-  use 'kshenoy/vim-signature'
+
   use 'vim-test/vim-test'
   use {
     'lambdalisue/fern.vim',
     branch = 'main',
     requires = {
       { 'lambdalisue/fern-hijack.vim' },
-      { 'lambdalisue/fern-git-status.vim' },
       { 'lambdalisue/nerdfont.vim' },
       { 'lambdalisue/fern-renderer-nerdfont.vim' }
     },
@@ -572,7 +584,6 @@ vim.opt.hlsearch = true
 vim.opt.smartindent = true
 vim.opt.virtualedit = "block"
 vim.opt.showtabline = 1
--- vim.opt.winbar = "%#MoreMsg#%f%m"
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.softtabstop = 2
@@ -592,6 +603,7 @@ vim.opt.softtabstop = 2
 vim.opt.expandtab = true
 vim.opt.clipboard:append({ vim.fn.has('mac') == true and 'unnamed' or 'unnamedplus' })
 vim.opt.grepprg = 'rg --vimgrep'
+vim.opt.mouse = {}
 
 -- file indent
 local filetype_indent_group = vim.api.nvim_create_augroup('fileTypeIndent', { clear = true })
