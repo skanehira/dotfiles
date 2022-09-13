@@ -147,20 +147,11 @@ local rust_tools_config = function()
   })
 end
 
--- iceberg.vim
-local iceberg_config = function()
+-- color scheme config
+local colorscheme_config = function()
   opt.termguicolors = true
-  cmd('colorscheme iceberg')
-  api.nvim_create_autocmd('FileType', {
-    pattern = '*',
-    callback = function()
-      cmd([[
-      hi clear VertSplit
-      hi VertSplit ctermfg=232 guifg=#202023
-    ]] )
-    end,
-    group = api.nvim_create_augroup('icebergGroup', { clear = true }),
-  })
+  vim.cmd('hi VertSplit ctermfg=232 guifg=#202023')
+  cmd('colorscheme carbonfox')
 end
 
 -- bufferline.nvim
@@ -170,14 +161,15 @@ local bufferline_config = function()
       mode = 'tabs',
       hover = {
         enabled = true,
-        delay = 200,
-        reveal = { 'close' }
       },
       diagnostics = 'nvim_lsp',
       diagnostics_indicator = function(count, level)
-        local icon = level:match("error") and " " or ""
+        local icon = level:match("error") and " " or " "
         return ' ' .. icon .. count
-      end
+      end,
+      indicator = {
+        icon = '',
+      },
     }
   })
 end
@@ -306,7 +298,7 @@ local lsp_config = function()
           return
         end
         opts = {
-          cmd = { 'deno', 'lsp', '--unstable'},
+          cmd = { 'deno', 'lsp', '--unstable' },
           root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json', '.git'),
           init_options = {
             lint = true,
@@ -387,7 +379,7 @@ local gitsigns_config = function()
       map({ 'n', 'x' }, 'g]', ':Gitsigns stage_hunk<CR>', opts)
       map({ 'n', 'x' }, 'g[', ':Gitsigns undo_stage_hunk<CR>', opts)
       map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>', opts)
-      map({ 'n', 'x' }, 'mp', ':Gitsigns preview_hunk<CR>', opts)
+      nmap('mp', ':Gitsigns preview_hunk<CR>', opts)
     end
   })
 end
@@ -663,10 +655,22 @@ local ensure_packer = function()
   return false
 end
 
+local indent_blankline = function()
+  require("indent_blankline").setup({
+    space_char_blankline = " ",
+    show_current_context = true,
+    show_current_context_start = true,
+  })
+end
+
 local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
   use { 'wbthomason/packer.nvim' }
+
+  use { 'lukas-reineke/indent-blankline.nvim',
+    config = indent_blankline,
+  }
 
   use { 'pwntester/octo.nvim',
     requires = {
@@ -705,9 +709,12 @@ require('packer').startup(function(use)
   }
 
   -- colorscheme
-  use { 'cocopon/iceberg.vim',
-    config = iceberg_config,
-  }
+  -- use { 'cocopon/iceberg.vim',
+  --   config = colorscheme_config,
+  -- }
+
+  use { 'EdenEast/nightfox.nvim', config = colorscheme_config }
+
   use { 'nvim-treesitter/nvim-treesitter',
     run = ':TSUpdate',
     config = treesitter_config
@@ -884,7 +891,6 @@ opt.wildcharm = ('<Tab>'):byte()
 opt.tabstop = 2
 opt.shiftwidth = 2
 opt.softtabstop = 2
-opt.expandtab = true
 opt.clipboard:append({ fn.has('mac') == true and 'unnamed' or 'unnamedplus' })
 opt.grepprg = 'rg --vimgrep'
 opt.mouse = {}
