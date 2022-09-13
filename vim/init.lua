@@ -367,6 +367,49 @@ local gitsigns_config = function()
   })
 end
 
+-- twihi.vim config
+local twihi_config = function()
+  nmap('<C-g>n', '<Cmd>TwihiTweet<CR>')
+  nmap('<C-g>m', '<Cmd>TwihiMentions<CR>')
+  nmap('<C-g>h', '<Cmd>TwihiHome<CR>')
+
+  local twihi_timeline_keymap = function()
+    local opt = { buffer = true, silent = true }
+    nmap('<C-g><C-y>', '<Plug>(twihi:tweet:yank)', opt)
+    nmap('R', '<Plug>(twihi:retweet)', opt)
+    nmap('<C-g><C-l>', '<C-g><C-l> <Plug>(twihi:tweet:like)', opt)
+    nmap('<C-o>', '<Plug>(twihi:tweet:open)', opt)
+    nmap('<C-r>', '<Plug>(twihi:reply)', opt)
+    nmap('<C-j>', '<Plug>(twihi:tweet:next)', opt)
+    nmap('<C-k>', '<Plug>(twihi:tweet:prev)', opt)
+  end
+
+  local twihi_media_keymap = function()
+    local opt = { buffer = true, silent = true }
+    nmap('<C-g>m', '<Plug>(twihi:media:add:clipboard)', opt)
+    nmap('<C-g>d', '<Plug>(twihi:media:remove)', opt)
+    nmap('<C-g>o', '<Plug>(twihi:media:open)', opt)
+  end
+
+  local twihi_init_group = vim.api.nvim_create_augroup("twihiInit", { clear = true })
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'twihi-timeline',
+    callback = function()
+      twihi_timeline_keymap()
+    end,
+    group = twihi_init_group,
+  })
+
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = { 'twihi-reply', 'twihi-tweet', 'twihi-retweet' },
+    callback = function()
+      twihi_media_keymap()
+    end,
+    group = twihi_init_group,
+  })
+end
+
+
 -- plugin settings
 local ensure_packer = function()
   local install_path = vim.fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
@@ -566,7 +609,10 @@ require('packer').startup(function(use)
   use 'tyru/capture.vim'
 
   -- other
-  use 'skanehira/denops-twihi.vim'
+  use {
+    'skanehira/denops-twihi.vim',
+    config = twihi_config,
+  }
 
   if packer_bootstrap then
     require('packer').sync()
@@ -912,48 +958,9 @@ vim.api.nvim_create_autocmd('FileType', {
 vim.g['twihi_mention_check_interval'] = 30000 * 10
 vim.g['twihi_notify_ui'] = 'system'
 
-nmap('<C-g>n', '<Cmd>TwihiTweet<CR>')
-nmap('<C-g>m', '<Cmd>TwihiMentions<CR>')
-nmap('<C-g>h', '<Cmd>TwihiHome<CR>')
-
-local twihi_timeline_keymap = function()
-  local opt = { buffer = true, silent = true }
-  nmap('<C-g><C-y>', '<Plug>(twihi:tweet:yank)', opt)
-  nmap('R', '<Plug>(twihi:retweet)', opt)
-  nmap('<C-g><C-l>', '<C-g><C-l> <Plug>(twihi:tweet:like)', opt)
-  nmap('<C-o>', '<Plug>(twihi:tweet:open)', opt)
-  nmap('<C-r>', '<Plug>(twihi:reply)', opt)
-  nmap('<C-j>', '<Plug>(twihi:tweet:next)', opt)
-  nmap('<C-k>', '<Plug>(twihi:tweet:prev)', opt)
-end
-
-local twihi_media_keymap = function()
-  local opt = { buffer = true, silent = true }
-  nmap('<C-g>m', '<Plug>(twihi:media:add:clipboard)', opt)
-  nmap('<C-g>d', '<Plug>(twihi:media:remove)', opt)
-  nmap('<C-g>o', '<Plug>(twihi:media:open)', opt)
-end
-
-local twihi_init_group = vim.api.nvim_create_augroup("twihiInit", { clear = true })
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'twihi-timeline',
-  callback = function()
-    twihi_timeline_keymap()
-  end,
-  group = twihi_init_group,
-})
-
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = { 'twihi-reply', 'twihi-tweet', 'twihi-retweet' },
-  callback = function()
-    twihi_media_keymap()
-  end,
-  group = twihi_init_group,
-})
-
 -- silicon.vim
 vim.g['silicon_options'] = {
-  font = 'Hack Nerd Font',
+  font = 'Cica',
   no_line_number = true,
   background_color = '#434C5E',
   no_window_controls = true,
