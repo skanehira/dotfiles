@@ -753,34 +753,34 @@ require('packer').startup(function(use)
   use { 'lambdalisue/gina.vim',
     config = gina_config,
   }
-  use 'lambdalisue/guise.vim'
+  use { 'lambdalisue/guise.vim' }
   use { 'mattn/emmet-vim',
     config = emmet_config
   }
   use { 'mattn/vim-sonictemplate',
     config = sonictemplate_config,
   }
-  use 'simeji/winresizer'
-  use 'vim-denops/denops.vim'
+  use { 'simeji/winresizer' }
+  use { 'vim-denops/denops.vim' }
   use { 'skanehira/denops-silicon.vim',
     config = silicon_config
   }
-  use 'skanehira/denops-docker.vim'
+  use { 'skanehira/denops-docker.vim' }
   use { 'thinca/vim-quickrun',
     requires = {
       { 'skanehira/quickrun-neoterm.vim', opt = true }
     },
     config = quickrun_config,
   }
-  use 'tyru/open-browser-github.vim'
+  use { 'tyru/open-browser-github.vim' }
   use { 'tyru/open-browser.vim',
     config = openbrowser_config,
   }
-  use 'mattn/vim-goimports'
+  use { 'mattn/vim-goimports' }
   use { 'skanehira/denops-graphql.vim',
     config = graphql_config
   }
-  use 'thinca/vim-prettyprint'
+  use { 'thinca/vim-prettyprint' }
   use { 'skanehira/k8s.vim',
     config = k8s_config,
   }
@@ -796,28 +796,28 @@ require('packer').startup(function(use)
   }
 
   -- for documentation
-  use 'glidenote/memolist.vim'
-  use 'godlygeek/tabular'
-  use 'gyim/vim-boxdraw'
-  use 'mattn/vim-maketable'
-  use 'shinespark/vim-list2tree'
+  use { 'glidenote/memolist.vim' }
+  use { 'godlygeek/tabular' }
+  use { 'gyim/vim-boxdraw' }
+  use { 'mattn/vim-maketable' }
+  use { 'shinespark/vim-list2tree' }
   use { 'skanehira/gyazo.vim',
     config = gyazo_config,
   }
   use { 'skanehira/denops-translate.vim',
     config = translate_config
   }
-  use 'vim-jp/vimdoc-ja'
-  use 'plasticboy/vim-markdown'
-  use 'previm/previm'
+  use { 'vim-jp/vimdoc-ja' }
+  use { 'plasticboy/vim-markdown' }
+  use { 'previm/previm' }
 
   -- for develop vim plugins
-  use 'LeafCage/vimhelpgenerator'
-  use 'lambdalisue/vital-Whisky'
-  use 'tweekmonster/helpful.vim'
-  use 'vim-jp/vital.vim'
-  use 'thinca/vim-themis'
-  use 'tyru/capture.vim'
+  use { 'LeafCage/vimhelpgenerator' }
+  use { 'lambdalisue/vital-Whisky' }
+  use { 'tweekmonster/helpful.vim' }
+  use { 'vim-jp/vital.vim' }
+  use { 'thinca/vim-themis' }
+  use { 'tyru/capture.vim' }
 
   -- other
   use { 'skanehira/denops-twihi.vim',
