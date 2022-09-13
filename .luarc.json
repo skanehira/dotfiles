@@ -1,5 +1,8 @@
 {
     "$schema": "https://raw.githubusercontent.com/sumneko/vscode-lua/master/setting/schema.json",
+    "Lua.diagnostics.disable": [
+        "redundant-parameter"
+    ],
     "Lua.diagnostics.globals": [
         "vim",
         "map",
@@ -9,6 +12,11 @@
         "omap",
         "cmap",
         "tmap",
-        "xmap"
+        "xmap",
+        "g",
+        "opt",
+        "cmd",
+        "fn",
+        "api"
     ]
 }
