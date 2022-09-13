@@ -306,6 +306,7 @@ local lsp_config = function()
           return
         end
         opts = {
+          cmd = { 'deno', 'lsp', '--unstable'},
           root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json', '.git'),
           init_options = {
             lint = true,
