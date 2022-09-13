@@ -272,58 +272,75 @@ local lsp_config = function()
 
   local lspconfig = require("lspconfig")
 
-  local ls = {
-    -- 'sumneko_lua',
-    -- 'tsserver',
-    -- 'denols',
+  -- mason-lspconfig will auto install LS when config included in lspconfig
+  local lss = {
+    'denols',
+    'gopls',
+    'rust_analyzer',
+    'tsserver',
+    'sumneko_lua',
     'golangci_lint_ls',
     'eslint',
     'graphql',
     'bashls',
     'yamlls',
-    'gopls',
     'jsonls',
     'vimls',
   }
 
-  for _, s in pairs(ls) do
-    lspconfig[s].setup({
-      on_attach = Lsp_on_attach
-    })
+  local node_root_dir = lspconfig.util.root_pattern("package.json")
+  local is_node_repo = node_root_dir(fn.getcwd()) ~= nil
+
+  for _, ls in pairs(lss) do
+    (function()
+      -- use rust-tools.nvim to setup
+      if ls == 'rust_analyzer' then
+        return
+      end
+
+      local opts = {}
+
+      if ls == 'denols' then
+        -- dont start LS in nodejs repository
+        if is_node_repo then
+          return
+        end
+        opts = {
+          root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json', '.git'),
+          init_options = {
+            lint = true,
+            unstable = true
+          },
+        }
+      elseif ls == 'tsserver' then
+        opts = {
+          root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
+        }
+      elseif ls == 'sumneko_lua' then
+        opts = {
+          settings = {
+            Lua = {
+              runtime = {
+                version = 'LuaJIT'
+              },
+              diagnostics = {
+                -- Get the language server to recognize the `vim` global
+                globals = { "vim" },
+              },
+              workspace = {
+                -- Make the server aware of Neovim runtime files
+                library = api.nvim_get_runtime_file("", true),
+              },
+            },
+          },
+        }
+      end
+
+      opts['on_attach'] = Lsp_on_attach
+
+      lspconfig[ls].setup(opts)
+    end)()
   end
-
-  lspconfig.denols.setup({
-    root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json', '.git'),
-    init_options = {
-      lint = true,
-      unstable = true
-    },
-    on_attach = Lsp_on_attach,
-  })
-
-  lspconfig.tsserver.setup({
-    root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
-    on_attach = Lsp_on_attach,
-  })
-
-  lspconfig.sumneko_lua.setup({
-    settings = {
-      Lua = {
-        runtime = {
-          version = 'LuaJIT'
-        },
-        diagnostics = {
-          -- Get the language server to recognize the `vim` global
-          globals = { "vim" },
-        },
-        workspace = {
-          -- Make the server aware of Neovim runtime files
-          library = api.nvim_get_runtime_file("", true),
-        },
-      },
-    },
-    on_attach = Lsp_on_attach,
-  })
 end
 
 -- treesitter config
@@ -963,7 +980,6 @@ api.nvim_create_user_command('ZennCreateArticle',
 local insert_markdown_link = function()
   local old = fn.getreg(9)
   local link = fn.trim(fn.getreg())
-  print(link:match('^http.*'))
   if link:match('^http.*') == nil then
     cmd('normal! p')
     return
