@@ -249,7 +249,7 @@ local fern_config = function()
     group = vim.api.nvim_create_augroup('fernInit', { clear = true }),
   })
 
-  nmap('<Leader>f', ':Fern . -drawer<CR>')
+  nmap('<Leader>f', ':Fern . -drawer<CR>', { silent = true })
 end
 
 -- lsp config
@@ -368,6 +368,11 @@ local gitsigns_config = function()
 end
 
 -- twihi.vim config
+
+-- twihi.vim
+vim.g['twihi_mention_check_interval'] = 30000 * 10
+vim.g['twihi_notify_ui'] = 'system'
+
 local twihi_config = function()
   nmap('<C-g>n', '<Cmd>TwihiTweet<CR>')
   nmap('<C-g>m', '<Cmd>TwihiMentions<CR>')
@@ -409,8 +414,220 @@ local twihi_config = function()
   })
 end
 
+-- k8s.vim
+local k8s_config = function()
 
--- plugin settings
+  local k8s_pods_keymap = function()
+    nmap('<CR>', '<Plug>(k8s:pods:containers)', { buffer = true })
+    nmap('<C-g><C-l>', '<Plug>(k8s:pods:logs)', { buffer = true })
+    nmap('<C-g><C-d>', '<Plug>(k8s:pods:describe)', { buffer = true })
+    nmap('D', '<Plug>(k8s:pods:delete)', { buffer = true })
+    nmap('K', '<Plug>(k8s:pods:kill)', { buffer = true })
+    nmap('<C-g><C-y>', '<Plug>(k8s:pods:yaml)', { buffer = true })
+    nmap('<C-e>', '<Plug>(k8s:pods:events)', { buffer = true })
+    nmap('s', '<Plug>(k8s:pods:shell)', { buffer = true })
+    nmap('e', '<Plug>(k8s:pods:exec)', { buffer = true })
+    nmap('E', '<Plug>(k8s:pods:edit)', { buffer = true })
+  end
+
+  local k8s_nodes_keymap = function()
+    nmap('<C-g><C-d>', '<Plug>(k8s:nodes:describe)', { buffer = true })
+    nmap('<C-g><C-y>', '<Plug>(k8s:nodes:yaml)', { buffer = true })
+    nmap('<CR>', '<Plug>(k8s:nodes:pods)', { buffer = true })
+    nmap('E', '<Plug>(k8s:nodes:edit)', { buffer = true })
+  end
+
+  local k8s_containers_keymap = function()
+    nmap('s', '<Plug>(k8s:pods:containers:shell)', { buffer = true })
+    nmap('e', '<Plug>(k8s:pods:containers:exec)', { buffer = true })
+  end
+
+  local k8s_deployments_keymap = function()
+    nmap('<C-g><C-d>', '<Plug>(k8s:deployments:describe)', { buffer = true })
+    nmap('<C-g><C-y>', '<Plug>(k8s:deployments:yaml)', { buffer = true })
+    nmap('E', '<Plug>(k8s:deployments:edit)', { buffer = true })
+    nmap('<CR>', '<Plug>(k8s:deployments:pods)', { buffer = true })
+    nmap('D', '<Plug>(k8s:deployments:delete)', { buffer = true })
+  end
+
+  local k8s_services_keymap = function()
+    nmap('<CR>', '<Plug>(k8s:svcs:pods)', { buffer = true })
+    nmap('<C-g><C-d>', '<Plug>(k8s:svcs:describe)', { buffer = true })
+    nmap('D', '<Plug>(k8s:svcs:delete)', { buffer = true })
+    nmap('<C-g><C-y>', '<Plug>(k8s:svcs:yaml)', { buffer = true })
+    nmap('E', '<Plug>(k8s:svcs:edit)', { buffer = true })
+  end
+
+  local k8s_secrets_keymap = function()
+    nmap('<C-g><C-d>', '<Plug>(k8s:secrets:describe)', { buffer = true })
+    nmap('<C-g><C-y>', '<Plug>(k8s:secrets:yaml)', { buffer = true })
+    nmap('E', '<Plug>(k8s:secrets:edit)', { buffer = true })
+    nmap('D', '<Plug>(k8s:secrets:delete)', { buffer = true })
+  end
+
+  local k8s_keymaps = {
+    { ft = 'k8s-pods', fn = k8s_pods_keymap },
+    { ft = 'k8s-nodes', fn = k8s_nodes_keymap },
+    { ft = 'k8s-containers', fn = k8s_containers_keymap },
+    { ft = 'k8s-deployments', fn = k8s_deployments_keymap },
+    { ft = 'k8s-services', fn = k8s_services_keymap },
+    { ft = 'k8s-secrets', fn = k8s_secrets_keymap },
+  }
+
+  local k8s_keymap_group = vim.api.nvim_create_augroup("k8sInit", { clear = true })
+
+  for _, m in pairs(k8s_keymaps) do
+    vim.api.nvim_create_autocmd('FileType', {
+      pattern = m.ft,
+      callback = m.fn,
+      group = k8s_keymap_group,
+    })
+  end
+end
+
+-- silicon.vim
+vim.g['silicon_options'] = {
+  font = 'Cica',
+  no_line_number = true,
+  background_color = '#434C5E',
+  no_window_controls = true,
+  theme = 'Nord',
+}
+local silicon_config = function()
+  nmap('gi', '<Plug>(silicon-generate)')
+  xmap('gi', '<Plug>(silicon-generate)')
+end
+
+-- graphql.vim
+local graphql_config = function()
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'graphql',
+    callback = function()
+      nmap('gp', '<Plug>(graphql-execute)')
+    end,
+    group = vim.api.nvim_create_augroup("graphqlInit", { clear = true }),
+  })
+end
+
+-- translate.vim
+local translate_config = function()
+  nmap('gr', '<Plug>(Translate)')
+  vmap('gr', '<Plug>(Translate)')
+end
+
+-- quickrun.vim
+vim.g['quickrun_config'] = {
+  typescript = {
+    command = 'deno',
+    tempfile = '%{printf("%s.ts", tempname())}',
+    cmdopt = '--no-check --unstable --allow-all',
+    exec = { 'NO_COLOR=1 %C run %o %s' },
+  },
+  ['deno/terminal'] = {
+    command = 'deno',
+    tempfile = '%{printf("%s.ts", tempname())}',
+    cmdopt = '--no-check --unstable --allow-all',
+    exec = { '%C run %o %s' },
+    type = 'typescript',
+    runner = 'neoterm',
+  },
+  rust = {
+    command = 'cargo',
+    exec = '%C run --quiet %s %a',
+  },
+}
+
+local quickrun_config = function()
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'quickrun',
+    callback = function()
+      nmap('q', '<Cmd>bw!<CR>', { silent = true, buffer = true })
+    end,
+    group = vim.api.nvim_create_augroup('quickrunInit', { clear = true }),
+  })
+end
+
+-- vim-markdown
+vim.g['vim_markdown_folding_disabled'] = true
+
+-- emmet
+vim.g['emmet_html5'] = false
+vim.g['user_emmet_install_global'] = false
+vim.g['user_emmet_settings'] = {
+  variables = {
+    lang = 'ja'
+  }
+}
+vim.g['user_emmet_leader_key'] = '<C-g>'
+local emmet_config = function()
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = { 'vue', 'html', 'css', 'typescriptreact' },
+    command = 'EmmetInstall',
+    group = vim.api.nvim_create_augroup("emmetInstall", { clear = true }),
+  })
+end
+
+-- vim-sonictemplate.vim
+vim.g['sonictemplate_author'] = 'skanehira'
+vim.g['sonictemplate_license'] = 'MIT'
+vim.g['sonictemplate_vim_template_dir'] = vim.fn.expand('~/.vim/sonictemplate')
+local sonictemplate_config = function()
+  imap('<C-l>', '<plug>(sonictemplate-postfix)', { silent = true })
+end
+
+-- vimhelpgenerator
+vim.g['vimhelpgenerator_version'] = ''
+vim.g['vimhelpgenerator_author'] = 'Author: skanehira <sho19921005@gmail.com>'
+vim.g['vimhelpgenerator_uri'] = 'https://github.com/skanehira/'
+vim.g['vimhelpgenerator_defaultlanguage'] = 'en'
+
+-- gyazo.vim
+vim.g['gyazo_insert_markdown'] = true
+local gyazo_config = function()
+  nmap('gup', '<Plug>(gyazo-upload)')
+end
+
+-- winselector.vim
+local winselector_config = function()
+  nmap('<C-f>', '<Plug>(winselector)')
+end
+
+-- test.vim
+vim.g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
+local test_config = function()
+  nmap('<Leader>tn', '<Cmd>TestNearest<CR>', { silent = true })
+end
+
+-- open-browser.vim
+local openbrowser_config = function()
+  nmap('gop', '<Plug>(openbrowser-open)')
+end
+
+-- lualine
+local lualine_config = function()
+  require('lualine').setup({
+    sections = {
+      lualine_c = {
+        {
+          'filename',
+          path = 3,
+        }
+      }
+    }
+  })
+end
+
+-- lspsaga
+local lspsaga_config = function()
+  require('lspsaga').setup({
+    error_sign = '💩',
+    warn_sign = '🦍',
+    hint_sign = "",
+    infor_sign = "",
+  })
+end
+
+-- packer settings
 local ensure_packer = function()
   local install_path = vim.fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
   if vim.fn.empty(vim.fn.glob(install_path)) == 1 then
@@ -426,8 +643,7 @@ local packer_bootstrap = ensure_packer()
 require('packer').startup(function(use)
   use { 'wbthomason/packer.nvim' }
 
-  use {
-    'pwntester/octo.nvim',
+  use { 'pwntester/octo.nvim',
     requires = {
       'nvim-lua/plenary.nvim',
       'nvim-telescope/telescope.nvim',
@@ -439,52 +655,35 @@ require('packer').startup(function(use)
   }
 
   -- lsp_signature
-  use {
-    'ray-x/lsp_signature.nvim',
+  use { 'ray-x/lsp_signature.nvim',
     config = function()
       require('lsp_signature').setup({})
     end
   }
 
   -- git signs
-  use {
-    'lewis6991/gitsigns.nvim',
+  use { 'lewis6991/gitsigns.nvim',
     config = gitsigns_config
   }
 
   -- status line
-  use {
-    'nvim-lualine/lualine.nvim',
+  use { 'nvim-lualine/lualine.nvim',
     requires = 'kyazdani42/nvim-web-devicons',
-    config = function()
-      require('lualine').setup({
-        sections = {
-          lualine_c = {
-            {
-              'filename',
-              path = 3,
-            }
-          }
-        }
-      })
-    end
+    config = lualine_config,
   }
 
   -- tabpage
-  use {
-    'akinsho/bufferline.nvim',
+  use { 'akinsho/bufferline.nvim',
     tag = "v2.*",
     requires = 'kyazdani42/nvim-web-devicons',
     config = bufferline_config
   }
 
   -- colorscheme
-  use {
-    'cocopon/iceberg.vim',
+  use { 'cocopon/iceberg.vim',
     config = iceberg_config,
   }
-  use {
-    'nvim-treesitter/nvim-treesitter',
+  use { 'nvim-treesitter/nvim-treesitter',
     run = ':TSUpdate',
     config = treesitter_config
   }
@@ -493,8 +692,7 @@ require('packer').startup(function(use)
   use { 'kevinhwang91/nvim-bqf', ft = 'qf' }
 
   -- lsp
-  use {
-    'williamboman/mason-lspconfig.nvim',
+  use { 'williamboman/mason-lspconfig.nvim',
     requires = {
       { 'neovim/nvim-lspconfig' },
       {
@@ -505,26 +703,16 @@ require('packer').startup(function(use)
     config = lsp_config,
   }
 
-  use {
-    'j-hui/fidget.nvim',
+  use { 'j-hui/fidget.nvim',
     config = function() require('fidget').setup() end,
   }
 
-  use {
-    'kkharji/lspsaga.nvim',
-    config = function()
-      require('lspsaga').setup({
-        error_sign = '💩',
-        warn_sign = '🦍',
-        hint_sign = "",
-        infor_sign = "",
-      })
-    end,
+  use { 'kkharji/lspsaga.nvim',
+    config = lspsaga_config,
   }
 
   -- complete
-  use {
-    'hrsh7th/nvim-cmp',
+  use { 'hrsh7th/nvim-cmp',
     requires = {
       'hrsh7th/cmp-nvim-lsp',
       'hrsh7th/cmp-buffer',
@@ -536,16 +724,16 @@ require('packer').startup(function(use)
   }
 
   -- for development
-  use {
-    'windwp/nvim-autopairs',
+  use { 'windwp/nvim-autopairs',
     config = function()
       require("nvim-autopairs").setup({ map_c_h = true })
     end,
   }
 
-  use 'vim-test/vim-test'
-  use {
-    'lambdalisue/fern.vim',
+  use { 'vim-test/vim-test',
+    config = test_config,
+  }
+  use { 'lambdalisue/fern.vim',
     branch = 'main',
     requires = {
       { 'lambdalisue/fern-hijack.vim' },
@@ -554,37 +742,48 @@ require('packer').startup(function(use)
     },
     config = fern_config,
   }
-  use {
-    'lambdalisue/gina.vim',
+  use { 'lambdalisue/gina.vim',
     config = gina_config,
   }
   use 'lambdalisue/guise.vim'
-  use 'mattn/emmet-vim'
-  use 'mattn/vim-sonictemplate'
+  use { 'mattn/emmet-vim',
+    config = emmet_config
+  }
+  use { 'mattn/vim-sonictemplate',
+    config = sonictemplate_config,
+  }
   use 'simeji/winresizer'
   use 'vim-denops/denops.vim'
-  use 'skanehira/denops-silicon.vim'
+  use { 'skanehira/denops-silicon.vim',
+    config = silicon_config
+  }
   use 'skanehira/denops-docker.vim'
-  use {
-    'thinca/vim-quickrun',
+  use { 'thinca/vim-quickrun',
     requires = {
       { 'skanehira/quickrun-neoterm.vim', opt = true }
-    }
+    },
+    config = quickrun_config,
   }
   use 'tyru/open-browser-github.vim'
-  use 'tyru/open-browser.vim'
+  use { 'tyru/open-browser.vim',
+    config = openbrowser_config,
+  }
   use 'mattn/vim-goimports'
-  use 'skanehira/denops-graphql.vim'
+  use { 'skanehira/denops-graphql.vim',
+    config = graphql_config
+  }
   use 'thinca/vim-prettyprint'
-  use 'skanehira/k8s.vim'
-  use 'skanehira/winselector.vim'
-  use {
-    'nvim-telescope/telescope.nvim',
+  use { 'skanehira/k8s.vim',
+    config = k8s_config,
+  }
+  use { 'skanehira/winselector.vim',
+    config = winselector_config,
+  }
+  use { 'nvim-telescope/telescope.nvim',
     requires = { { 'nvim-lua/plenary.nvim' } },
     config = telescope_config,
   }
-  use {
-    'simrat39/rust-tools.nvim',
+  use { 'simrat39/rust-tools.nvim',
     config = rust_tools_config,
   }
 
@@ -594,8 +793,12 @@ require('packer').startup(function(use)
   use 'gyim/vim-boxdraw'
   use 'mattn/vim-maketable'
   use 'shinespark/vim-list2tree'
-  use 'skanehira/gyazo.vim'
-  use 'skanehira/denops-translate.vim'
+  use { 'skanehira/gyazo.vim',
+    config = gyazo_config,
+  }
+  use { 'skanehira/denops-translate.vim',
+    config = translate_config
+  }
   use 'vim-jp/vimdoc-ja'
   use 'plasticboy/vim-markdown'
   use 'previm/previm'
@@ -609,8 +812,7 @@ require('packer').startup(function(use)
   use 'tyru/capture.vim'
 
   -- other
-  use {
-    'skanehira/denops-twihi.vim',
+  use { 'skanehira/denops-twihi.vim',
     config = twihi_config,
   }
 
@@ -739,6 +941,43 @@ vim.api.nvim_create_autocmd('BufWritePre', {
   group = vim.api.nvim_create_augroup('autoMkdir', { clear = true })
 })
 
+-- create zenn article
+vim.api.nvim_create_user_command('ZennCreateArticle',
+  function(opts)
+    local date = vim.fn.strftime('%Y-%m-%d')
+    local slug = date .. '-' .. opts.args
+    local cmd = 'npx zenn new:article --emoji 🦍 --slug ' .. slug
+    os.execute(cmd)
+    vim.cmd('edit ' .. string.format('articles/%s.md', slug))
+  end, { nargs = 1 })
+
+-- insert markdown link
+local insert_markdown_link = function()
+  local old = vim.fn.getreg(9)
+  local link = vim.fn.trim(vim.fn.getreg())
+  print(link:match('^http.*'))
+  if link:match('^http.*') == nil then
+    vim.cmd('normal! p')
+    return
+  end
+  vim.cmd('normal! "9y')
+  local word = vim.fn.getreg(9)
+  local text = string.format('[%s](%s)', word, link)
+  vim.fn.setreg(9, text)
+  vim.cmd('normal! gv"9p')
+  vim.fn.setreg(9, old)
+end
+
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'markdown',
+  callback = function()
+    map('x', 'p', function()
+      insert_markdown_link()
+    end, { silent = true, buffer = true })
+  end,
+  group = vim.api.nvim_create_augroup("markdownInsertLink", { clear = true }),
+})
+
 -- key mappings
 
 -- text object
@@ -826,214 +1065,3 @@ nmap('<Leader>tm', [[:new | terminal<CR>]])
 tmap('<C-]>', [[<C-\><C-n>]])
 vmap('H', '^')
 vmap('L', 'g_')
-
--- translate.vim
-nmap('gr', '<Plug>(Translate)')
-vmap('gr', '<Plug>(Translate)')
-
--- quickrun.vim
-vim.g['quickrun_config'] = {
-  typescript = {
-    command = 'deno',
-    tempfile = '%{printf("%s.ts", tempname())}',
-    cmdopt = '--no-check --unstable --allow-all',
-    exec = { 'NO_COLOR=1 %C run %o %s' },
-  },
-  ['deno/terminal'] = {
-    command = 'deno',
-    tempfile = '%{printf("%s.ts", tempname())}',
-    cmdopt = '--no-check --unstable --allow-all',
-    exec = { '%C run %o %s' },
-    type = 'typescript',
-    runner = 'neoterm',
-  },
-  rust = {
-    command = 'cargo',
-    exec = '%C run --quiet %s %a',
-  },
-}
-
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'quickrun',
-  callback = function()
-    nmap('q', '<Cmd>bw!<CR>', { silent = true, buffer = true })
-  end,
-  group = vim.api.nvim_create_augroup('quickrunInit', { clear = true }),
-})
-
--- vim-markdown
-vim.g['vim_markdown_folding_disabled'] = true
-
--- emmet
-vim.g['emmet_html5'] = false
-vim.g['user_emmet_install_global'] = false
-vim.g['user_emmet_settings'] = {
-  variables = {
-    lang = 'ja'
-  }
-}
-vim.g['user_emmet_leader_key'] = '<C-g>'
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = { 'vue', 'html', 'css', 'typescriptreact' },
-  command = 'EmmetInstall',
-  group = vim.api.nvim_create_augroup("emmetInstall", { clear = true }),
-})
-
--- vim-sonictemplate.vim
-vim.g['sonictemplate_author'] = 'skanehira'
-vim.g['sonictemplate_license'] = 'MIT'
-vim.g['sonictemplate_vim_template_dir'] = vim.fn.expand('~/.vim/sonictemplate')
-imap('<C-l>', '<plug>(sonictemplate-postfix)', { silent = true })
-
--- vimhelpgenerator
-vim.g['vimhelpgenerator_version'] = ''
-vim.g['vimhelpgenerator_author'] = 'Author: skanehira <sho19921005@gmail.com>'
-vim.g['vimhelpgenerator_uri'] = 'https://github.com/skanehira/'
-vim.g['vimhelpgenerator_defaultlanguage'] = 'en'
-
--- gyazo.vim
-vim.g['gyazo_insert_markdown'] = true
-nmap('gup', '<Plug>(gyazo-upload)')
-
--- winselector.vim
-nmap('<C-f>', '<Plug>(winselector)')
-
--- change visual highlight
-vim.cmd('hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851')
-
--- test.vim
-vim.g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
-nmap('<Leader>tn', '<Cmd>TestNearest<CR>', { silent = true })
-
--- open-browser.vim
-nmap('gop', '<Plug>(openbrowser-open)')
-
--- create zenn article
-vim.api.nvim_create_user_command('ZennCreateArticle',
-  function(opts)
-    local date = vim.fn.strftime('%Y-%m-%d')
-    local slug = date .. '-' .. opts.args
-    local cmd = 'npx zenn new:article --emoji 🦍 --slug ' .. slug
-    os.execute(cmd)
-    vim.cmd('edit ' .. string.format('articles/%s.md', slug))
-  end, { nargs = 1 })
-
--- insert markdown link
-local insert_markdown_link = function()
-  local old = vim.fn.getreg(9)
-  local link = vim.fn.trim(vim.fn.getreg())
-  print(link:match('^http.*'))
-  if link:match('^http.*') == nil then
-    vim.cmd('normal! p')
-    return
-  end
-  vim.cmd('normal! "9y')
-  local word = vim.fn.getreg(9)
-  local text = string.format('[%s](%s)', word, link)
-  vim.fn.setreg(9, text)
-  vim.cmd('normal! gv"9p')
-  vim.fn.setreg(9, old)
-end
-
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'markdown',
-  callback = function()
-    map('x', 'p', function()
-      insert_markdown_link()
-    end, { silent = true, buffer = true })
-  end,
-  group = vim.api.nvim_create_augroup("markdownInsertLink", { clear = true }),
-})
-
--- graphql.vim
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'graphql',
-  callback = function()
-    nmap('gp', '<Plug>(graphql-execute)')
-  end,
-  group = vim.api.nvim_create_augroup("graphqlInit", { clear = true }),
-})
-
--- twihi.vim
-vim.g['twihi_mention_check_interval'] = 30000 * 10
-vim.g['twihi_notify_ui'] = 'system'
-
--- silicon.vim
-vim.g['silicon_options'] = {
-  font = 'Cica',
-  no_line_number = true,
-  background_color = '#434C5E',
-  no_window_controls = true,
-  theme = 'Nord',
-}
-
-nmap('gi', '<Plug>(silicon-generate)')
-xmap('gi', '<Plug>(silicon-generate)')
-
--- k8s.vim
-local k8s_pods_keymap = function()
-  nmap('<CR>', '<Plug>(k8s:pods:containers)', { buffer = true })
-  nmap('<C-g><C-l>', '<Plug>(k8s:pods:logs)', { buffer = true })
-  nmap('<C-g><C-d>', '<Plug>(k8s:pods:describe)', { buffer = true })
-  nmap('D', '<Plug>(k8s:pods:delete)', { buffer = true })
-  nmap('K', '<Plug>(k8s:pods:kill)', { buffer = true })
-  nmap('<C-g><C-y>', '<Plug>(k8s:pods:yaml)', { buffer = true })
-  nmap('<C-e>', '<Plug>(k8s:pods:events)', { buffer = true })
-  nmap('s', '<Plug>(k8s:pods:shell)', { buffer = true })
-  nmap('e', '<Plug>(k8s:pods:exec)', { buffer = true })
-  nmap('E', '<Plug>(k8s:pods:edit)', { buffer = true })
-end
-
-local k8s_nodes_keymap = function()
-  nmap('<C-g><C-d>', '<Plug>(k8s:nodes:describe)', { buffer = true })
-  nmap('<C-g><C-y>', '<Plug>(k8s:nodes:yaml)', { buffer = true })
-  nmap('<CR>', '<Plug>(k8s:nodes:pods)', { buffer = true })
-  nmap('E', '<Plug>(k8s:nodes:edit)', { buffer = true })
-end
-
-local k8s_containers_keymap = function()
-  nmap('s', '<Plug>(k8s:pods:containers:shell)', { buffer = true })
-  nmap('e', '<Plug>(k8s:pods:containers:exec)', { buffer = true })
-end
-
-local k8s_deployments_keymap = function()
-  nmap('<C-g><C-d>', '<Plug>(k8s:deployments:describe)', { buffer = true })
-  nmap('<C-g><C-y>', '<Plug>(k8s:deployments:yaml)', { buffer = true })
-  nmap('E', '<Plug>(k8s:deployments:edit)', { buffer = true })
-  nmap('<CR>', '<Plug>(k8s:deployments:pods)', { buffer = true })
-  nmap('D', '<Plug>(k8s:deployments:delete)', { buffer = true })
-end
-
-local k8s_services_keymap = function()
-  nmap('<CR>', '<Plug>(k8s:svcs:pods)', { buffer = true })
-  nmap('<C-g><C-d>', '<Plug>(k8s:svcs:describe)', { buffer = true })
-  nmap('D', '<Plug>(k8s:svcs:delete)', { buffer = true })
-  nmap('<C-g><C-y>', '<Plug>(k8s:svcs:yaml)', { buffer = true })
-  nmap('E', '<Plug>(k8s:svcs:edit)', { buffer = true })
-end
-
-local k8s_secrets_keymap = function()
-  nmap('<C-g><C-d>', '<Plug>(k8s:secrets:describe)', { buffer = true })
-  nmap('<C-g><C-y>', '<Plug>(k8s:secrets:yaml)', { buffer = true })
-  nmap('E', '<Plug>(k8s:secrets:edit)', { buffer = true })
-  nmap('D', '<Plug>(k8s:secrets:delete)', { buffer = true })
-end
-
-local k8s_keymaps = {
-  { ft = 'k8s-pods', fn = k8s_pods_keymap },
-  { ft = 'k8s-nodes', fn = k8s_nodes_keymap },
-  { ft = 'k8s-containers', fn = k8s_containers_keymap },
-  { ft = 'k8s-deployments', fn = k8s_deployments_keymap },
-  { ft = 'k8s-services', fn = k8s_services_keymap },
-  { ft = 'k8s-secrets', fn = k8s_secrets_keymap },
-}
-
-local k8s_keymap_group = vim.api.nvim_create_augroup("k8sInit", { clear = true })
-
-for _, m in pairs(k8s_keymaps) do
-  vim.api.nvim_create_autocmd('FileType', {
-    pattern = m.ft,
-    callback = m.fn,
-    group = k8s_keymap_group,
-  })
-end
