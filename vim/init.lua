@@ -286,7 +286,7 @@ local lsp_config = function()
   end
 
   lspconfig.denols.setup({
-    root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json'),
+    root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json', '.git'),
     init_options = {
       lint = true,
       unstable = true
@@ -479,7 +479,6 @@ require('packer').startup(function(use)
       'hrsh7th/cmp-path',
       'hrsh7th/cmp-vsnip',
       'hrsh7th/vim-vsnip',
-      'hrsh7th/vim-vsnip-integ',
     },
     config = nvim_cmp_config,
   }
@@ -546,6 +545,8 @@ require('packer').startup(function(use)
   use 'skanehira/gyazo.vim'
   use 'skanehira/denops-translate.vim'
   use 'vim-jp/vimdoc-ja'
+  use 'plasticboy/vim-markdown'
+  use 'previm/previm'
 
   -- for develop vim plugins
   use 'LeafCage/vimhelpgenerator'
@@ -805,6 +806,9 @@ vim.api.nvim_create_autocmd('FileType', {
   group = vim.api.nvim_create_augroup('quickrunInit', { clear = true }),
 })
 
+-- vim-markdown
+vim.g['vim_markdown_folding_disabled'] = true
+
 -- emmet
 vim.g['emmet_html5'] = false
 vim.g['user_emmet_install_global'] = false
@@ -940,6 +944,7 @@ vim.api.nvim_create_autocmd('FileType', {
 
 -- silicon.vim
 vim.g['silicon_options'] = {
+  font = 'Hack Nerd Font',
   no_line_number = true,
   background_color = '#434C5E',
   no_window_controls = true,
