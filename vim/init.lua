@@ -707,6 +707,7 @@ require('packer').startup(function(use)
         config = function() require("mason").setup() end,
       },
     },
+    after = { 'mason.nvim', 'nvim-lspconfig' },
     config = lsp_config,
   }
 
