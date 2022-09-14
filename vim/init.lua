@@ -150,8 +150,11 @@ end
 -- color scheme config
 local colorscheme_config = function()
   opt.termguicolors = true
-  vim.cmd('hi VertSplit ctermfg=232 guifg=#202023')
   cmd('colorscheme carbonfox')
+  vim.cmd([[
+      hi VertSplit guifg=#535353
+      hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
+      ]])
 end
 
 -- bufferline.nvim
