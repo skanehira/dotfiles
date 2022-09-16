@@ -100,6 +100,15 @@ Lsp_on_attach = function(client, bufnr)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
 
   -- auto format when save the file
+  local organize_import = function() end
+  local actions = vim.tbl_get(client.server_capabilities, 'codeActionProvider', "codeActionKinds")
+  if actions ~= nil and vim.tbl_contains(actions, "source.organizeImports") then
+    organize_import = function()
+      vim.lsp.buf.code_action({ context = { only = { "source.organizeImports" } }, apply = true })
+    end
+  end
+  nmap('mi', organize_import)
+
   local augroup = api.nvim_create_augroup("LspFormatting", { clear = false })
   if client.supports_method("textDocument/formatting") then
     nmap(';f', vim.lsp.buf.format, { buffer = bufnr })
@@ -108,6 +117,7 @@ Lsp_on_attach = function(client, bufnr)
     end
     api.nvim_create_autocmd("BufWritePre", {
       callback = function()
+        organize_import()
         vim.lsp.buf.format()
       end,
       group = augroup,
@@ -348,22 +358,6 @@ local lsp_config = function()
   end
 end
 
--- treesitter config
-local treesitter_config = function()
-  require('nvim-treesitter.configs').setup({
-    ensure_installed = {
-      'lua', 'rust', 'typescript', 'tsx',
-      'go', 'gomod', 'sql', 'toml', 'yaml',
-      'html', 'javascript', 'graphql',
-      'markdown', 'markdown_inline'
-    },
-    auto_install = true,
-    highlight = {
-      enable = true,
-    }
-  })
-end
-
 -- gitsigns.nvim
 local gitsigns_config = function()
   require('gitsigns').setup({
@@ -388,8 +382,8 @@ local gitsigns_config = function()
         silent = true
       }
       -- Actions
-      map({ 'n', 'x' }, 'g]', ':Gitsigns stage_hunk<CR>', opts)
-      map({ 'n', 'x' }, 'g[', ':Gitsigns undo_stage_hunk<CR>', opts)
+      map({ 'n', 'x' }, ']g', ':Gitsigns stage_hunk<CR>', opts)
+      map({ 'n', 'x' }, '[g', ':Gitsigns undo_stage_hunk<CR>', opts)
       map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>', opts)
       nmap('mp', ':Gitsigns preview_hunk<CR>', opts)
     end
@@ -723,17 +717,7 @@ require('packer').startup(function(use)
     config = bufferline_config
   }
 
-  -- colorscheme
-  -- use { 'cocopon/iceberg.vim',
-  --   config = colorscheme_config,
-  -- }
-
   use { 'EdenEast/nightfox.nvim', config = colorscheme_config }
-
-  use { 'nvim-treesitter/nvim-treesitter',
-    run = ':TSUpdate',
-    config = treesitter_config
-  }
 
   -- better quickfix
   use { 'kevinhwang91/nvim-bqf', ft = 'qf' }
@@ -816,7 +800,6 @@ require('packer').startup(function(use)
   use { 'tyru/open-browser.vim',
     config = openbrowser_config,
   }
-  use { 'mattn/vim-goimports' }
   use { 'skanehira/denops-graphql.vim',
     config = graphql_config
   }
