@@ -305,7 +305,16 @@ local lsp_config = function()
           root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json', '.git'),
           init_options = {
             lint = true,
-            unstable = true
+            unstable = true,
+            suggest = {
+              imports = {
+                hosts = {
+                  ["https://deno.land"] = true,
+                  ["https://cdn.nest.land"] = true,
+                  ["https://crux.land"] = true,
+                },
+              },
+            },
           },
         }
       elseif ls == 'tsserver' then
@@ -661,8 +670,6 @@ end
 local indent_blankline = function()
   require("indent_blankline").setup({
     space_char_blankline = " ",
-    show_current_context = true,
-    show_current_context_start = true,
   })
 end
 
@@ -670,6 +677,11 @@ local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
   use { 'wbthomason/packer.nvim' }
+  use { 'WhoIsSethDaniel/toggle-lsp-diagnostics.nvim',
+    config = function()
+      require('toggle_lsp_diagnostics').init()
+    end,
+  }
 
   use { 'lukas-reineke/indent-blankline.nvim',
     config = indent_blankline,
