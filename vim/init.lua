@@ -1,4 +1,12 @@
 ---@diagnostic disable: need-check-nil
+
+-- alias to vim's objects
+g = vim.g
+opt = vim.opt
+cmd = vim.cmd
+fn = vim.fn
+api = vim.api
+
 -- disable default plugins
 local disable_plugins = {
   "loaded_gzip",
@@ -30,18 +38,11 @@ local disable_plugins = {
   "skip_loading_mswin",
 }
 
--- alias to vim's objects
-g = vim.g
-opt = vim.opt
-cmd = vim.cmd
-fn = vim.fn
-api = vim.api
-
 for _, name in pairs(disable_plugins) do
   g[name] = true
 end
 
--- helper functions
+-- map functions
 _G['map'] = function(mode, lhs, rhs, opt)
   vim.keymap.set(mode, lhs, rhs, opt or { silent = true })
 end
@@ -439,7 +440,6 @@ end
 
 -- k8s.vim
 local k8s_config = function()
-
   local k8s_pods_keymap = function()
     nmap('<CR>', '<Plug>(k8s:pods:containers)', { buffer = true })
     nmap('<C-g><C-l>', '<Plug>(k8s:pods:logs)', { buffer = true })
@@ -595,7 +595,7 @@ g['sonictemplate_author'] = 'skanehira'
 g['sonictemplate_license'] = 'MIT'
 g['sonictemplate_vim_template_dir'] = fn.expand('~/.vim/sonictemplate')
 local sonictemplate_config = function()
-  imap('<C-l>', '<plug>(sonictemplate-postfix)', { silent = true })
+  imap('<C-l>', '<plug>(sonictemplate-postfix)')
 end
 
 -- vimhelpgenerator
@@ -618,7 +618,7 @@ end
 -- test.vim
 g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
 local test_config = function()
-  nmap('<Leader>tn', '<Cmd>TestNearest<CR>', { silent = true })
+  nmap('<Leader>tn', '<Cmd>TestNearest<CR>')
 end
 
 -- open-browser.vim
@@ -1068,8 +1068,7 @@ api.nvim_create_autocmd('FileType', {
 })
 
 -- paste with <C-v>
-local paste_rhs = 'printf("<C-r><C-o>%s", v:register)'
-map({ 'c', 'i' }, '<C-v>', paste_rhs, { expr = true })
+map({ 'c', 'i' }, '<C-v>', 'printf("<C-r><C-o>%s", v:register)', { expr = true })
 
 -- other keymap
 nmap('ms', function()
