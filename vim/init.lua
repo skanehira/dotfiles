@@ -191,9 +191,9 @@ end
 -- gina.vim
 local gina_config = function()
   local gina_keymaps = {
-    { map = 'nmap', buffer = 'status', lhs = 'gp', rhs = '<Cmd>terminal git push<CR>' },
+    { map = 'nmap', buffer = 'status', lhs = 'gp', rhs = '<Cmd>Gina push<CR>' },
     { map = 'nmap', buffer = 'status', lhs = 'gr', rhs = '<Cmd>terminal gh pr create -d<CR>' },
-    { map = 'nmap', buffer = 'status', lhs = 'gl', rhs = '<Cmd>terminal git pull<CR>' },
+    { map = 'nmap', buffer = 'status', lhs = 'gl', rhs = '<Cmd>Gina pull<CR>' },
     { map = 'nmap', buffer = 'status', lhs = 'cm', rhs = '<Cmd>Gina commit<CR>' },
     { map = 'nmap', buffer = 'status', lhs = 'ca', rhs = '<Cmd>Gina commit --amend<CR>' },
     { map = 'nmap', buffer = 'status', lhs = 'dp', rhs = '<Plug>(gina-patch-oneside-tab)' },
