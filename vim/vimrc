@@ -7,12 +7,6 @@
 
 let g:mapleader = "\<Space>" " Leaderキーをスペースに設定
 
-if has('nvim')
-  let g:loaded_python_provider   = 0
-  let g:loaded_python3_provider  = 0
-  let g:loaded_shada_plugin      = 1
-endif
-
 " Disable unnecessary default plugins
 let g:loaded_spellfile_plugin   = 1
 let g:loaded_tutor_mode_plugin  = 1
@@ -42,7 +36,7 @@ let g:plug_shallow = 0
 
 " プラグイン設定 {{{
 " {{{ dein.vim settings
-let s:dein_dir = has('nvim') ? expand('~/.cache/dein/nvim') : expand('~/.cache/dein/vim')
+let s:dein_dir = expand('~/.cache/dein/vim')
 let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
 if &runtimepath !~# '/dein.vim'
@@ -77,9 +71,6 @@ if dein#load_state(s:dein_dir)
   call dein#add('lambdalisue/fern-git-status.vim')
   call dein#add('lambdalisue/gina.vim')
   call dein#add('lambdalisue/guise.vim')
-  if !has("nvim")
-    call dein#add('markonm/traces.vim')
-  endif
   call dein#add('mattn/emmet-vim', {'merged': 0})
   call dein#add('mattn/vim-sonictemplate')
   call dein#add('simeji/winresizer')
@@ -667,9 +658,6 @@ colorscheme iceberg
 function s:initColorscheme() abort
   hi clear VertSplit
   hi VertSplit ctermfg=232 guifg=#202023
-  if !has('nvim')
-    "unlet g:terminal_ansi_colors
-  endif
 endfunction
 
 augroup iceberg
@@ -716,16 +704,10 @@ set noshowmode
 set list listchars=tab:»-,trail:-,extends:»,precedes:«,nbsp:% " listの設定
 set nrformats+=unsigned " 数値の加減算を考慮
 set laststatus=2
-if !has('nvim')
-  set cursorlineopt=line " 行のみハイライト
-  set wildoptions+=pum
-  set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
-else
-  set mouse=
-  set laststatus=3
-  set winbar=%#MoreMsg#%f%m
-endif
-if has("mac") | set clipboard+=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
+set cursorlineopt=line " 行のみハイライト
+set wildoptions+=pum
+set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,terminal " セッションで保存する対象
+if has("mac") | set clipboard^=unnamed | else | set clipboard^=unnamedplus | endif " クリップボードを共有
 set diffopt=vertical
 set completeopt-=preview " disable preview window
 set wildcharm=<Tab> " cnnoremap <expr> で <Tab> を有効にする
@@ -794,10 +776,6 @@ endif
 " }}}
 
 " キーマップ {{{
-if has('nvim')
-  unmap Y
-endif
-
 " 仮想置換モードのみを使う
 nnoremap R gR
 
@@ -863,14 +841,6 @@ nnoremap <C-h> gT
 
 " ターミナル関連 {{{
 tnoremap <C-]> <C-\><C-n>
-
-if has('nvim')
-  augroup neovim-terminal
-    au!
-    au TermOpen * startinsert
-  augroup END
-endif
-
 nnoremap <silent> <Leader>tm :new \| terminal<CR>
 " }}}
 
@@ -888,9 +858,8 @@ inoremap <silent> <C-e> <C-o>A
 inoremap <silent> <C-a> <C-o>I
 
 " C-v でペースト
-let g:clipboard_register = has('linux') || has('unix') ? '+' : '*'
-inoremap <expr> <C-v> printf('<C-r><C-o>%s', g:clipboard_register)
-cnoremap <expr> <C-v> printf('<C-r><C-o>%s', g:clipboard_register)
+inoremap <expr> <C-v> printf('<C-r><C-o>%s', v:register)
+cnoremap <expr> <C-v> printf('<C-r><C-o>%s', v:register)
 
 " ヘルプ
 augroup help-mapping
@@ -988,7 +957,7 @@ nnoremap <silent> gdt :call fzf#run({
 function! InsertMarkdownLink() abort
   " use register `9`
   let old = getreg('9')
-  let link = trim(getreg(g:clipboard_register))
+  let link = trim(getreg(v:register))
   if link !~# '^http.*'
     normal! gvp
     return
