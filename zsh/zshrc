@@ -45,13 +45,19 @@ case $( uname -s ) in
     autoload -Uz compinit && compinit
 
     # asdf settings
-    . $(brew --prefix)/opt/asdf/libexec/asdf.sh
+    local asdf="$(brew --prefix)/opt/asdf/libexec/asdf.sh"
+    if [ -f $asdf ]; then
+      . $asdf
+    fi
 
     # add homebrew site-functions for completion
     fpath=($(brew --prefix)/share/zsh/site-functions "${fpath[@]}")
 
     # enable zsh-autosuggestions
-    source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+    local suggest=$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+    if [ -f $suggest ]; then
+      source $suggest
+    fi
 
     # colors: https://coderwall.com/p/pb1uzq/z-shell-colors
     #export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=009"
@@ -72,7 +78,7 @@ esac
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 # k8s auto complete
-source <(kubectl completion zsh)
+[ -x "$(which kubectl)" ] && source <(kubectl completion zsh)
 
 function ghq-fzf() {
   local src=$(ghq list | fzf --preview "bat --color=always --style=grid $(ghq root)/{}/README.*")
@@ -114,6 +120,6 @@ function gify() {
 
 zle -N gify
 
-if [ -x $(which starship) ]; then
+if [ -x "$(which starship)" ]; then
   eval "$(starship init zsh)"
 fi
