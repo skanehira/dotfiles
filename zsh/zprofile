@@ -28,6 +28,8 @@ case $( uname -s ) in
 
     # homebrew curl
     export PATH="/opt/homebrew/opt/curl/bin:$PATH"
+    # llvm
+    export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
 esac
 
 # GHQ
