@@ -96,7 +96,7 @@ Lsp_on_attach = function(client, bufnr)
   nmap('<Leader>gi', vim.lsp.buf.implementation, bufopts)
   nmap('<Leader>gr', vim.lsp.buf.references, bufopts)
   nmap('<Leader>rn', vim.lsp.buf.rename, bufopts)
-  nmap('<C-]>', vim.lsp.buf.definition, bufopts)
+  opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
   nmap('ma', vim.lsp.buf.code_action, bufopts)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
 
@@ -152,7 +152,7 @@ local rust_tools_config = function()
           { '╰', 'NormalFloat' },
           { '│', 'NormalFloat' },
         },
-        auto_focus = true,
+        -- auto_focus = true,
       },
     }
   })
@@ -161,8 +161,8 @@ end
 -- color scheme config
 local colorscheme_config = function()
   opt.termguicolors = true
-  cmd('colorscheme carbonfox')
-  vim.cmd([[
+  cmd([[
+      colorscheme carbonfox
       hi VertSplit guifg=#535353
       hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
       ]])
@@ -239,6 +239,11 @@ local telescope_config = function()
             ['<C-e>'] = 'select_drop',
           }
         }
+      }
+    },
+    extensions = {
+      ['ui-select'] = {
+        require('telescope.themes').get_dropdown {}
       }
     }
   }
@@ -391,9 +396,13 @@ local gitsigns_config = function()
   })
 end
 
--- twihi.vim config
+-- lsp hover config
+vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
+  vim.lsp.handlers.hover, {
+  border = "single"
+})
 
--- twihi.vim
+-- twihi.vim config
 g['twihi_mention_check_interval'] = 30000 * 10
 g['twihi_notify_ui'] = 'system'
 
@@ -617,6 +626,7 @@ end
 
 -- test.vim
 g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
+g['test#rust#cargotest#options'] = { all = '-- --nocapture' }
 local test_config = function()
   nmap('<Leader>tn', '<Cmd>TestNearest<CR>')
 end
@@ -650,6 +660,29 @@ local lspsaga_config = function()
   })
 end
 
+-- treesitter config
+local treesitter_config = function()
+  require('nvim-treesitter.configs').setup({
+    ensure_installed = {
+      'lua', 'rust', 'typescript', 'tsx',
+      'go', 'gomod', 'sql', 'toml', 'yaml',
+      'html', 'javascript', 'graphql',
+      'markdown', 'markdown_inline'
+    },
+    auto_install = true,
+    highlight = {
+      enable = false,
+    }
+  })
+end
+
+-- indent_blankline config
+local indent_blankline = function()
+  require("indent_blankline").setup({
+    space_char_blankline = " ",
+  })
+end
+
 -- packer settings
 local ensure_packer = function()
   local install_path = fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
@@ -661,15 +694,13 @@ local ensure_packer = function()
   return false
 end
 
-local indent_blankline = function()
-  require("indent_blankline").setup({
-    space_char_blankline = " ",
-  })
-end
-
 local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
+  use { 'https://git.sr.ht/~whynothugo/lsp_lines.nvim', config = function()
+    -- vim.diagnostic.config({ virtual_text = false })
+    -- require("lsp_lines").setup()
+  end }
   use { 'wbthomason/packer.nvim' }
   use { 'WhoIsSethDaniel/toggle-lsp-diagnostics.nvim',
     config = function()
@@ -756,6 +787,20 @@ require('packer').startup(function(use)
   }
 
   -- for development
+  use { 'andymass/vim-matchup' }
+
+  use { 'nvim-treesitter/nvim-treesitter',
+    run = ':TSUpdate',
+    config = treesitter_config
+  }
+
+  use { 'windwp/nvim-ts-autotag',
+    after = { 'nvim-treesitter' },
+    config = function()
+      require('nvim-ts-autotag').setup()
+    end,
+  }
+
   use { 'windwp/nvim-autopairs',
     config = function()
       require("nvim-autopairs").setup({ map_c_h = true })
@@ -811,8 +856,17 @@ require('packer').startup(function(use)
     config = winselector_config,
   }
   use { 'nvim-telescope/telescope.nvim',
-    requires = { { 'nvim-lua/plenary.nvim' } },
+    requires = {
+      { 'nvim-lua/plenary.nvim' },
+    },
     config = telescope_config,
+  }
+  use {
+    'nvim-telescope/telescope-ui-select.nvim',
+    after = 'telescope.nvim',
+    config = function()
+      require("telescope").load_extension("ui-select")
+    end
   }
   use { 'simrat39/rust-tools.nvim',
     config = rust_tools_config,
@@ -885,7 +939,7 @@ opt.autowrite = true
 opt.swapfile = false
 opt.showtabline = 1
 opt.diffopt = 'vertical'
-opt.wildcharm = ('<Tab>'):byte()
+-- opt.wildcharm = ('<Tab>'):byte()
 opt.tabstop = 2
 opt.shiftwidth = 2
 opt.softtabstop = 2
