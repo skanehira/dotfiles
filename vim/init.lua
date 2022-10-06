@@ -98,7 +98,7 @@ Lsp_on_attach = function(client, bufnr)
   nmap('<Leader>rn', vim.lsp.buf.rename, bufopts)
   opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
   nmap('gd', vim.lsp.buf.definition, bufopts)
-  nmap('ma', vim.lsp.buf.code_action, bufopts)
+  -- nmap('ma', vim.lsp.buf.code_action, bufopts)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
 
   -- auto format when save the file
@@ -140,6 +140,13 @@ local rust_tools_config = function()
         nmap('<Leader>gl', rt.code_action_group.code_action_group, bufopts)
       end,
       standalone = true,
+      settings = {
+        ['rust-analyzer'] = {
+          checkOnSave = {
+            command = 'clippy'
+          }
+        }
+      }
     },
     tools = {
       hover_actions = {
@@ -698,10 +705,18 @@ end
 local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
-  use { 'https://git.sr.ht/~whynothugo/lsp_lines.nvim', config = function()
-    -- vim.diagnostic.config({ virtual_text = false })
-    -- require("lsp_lines").setup()
-  end }
+  use {
+    "aznhe21/actions-preview.nvim",
+    config = function()
+      vim.keymap.set({ "v", "n" }, "ma", require("actions-preview").code_actions)
+    end,
+  }
+
+  -- use { 'https://git.sr.ht/~whynothugo/lsp_lines.nvim', config = function()
+  --   vim.diagnostic.config({ virtual_text = false })
+  --   require("lsp_lines").setup()
+  -- end }
+
   use { 'wbthomason/packer.nvim' }
   use { 'WhoIsSethDaniel/toggle-lsp-diagnostics.nvim',
     config = function()
