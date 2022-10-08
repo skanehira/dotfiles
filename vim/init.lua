@@ -96,8 +96,11 @@ Lsp_on_attach = function(client, bufnr)
   nmap('<Leader>gi', vim.lsp.buf.implementation, bufopts)
   nmap('<Leader>gr', vim.lsp.buf.references, bufopts)
   nmap('<Leader>rn', vim.lsp.buf.rename, bufopts)
-  opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
-  nmap('gd', vim.lsp.buf.definition, bufopts)
+  if client.name == 'denols' then
+    nmap('<C-]>', vim.lsp.buf.definition, bufopts)
+  else  
+    opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
+  end
   -- nmap('ma', vim.lsp.buf.code_action, bufopts)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
 
@@ -571,7 +574,7 @@ g['quickrun_config'] = {
     type = 'typescript',
     runner = 'neoterm',
   },
-  rust = {
+  ['rust/cargo'] = {
     command = 'cargo',
     exec = '%C run --quiet %s %a',
   },
@@ -940,6 +943,7 @@ opt.incsearch = true
 opt.ignorecase = true
 opt.smartcase = true
 opt.hlsearch = true
+opt.autoindent = true
 opt.smartindent = true
 opt.virtualedit = "block"
 opt.showtabline = 1
