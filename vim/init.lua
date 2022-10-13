@@ -963,7 +963,7 @@ opt.diffopt = 'vertical'
 opt.tabstop = 2
 opt.shiftwidth = 2
 opt.softtabstop = 2
-opt.clipboard:append({ fn.has('mac') == true and 'unnamed' or 'unnamedplus' })
+opt.clipboard:append({ fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
 opt.grepprg = 'rg --vimgrep'
 opt.mouse = {}
 
