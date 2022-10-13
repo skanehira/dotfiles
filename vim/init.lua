@@ -98,7 +98,7 @@ Lsp_on_attach = function(client, bufnr)
   nmap('<Leader>rn', vim.lsp.buf.rename, bufopts)
   if client.name == 'denols' then
     nmap('<C-]>', vim.lsp.buf.definition, bufopts)
-  else  
+  else
     opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
   end
   -- nmap('ma', vim.lsp.buf.code_action, bufopts)
@@ -213,6 +213,8 @@ local gina_config = function()
     { map = 'nmap', buffer = 'log', lhs = 'dd', rhs = '<Plug>(gina-changes-of)' },
     { map = 'nmap', buffer = 'branch', lhs = 'n', rhs = '<Plug>(gina-branch-new)' },
     { map = 'nmap', buffer = 'branch', lhs = 'D', rhs = '<Plug>(gina-branch-delete)' },
+    { map = 'nmap', buffer = 'branch', lhs = 'p', rhs = '<Cmd>terminal gh pr create<CR>' },
+    { map = 'nmap', buffer = 'branch', lhs = 'P', rhs = '<Cmd>terminal gh pr create -d<CR>' },
     { map = 'nmap', buffer = '/.*', lhs = 'q', rhs = '<Cmd>bw<CR>' },
   }
   for _, m in pairs(gina_keymaps) do
