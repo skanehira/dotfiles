@@ -116,7 +116,7 @@ Lsp_on_attach = function(client, bufnr)
 
   local augroup = api.nvim_create_augroup("LspFormatting", { clear = false })
   if client.supports_method("textDocument/formatting") then
-    nmap(';f', vim.lsp.buf.format, { buffer = bufnr })
+    nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
     if client.name == 'sumneko_lua' then
       return
     end
@@ -416,8 +416,8 @@ vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
 })
 
 -- twihi.vim config
-g['twihi_mention_check_interval'] = 30000 * 10
-g['twihi_notify_ui'] = 'system'
+-- g['twihi_mention_check_interval'] = 30000 * 10
+-- g['twihi_notify_ui'] = 'system'
 
 local twihi_config = function()
   nmap('<C-g>n', '<Cmd>TwihiTweet<CR>')
@@ -710,6 +710,12 @@ end
 local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
+  use {
+    '4513ECHO/denops-gitter.vim',
+    config = function()
+      g['gitter#token'] = fn.trim(fn.readfile(fn.expand('~/.config/denops_gitter/token'))[1])
+    end
+  }
   use {
     "aznhe21/actions-preview.nvim",
     config = function()
