@@ -1,6 +1,7 @@
 # enable prompt color
 autoload -U colors && colors
-export PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[green]%}%m%{$fg_bold[yellow]%} %3~ %{$reset_color%}$ "
+export PROMPT="%{$fg[red]%}%n%{$reset_color%}@%{$fg[green]%}%m%{$fg_bold[yellow]%} %3~ %{$reset_color%}
+$ "
 
 # alias
 alias lg=lazygit
