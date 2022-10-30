@@ -57,6 +57,7 @@ end
 local nvim_cmp_config = function()
   local cmp = require('cmp')
   cmp.setup({
+    preselect = cmp.PreselectMode.None,
     mapping = cmp.mapping.preset.insert({
       ['<C-b>'] = cmp.mapping.scroll_docs(-4),
       ['<C-f>'] = cmp.mapping.scroll_docs(4),
@@ -330,7 +331,7 @@ local lsp_config = function()
           return
         end
         opts = {
-          cmd = { 'deno', 'lsp', '--unstable' },
+          cmd = { 'deno', 'lsp' },
           root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json', '.git'),
           init_options = {
             lint = true,
@@ -696,6 +697,49 @@ local indent_blankline = function()
   })
 end
 
+-- ddc settings
+local ddc_config = function ()
+  cmd([[
+  call ddc#custom#patch_global('ui', 'native') 
+
+  augroup gh_ddc
+    au!
+    au User gh_open_issue call EnableAutoCompletionForGh('gh_issues')
+    au User gh_open_issue_assignees call EnableAutoCompletionForGh('gh_issues_assginees')
+  augroup END
+
+  function! EnableAutoCompletionForGh(kind) abort
+    call ddc#custom#patch_buffer('sources', [a:kind])
+    call ddc#custom#patch_buffer('specialBufferCompletion', v:true)
+
+    " If you want to complements with japanese, you should add keywordPattern
+    call ddc#custom#patch_buffer({'keywordPattern':
+          \ "[a-zA-Z0-9_À-ÿ\u30a0-\u30ff\u3040-\u309f\u3005-\u3006\u30e0-\u9fcf]*"})
+
+    let option = {}
+    if a:kind ==# 'gh_issues'
+      let option = {
+            \ 'gh_issues': {
+              \  'matcherKey': 'menu',
+              \  'minAutoCompleteLength': 1,
+              \ }}
+    elseif a:kind ==# 'gh_issues_assginees'
+      let option = {
+            \ 'gh_issues_assginees': {
+              \  'minAutoCompleteLength': 1,
+              \ }}
+    endif
+    call ddc#custom#patch_buffer('sourceOptions', option)
+  endfunction
+
+  inoremap <silent><expr> <TAB>
+  \ pumvisible() ? '<C-n>' :
+  \ (col('.') <= 1 <Bar><Bar> getline('.')[col('.') - 2] =~# '\s') ?
+  \ '<TAB>' : ddc#map#manual_complete()
+  "call ddc#enable()
+  ]])
+end
+
 -- packer settings
 local ensure_packer = function()
   local install_path = fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
@@ -710,6 +754,14 @@ end
 local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
+  use {
+    'Shougo/ddc-ui-native',
+  }
+  use {
+    'Shougo/ddc.vim',
+    config = ddc_config,
+  }
+
   use {
     '4513ECHO/denops-gitter.vim',
     config = function()
@@ -1058,8 +1110,7 @@ api.nvim_create_user_command('ZennCreateArticle',
   function(opts)
     local date = fn.strftime('%Y-%m-%d')
     local slug = date .. '-' .. opts.args
-    local cmd = 'npx zenn new:article --emoji 🦍 --slug ' .. slug
-    os.execute(cmd)
+    os.execute('npx zenn new:article --emoji 🦍 --slug ' .. slug)
     cmd('edit ' .. string.format('articles/%s.md', slug))
   end, { nargs = 1 })
 
