@@ -196,6 +196,7 @@ local bufferline_config = function()
       indicator = {
         icon = '',
       },
+      buffer_close_icon = 'x'
     }
   })
 end
