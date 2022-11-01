@@ -115,21 +115,25 @@ Lsp_on_attach = function(client, bufnr)
   end
   nmap('mi', organize_import)
 
-  local augroup = api.nvim_create_augroup("LspFormatting", { clear = false })
   if client.supports_method("textDocument/formatting") then
     nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
-    if client.name == 'sumneko_lua' then
-      return
-    end
-    api.nvim_create_autocmd("BufWritePre", {
-      callback = function()
-        organize_import()
-        vim.lsp.buf.format()
-      end,
-      group = augroup,
-      buffer = bufnr,
-    })
   end
+
+  -- local augroup = api.nvim_create_augroup("LspFormatting", { clear = false })
+  -- if client.supports_method("textDocument/formatting") then
+  --   nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
+  --   if client.name == 'sumneko_lua' then
+  --     return
+  --   end
+  --   api.nvim_create_autocmd("BufWritePre", {
+  --     callback = function()
+  --       organize_import()
+  --       vim.lsp.buf.format()
+  --     end,
+  --     group = augroup,
+  --     buffer = bufnr,
+  --   })
+  -- end
 end
 
 -- rust-tools.nvim
@@ -699,7 +703,7 @@ local indent_blankline = function()
 end
 
 -- ddc settings
-local ddc_config = function ()
+local ddc_config = function()
   cmd([[
   call ddc#custom#patch_global('ui', 'native') 
 
@@ -1140,6 +1144,14 @@ api.nvim_create_autocmd('FileType', {
   end,
   group = api.nvim_create_augroup("markdownInsertLink", { clear = true }),
 })
+
+--- syntax clear
+-- api.nvim_create_autocmd('FileType', {
+--   pattern = {'go', 'vim', 'javascript', 'typescript', 'rust', 'json'},
+--   callback = function ()
+--     cmd('syntax clear')
+--   end
+-- })
 
 -- key mappings
 
