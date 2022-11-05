@@ -15,6 +15,8 @@ return {
 		{ key = "f", mods = "SHIFT|CTRL", action = wezterm.action.ToggleFullScreen },
 		{ key = " ", mods = "CTRL", action = wezterm.action.HideApplication },
 		{ key = "q", mods = "CMD", action = wezterm.action.QuitApplication },
+    -- C-q を2回押さないと行けない問題を回避するため
+    { key = 'q', mods = 'CTRL', action = wezterm.action { SendString = '\x11' } },
 		-- { key = "¥", mods = "CMD", action=wezterm.action{SplitHorizontal={domain="CurrentPaneDomain"}}},
 		-- { key = "-", mods = "CMD", action=wezterm.action{SplitVertical={domain="CurrentPaneDomain"}}},
 		-- { key = "h", mods = "LEADER", action=wezterm.action{AdjustPaneSize={"Left", 5}}},
