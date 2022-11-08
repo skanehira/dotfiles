@@ -1,4 +1,9 @@
 local wezterm = require 'wezterm';
+
+wezterm.on('window-maximize', function(window, pane)
+  window:maximize()
+end)
+
 return {
 	color_scheme = "iceberg-dark",
 	font = wezterm.font("Cica"),
@@ -12,11 +17,11 @@ return {
 		{ key = 'v', mods = 'CMD', action = wezterm.action.Paste },
 		{ key = ";", mods = "CMD", action = wezterm.action.IncreaseFontSize },
 		{ key = "-", mods = "CMD", action = wezterm.action.DecreaseFontSize },
-		{ key = "f", mods = "SHIFT|CTRL", action = wezterm.action.ToggleFullScreen },
 		{ key = " ", mods = "CTRL", action = wezterm.action.HideApplication },
 		{ key = "q", mods = "CMD", action = wezterm.action.QuitApplication },
     -- C-q を2回押さないと行けない問題を回避するため
     { key = 'q', mods = 'CTRL', action = wezterm.action { SendString = '\x11' } },
+    { key = 'f', mods = 'SHIFT|CTRL', action = wezterm.action.EmitEvent 'window-maximize' },
 		-- { key = "¥", mods = "CMD", action=wezterm.action{SplitHorizontal={domain="CurrentPaneDomain"}}},
 		-- { key = "-", mods = "CMD", action=wezterm.action{SplitVertical={domain="CurrentPaneDomain"}}},
 		-- { key = "h", mods = "LEADER", action=wezterm.action{AdjustPaneSize={"Left", 5}}},
