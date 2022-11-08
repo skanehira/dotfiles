@@ -760,6 +760,10 @@ local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
   use {
+    'mattn/vim-goimports'
+  }
+
+  use {
     'Shougo/ddc-ui-native',
   }
   use {
