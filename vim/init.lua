@@ -764,6 +764,10 @@ require('packer').startup(function(use)
   }
 
   use {
+    'skanehira/denops-gh.vim'
+  }
+
+  use {
     'Shougo/ddc-ui-native',
   }
   use {
