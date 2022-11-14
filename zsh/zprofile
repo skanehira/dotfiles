@@ -12,6 +12,7 @@ export HISTFILE=$HOME/.zsh_history
 export HISTSIZE=1000
 export SAVEHIST=1000
 setopt appendhistory
+export TIMEFMT=$'\n\n========================\nProgram : %J\nCPU     : %P\nuser    : %*Us\nsystem  : %*Ss\ntotal   : %*Es\n========================\n'
 
 case $( uname -s ) in
   Linux)
