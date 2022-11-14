@@ -448,6 +448,7 @@ call coc#config('diagnostic', {
       \ 'hintSign': '🧐',
       \ })
 call coc#config('diagnostic.messageDelay', 0)
+call coc#config('notification.statusLineProgress', 0)
 call coc#config('graphql.filetypes', ['graphql'])
 call coc#config('diagnostic-languageserver.filetypes', {
       \ 'sh': 'shellcheck',
@@ -518,7 +519,8 @@ call coc#config('go.goplsOptions', {
 
 " rust-analyzer configuration
 call coc#config('rust-analyzer.diagnostics.experimental.enable', v:true)
-
+nnoremap ]f <Cmd>LspFormat<CR>
+nnoremap ma <Plug>(coc-codeaction-cursor)
 " }}}
 
 " vim-markdown {{{
@@ -711,6 +713,7 @@ if has("mac") | set clipboard^=unnamed | else | set clipboard^=unnamedplus | end
 set diffopt=vertical
 set completeopt-=preview " disable preview window
 set wildcharm=<Tab> " cnnoremap <expr> で <Tab> を有効にする
+set termwinkey=<C-\\>
 
 " 拡張子ごとのインデント設定 {{{
 set tabstop=2 shiftwidth=2 softtabstop=2
@@ -742,6 +745,7 @@ augroup END
 " }}}
 
 " grepした結果をquickfixに表示する {{{
+set grepprg="rg --vimgrep"
 augroup grepwindow
   au!
   au QuickFixCmdPost *grep* cwindow
