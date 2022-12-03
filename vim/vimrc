@@ -841,7 +841,7 @@ nnoremap <C-h> gT
 
 " ターミナル関連 {{{
 tnoremap <C-]> <C-\><C-n>
-nnoremap <silent> <Leader>tm :new \| terminal<CR>
+nnoremap <silent> <Leader>tm :terminal<CR>
 " }}}
 
 " 改行
