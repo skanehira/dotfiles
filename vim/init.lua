@@ -181,6 +181,8 @@ local colorscheme_config = function()
       colorscheme carbonfox
       hi VertSplit guifg=#535353
       hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
+      hi DiffAdd guifg=#25be6a
+      hi DiffDelete guifg=#ee5396
       ]])
 end
 
@@ -240,11 +242,7 @@ end
 
 -- telescope.vim
 local telescope_config = function()
-  nmap('<C-p>', '<Cmd>Telescope find_files<CR>')
-  nmap('mg', '<Cmd>Telescope live_grep<CR>')
-  nmap('md', '<Cmd>Telescope diagnostics<CR>')
-  nmap('mf', '<Cmd>Telescope current_buffer_fuzzy_find<CR>')
-
+  require("telescope").load_extension("ui-select")
   require('telescope').setup {
     pickers = {
       find_files = {
@@ -291,6 +289,12 @@ end
 
 -- lsp config
 local lsp_config = function()
+  local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
+  for type, icon in pairs(signs) do
+    local hl = "DiagnosticSign" .. type
+    vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
+  end
+
   require('mason-lspconfig').setup({
     automatic_installation = {
       exclude = {
@@ -619,11 +623,11 @@ local emmet_config = function()
 end
 
 -- vim-sonictemplate.vim
-g['sonictemplate_author'] = 'skanehira'
-g['sonictemplate_license'] = 'MIT'
-g['sonictemplate_vim_template_dir'] = fn.expand('~/.vim/sonictemplate')
 local sonictemplate_config = function()
   imap('<C-l>', '<plug>(sonictemplate-postfix)')
+  g['sonictemplate_author'] = 'skanehira'
+  g['sonictemplate_license'] = 'MIT'
+  g['sonictemplate_vim_template_dir'] = fn.expand('~/.vim/sonictemplate')
 end
 
 -- vimhelpgenerator
@@ -644,9 +648,10 @@ local winselector_config = function()
 end
 
 -- test.vim
-g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
-g['test#rust#cargotest#options'] = { all = '-- --nocapture' }
 local test_config = function()
+  g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
+  g['test#rust#cargotest#options'] = { all = '-- --nocapture' }
+  g['test#go#gotest#options'] = { all = '-v' }
   nmap('<Leader>tn', '<Cmd>TestNearest<CR>')
 end
 
@@ -669,16 +674,6 @@ local lualine_config = function()
   })
 end
 
--- lspsaga
-local lspsaga_config = function()
-  require('lspsaga').setup({
-    error_sign = '💩',
-    warn_sign = '🦍',
-    hint_sign = "",
-    infor_sign = "",
-  })
-end
-
 -- treesitter config
 local treesitter_config = function()
   require('nvim-treesitter.configs').setup({
@@ -686,11 +681,11 @@ local treesitter_config = function()
       'lua', 'rust', 'typescript', 'tsx',
       'go', 'gomod', 'sql', 'toml', 'yaml',
       'html', 'javascript', 'graphql',
-      'markdown', 'markdown_inline'
+      'markdown', 'markdown_inline', 'help',
     },
     auto_install = true,
     highlight = {
-      enable = false,
+      enable = true,
     }
   })
 end
@@ -700,49 +695,6 @@ local indent_blankline = function()
   require("indent_blankline").setup({
     space_char_blankline = " ",
   })
-end
-
--- ddc settings
-local ddc_config = function()
-  cmd([[
-  call ddc#custom#patch_global('ui', 'native') 
-
-  augroup gh_ddc
-    au!
-    au User gh_open_issue call EnableAutoCompletionForGh('gh_issues')
-    au User gh_open_issue_assignees call EnableAutoCompletionForGh('gh_issues_assginees')
-  augroup END
-
-  function! EnableAutoCompletionForGh(kind) abort
-    call ddc#custom#patch_buffer('sources', [a:kind])
-    call ddc#custom#patch_buffer('specialBufferCompletion', v:true)
-
-    " If you want to complements with japanese, you should add keywordPattern
-    call ddc#custom#patch_buffer({'keywordPattern':
-          \ "[a-zA-Z0-9_À-ÿ\u30a0-\u30ff\u3040-\u309f\u3005-\u3006\u30e0-\u9fcf]*"})
-
-    let option = {}
-    if a:kind ==# 'gh_issues'
-      let option = {
-            \ 'gh_issues': {
-              \  'matcherKey': 'menu',
-              \  'minAutoCompleteLength': 1,
-              \ }}
-    elseif a:kind ==# 'gh_issues_assginees'
-      let option = {
-            \ 'gh_issues_assginees': {
-              \  'minAutoCompleteLength': 1,
-              \ }}
-    endif
-    call ddc#custom#patch_buffer('sourceOptions', option)
-  endfunction
-
-  inoremap <silent><expr> <TAB>
-  \ pumvisible() ? '<C-n>' :
-  \ (col('.') <= 1 <Bar><Bar> getline('.')[col('.') - 2] =~# '\s') ?
-  \ '<TAB>' : ddc#map#manual_complete()
-  "call ddc#enable()
-  ]])
 end
 
 -- packer settings
@@ -760,6 +712,7 @@ local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
   use {
+    ft = 'go',
     'mattn/vim-goimports'
   }
 
@@ -768,25 +721,19 @@ require('packer').startup(function(use)
   }
 
   use {
-    'Shougo/ddc-ui-native',
-  }
-  use {
-    'Shougo/ddc.vim',
-    config = ddc_config,
-  }
-
-  use {
     '4513ECHO/denops-gitter.vim',
     config = function()
       g['gitter#token'] = fn.trim(fn.readfile(fn.expand('~/.config/denops_gitter/token'))[1])
     end
   }
-  use {
-    "aznhe21/actions-preview.nvim",
-    config = function()
-      vim.keymap.set({ "v", "n" }, "ma", require("actions-preview").code_actions)
-    end,
-  }
+
+  use({
+    'weilbith/nvim-code-action-menu',
+    cmd = 'CodeActionMenu',
+    setup = function()
+      map('n', 'ma', '<Cmd>CodeActionMenu<CR>')
+    end
+  })
 
   -- use { 'https://git.sr.ht/~whynothugo/lsp_lines.nvim', config = function()
   --   vim.diagnostic.config({ virtual_text = false })
@@ -794,29 +741,16 @@ require('packer').startup(function(use)
   -- end }
 
   use { 'wbthomason/packer.nvim' }
-  use { 'WhoIsSethDaniel/toggle-lsp-diagnostics.nvim',
-    config = function()
-      require('toggle_lsp_diagnostics').init()
-    end,
-  }
 
   use { 'lukas-reineke/indent-blankline.nvim',
+    event = 'BufRead',
     config = indent_blankline,
   }
 
-  use { 'pwntester/octo.nvim',
-    requires = {
-      'nvim-lua/plenary.nvim',
-      'nvim-telescope/telescope.nvim',
-      'kyazdani42/nvim-web-devicons',
-    },
-    config = function()
-      require('octo').setup()
-    end
-  }
-
   -- lsp_signature
-  use { 'ray-x/lsp_signature.nvim',
+  use {
+    'ray-x/lsp_signature.nvim',
+    event = 'BufRead',
     config = function()
       require('lsp_signature').setup({})
     end
@@ -824,6 +758,7 @@ require('packer').startup(function(use)
 
   -- git signs
   use { 'lewis6991/gitsigns.nvim',
+    event = 'BufRead',
     config = gitsigns_config
   }
 
@@ -840,21 +775,40 @@ require('packer').startup(function(use)
     config = bufferline_config
   }
 
-  use { 'EdenEast/nightfox.nvim', config = colorscheme_config }
+  use {
+    'EdenEast/nightfox.nvim',
+    config = colorscheme_config,
+  }
 
   -- better quickfix
-  use { 'kevinhwang91/nvim-bqf', ft = 'qf' }
+  use {
+    'kevinhwang91/nvim-bqf',
+    ft = 'qf',
+    event = { 'QuickFixCmdPost' }
+  }
 
   -- lsp
-  use { 'williamboman/mason-lspconfig.nvim',
+  use { 'simrat39/rust-tools.nvim',
+    ft = { 'rust' },
+    config = rust_tools_config,
     requires = {
-      { 'neovim/nvim-lspconfig' },
+      { 'neovim/nvim-lspconfig', opt = true },
+    },
+    wants = { 'nvim-lspconfig' },
+  }
+
+  use {
+    'williamboman/mason-lspconfig.nvim',
+    event = 'BufRead',
+    requires = {
+      { 'neovim/nvim-lspconfig', opt = true },
       {
         'williamboman/mason.nvim',
         config = function() require("mason").setup() end,
+        opt = true,
       },
     },
-    after = { 'mason.nvim', 'nvim-lspconfig' },
+    wants = { 'mason.nvim', 'nvim-lspconfig' },
     config = lsp_config,
   }
 
@@ -862,66 +816,74 @@ require('packer').startup(function(use)
     config = function() require('fidget').setup() end,
   }
 
-  use { 'kkharji/lspsaga.nvim',
-    config = lspsaga_config,
-  }
-
   -- complete
-  use { 'hrsh7th/nvim-cmp',
+  use {
+    'hrsh7th/nvim-cmp',
+    module = { "cmp" },
     requires = {
-      'hrsh7th/cmp-nvim-lsp',
-      'hrsh7th/cmp-buffer',
-      'hrsh7th/cmp-path',
-      'hrsh7th/cmp-vsnip',
-      'hrsh7th/vim-vsnip',
+      { 'hrsh7th/cmp-nvim-lsp', event = { 'InsertEnter' } },
+      { 'hrsh7th/cmp-buffer', event = { 'InsertEnter' } },
+      { 'hrsh7th/cmp-path', event = { 'InsertEnter' } },
+      { 'hrsh7th/cmp-vsnip', event = { 'InsertEnter' } },
+      { 'hrsh7th/vim-vsnip', event = { 'InsertEnter' } },
     },
     config = nvim_cmp_config,
   }
-
-  -- for development
-  use { 'andymass/vim-matchup' }
 
   use { 'nvim-treesitter/nvim-treesitter',
     run = ':TSUpdate',
     config = treesitter_config
   }
 
-  use { 'windwp/nvim-ts-autotag',
-    after = { 'nvim-treesitter' },
-    config = function()
-      require('nvim-ts-autotag').setup()
-    end,
-  }
-
   use { 'windwp/nvim-autopairs',
+    event = { 'InsertEnter' },
     config = function()
       require("nvim-autopairs").setup({ map_c_h = true })
     end,
   }
 
   use { 'vim-test/vim-test',
+    event = 'BufRead',
     config = test_config,
   }
-  use { 'lambdalisue/fern.vim',
-    branch = 'main',
+
+  use {
+    'lambdalisue/fern-hijack.vim',
     requires = {
-      { 'lambdalisue/fern-hijack.vim' },
-      { 'lambdalisue/nerdfont.vim' },
-      { 'lambdalisue/fern-renderer-nerdfont.vim' }
+      'lambdalisue/fern.vim',
+      cmd = 'Fern',
+      config = fern_config,
+      opt = true,
     },
-    config = fern_config,
+    wants = {
+      'lambdalisue/fern.vim'
+    },
+    setup = function()
+      nmap('<Leader>f', ':Fern . -drawer<CR>', { silent = true })
+    end
   }
+
   use { 'lambdalisue/gina.vim',
     config = gina_config,
   }
-  use { 'lambdalisue/guise.vim' }
+
+  use {
+    'lambdalisue/guise.vim',
+  }
+
   use { 'mattn/emmet-vim',
+    event = 'BufRead',
     config = emmet_config
   }
-  use { 'mattn/vim-sonictemplate',
+  use {
+    'mattn/vim-sonictemplate',
+    event = { 'InsertEnter' },
     config = sonictemplate_config,
   }
-  use { 'simeji/winresizer' }
+  use {
+    'simeji/winresizer',
+    keys = { { 'n', '<C-e>' } },
+  }
   use { 'vim-denops/denops.vim' }
   use { 'skanehira/denops-silicon.vim',
     config = silicon_config
@@ -947,45 +909,58 @@ require('packer').startup(function(use)
   use { 'skanehira/winselector.vim',
     config = winselector_config,
   }
-  use { 'nvim-telescope/telescope.nvim',
-    requires = {
-      { 'nvim-lua/plenary.nvim' },
-    },
-    config = telescope_config,
-  }
   use {
-    'nvim-telescope/telescope-ui-select.nvim',
-    after = 'telescope.nvim',
-    config = function()
-      require("telescope").load_extension("ui-select")
-    end
-  }
-  use { 'simrat39/rust-tools.nvim',
-    config = rust_tools_config,
+    'nvim-telescope/telescope.nvim',
+    module = { "telescope" },
+    requires = {
+      { 'nvim-lua/plenary.nvim', opt = true },
+      { 'nvim-telescope/telescope-ui-select.nvim', opt = true },
+    },
+    wants = {
+      'plenary.nvim',
+      'telescope-ui-select.nvim',
+    },
+    setup = function()
+      local function builtin(name)
+        return function(opt)
+          return function()
+            return require("telescope.builtin")[name](opt or {})
+          end
+        end
+      end
+
+      nmap('<C-p>', builtin 'find_files' {})
+      nmap('mg', builtin 'live_grep' {})
+      nmap('md', builtin 'diagnostics' {})
+      nmap('mf', builtin 'current_buffer_fuzzy_find' {})
+      nmap('mh', builtin 'help_tags' { lang = 'ja' })
+    end,
+    config = telescope_config,
   }
 
   -- for documentation
-  use { 'glidenote/memolist.vim' }
-  use { 'godlygeek/tabular' }
-  use { 'gyim/vim-boxdraw' }
-  use { 'mattn/vim-maketable' }
-  use { 'shinespark/vim-list2tree' }
+  use { 'glidenote/memolist.vim', cmd = { 'MemoList', 'MemoNew' } }
+  use { 'godlygeek/tabular', event = 'BufRead' }
+  -- use { 'gyim/vim-boxdraw' }
+  use { 'mattn/vim-maketable', event = 'BufRead' }
+  -- use { 'shinespark/vim-list2tree' }
   use { 'skanehira/gyazo.vim',
     config = gyazo_config,
+    ft = 'markdown',
   }
   use { 'skanehira/denops-translate.vim',
     config = translate_config
   }
   use { 'vim-jp/vimdoc-ja' }
-  use { 'plasticboy/vim-markdown' }
-  use { 'previm/previm' }
+  use { 'plasticboy/vim-markdown', ft = 'markdown' }
+  use { 'previm/previm', ft = 'markdown' }
 
   -- for develop vim plugins
-  use { 'LeafCage/vimhelpgenerator' }
-  use { 'lambdalisue/vital-Whisky' }
+  use { 'LeafCage/vimhelpgenerator', ft = 'vim' }
+  use { 'lambdalisue/vital-Whisky', ft = 'vim' }
   use { 'tweekmonster/helpful.vim' }
   use { 'vim-jp/vital.vim' }
-  use { 'thinca/vim-themis' }
+  use { 'thinca/vim-themis', ft = 'vim' }
   use { 'tyru/capture.vim' }
 
   -- other
