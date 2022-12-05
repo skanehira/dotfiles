@@ -152,7 +152,10 @@ local rust_tools_config = function()
         ['rust-analyzer'] = {
           checkOnSave = {
             command = 'clippy'
-          }
+          },
+          -- files = {
+          --   excludeDirs = {'/root/path/to/dir'},
+          -- },
         }
       }
     },
@@ -712,8 +715,12 @@ local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
   use {
+    'mattn/vim-goimports',
     ft = 'go',
-    'mattn/vim-goimports'
+  }
+
+  use {
+    'skanehira/pinwin.vim'
   }
 
   use {
