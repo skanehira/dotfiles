@@ -54,7 +54,8 @@
                     "bundle_identifiers": [
                       "^com\\.googlecode\\.iterm2$",
                       "^com\\.tinyspeck\\.slackmacgap$",
-                      "^com\\.github\\.wez\\.wezterm$"
+                      "^com\\.github\\.wez\\.wezterm$",
+                      "^com\\.apple\\.QuickTimePlayerX$"
                     ]
                   }
                 ],
@@ -83,7 +84,8 @@
                     "bundle_identifiers": [
                       "^com\\.googlecode\\.iterm2$",
                       "^com\\.tinyspeck\\.slackmacgap$",
-                      "^com\\.github\\.wez\\.wezterm$"
+                      "^com\\.github\\.wez\\.wezterm$",
+                      "^com\\.apple\\.QuickTimePlayerX$"
                     ]
                   }
                 ],
@@ -112,7 +114,8 @@
                     "bundle_identifiers": [
                       "^com\\.googlecode\\.iterm2$",
                       "^com\\.tinyspeck\\.slackmacgap$",
-                      "^com\\.github\\.wez\\.wezterm$"
+                      "^com\\.github\\.wez\\.wezterm$",
+                      "^com\\.apple\\.QuickTimePlayerX$"
                     ]
                   }
                 ],
@@ -141,7 +144,8 @@
                     "bundle_identifiers": [
                       "^com\\.googlecode\\.iterm2$",
                       "^com\\.tinyspeck\\.slackmacgap$",
-                      "^com\\.github\\.wez\\.wezterm$"
+                      "^com\\.github\\.wez\\.wezterm$",
+                      "^com\\.apple\\.QuickTimePlayerX$"
                     ]
                   }
                 ],
