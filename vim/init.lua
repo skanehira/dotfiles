@@ -734,14 +734,6 @@ require('packer').startup(function(use)
     end
   }
 
-  use({
-    'weilbith/nvim-code-action-menu',
-    cmd = 'CodeActionMenu',
-    setup = function()
-      map('n', 'ma', '<Cmd>CodeActionMenu<CR>')
-    end
-  })
-
   -- use { 'https://git.sr.ht/~whynothugo/lsp_lines.nvim', config = function()
   --   vim.diagnostic.config({ virtual_text = false })
   --   require("lsp_lines").setup()
@@ -931,7 +923,7 @@ require('packer').startup(function(use)
       local function builtin(name)
         return function(opt)
           return function()
-            return require("telescope.builtin")[name](opt or {})
+            return require('telescope.builtin')[name](opt or {})
           end
         end
       end
