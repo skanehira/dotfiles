@@ -97,12 +97,15 @@ Lsp_on_attach = function(client, bufnr)
   nmap('<Leader>gi', vim.lsp.buf.implementation, bufopts)
   nmap('<Leader>gr', vim.lsp.buf.references, bufopts)
   nmap('<Leader>rn', vim.lsp.buf.rename, bufopts)
+  nmap(']d', vim.diagnostic.goto_next, bufopts)
+  nmap('[d', vim.diagnostic.goto_prev, bufopts)
+  nmap('<C-g>o', vim.diagnostic.open_float, bufopts)
   if client.name == 'denols' then
     nmap('<C-]>', vim.lsp.buf.definition, bufopts)
   else
     opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
   end
-  -- nmap('ma', vim.lsp.buf.code_action, bufopts)
+  nmap('ma', vim.lsp.buf.code_action, bufopts)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
 
   -- auto format when save the file
