@@ -694,6 +694,7 @@ local treesitter_config = function()
     auto_install = true,
     highlight = {
       enable = true,
+      disable = { 'yaml' },
     }
   })
 end
