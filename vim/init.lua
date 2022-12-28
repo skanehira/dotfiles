@@ -153,11 +153,11 @@ local rust_tools_config = function()
       standalone = true,
       settings = {
         ['rust-analyzer'] = {
-          checkOnSave = {
-            command = 'clippy'
-          },
+          -- checkOnSave = {
+          --   command = 'clippy'
+          -- },
           -- files = {
-          --   excludeDirs = {'/root/path/to/dir'},
+          --   excludeDirs = { '/root/path/to/dir' },
           -- },
         }
       }
@@ -318,6 +318,7 @@ local lsp_config = function()
     'gopls',
     'rust_analyzer',
     'tsserver',
+    'volar',
     'sumneko_lua',
     'golangci_lint_ls',
     'eslint',
@@ -718,6 +719,11 @@ local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
   use {
+    'dhruvasagar/vim-zoom',
+    keys = { { 'n', '<C-w>m' } },
+  }
+
+  use {
     'mattn/vim-goimports',
     ft = 'go',
   }
@@ -801,7 +807,7 @@ require('packer').startup(function(use)
 
   use {
     'williamboman/mason-lspconfig.nvim',
-    event = 'BufRead',
+    event = { 'BufRead', 'BufNewFile' },
     requires = {
       { 'neovim/nvim-lspconfig', opt = true },
       {
