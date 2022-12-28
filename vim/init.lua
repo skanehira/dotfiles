@@ -253,17 +253,14 @@ end
 -- telescope.vim
 local telescope_config = function()
   require("telescope").load_extension("ui-select")
+  local actions = require('telescope.actions')
   require('telescope').setup {
     pickers = {
-      find_files = {
+      live_grep = {
         mappings = {
           i = {
-            ['<C-j>'] = 'move_selection_next',
-            ['<C-k>'] = 'move_selection_previous',
-            ['<C-s>'] = 'select_horizontal',
-            ['<C-v>'] = 'select_vertical',
-            ['<C-t>'] = 'select_tab',
-            ['<C-e>'] = 'select_drop',
+            ['<C-o>'] = actions.send_to_qflist + actions.open_qflist,
+            ['<C-l>'] = actions.send_to_loclist + actions.open_loclist,
           }
         }
       }
@@ -946,6 +943,7 @@ require('packer').startup(function(use)
       nmap('md', builtin 'diagnostics' {})
       nmap('mf', builtin 'current_buffer_fuzzy_find' {})
       nmap('mh', builtin 'help_tags' { lang = 'ja' })
+      nmap('mo', builtin 'oldfiles' {})
     end,
     config = telescope_config,
   }
