@@ -57,6 +57,10 @@ end
 local nvim_cmp_config = function()
   local cmp = require('cmp')
   cmp.setup({
+    window = {
+      -- completion = cmp.config.window.bordered(),
+      documentation = cmp.config.window.bordered(),
+    },
     preselect = cmp.PreselectMode.None,
     mapping = cmp.mapping.preset.insert({
       ['<C-b>'] = cmp.mapping.scroll_docs(-4),
