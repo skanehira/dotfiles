@@ -1,6 +1,6 @@
 local wezterm = require 'wezterm';
 
-wezterm.on('window-maximize', function(window, pane)
+wezterm.on('window-maximize', function(window, _)
   window:maximize()
 end)
 
@@ -22,7 +22,7 @@ return {
 		{ key = "q", mods = "CMD", action = wezterm.action.QuitApplication },
     -- C-q を2回押さないと行けない問題を回避するため
     { key = 'q', mods = 'CTRL', action = wezterm.action { SendString = '\x11' } },
-    { key = 'f', mods = 'SHIFT|CTRL', action = wezterm.action.EmitEvent 'window-maximize' },
+    { key = 'm', mods = 'SHIFT|CTRL', action = wezterm.action.EmitEvent 'window-maximize' },
 		-- { key = "¥", mods = "CMD", action=wezterm.action{SplitHorizontal={domain="CurrentPaneDomain"}}},
 		-- { key = "-", mods = "CMD", action=wezterm.action{SplitVertical={domain="CurrentPaneDomain"}}},
 		-- { key = "h", mods = "LEADER", action=wezterm.action{AdjustPaneSize={"Left", 5}}},
