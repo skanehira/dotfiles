@@ -14,8 +14,8 @@ return {
 	-- leader = { key="s", mods="CTRL" },
 	window_decorations = "RESIZE",
 	keys = {
-		{ key = "c", mods = "CMD", action = wezterm.action.Copy },
-		{ key = 'v', mods = 'CMD', action = wezterm.action.Paste },
+		{ key = "c", mods = "CMD", action = wezterm.action.CopyTo 'Clipboard' },
+		{ key = 'v', mods = 'CMD', action = wezterm.action.PasteFrom 'Clipboard' },
 		{ key = ";", mods = "CMD", action = wezterm.action.IncreaseFontSize },
 		{ key = "-", mods = "CMD", action = wezterm.action.DecreaseFontSize },
 		{ key = " ", mods = "CTRL", action = wezterm.action.HideApplication },
