@@ -38,4 +38,5 @@ return {
     top = 0,
   },
   enable_scroll_bar = false,
+  front_end = "WebGpu",
 }
