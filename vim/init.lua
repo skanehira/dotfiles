@@ -103,7 +103,7 @@ Lsp_on_attach = function(client, bufnr)
   nmap('<Leader>rn', vim.lsp.buf.rename, bufopts)
   nmap(']d', vim.diagnostic.goto_next, bufopts)
   nmap('[d', vim.diagnostic.goto_prev, bufopts)
-  nmap('<C-g>o', vim.diagnostic.open_float, bufopts)
+  nmap('<C-g><C-d>', vim.diagnostic.open_float, bufopts)
   if client.name == 'denols' then
     nmap('<C-]>', vim.lsp.buf.definition, bufopts)
   else
@@ -949,6 +949,7 @@ require('packer').startup(function(use)
       nmap('mf', builtin 'current_buffer_fuzzy_find' {})
       nmap('mh', builtin 'help_tags' { lang = 'ja' })
       nmap('mo', builtin 'oldfiles' {})
+      nmap('ms', builtin 'git_status' {})
     end,
     config = telescope_config,
   }
@@ -1232,7 +1233,7 @@ api.nvim_create_autocmd('FileType', {
 map({ 'c', 'i' }, '<C-v>', 'printf("<C-r><C-o>%s", v:register)', { expr = true })
 
 -- other keymap
-nmap('ms', function()
+nmap('<Leader>s', function()
   cmd([[
   luafile ~/.config/nvim/init.lua
   PackerInstall
