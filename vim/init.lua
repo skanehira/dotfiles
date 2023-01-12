@@ -90,6 +90,29 @@ local nvim_cmp_config = function()
       end
     },
   })
+
+  -- `/` cmdline setup.
+  cmp.setup.cmdline('/', {
+    mapping = cmp.mapping.preset.cmdline(),
+    sources = {
+      { name = 'buffer' }
+    }
+  })
+
+  -- `:` cmdline setup.
+  cmp.setup.cmdline(':', {
+    mapping = cmp.mapping.preset.cmdline(),
+    sources = cmp.config.sources({
+      { name = 'path' }
+    }, {
+      {
+        name = 'cmdline',
+        option = {
+          ignore_cmds = { 'Man', '!' }
+        }
+      }
+    })
+  })
 end
 
 -- lsp on attach
@@ -840,6 +863,7 @@ require('packer').startup(function(use)
       { 'hrsh7th/cmp-path', event = { 'InsertEnter' } },
       { 'hrsh7th/cmp-vsnip', event = { 'InsertEnter' } },
       { 'hrsh7th/vim-vsnip', event = { 'InsertEnter' } },
+      { 'hrsh7th/cmp-cmdline', event = { 'CmdlineEnter' } },
     },
     config = nvim_cmp_config,
   }
@@ -1092,7 +1116,7 @@ ensure_undo_dir()
 -- start insert mode when termopen
 api.nvim_create_autocmd("TermOpen", {
   pattern = "*",
-  callback = function ()
+  callback = function()
     cmd('startinsert')
     cmd('setlocal scrolloff=0')
   end,
