@@ -1029,6 +1029,7 @@ opt.shiftwidth = 2
 opt.softtabstop = 2
 opt.clipboard:append({ fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
 opt.grepprg = 'rg --vimgrep'
+opt.grepformat = '%f:%l:%c:%m'
 opt.mouse = {}
 
 -- file indent
