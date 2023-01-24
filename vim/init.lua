@@ -154,13 +154,20 @@ local rust_tools_config = function()
         Lsp_on_attach(client, bufnr)
         nmap('K', rt.hover_actions.hover_actions, bufopts)
         nmap('<Leader>gl', rt.code_action_group.code_action_group, bufopts)
+        nmap('gO', function()
+          vim.lsp.buf_request(0, 'experimental/externalDocs', vim.lsp.util.make_position_params(),
+            function(err, url)
+              if err then
+                error(tostring(err))
+              else
+                fn.jobstart({ 'open', url })
+              end
+            end)
+        end, bufopts)
       end,
       standalone = true,
       settings = {
         ['rust-analyzer'] = {
-          -- checkOnSave = {
-          --   command = 'clippy'
-          -- },
           -- files = {
           --   excludeDirs = { '/root/path/to/dir' },
           -- },
@@ -181,7 +188,7 @@ local rust_tools_config = function()
         },
         -- auto_focus = true,
       },
-    }
+    },
   })
 end
 
