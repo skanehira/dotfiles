@@ -725,6 +725,10 @@ local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
   use {
+    'thinca/vim-qfreplace'
+  }
+
+  use {
     'dhruvasagar/vim-zoom',
     keys = { { 'n', '<C-w>m' } },
   }
