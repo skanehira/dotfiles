@@ -725,6 +725,17 @@ local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
   use {
+    'lambdalisue/kensaku.vim'
+  }
+
+  use {
+    'lambdalisue/kensaku-search.vim',
+    config = function()
+      cmap('<CR>', '<Plug>(kensaku-search-replace)<CR>', {})
+    end
+  }
+
+  use {
     'thinca/vim-qfreplace'
   }
 
