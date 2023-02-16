@@ -110,7 +110,7 @@ Lsp_on_attach = function(client, bufnr)
   else
     opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
   end
-  nmap('ma', vim.lsp.buf.code_action, bufopts)
+  map({ 'n', 'x' }, 'ma', vim.lsp.buf.code_action, bufopts)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
 
   -- auto format when save the file
