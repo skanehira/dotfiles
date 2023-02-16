@@ -1096,7 +1096,7 @@ ensure_undo_dir()
 -- start insert mode when termopen
 api.nvim_create_autocmd("TermOpen", {
   pattern = "*",
-  callback = function ()
+  callback = function()
     cmd('startinsert')
     cmd('setlocal scrolloff=0')
   end,
