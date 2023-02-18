@@ -71,6 +71,7 @@ local nvim_cmp_config = function()
       ['<CR>'] = cmp.mapping.confirm({ select = true }),
     }),
     sources = {
+      { name = 'skkeleton' },
       { name = 'nvim_lsp' },
       { name = 'vsnip' },
       { name = 'buffer', option = {
@@ -83,6 +84,9 @@ local nvim_cmp_config = function()
         end
       } },
       { name = 'path' },
+    },
+    view = {
+      entries = 'native'
     },
     snippet = {
       expand = function(args)
@@ -733,6 +737,19 @@ local packer_bootstrap = ensure_packer()
 
 require('packer').startup(function(use)
   use {
+    'vim-skk/skkeleton',
+    config = function()
+      vim.call('skkeleton#config', {
+        ['globalJisyo'] = vim.fn.expand('~/.config/skk/SKK-JISYO.L'),
+        eggLikeNewline = true,
+        keepState = true
+      })
+      imap('<C-j>', '<Plug>(skkeleton-toggle)')
+      cmap('<C-j>', '<Plug>(skkeleton-toggle)')
+    end
+  }
+
+  use {
     'lambdalisue/kensaku.vim'
   }
 
@@ -858,6 +875,7 @@ require('packer').startup(function(use)
     'hrsh7th/nvim-cmp',
     module = { "cmp" },
     requires = {
+      { 'rinx/cmp-skkeleton', event = { 'InsertEnter' } },
       { 'hrsh7th/cmp-nvim-lsp', event = { 'InsertEnter' } },
       { 'hrsh7th/cmp-buffer', event = { 'InsertEnter' } },
       { 'hrsh7th/cmp-path', event = { 'InsertEnter' } },
