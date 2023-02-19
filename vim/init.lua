@@ -332,7 +332,7 @@ local lsp_config = function()
     'rust_analyzer',
     'tsserver',
     'volar',
-    'sumneko_lua',
+    'lua_ls',
     'golangci_lint_ls',
     'eslint',
     'graphql',
