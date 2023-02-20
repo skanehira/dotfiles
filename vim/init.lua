@@ -71,7 +71,6 @@ local nvim_cmp_config = function()
       ['<CR>'] = cmp.mapping.confirm({ select = true }),
     }),
     sources = {
-      { name = 'skkeleton' },
       { name = 'nvim_lsp' },
       { name = 'vsnip' },
       { name = 'buffer', option = {
@@ -875,7 +874,6 @@ require('packer').startup(function(use)
     'hrsh7th/nvim-cmp',
     module = { "cmp" },
     requires = {
-      { 'rinx/cmp-skkeleton', event = { 'InsertEnter' } },
       { 'hrsh7th/cmp-nvim-lsp', event = { 'InsertEnter' } },
       { 'hrsh7th/cmp-buffer', event = { 'InsertEnter' } },
       { 'hrsh7th/cmp-path', event = { 'InsertEnter' } },
