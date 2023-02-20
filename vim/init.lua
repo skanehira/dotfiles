@@ -384,7 +384,7 @@ local lsp_config = function()
         opts = {
           root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
         }
-      elseif ls == 'sumneko_lua' then
+      elseif ls == 'lua_ls' then
         opts = {
           settings = {
             Lua = {
