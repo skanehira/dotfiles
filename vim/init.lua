@@ -747,7 +747,6 @@ require('packer').startup(function(use)
       imap('<C-j>', '<Plug>(skkeleton-toggle)')
       cmap('<C-j>', '<Plug>(skkeleton-toggle)')
     end,
-    event = { 'InsertEnter' }
   }
 
   use {
