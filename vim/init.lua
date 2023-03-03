@@ -449,9 +449,6 @@ vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
 })
 
 -- twihi.vim config
--- g['twihi_mention_check_interval'] = 30000 * 10
--- g['twihi_notify_ui'] = 'system'
-
 local twihi_config = function()
   nmap('<C-g>n', '<Cmd>TwihiTweet<CR>')
   nmap('<C-g>m', '<Cmd>TwihiMentions<CR>')
@@ -491,6 +488,9 @@ local twihi_config = function()
     end,
     group = twihi_init_group,
   })
+
+  -- g['twihi_mention_check_interval'] = 30000 * 10
+  -- g['twihi_notify_ui'] = 'system'
 end
 
 -- k8s.vim
@@ -739,13 +739,14 @@ require('packer').startup(function(use)
     'vim-skk/skkeleton',
     config = function()
       vim.call('skkeleton#config', {
-        ['globalJisyo'] = vim.fn.expand('~/.config/skk/SKK-JISYO.L'),
+        globalJisyo = vim.fn.expand('~/.config/skk/SKK-JISYO.L'),
         eggLikeNewline = true,
         keepState = true
       })
       imap('<C-j>', '<Plug>(skkeleton-toggle)')
       cmap('<C-j>', '<Plug>(skkeleton-toggle)')
-    end
+    end,
+    event = { 'InsertEnter' }
   }
 
   use {
@@ -760,7 +761,8 @@ require('packer').startup(function(use)
   }
 
   use {
-    'thinca/vim-qfreplace'
+    'thinca/vim-qfreplace',
+    event = { 'QuickFixCmdPost' }
   }
 
   use {
@@ -781,12 +783,12 @@ require('packer').startup(function(use)
     'skanehira/denops-gh.vim'
   }
 
-  use {
-    '4513ECHO/denops-gitter.vim',
-    config = function()
-      g['gitter#token'] = fn.trim(fn.readfile(fn.expand('~/.config/denops_gitter/token'))[1])
-    end
-  }
+  -- use {
+  --   '4513ECHO/denops-gitter.vim',
+  --   config = function()
+  --     g['gitter#token'] = fn.trim(fn.readfile(fn.expand('~/.config/denops_gitter/token'))[1])
+  --   end
+  -- }
 
   -- use { 'https://git.sr.ht/~whynothugo/lsp_lines.nvim', config = function()
   --   vim.diagnostic.config({ virtual_text = false })
@@ -796,7 +798,7 @@ require('packer').startup(function(use)
   use { 'wbthomason/packer.nvim' }
 
   use { 'lukas-reineke/indent-blankline.nvim',
-    event = 'BufRead',
+    event = 'BufReadPre',
     config = indent_blankline,
   }
 
@@ -837,7 +839,7 @@ require('packer').startup(function(use)
   use {
     'kevinhwang91/nvim-bqf',
     ft = 'qf',
-    event = { 'QuickFixCmdPost' }
+    event = { 'QuickFixCmdPre' }
   }
 
   -- lsp
