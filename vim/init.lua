@@ -1094,13 +1094,12 @@ require("lazy").setup({
   },
   {
     'williamboman/mason-lspconfig.nvim',
-    event = { 'BufRead', 'BufNewFile' },
+    event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
       { 'neovim/nvim-lspconfig' },
       {
         'williamboman/mason.nvim',
         config = function() require("mason").setup() end,
-        lazy = true,
       },
     },
     config = lsp_config,
