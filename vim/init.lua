@@ -53,6 +53,262 @@ for _, mode in pairs({ 'n', 'v', 'i', 'o', 'c', 't', 'x', 't' }) do
   end
 end
 
+-- options
+cmd('syntax enable')
+cmd('filetype plugin indent on')
+
+g.mapleader = " "
+opt.breakindent = true
+opt.number = false
+opt.incsearch = true
+opt.ignorecase = true
+opt.smartcase = true
+opt.hlsearch = true
+opt.autoindent = true
+opt.smartindent = true
+opt.virtualedit = "block"
+opt.showtabline = 1
+opt.tabstop = 2
+opt.shiftwidth = 2
+opt.softtabstop = 2
+opt.completeopt = 'menu,menuone,noselect'
+opt.laststatus = 3
+opt.scrolloff = 100
+opt.cursorline = true
+opt.helplang = 'ja'
+opt.autowrite = true
+opt.swapfile = false
+opt.showtabline = 1
+-- opt.diffopt = 'vertical,internal'
+-- opt.wildcharm = ('<Tab>'):byte()
+opt.tabstop = 2
+opt.shiftwidth = 2
+opt.softtabstop = 2
+opt.clipboard:append({ fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
+opt.grepprg = 'rg --vimgrep'
+opt.grepformat = '%f:%l:%c:%m'
+opt.mouse = {}
+
+-- file indent
+local filetype_indent_group = api.nvim_create_augroup('fileTypeIndent', { clear = true })
+local file_indents = {
+  {
+    pattern = 'go',
+    command = 'setlocal tabstop=4 shiftwidth=4'
+  },
+  {
+    pattern = 'rust',
+    command = 'setlocal tabstop=4 softtabstop=4 shiftwidth=4 expandtab'
+  },
+  {
+    pattern = { 'javascript', 'typescriptreact', 'typescript', 'vim', 'lua', 'yaml', 'json', 'sh', 'zsh', 'markdown' },
+    command = 'setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab'
+  },
+}
+
+for _, indent in pairs(file_indents) do
+  api.nvim_create_autocmd('FileType', {
+    pattern = indent.pattern,
+    command = indent.command,
+    group = filetype_indent_group
+  })
+end
+
+-- grep window
+api.nvim_create_autocmd('QuickFixCmdPost', {
+  pattern = '*grep*',
+  command = 'cwindow',
+  group = api.nvim_create_augroup('grepWindow', { clear = true }),
+})
+
+-- restore cursorline
+api.nvim_create_autocmd('BufReadPost',
+  {
+    pattern = '*',
+    callback = function()
+      cmd([[
+    if line("'\"") > 0 && line("'\"") <= line("$")
+      exe "normal! g'\""
+    endif
+    ]] )
+    end,
+    group = api.nvim_create_augroup('restoreCursorline', { clear = true })
+  })
+
+-- persistent undo
+local ensure_undo_dir = function()
+  local undo_path = fn.expand('~/.config/nvim/undo')
+  if fn.isdirectory(undo_path) == 0 then
+    fn.mkdir(undo_path, 'p')
+  end
+  opt.undodir = undo_path
+  opt.undofile = true
+end
+ensure_undo_dir()
+
+-- start insert mode when termopen
+api.nvim_create_autocmd("TermOpen", {
+  pattern = "*",
+  callback = function()
+    cmd('startinsert')
+    cmd('setlocal scrolloff=0')
+  end,
+  group = api.nvim_create_augroup("neovimTerminal", { clear = true }),
+})
+
+-- auto mkdir
+local auto_mkdir = function(dir)
+  if fn.isdirectory(dir) == 0 then
+    fn.mkdir(dir, 'p')
+  end
+end
+api.nvim_create_autocmd('BufWritePre', {
+  pattern = '*',
+  callback = function()
+    auto_mkdir(fn.expand('<afile>:p:h'))
+  end,
+  group = api.nvim_create_augroup('autoMkdir', { clear = true })
+})
+
+-- create zenn article
+api.nvim_create_user_command('ZennCreateArticle',
+  function(opts)
+    local date = fn.strftime('%Y-%m-%d')
+    local slug = date .. '-' .. opts.args
+    os.execute('npx zenn new:article --emoji 🦍 --slug ' .. slug)
+    cmd('edit ' .. string.format('articles/%s.md', slug))
+  end, { nargs = 1 })
+
+-- insert markdown link
+local insert_markdown_link = function()
+  local old = fn.getreg(9)
+  local link = fn.trim(fn.getreg())
+  if link:match('^http.*') == nil then
+    cmd('normal! p')
+    return
+  end
+  cmd('normal! "9y')
+  local word = fn.getreg(9)
+  local text = string.format('[%s](%s)', word, link)
+  fn.setreg(9, text)
+  cmd('normal! gv"9p')
+  fn.setreg(9, old)
+end
+
+api.nvim_create_autocmd('FileType', {
+  pattern = 'markdown',
+  callback = function()
+    map('x', 'p', function()
+      insert_markdown_link()
+    end, { silent = true, buffer = true })
+  end,
+  group = api.nvim_create_augroup("markdownInsertLink", { clear = true }),
+})
+
+--- syntax clear
+-- api.nvim_create_autocmd('FileType', {
+--   pattern = {'go', 'vim', 'javascript', 'typescript', 'rust', 'json'},
+--   callback = function ()
+--     cmd('syntax clear')
+--   end
+-- })
+
+-- key mappings
+
+-- text object
+omap('8', 'i(')
+omap('2', 'i"')
+omap('7', 'i\'')
+omap('@', 'i`')
+omap('[', 'i[')
+omap('{', 'i{')
+omap('a8', 'a(')
+omap('a2', 'a"')
+omap('a7', 'a\'')
+omap('a@', 'a`')
+
+nmap('v8', 'vi(')
+nmap('v2', 'vi"')
+nmap('v7', 'vi\'')
+nmap('v@', 'vi`')
+nmap('v[', 'vi[')
+nmap('v{', 'vi{')
+nmap('va8', 'va(')
+nmap('va2', 'va"')
+nmap('va7', 'va\'')
+nmap('va@', 'va`')
+
+-- emacs like
+imap('<C-k>', '<C-o>C')
+imap('<C-f>', '<Right>')
+imap('<C-b>', '<Left>')
+imap('<C-e>', '<C-o>A')
+imap('<C-a>', '<C-o>I')
+
+xmap("*",
+  table.concat {
+    -- 選択範囲を検索クエリに用いるため、m レジスタに格納。
+    -- ビジュアルモードはここで抜ける。
+    [["my]],
+    -- "m レジスタの中身を検索。
+    -- ただし必要な文字はエスケープした上で、空白に関しては伸び縮み可能とする
+    [[/\V<C-R><C-R>=substitute(escape(@m, '/\'), '\_s\+', '\\_s\\+', 'g')<CR><CR>]],
+    -- 先ほど検索した範囲にカーソルが移るように、手前に戻す
+    [[N]],
+  },
+  {}
+)
+
+-- help
+api.nvim_create_autocmd("FileType", {
+  pattern = "help",
+  command = "nnoremap <buffer> <silent>q :bw!<CR>",
+  group = api.nvim_create_augroup("helpKeymaps", { clear = true }),
+})
+
+-- command line
+-- cmap defaults silent to true, but passes an empty setting because the cursor is not updated
+cmap('<C-b>', '<Left>', {})
+cmap('<C-f>', '<Right>', {})
+cmap('<C-a>', '<Home>', {})
+cmap('<Up>', '<C-p>')
+cmap('<Down>', '<C-n>')
+cmap('<C-n>', function()
+  return fn.pumvisible() == 1 and '<C-n>' or '<Down>'
+end, { expr = true })
+cmap('<C-p>', function()
+  return fn.pumvisible() == 1 and '<C-p>' or '<Up>'
+end, { expr = true })
+api.nvim_create_autocmd('FileType', {
+  pattern = 'qf',
+  callback = function()
+    nmap('q', '<Cmd>q<CR>', { silent = true, buffer = true })
+  end,
+  group = api.nvim_create_augroup("qfInit", { clear = true }),
+})
+
+-- paste with <C-v>
+map({ 'c', 'i' }, '<C-v>', 'printf("<C-r><C-o>%s", v:register)', { expr = true })
+
+-- other keymap
+nmap('<Leader>.', ':tabnew ~/.config/nvim/init.lua<CR>')
+nmap('Y', 'Y')
+nmap('R', 'gR')
+nmap('*', '*N')
+nmap('<Esc><Esc>', '<Cmd>nohlsearch<CR>')
+nmap('H', '^')
+nmap('L', 'g_')
+nmap('<C-j>', 'o<Esc>')
+nmap('<C-k>', 'O<Esc>')
+nmap('o', 'A<CR>')
+nmap('<C-l>', 'gt')
+nmap('<C-h>', 'gT')
+nmap('<Leader>tm', [[:new | terminal<CR>]])
+tmap('<C-]>', [[<C-\><C-n>]])
+vmap('H', '^')
+vmap('L', 'g_')
+
+-- ############################# plugin config section ###############################
 -- nvim-cmp
 local nvim_cmp_config = function()
   local cmp = require('cmp')
@@ -301,8 +557,6 @@ local fern_config = function()
     end,
     group = api.nvim_create_augroup('fernInit', { clear = true }),
   })
-
-  nmap('<Leader>f', ':Fern . -drawer<CR>', { silent = true })
 end
 
 -- lsp config
@@ -672,12 +926,12 @@ local winselector_config = function()
 end
 
 -- test.vim
-local test_config = function()
-  g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
-  g['test#rust#cargotest#options'] = { all = '-- --nocapture' }
-  g['test#go#gotest#options'] = { all = '-v' }
-  nmap('<Leader>tn', '<Cmd>TestNearest<CR>')
-end
+-- local test_config = function()
+--   g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
+--   g['test#rust#cargotest#options'] = { all = '-- --nocapture' }
+--   g['test#go#gotest#options'] = { all = '-v' }
+--   nmap('<Leader>tn', '<Cmd>TestNearest<CR>')
+-- end
 
 -- open-browser.vim
 local openbrowser_config = function()
@@ -722,21 +976,24 @@ local indent_blankline = function()
   })
 end
 
--- packer settings
-local ensure_packer = function()
-  local install_path = fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
-  if fn.empty(fn.glob(install_path)) == 1 then
-    fn.system({ 'git', 'clone', '--depth', '1', 'https://github.com/wbthomason/packer.nvim', install_path })
-    cmd('packadd packer.nvim')
-    return true
-  end
-  return false
+-- ############################# lazy config section ###############################
+-- lazy.nvim
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not vim.loop.fs_stat(lazypath) then
+  vim.fn.system({
+    "git",
+    "clone",
+    "--filter=blob:none",
+    "https://github.com/folke/lazy.nvim.git",
+    "--branch=stable", -- latest stable release
+    lazypath,
+  })
 end
+vim.opt.rtp:prepend(lazypath)
 
-local packer_bootstrap = ensure_packer()
-
-require('packer').startup(function(use)
-  use {
+-- lazy settings
+require("lazy").setup({
+  {
     'vim-skk/skkeleton',
     config = function()
       vim.call('skkeleton#config', {
@@ -747,235 +1004,218 @@ require('packer').startup(function(use)
       imap('<C-j>', '<Plug>(skkeleton-toggle)')
       cmap('<C-j>', '<Plug>(skkeleton-toggle)')
     end,
-  }
-
-  use {
+  },
+  {
     'lambdalisue/kensaku.vim'
-  }
-
-  use {
+  },
+  {
     'lambdalisue/kensaku-search.vim',
     config = function()
       cmap('<CR>', '<Plug>(kensaku-search-replace)<CR>', {})
     end
-  }
-
-  use {
+  },
+  {
     'thinca/vim-qfreplace',
     event = { 'QuickFixCmdPost' }
-  }
-
-  use {
+  },
+  {
     'dhruvasagar/vim-zoom',
-    keys = { { 'n', '<C-w>m' } },
-  }
-
-  use {
+    keys = {
+      { '<C-w>m', '<Cmd>call zoom#toggle()<CR>' }
+    },
+  },
+  {
     'mattn/vim-goimports',
     ft = 'go',
-  }
-
-  use {
-    'skanehira/pinwin.vim'
-  }
-
-  use {
+  },
+  -- {
+  --   'skanehira/pinwin.vim'
+  -- },
+  {
     'skanehira/denops-gh.vim'
-  }
-
-  -- use {
+  },
+  -- {
   --   '4513ECHO/denops-gitter.vim',
   --   config = function()
   --     g['gitter#token'] = fn.trim(fn.readfile(fn.expand('~/.config/denops_gitter/token'))[1])
   --   end
-  -- }
-
-  -- use { 'https://git.sr.ht/~whynothugo/lsp_lines.nvim', config = function()
-  --   vim.diagnostic.config({ virtual_text = false })
-  --   require("lsp_lines").setup()
-  -- end }
-
-  use { 'wbthomason/packer.nvim' }
-
-  use { 'lukas-reineke/indent-blankline.nvim',
+  -- },
+  -- { 'https://git.sr.ht/~whynothugo/lsp_lines.nvim',
+  --   config = function()
+  --     vim.diagnostic.config({ virtual_text = false })
+  --     require("lsp_lines").setup()
+  --   end
+  -- },
+  {
+    'lukas-reineke/indent-blankline.nvim',
     event = 'BufReadPre',
     config = indent_blankline,
-  }
-
-  -- lsp_signature
-  use {
+  },
+  {
     'ray-x/lsp_signature.nvim',
     event = 'BufRead',
     config = function()
       require('lsp_signature').setup({})
     end
-  }
-
-  -- git signs
-  use { 'lewis6991/gitsigns.nvim',
+  },
+  {
+    'lewis6991/gitsigns.nvim',
     event = 'BufRead',
     config = gitsigns_config
-  }
-
-  -- status line
-  use { 'nvim-lualine/lualine.nvim',
-    requires = 'kyazdani42/nvim-web-devicons',
+  },
+  {
+    'nvim-lualine/lualine.nvim',
+    dependencies = 'kyazdani42/nvim-web-devicons',
     config = lualine_config,
-  }
-
-  -- tabpage
-  use { 'akinsho/bufferline.nvim',
-    tag = "v2.*",
-    requires = 'kyazdani42/nvim-web-devicons',
+  },
+  {
+    'akinsho/bufferline.nvim',
+    version = "v2.*",
+    dependencies = 'kyazdani42/nvim-web-devicons',
     config = bufferline_config
-  }
-
-  use {
+  },
+  {
     'EdenEast/nightfox.nvim',
+    lazy = false,
     config = colorscheme_config,
-  }
-
-  -- better quickfix
-  use {
+  },
+  {
     'kevinhwang91/nvim-bqf',
     ft = 'qf',
     event = { 'QuickFixCmdPre' }
-  }
-
-  -- lsp
-  use { 'simrat39/rust-tools.nvim',
+  },
+  {
+    'simrat39/rust-tools.nvim',
     ft = { 'rust' },
     config = rust_tools_config,
-    requires = {
-      { 'neovim/nvim-lspconfig', opt = true },
+    dependencies = {
+      { 'neovim/nvim-lspconfig' },
     },
-    wants = { 'nvim-lspconfig' },
-  }
-
-  use {
+  },
+  {
     'williamboman/mason-lspconfig.nvim',
     event = { 'BufRead', 'BufNewFile' },
-    requires = {
-      { 'neovim/nvim-lspconfig', opt = true },
+    dependencies = {
+      { 'neovim/nvim-lspconfig' },
       {
         'williamboman/mason.nvim',
         config = function() require("mason").setup() end,
-        opt = true,
+        lazy = true,
       },
     },
-    wants = { 'mason.nvim', 'nvim-lspconfig' },
     config = lsp_config,
-  }
-
-  use { 'j-hui/fidget.nvim',
+  },
+  {
+    'j-hui/fidget.nvim',
     config = function() require('fidget').setup() end,
-  }
-
-  -- complete
-  use {
+  },
+  {
     'hrsh7th/nvim-cmp',
-    module = { "cmp" },
-    requires = {
-      { 'hrsh7th/cmp-nvim-lsp', event = { 'InsertEnter' } },
-      { 'hrsh7th/cmp-buffer', event = { 'InsertEnter' } },
-      { 'hrsh7th/cmp-path', event = { 'InsertEnter' } },
-      { 'hrsh7th/cmp-vsnip', event = { 'InsertEnter' } },
-      { 'hrsh7th/vim-vsnip', event = { 'InsertEnter' } },
+    -- module = { "cmp" },
+    dependencies = {
+      { 'hrsh7th/cmp-nvim-lsp' },
+      { 'hrsh7th/cmp-buffer' },
+      { 'hrsh7th/cmp-path' },
+      { 'hrsh7th/cmp-vsnip' },
+      { 'hrsh7th/vim-vsnip' },
     },
     config = nvim_cmp_config,
-  }
-
-  use { 'nvim-treesitter/nvim-treesitter',
-    run = ':TSUpdate',
+    event = { 'InsertEnter' },
+  },
+  {
+    'nvim-treesitter/nvim-treesitter',
+    build = ':TSUpdate',
     config = treesitter_config
-  }
-
-  use { 'windwp/nvim-autopairs',
+  },
+  {
+    'windwp/nvim-autopairs',
     event = { 'InsertEnter' },
     config = function()
       require("nvim-autopairs").setup({ map_c_h = true })
     end,
-  }
-
-  use { 'vim-test/vim-test',
-    event = 'BufRead',
-    config = test_config,
-  }
-
-  use {
+  },
+  -- {
+  --   'vim-test/vim-test',
+  --   event = 'BufRead',
+  --   config = test_config,
+  -- },
+  {
     'lambdalisue/fern-hijack.vim',
-    requires = {
+    dependencies = {
       'lambdalisue/fern.vim',
       cmd = 'Fern',
       config = fern_config,
-      opt = true,
     },
-    wants = {
-      'lambdalisue/fern.vim'
-    },
-    setup = function()
-      nmap('<Leader>f', ':Fern . -drawer<CR>', { silent = true })
+    init = function()
+      nmap('<Leader>f', '<Cmd>Fern . -drawer<CR>', { silent = true })
     end
-  }
-
-  use { 'lambdalisue/gina.vim',
+  },
+  {
+    'lambdalisue/gina.vim',
     config = gina_config,
-  }
-
-  use {
+  },
+  {
     'lambdalisue/guise.vim',
-  }
-
-  use { 'mattn/emmet-vim',
+  },
+  {
+    'mattn/emmet-vim',
     event = 'BufRead',
     config = emmet_config
-  }
-  use {
+  },
+  {
     'mattn/vim-sonictemplate',
     event = { 'InsertEnter' },
     config = sonictemplate_config,
-  }
-  use {
+  },
+  {
     'simeji/winresizer',
-    keys = { { 'n', '<C-e>' } },
-  }
-  use { 'vim-denops/denops.vim' }
-  use { 'skanehira/denops-silicon.vim',
+    keys = {
+      { '<C-e>', '<Cmd>WinResizerStartResize<CR>', desc = 'start window resizer' }
+    },
+  },
+  { 'vim-denops/denops.vim' },
+  {
+    'skanehira/denops-silicon.vim',
     config = silicon_config
-  }
-  use { 'skanehira/denops-docker.vim' }
-  use { 'thinca/vim-quickrun',
-    requires = {
-      { 'skanehira/quickrun-neoterm.vim', opt = true }
+  },
+  { 'skanehira/denops-docker.vim' },
+  {
+    'thinca/vim-quickrun',
+    dependencies = {
+      { 'skanehira/quickrun-neoterm.vim' }
     },
     config = quickrun_config,
-  }
-  use { 'tyru/open-browser-github.vim' }
-  use { 'tyru/open-browser.vim',
-    config = openbrowser_config,
-  }
-  use { 'skanehira/denops-graphql.vim',
+  },
+  {
+    'tyru/open-browser-github.vim',
+    dependencies = {
+      {
+        'tyru/open-browser.vim',
+        config = openbrowser_config,
+      },
+    }
+  },
+  {
+    'skanehira/denops-graphql.vim',
     config = graphql_config
-  }
-  use { 'thinca/vim-prettyprint' }
-  use { 'skanehira/k8s.vim',
+  },
+  { 'thinca/vim-prettyprint' },
+  {
+    'skanehira/k8s.vim',
     config = k8s_config,
-  }
-  use { 'skanehira/winselector.vim',
+  },
+  {
+    'skanehira/winselector.vim',
     config = winselector_config,
-  }
-  use {
+  },
+  {
     'nvim-telescope/telescope.nvim',
-    module = { "telescope" },
-    requires = {
-      { 'nvim-lua/plenary.nvim', opt = true },
-      { 'nvim-telescope/telescope-ui-select.nvim', opt = true },
+    -- module = { "telescope" },
+    dependencies = {
+      { 'nvim-lua/plenary.nvim' },
+      { 'nvim-telescope/telescope-ui-select.nvim' },
     },
-    wants = {
-      'plenary.nvim',
-      'telescope-ui-select.nvim',
-    },
-    setup = function()
+    init = function()
       local function builtin(name)
         return function(opt)
           return function()
@@ -993,307 +1233,37 @@ require('packer').startup(function(use)
       nmap('ms', builtin 'git_status' {})
     end,
     config = telescope_config,
-  }
-
+  },
   -- for documentation
-  use { 'glidenote/memolist.vim', cmd = { 'MemoList', 'MemoNew' } }
-  use { 'godlygeek/tabular', event = 'BufRead' }
-  -- use { 'gyim/vim-boxdraw' }
-  use { 'mattn/vim-maketable', event = 'BufRead' }
-  -- use { 'shinespark/vim-list2tree' }
-  use { 'skanehira/gyazo.vim',
+  { 'glidenote/memolist.vim', cmd = { 'MemoList', 'MemoNew' } },
+  { 'godlygeek/tabular', event = 'BufRead' },
+  -- { 'gyim/vim-boxdraw' }
+  { 'mattn/vim-maketable', event = 'BufRead' },
+  -- { 'shinespark/vim-list2tree' }
+  {
+    'skanehira/gyazo.vim',
     config = gyazo_config,
     ft = 'markdown',
-  }
-  use { 'skanehira/denops-translate.vim',
+  },
+  {
+    'skanehira/denops-translate.vim',
     config = translate_config
-  }
-  use { 'vim-jp/vimdoc-ja' }
-  use { 'plasticboy/vim-markdown', ft = 'markdown' }
-  use { 'previm/previm', ft = 'markdown' }
+  },
+  { 'vim-jp/vimdoc-ja' },
+  { 'plasticboy/vim-markdown', ft = 'markdown' },
+  { 'previm/previm', ft = 'markdown' },
 
   -- for develop vim plugins
-  use { 'LeafCage/vimhelpgenerator', ft = 'vim' }
-  use { 'lambdalisue/vital-Whisky', ft = 'vim' }
-  use { 'tweekmonster/helpful.vim' }
-  use { 'vim-jp/vital.vim' }
-  use { 'thinca/vim-themis', ft = 'vim' }
-  use { 'tyru/capture.vim' }
+  { 'LeafCage/vimhelpgenerator', ft = 'vim' },
+  { 'lambdalisue/vital-Whisky', ft = 'vim' },
+  { 'tweekmonster/helpful.vim' },
+  { 'vim-jp/vital.vim' },
+  { 'thinca/vim-themis', ft = 'vim' },
+  { 'tyru/capture.vim' },
 
   -- other
-  use { 'skanehira/denops-twihi.vim',
+  {
+    'skanehira/denops-twihi.vim',
     config = twihi_config,
-  }
-
-  if packer_bootstrap then
-    require('packer').sync()
-  end
-end)
-
--- update config when install, clean, update the plugins
-api.nvim_create_autocmd('User', {
-  pattern = 'PackerComplete',
-  command = 'PackerCompile',
-  group = api.nvim_create_augroup('packerComplete', { clear = true }),
-})
-
--- options
-cmd('syntax enable')
-cmd('filetype plugin indent on')
-
-g.mapleader = " "
-opt.breakindent = true
-opt.number = false
-opt.incsearch = true
-opt.ignorecase = true
-opt.smartcase = true
-opt.hlsearch = true
-opt.autoindent = true
-opt.smartindent = true
-opt.virtualedit = "block"
-opt.showtabline = 1
-opt.tabstop = 2
-opt.shiftwidth = 2
-opt.softtabstop = 2
-opt.completeopt = 'menu,menuone,noselect'
-opt.laststatus = 3
-opt.scrolloff = 100
-opt.cursorline = true
-opt.helplang = 'ja'
-opt.autowrite = true
-opt.swapfile = false
-opt.showtabline = 1
--- opt.diffopt = 'vertical,internal'
--- opt.wildcharm = ('<Tab>'):byte()
-opt.tabstop = 2
-opt.shiftwidth = 2
-opt.softtabstop = 2
-opt.clipboard:append({ fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
-opt.grepprg = 'rg --vimgrep'
-opt.grepformat = '%f:%l:%c:%m'
-opt.mouse = {}
-
--- file indent
-local filetype_indent_group = api.nvim_create_augroup('fileTypeIndent', { clear = true })
-local file_indents = {
-  {
-    pattern = 'go',
-    command = 'setlocal tabstop=4 shiftwidth=4'
   },
-  {
-    pattern = 'rust',
-    command = 'setlocal tabstop=4 softtabstop=4 shiftwidth=4 expandtab'
-  },
-  {
-    pattern = { 'javascript', 'typescriptreact', 'typescript', 'vim', 'lua', 'yaml', 'json', 'sh', 'zsh', 'markdown' },
-    command = 'setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab'
-  },
-}
-
-for _, indent in pairs(file_indents) do
-  api.nvim_create_autocmd('FileType', {
-    pattern = indent.pattern,
-    command = indent.command,
-    group = filetype_indent_group
-  })
-end
-
--- grep window
-api.nvim_create_autocmd('QuickFixCmdPost', {
-  pattern = '*grep*',
-  command = 'cwindow',
-  group = api.nvim_create_augroup('grepWindow', { clear = true }),
 })
-
--- restore cursorline
-api.nvim_create_autocmd('BufReadPost',
-  {
-    pattern = '*',
-    callback = function()
-      cmd([[
-    if line("'\"") > 0 && line("'\"") <= line("$")
-      exe "normal! g'\""
-    endif
-    ]] )
-    end,
-    group = api.nvim_create_augroup('restoreCursorline', { clear = true })
-  })
-
--- persistent undo
-local ensure_undo_dir = function()
-  local undo_path = fn.expand('~/.config/nvim/undo')
-  if fn.isdirectory(undo_path) == 0 then
-    fn.mkdir(undo_path, 'p')
-  end
-  opt.undodir = undo_path
-  opt.undofile = true
-end
-ensure_undo_dir()
-
--- start insert mode when termopen
-api.nvim_create_autocmd("TermOpen", {
-  pattern = "*",
-  callback = function()
-    cmd('startinsert')
-    cmd('setlocal scrolloff=0')
-  end,
-  group = api.nvim_create_augroup("neovimTerminal", { clear = true }),
-})
-
--- auto mkdir
-local auto_mkdir = function(dir)
-  if fn.isdirectory(dir) == 0 then
-    fn.mkdir(dir, 'p')
-  end
-end
-api.nvim_create_autocmd('BufWritePre', {
-  pattern = '*',
-  callback = function()
-    auto_mkdir(fn.expand('<afile>:p:h'))
-  end,
-  group = api.nvim_create_augroup('autoMkdir', { clear = true })
-})
-
--- create zenn article
-api.nvim_create_user_command('ZennCreateArticle',
-  function(opts)
-    local date = fn.strftime('%Y-%m-%d')
-    local slug = date .. '-' .. opts.args
-    os.execute('npx zenn new:article --emoji 🦍 --slug ' .. slug)
-    cmd('edit ' .. string.format('articles/%s.md', slug))
-  end, { nargs = 1 })
-
--- insert markdown link
-local insert_markdown_link = function()
-  local old = fn.getreg(9)
-  local link = fn.trim(fn.getreg())
-  if link:match('^http.*') == nil then
-    cmd('normal! p')
-    return
-  end
-  cmd('normal! "9y')
-  local word = fn.getreg(9)
-  local text = string.format('[%s](%s)', word, link)
-  fn.setreg(9, text)
-  cmd('normal! gv"9p')
-  fn.setreg(9, old)
-end
-
-api.nvim_create_autocmd('FileType', {
-  pattern = 'markdown',
-  callback = function()
-    map('x', 'p', function()
-      insert_markdown_link()
-    end, { silent = true, buffer = true })
-  end,
-  group = api.nvim_create_augroup("markdownInsertLink", { clear = true }),
-})
-
---- syntax clear
--- api.nvim_create_autocmd('FileType', {
---   pattern = {'go', 'vim', 'javascript', 'typescript', 'rust', 'json'},
---   callback = function ()
---     cmd('syntax clear')
---   end
--- })
-
--- key mappings
-
--- text object
-omap('8', 'i(')
-omap('2', 'i"')
-omap('7', 'i\'')
-omap('@', 'i`')
-omap('[', 'i[')
-omap('{', 'i{')
-omap('a8', 'a(')
-omap('a2', 'a"')
-omap('a7', 'a\'')
-omap('a@', 'a`')
-
-nmap('v8', 'vi(')
-nmap('v2', 'vi"')
-nmap('v7', 'vi\'')
-nmap('v@', 'vi`')
-nmap('v[', 'vi[')
-nmap('v{', 'vi{')
-nmap('va8', 'va(')
-nmap('va2', 'va"')
-nmap('va7', 'va\'')
-nmap('va@', 'va`')
-
--- emacs like
-imap('<C-k>', '<C-o>C')
-imap('<C-f>', '<Right>')
-imap('<C-b>', '<Left>')
-imap('<C-e>', '<C-o>A')
-imap('<C-a>', '<C-o>I')
-
-xmap("*",
-  table.concat {
-    -- 選択範囲を検索クエリに用いるため、m レジスタに格納。
-    -- ビジュアルモードはここで抜ける。
-    [["my]],
-    -- "m レジスタの中身を検索。
-    -- ただし必要な文字はエスケープした上で、空白に関しては伸び縮み可能とする
-    [[/\V<C-R><C-R>=substitute(escape(@m, '/\'), '\_s\+', '\\_s\\+', 'g')<CR><CR>]],
-    -- 先ほど検索した範囲にカーソルが移るように、手前に戻す
-    [[N]],
-  },
-  {}
-)
-
--- help
-api.nvim_create_autocmd("FileType", {
-  pattern = "help",
-  command = "nnoremap <buffer> <silent>q :bw!<CR>",
-  group = api.nvim_create_augroup("helpKeymaps", { clear = true }),
-})
-
--- command line
--- cmap defaults silent to true, but passes an empty setting because the cursor is not updated
-cmap('<C-b>', '<Left>', {})
-cmap('<C-f>', '<Right>', {})
-cmap('<C-a>', '<Home>', {})
-cmap('<Up>', '<C-p>')
-cmap('<Down>', '<C-n>')
-cmap('<C-n>', function()
-  return fn.pumvisible() == 1 and '<C-n>' or '<Down>'
-end, { expr = true })
-cmap('<C-p>', function()
-  return fn.pumvisible() == 1 and '<C-p>' or '<Up>'
-end, { expr = true })
-api.nvim_create_autocmd('FileType', {
-  pattern = 'qf',
-  callback = function()
-    nmap('q', '<Cmd>q<CR>', { silent = true, buffer = true })
-  end,
-  group = api.nvim_create_augroup("qfInit", { clear = true }),
-})
-
--- paste with <C-v>
-map({ 'c', 'i' }, '<C-v>', 'printf("<C-r><C-o>%s", v:register)', { expr = true })
-
--- other keymap
-nmap('<Leader>s', function()
-  cmd([[
-  luafile ~/.config/nvim/init.lua
-  PackerInstall
-  ]])
-end)
-nmap('<Leader>.', ':tabnew ~/.config/nvim/init.lua<CR>')
-nmap('Y', 'Y')
-nmap('R', 'gR')
-nmap('*', '*N')
-nmap('<Esc><Esc>', '<Cmd>nohlsearch<CR>')
-nmap('H', '^')
-nmap('L', 'g_')
-nmap('<C-j>', 'o<Esc>')
-nmap('<C-k>', 'O<Esc>')
-nmap('o', 'A<CR>')
-nmap('<C-l>', 'gt')
-nmap('<C-h>', 'gT')
-nmap('<Leader>tm', [[:new | terminal<CR>]])
-tmap('<C-]>', [[<C-\><C-n>]])
-vmap('H', '^')
-vmap('L', 'g_')
