@@ -974,6 +974,7 @@ local indent_blankline = function()
   require("indent_blankline").setup({
     space_char_blankline = " ",
   })
+  cmd([[hi IndentBlanklineChar guifg=#353535]])
 end
 
 -- ############################# lazy config section ###############################
