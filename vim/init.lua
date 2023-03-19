@@ -1178,7 +1178,13 @@ require("lazy").setup({
     'skanehira/denops-silicon.vim',
     config = silicon_config
   },
-  { 'skanehira/denops-docker.vim' },
+  {
+    'skanehira/denops-docker.vim',
+    config = function()
+      nmap('gdc', '<Cmd>new | DockerContainers<CR>', {})
+      nmap('gdi', '<Cmd>new | DockerImages<CR>', {})
+    end
+  },
   {
     'thinca/vim-quickrun',
     dependencies = {
