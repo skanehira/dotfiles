@@ -996,15 +996,23 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
   {
     'vim-skk/skkeleton',
-    config = function()
-      vim.call('skkeleton#config', {
-        globalJisyo = vim.fn.expand('~/.config/skk/SKK-JISYO.L'),
-        eggLikeNewline = true,
-        keepState = true
+    init = function()
+      api.nvim_create_autocmd('User', {
+        pattern = 'skkeleton-initialize-pre',
+        callback = function()
+          vim.call('skkeleton#config', {
+            globalJisyo = vim.fn.expand('~/.config/skk/SKK-JISYO.L'),
+            eggLikeNewline = true,
+            keepState = true
+          })
+        end,
+        group = api.nvim_create_augroup('skkelectonInitPre', { clear = true }),
       })
+    end,
+    config = function()
       imap('<C-j>', '<Plug>(skkeleton-toggle)')
       cmap('<C-j>', '<Plug>(skkeleton-toggle)')
-    end,
+    end
   },
   {
     'lambdalisue/kensaku.vim'
