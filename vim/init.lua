@@ -1014,6 +1014,15 @@ require("lazy").setup({
     end
   },
   {
+    'tyru/operator-camelize.vim',
+    dependencies = {
+      'kana/vim-operator-user'
+    },
+    config = function()
+      vmap('<Leader>c', '<plug>(operator-camelize-toggle)')
+    end
+  },
+  {
     'vim-skk/skkeleton',
     init = function()
       api.nvim_create_autocmd('User', {
