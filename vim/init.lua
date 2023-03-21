@@ -130,7 +130,7 @@ api.nvim_create_autocmd('BufReadPost',
     if line("'\"") > 0 && line("'\"") <= line("$")
       exe "normal! g'\""
     endif
-    ]] )
+    ]])
     end,
     group = api.nvim_create_augroup('restoreCursorline', { clear = true })
   })
@@ -329,15 +329,18 @@ local nvim_cmp_config = function()
     sources = {
       { name = 'nvim_lsp' },
       { name = 'vsnip' },
-      { name = 'buffer', option = {
-        get_bufnrs = function()
-          local bufs = {}
-          for _, win in ipairs(api.nvim_list_wins()) do
-            bufs[api.nvim_win_get_buf(win)] = true
+      {
+        name = 'buffer',
+        option = {
+          get_bufnrs = function()
+            local bufs = {}
+            for _, win in ipairs(api.nvim_list_wins()) do
+              bufs[api.nvim_win_get_buf(win)] = true
+            end
+            return vim.tbl_keys(bufs)
           end
-          return vim.tbl_keys(bufs)
-        end
-      } },
+        }
+      },
       { name = 'path' },
     },
     view = {
@@ -373,7 +376,8 @@ Lsp_on_attach = function(client, bufnr)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
 
   -- auto format when save the file
-  local organize_import = function() end
+  local organize_import = function()
+  end
   local actions = vim.tbl_get(client.server_capabilities, 'codeActionProvider', "codeActionKinds")
   if actions ~= nil and vim.tbl_contains(actions, "source.organizeImports") then
     organize_import = function()
@@ -495,12 +499,12 @@ local gina_config = function()
     { map = 'nmap', buffer = 'status', lhs = 'dp', rhs = '<Plug>(gina-patch-oneside-tab)' },
     { map = 'nmap', buffer = 'status', lhs = 'ga', rhs = '--' },
     { map = 'vmap', buffer = 'status', lhs = 'ga', rhs = '--' },
-    { map = 'nmap', buffer = 'log', lhs = 'dd', rhs = '<Plug>(gina-changes-of)' },
-    { map = 'nmap', buffer = 'branch', lhs = 'n', rhs = '<Plug>(gina-branch-new)' },
-    { map = 'nmap', buffer = 'branch', lhs = 'D', rhs = '<Plug>(gina-branch-delete)' },
-    { map = 'nmap', buffer = 'branch', lhs = 'p', rhs = '<Cmd>terminal gh pr create<CR>' },
-    { map = 'nmap', buffer = 'branch', lhs = 'P', rhs = '<Cmd>terminal gh pr create<CR>' },
-    { map = 'nmap', buffer = '/.*', lhs = 'q', rhs = '<Cmd>bw<CR>' },
+    { map = 'nmap', buffer = 'log',    lhs = 'dd', rhs = '<Plug>(gina-changes-of)' },
+    { map = 'nmap', buffer = 'branch', lhs = 'n',  rhs = '<Plug>(gina-branch-new)' },
+    { map = 'nmap', buffer = 'branch', lhs = 'D',  rhs = '<Plug>(gina-branch-delete)' },
+    { map = 'nmap', buffer = 'branch', lhs = 'p',  rhs = '<Cmd>terminal gh pr create<CR>' },
+    { map = 'nmap', buffer = 'branch', lhs = 'P',  rhs = '<Cmd>terminal gh pr create<CR>' },
+    { map = 'nmap', buffer = '/.*',    lhs = 'q',  rhs = '<Cmd>bw<CR>' },
   }
   for _, m in pairs(gina_keymaps) do
     fn['gina#custom#mapping#' .. m.map](m.buffer, m.lhs, m.rhs, { silent = true })
@@ -700,8 +704,8 @@ end
 -- lsp hover config
 vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
   vim.lsp.handlers.hover, {
-  border = "single"
-})
+    border = "single"
+  })
 
 -- twihi.vim config
 local twihi_config = function()
@@ -799,12 +803,12 @@ local k8s_config = function()
   end
 
   local k8s_keymaps = {
-    { ft = 'k8s-pods', fn = k8s_pods_keymap },
-    { ft = 'k8s-nodes', fn = k8s_nodes_keymap },
-    { ft = 'k8s-containers', fn = k8s_containers_keymap },
+    { ft = 'k8s-pods',        fn = k8s_pods_keymap },
+    { ft = 'k8s-nodes',       fn = k8s_nodes_keymap },
+    { ft = 'k8s-containers',  fn = k8s_containers_keymap },
     { ft = 'k8s-deployments', fn = k8s_deployments_keymap },
-    { ft = 'k8s-services', fn = k8s_services_keymap },
-    { ft = 'k8s-secrets', fn = k8s_secrets_keymap },
+    { ft = 'k8s-services',    fn = k8s_services_keymap },
+    { ft = 'k8s-secrets',     fn = k8s_secrets_keymap },
   }
 
   local k8s_keymap_group = api.nvim_create_augroup("k8sInit", { clear = true })
@@ -1250,9 +1254,9 @@ require("lazy").setup({
   },
   -- for documentation
   { 'glidenote/memolist.vim', cmd = { 'MemoList', 'MemoNew' } },
-  { 'godlygeek/tabular', event = 'BufRead' },
+  { 'godlygeek/tabular',      event = 'BufRead' },
   -- { 'gyim/vim-boxdraw' }
-  { 'mattn/vim-maketable', event = 'BufRead' },
+  { 'mattn/vim-maketable',    event = 'BufRead' },
   -- { 'shinespark/vim-list2tree' }
   {
     'skanehira/gyazo.vim',
@@ -1264,15 +1268,15 @@ require("lazy").setup({
     config = translate_config
   },
   { 'vim-jp/vimdoc-ja' },
-  { 'plasticboy/vim-markdown', ft = 'markdown' },
-  { 'previm/previm', ft = 'markdown' },
+  { 'plasticboy/vim-markdown',   ft = 'markdown' },
+  { 'previm/previm',             ft = 'markdown' },
 
   -- for develop vim plugins
   { 'LeafCage/vimhelpgenerator', ft = 'vim' },
-  { 'lambdalisue/vital-Whisky', ft = 'vim' },
+  { 'lambdalisue/vital-Whisky',  ft = 'vim' },
   { 'tweekmonster/helpful.vim' },
   { 'vim-jp/vital.vim' },
-  { 'thinca/vim-themis', ft = 'vim' },
+  { 'thinca/vim-themis',         ft = 'vim' },
   { 'tyru/capture.vim' },
 
   -- other
