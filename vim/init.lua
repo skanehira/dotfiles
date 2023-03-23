@@ -101,8 +101,9 @@ local file_indents = {
     command = 'setlocal tabstop=4 softtabstop=4 shiftwidth=4 expandtab'
   },
   {
-    pattern = { 'javascript', 'typescriptreact', 'typescript', 'vim', 'lua', 'yaml', 'json', 'sh', 'zsh', 'markdown' },
-    command = 'setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab'
+    pattern = { 'javascript', 'typescriptreact', 'typescript', 'vim', 'lua', 'yaml', 'json', 'sh', 'zsh', 'markdown',
+      'wast' },
+    command = 'setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab smartindent autoindent'
   },
 }
 
@@ -325,7 +326,14 @@ local nvim_cmp_config = function()
       ["<C-n>"] = cmp.mapping.select_next_item(),
       ['<Tab>'] = cmp.mapping.complete(),
       ['<CR>'] = cmp.mapping.confirm({ select = true }),
+      ['<C-l>'] = cmp.mapping(function(_)
+        vim.api.nvim_feedkeys(vim.fn['copilot#Accept'](vim.api.nvim_replace_termcodes('<Tab>', true, true, true)), 'n',
+          true)
+      end)
     }),
+    experimental = {
+      ghost_text = false -- this feature conflict with copilot.vim's preview.
+    },
     sources = {
       { name = 'nvim_lsp' },
       { name = 'vsnip' },
@@ -998,6 +1006,13 @@ vim.opt.rtp:prepend(lazypath)
 
 -- lazy settings
 require("lazy").setup({
+  {
+    'github/copilot.vim',
+    config = function()
+      g['copilot_no_tab_map'] = 1
+      imap('<Plug>(vimrc:copilot-dummy-map)', 'copilot#Accept("\\<Tab>")', { expr = true })
+    end
+  },
   {
     'vim-skk/skkeleton',
     init = function()
