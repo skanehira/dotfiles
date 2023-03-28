@@ -667,6 +667,17 @@ local lsp_config = function()
             },
           },
         }
+      elseif ls == 'yamlls' then
+        opts = {
+          settings = {
+            yaml = {
+              schemas = {
+                ['https://json.schemastore.org/github-workflow.json'] = "/.github/workflows/*",
+                ['https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json'] = "*compose.y*ml"
+              }
+            }
+          }
+        }
       end
 
       opts['on_attach'] = Lsp_on_attach
