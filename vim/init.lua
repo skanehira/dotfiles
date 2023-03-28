@@ -1019,6 +1019,7 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
   {
     'github/copilot.vim',
+    event = { 'BufRead', 'BufNewFile' },
     config = function()
       g['copilot_no_tab_map'] = 1
       imap('<Plug>(vimrc:copilot-dummy-map)', 'copilot#Accept("\\<Tab>")', { expr = true })
@@ -1101,14 +1102,14 @@ require("lazy").setup({
   },
   {
     'ray-x/lsp_signature.nvim',
-    event = 'BufRead',
+    event = { 'BufRead', 'BufNewFile' },
     config = function()
       require('lsp_signature').setup({})
     end
   },
   {
     'lewis6991/gitsigns.nvim',
-    event = 'BufRead',
+    event = { 'BufRead', 'BufNewFile' },
     config = gitsigns_config
   },
   {
@@ -1206,7 +1207,7 @@ require("lazy").setup({
   },
   {
     'mattn/emmet-vim',
-    event = 'BufRead',
+    event = { 'BufRead', 'BufNewFile' },
     config = emmet_config
   },
   {
@@ -1289,9 +1290,9 @@ require("lazy").setup({
   },
   -- for documentation
   { 'glidenote/memolist.vim', cmd = { 'MemoList', 'MemoNew' } },
-  { 'godlygeek/tabular',      event = 'BufRead' },
+  { 'godlygeek/tabular',      event = { 'BufRead', 'BufNewFile' } },
   -- { 'gyim/vim-boxdraw' }
-  { 'mattn/vim-maketable',    event = 'BufRead' },
+  { 'mattn/vim-maketable',    event = { 'BufRead', 'BufNewFile' } },
   -- { 'shinespark/vim-list2tree' }
   {
     'skanehira/gyazo.vim',
