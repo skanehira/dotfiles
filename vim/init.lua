@@ -326,7 +326,7 @@ local nvim_cmp_config = function()
       ["<C-n>"] = cmp.mapping.select_next_item(),
       ['<Tab>'] = cmp.mapping.complete(),
       ['<CR>'] = cmp.mapping.confirm({ select = true }),
-      ['<C-l>'] = cmp.mapping(function(_)
+      ['<C-g>'] = cmp.mapping(function(_)
         vim.api.nvim_feedkeys(vim.fn['copilot#Accept'](vim.api.nvim_replace_termcodes('<Tab>', true, true, true)), 'n',
           true)
       end)
