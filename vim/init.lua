@@ -1065,7 +1065,7 @@ require("lazy").setup({
   },
   {
     'thinca/vim-qfreplace',
-    event = { 'QuickFixCmdPre' }
+    event = { 'BufNewFile', 'BufRead' }
   },
   {
     'dhruvasagar/vim-zoom',
