@@ -439,6 +439,9 @@ local rust_tools_config = function()
       standalone = true,
       settings = {
         ['rust-analyzer'] = {
+          check = {
+            command = 'clippy'
+          },
           -- files = {
           --   excludeDirs = { '/root/path/to/dir' },
           -- },
@@ -845,9 +848,9 @@ end
 g['silicon_options'] = {
   font = 'Cica',
   no_line_number = true,
-  background_color = '#434C5E',
+  -- background_color = '#434C5E',
   no_window_controls = true,
-  theme = 'Nord',
+  theme = 'GitHub',
 }
 local silicon_config = function()
   nmap('gi', '<Plug>(silicon-generate)')
