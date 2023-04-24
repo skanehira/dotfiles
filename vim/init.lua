@@ -382,6 +382,7 @@ Lsp_on_attach = function(client, bufnr)
   end
   map({ 'n', 'x' }, 'ma', vim.lsp.buf.code_action, bufopts)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
+  nmap('<Leader>s', vim.lsp.buf.document_symbol, bufopts)
 
   -- auto format when save the file
   local organize_import = function()
@@ -608,6 +609,7 @@ local lsp_config = function()
     'yamlls',
     'jsonls',
     'vimls',
+    'marksman',
   }
 
   local node_root_dir = lspconfig.util.root_pattern("package.json")
@@ -780,13 +782,13 @@ local k8s_config = function()
     nmap('<CR>', '<Plug>(k8s:pods:containers)', { buffer = true })
     nmap('<C-g><C-l>', '<Plug>(k8s:pods:logs)', { buffer = true })
     nmap('<C-g><C-d>', '<Plug>(k8s:pods:describe)', { buffer = true })
-    nmap('D', '<Plug>(k8s:pods:delete)', { buffer = true })
-    nmap('K', '<Plug>(k8s:pods:kill)', { buffer = true })
-    nmap('<C-g><C-y>', '<Plug>(k8s:pods:yaml)', { buffer = true })
+    -- nmap('D', '<Plug>(k8s:pods:delete)', { buffer = true })
+    -- nmap('K', '<Plug>(k8s:pods:kill)', { buffer = true })
+    -- nmap('<C-g><C-y>', '<Plug>(k8s:pods:yaml)', { buffer = true })
     nmap('<C-e>', '<Plug>(k8s:pods:events)', { buffer = true })
     nmap('s', '<Plug>(k8s:pods:shell)', { buffer = true })
     nmap('e', '<Plug>(k8s:pods:exec)', { buffer = true })
-    nmap('E', '<Plug>(k8s:pods:edit)', { buffer = true })
+    -- nmap('E', '<Plug>(k8s:pods:edit)', { buffer = true })
   end
 
   local k8s_nodes_keymap = function()
