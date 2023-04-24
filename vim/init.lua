@@ -382,7 +382,6 @@ Lsp_on_attach = function(client, bufnr)
   end
   map({ 'n', 'x' }, 'ma', vim.lsp.buf.code_action, bufopts)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
-  nmap('<Leader>s', vim.lsp.buf.document_symbol, bufopts)
 
   -- auto format when save the file
   local organize_import = function()
@@ -1269,7 +1268,6 @@ require("lazy").setup({
   },
   {
     'nvim-telescope/telescope.nvim',
-    -- module = { "telescope" },
     dependencies = {
       { 'nvim-lua/plenary.nvim' },
       { 'nvim-telescope/telescope-ui-select.nvim' },
@@ -1290,6 +1288,7 @@ require("lazy").setup({
       nmap('mh', builtin 'help_tags' { lang = 'ja' })
       nmap('mo', builtin 'oldfiles' {})
       nmap('ms', builtin 'git_status' {})
+      nmap('<Leader>s', builtin 'lsp_document_symbols' {})
     end,
     config = telescope_config,
   },
