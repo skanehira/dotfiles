@@ -1033,7 +1033,19 @@ require("lazy").setup({
         sources = {
           null_ls.builtins.formatting.prettier,
           null_ls.builtins.diagnostics.actionlint,
-          null_ls.builtins.diagnostics.eslint,
+          null_ls.builtins.diagnostics.textlint.with {
+            prefer_local = 'node_modules/.bin',
+            condition = function(utils)
+              return utils.root_has_file {
+                '.textlintrc',
+                '.textlintrc.js',
+                '.textlintrc.json',
+                '.textlintrc.yml',
+                '.textlintrc.yaml',
+              }
+            end,
+          },
+          -- null_ls.builtins.diagnostics.eslint,
         }
       })
     end
