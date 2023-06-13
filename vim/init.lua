@@ -58,6 +58,7 @@ cmd('syntax enable')
 cmd('filetype plugin indent on')
 
 g.mapleader = " "
+g["markdown_recommended_style"] = 0
 opt.breakindent = true
 opt.number = false
 opt.incsearch = true
