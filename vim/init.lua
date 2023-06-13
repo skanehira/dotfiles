@@ -375,6 +375,14 @@ Lsp_on_attach = function(client, bufnr)
   nmap('<Leader>rn', vim.lsp.buf.rename, bufopts)
   nmap(']d', vim.diagnostic.goto_next, bufopts)
   nmap('[d', vim.diagnostic.goto_prev, bufopts)
+  nmap('gO', function()
+    vim.lsp.buf_request(0, 'experimental/externalDocs', vim.lsp.util.make_position_params(),
+      function(_, url)
+        if url then
+          fn.jobstart({ 'open', url })
+        end
+      end)
+  end, bufopts)
   nmap('<C-g><C-d>', vim.diagnostic.open_float, bufopts)
   if client.name == 'denols' then
     nmap('<C-]>', vim.lsp.buf.definition, bufopts)
@@ -414,57 +422,6 @@ Lsp_on_attach = function(client, bufnr)
   --     buffer = bufnr,
   --   })
   -- end
-end
-
--- rust-tools.nvim
-local rust_tools_config = function()
-  local rt = require("rust-tools")
-  rt.setup({
-    server = {
-      on_attach = function(client, bufnr)
-        local bufopts = { silent = true, buffer = bufnr }
-        Lsp_on_attach(client, bufnr)
-        nmap('K', rt.hover_actions.hover_actions, bufopts)
-        nmap('<Leader>gl', rt.code_action_group.code_action_group, bufopts)
-        nmap('gO', function()
-          vim.lsp.buf_request(0, 'experimental/externalDocs', vim.lsp.util.make_position_params(),
-            function(err, url)
-              if err then
-                error(tostring(err))
-              else
-                fn.jobstart({ 'open', url })
-              end
-            end)
-        end, bufopts)
-      end,
-      standalone = true,
-      settings = {
-        ['rust-analyzer'] = {
-          check = {
-            command = 'clippy'
-          },
-          -- files = {
-          --   excludeDirs = { '/root/path/to/dir' },
-          -- },
-        }
-      }
-    },
-    tools = {
-      hover_actions = {
-        border = {
-          { '╭', 'NormalFloat' },
-          { '─', 'NormalFloat' },
-          { '╮', 'NormalFloat' },
-          { '│', 'NormalFloat' },
-          { '╯', 'NormalFloat' },
-          { '─', 'NormalFloat' },
-          { '╰', 'NormalFloat' },
-          { '│', 'NormalFloat' },
-        },
-        -- auto_focus = true,
-      },
-    },
-  })
 end
 
 -- color scheme config
@@ -617,11 +574,6 @@ local lsp_config = function()
 
   for _, ls in pairs(lss) do
     (function()
-      -- use rust-tools.nvim to setup
-      if ls == 'rust_analyzer' then
-        return
-      end
-
       local opts = {}
 
       if ls == 'denols' then
@@ -679,6 +631,21 @@ local lsp_config = function()
               schemas = {
                 ['https://json.schemastore.org/github-workflow.json'] = "/.github/workflows/*",
                 ['https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json'] = "*compose.y*ml"
+              }
+            }
+          }
+        }
+      elseif ls == "rust_analyzer" then
+        opts = {
+          settings = {
+            ["rust-analyzer"] = {
+              check = {
+                command = "clippy"
+              },
+              diagnostics = {
+                experimental = {
+                  enable = true,
+                }
               }
             }
           }
@@ -1057,7 +1024,18 @@ require("lazy").setup({
               }
             end,
           },
-          -- null_ls.builtins.diagnostics.eslint,
+          -- null_ls.builtins.diagnostics.eslint.with {
+          --   prefer_local = 'node_modules/.bin',
+          --   condition = function(utils)
+          --     return utils.root_has_file {
+          --       '.eslintrc.js',
+          --       '.eslintrc.cjs',
+          --       '.eslintrc.yaml',
+          --       '.eslintrc.yml',
+          --       '.eslintrc.json',
+          --     }
+          --   end,
+          -- },
         }
       })
     end
@@ -1178,14 +1156,6 @@ require("lazy").setup({
     event = { 'QuickFixCmdPre' }
   },
   {
-    'simrat39/rust-tools.nvim',
-    ft = { 'rust' },
-    config = rust_tools_config,
-    dependencies = {
-      { 'neovim/nvim-lspconfig' },
-    },
-  },
-  {
     'williamboman/mason-lspconfig.nvim',
     event = { 'BufReadPre', 'BufNewFile' },
     dependencies = {
@@ -1199,6 +1169,7 @@ require("lazy").setup({
   },
   {
     'j-hui/fidget.nvim',
+    tag = "legacy",
     config = function() require('fidget').setup() end,
   },
   {
@@ -1266,10 +1237,10 @@ require("lazy").setup({
     },
   },
   { 'vim-denops/denops.vim' },
-  {
-    'skanehira/denops-silicon.vim',
-    config = silicon_config
-  },
+  -- {
+  --   'skanehira/denops-silicon.vim',
+  --   config = silicon_config
+  -- },
   {
     'skanehira/denops-docker.vim',
     config = function()
@@ -1360,8 +1331,8 @@ require("lazy").setup({
   { 'tyru/capture.vim' },
 
   -- other
-  {
-    'skanehira/denops-twihi.vim',
-    config = twihi_config,
-  },
+  -- {
+  --   'skanehira/denops-twihi.vim',
+  --   config = twihi_config,
+  -- },
 })
