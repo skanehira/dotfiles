@@ -82,9 +82,6 @@ opt.swapfile = false
 opt.showtabline = 1
 -- opt.diffopt = 'vertical,internal'
 -- opt.wildcharm = ('<Tab>'):byte()
-opt.tabstop = 2
-opt.shiftwidth = 2
-opt.softtabstop = 2
 opt.clipboard:append({ fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
 opt.grepprg = 'rg --vimgrep'
 opt.grepformat = '%f:%l:%c:%m'
