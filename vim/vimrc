@@ -97,6 +97,7 @@ if dein#load_state(s:dein_dir)
   call dein#add('lambdalisue/file-protocol.vim')
   call dein#add('skanehira/k8s.vim')
   call dein#add('skanehira/winselector.vim')
+  call dein#add('thinca/vim-qfreplace')
 
   " for documentation
   call dein#add('glidenote/memolist.vim')
@@ -519,6 +520,7 @@ call coc#config('go.goplsOptions', {
 
 " rust-analyzer configuration
 call coc#config('rust-analyzer.diagnostics.experimental.enable', v:true)
+call coc#config('rust-analyzer.inlayHints.typeHints.enable', v:false)
 nnoremap ]f <Cmd>LspFormat<CR>
 nnoremap ma <Plug>(coc-codeaction-cursor)
 " }}}
