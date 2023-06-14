@@ -999,12 +999,16 @@ require("lazy").setup({
           null_ls.builtins.formatting.prettier.with {
             prefer_local = 'node_modules/.bin',
             condition = function(utils)
+              -- https://prettier.io/docs/en/configuration.html
               return utils.root_has_file {
-                '.textlintrc',
-                '.textlintrc.js',
-                '.textlintrc.json',
-                '.textlintrc.yml',
-                '.textlintrc.yaml',
+                '.prettierrc',
+                '.prettierrc.js',
+                '.prettierrc.cjs',
+                '.prettierrc.json',
+                '.prettierrc.yml',
+                '.prettierrc.yaml',
+                'prettier.config.js',
+                'prettier.config.cjs',
               }
             end,
           },
