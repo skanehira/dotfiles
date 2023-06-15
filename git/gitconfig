@@ -1,0 +1,45 @@
+[user]
+	name = skanehira
+	email = sho19921005@gmail.com
+
+#[core]
+#	pager = delta
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	features = side-by-side line-numbers decorations
+	whitespace-error-style = 22 reverse
+
+[delta "decorations"]
+	commit-decoration-style = bold yellow box ul
+	file-style = bold yellow ul
+	file-decoration-style = none
+
+[filter "lfs"]
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+	clean = git-lfs clean -- %f
+
+[commit]
+	verbose = true
+
+[status]
+	showUntrackedFiles = all
+
+[pull]
+	rebase = true
+
+[push]
+  default = current
+
+[rebase]
+  autostash = true
+
+[init]
+	defaultBranch = main
+
+[alias]
+	c = "!checkout() { git branch --all | fzf | tr -d '[:space:]' | xargs git checkout; }; checkout"
