@@ -1025,18 +1025,6 @@ require("lazy").setup({
               }
             end,
           },
-          -- null_ls.builtins.diagnostics.eslint.with {
-          --   prefer_local = 'node_modules/.bin',
-          --   condition = function(utils)
-          --     return utils.root_has_file {
-          --       '.eslintrc.js',
-          --       '.eslintrc.cjs',
-          --       '.eslintrc.yaml',
-          --       '.eslintrc.yml',
-          --       '.eslintrc.json',
-          --     }
-          --   end,
-          -- },
         }
       })
     end
