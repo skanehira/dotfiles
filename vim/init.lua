@@ -1288,6 +1288,7 @@ require("lazy").setup({
       nmap('mh', builtin 'help_tags' { lang = 'ja' })
       nmap('mo', builtin 'oldfiles' {})
       nmap('ms', builtin 'git_status' {})
+      nmap('mc', builtin 'commands' {})
       nmap('<Leader>s', builtin 'lsp_document_symbols' {})
     end,
     config = telescope_config,
