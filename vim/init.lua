@@ -348,6 +348,7 @@ local nvim_cmp_config = function()
         }
       },
       { name = 'path' },
+      { name = "crates" },
     },
     view = {
       entries = 'native'
@@ -1333,6 +1334,20 @@ require("lazy").setup({
       vmap("g<C-x>", dial.dec_gvisual())
     end
   },
+  {
+    'Saecki/crates.nvim',
+    dependencies = {
+      { 'nvim-lua/plenary.nvim' },
+    },
+    config = function()
+      require('crates').setup({
+        null_ls = {
+          enabled = true,
+          name = "crates.nvim",
+        },
+      })
+    end
+  }
 
   -- other
   -- {
