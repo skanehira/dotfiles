@@ -952,7 +952,7 @@ local treesitter_config = function()
       'lua', 'rust', 'typescript', 'tsx',
       'go', 'gomod', 'sql', 'toml', 'yaml',
       'html', 'javascript', 'graphql',
-      'markdown', 'markdown_inline', 'help',
+      'markdown', 'markdown_inline',
     },
     auto_install = true,
     highlight = {
@@ -997,35 +997,9 @@ require("lazy").setup({
       local null_ls = require('null-ls')
       null_ls.setup({
         sources = {
-          null_ls.builtins.formatting.prettier.with {
-            prefer_local = 'node_modules/.bin',
-            condition = function(utils)
-              -- https://prettier.io/docs/en/configuration.html
-              return utils.root_has_file {
-                '.prettierrc',
-                '.prettierrc.js',
-                '.prettierrc.cjs',
-                '.prettierrc.json',
-                '.prettierrc.yml',
-                '.prettierrc.yaml',
-                'prettier.config.js',
-                'prettier.config.cjs',
-              }
-            end,
-          },
+          null_ls.builtins.formatting.prettier,
           null_ls.builtins.diagnostics.actionlint,
-          null_ls.builtins.diagnostics.textlint.with {
-            prefer_local = 'node_modules/.bin',
-            condition = function(utils)
-              return utils.root_has_file {
-                '.textlintrc',
-                '.textlintrc.js',
-                '.textlintrc.json',
-                '.textlintrc.yml',
-                '.textlintrc.yaml',
-              }
-            end,
-          },
+          null_ls.builtins.diagnostics.textlint,
         }
       })
     end
