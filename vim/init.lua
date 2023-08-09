@@ -516,7 +516,7 @@ local fern_config = function()
   g['fern#renderer'] = 'nerdfont'
   g['fern#window_selector_use_popup'] = true
   g['fern#default_hidden'] = 1
-  g['fern#default_exclude'] = '.git$'
+  g['fern#default_exclude'] = '\\.git\\|\\.DS_Store'
 
   api.nvim_create_autocmd('FileType', {
     pattern = 'fern',
