@@ -86,6 +86,8 @@ opt.clipboard:append({ fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
 opt.grepprg = 'rg --vimgrep'
 opt.grepformat = '%f:%l:%c:%m'
 opt.mouse = {}
+opt.foldmethod = 'expr'
+opt.foldexpr= 'nvim_treesitter#foldexpr()'
 
 -- file indent
 local filetype_indent_group = api.nvim_create_augroup('fileTypeIndent', { clear = true })
