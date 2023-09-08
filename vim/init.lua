@@ -518,7 +518,7 @@ local fern_config = function()
   g['fern#renderer'] = 'nerdfont'
   g['fern#window_selector_use_popup'] = true
   g['fern#default_hidden'] = 1
-  g['fern#default_exclude'] = '\\.git\\|\\.DS_Store'
+  g['fern#default_exclude'] = '\\.git$\\|\\.DS_Store'
 
   api.nvim_create_autocmd('FileType', {
     pattern = 'fern',
@@ -534,7 +534,7 @@ end
 
 -- lsp config
 local lsp_config = function()
-  local signs = { Error = " ", Warn = " ", Hint = " ", Info = " " }
+  local signs = { Error = " ", Warn = " ", Hint = "💡", Info = " " }
   for type, icon in pairs(signs) do
     local hl = "DiagnosticSign" .. type
     vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
@@ -1239,10 +1239,10 @@ require("lazy").setup({
     },
   },
   { 'vim-denops/denops.vim' },
-  -- {
-  --   'skanehira/denops-silicon.vim',
-  --   config = silicon_config
-  -- },
+  {
+    'skanehira/denops-silicon.vim',
+    config = silicon_config
+  },
   {
     'skanehira/denops-docker.vim',
     config = function()
@@ -1360,10 +1360,4 @@ require("lazy").setup({
       })
     end
   }
-
-  -- other
-  -- {
-  --   'skanehira/denops-twihi.vim',
-  --   config = twihi_config,
-  -- },
 })
