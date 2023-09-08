@@ -36,6 +36,7 @@ for i = 1, 9 do
 end
 
 local config = {
+  audible_bell = "Disabled",
   color_scheme = "iceberg-dark",
   font = wezterm.font("Cica"),
   macos_forward_to_ime_modifier_mask = "SHIFT|CTRL",
