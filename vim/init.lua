@@ -567,6 +567,7 @@ local lsp_config = function()
     'jsonls',
     'vimls',
     'marksman',
+    'taplo',
   }
 
   local node_root_dir = lspconfig.util.root_pattern("package.json")
