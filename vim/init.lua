@@ -568,6 +568,9 @@ local lsp_config = function()
     'vimls',
     'marksman',
     'taplo',
+    -- need manual nistall 
+    -- https://github.com/kitagry/regols
+    'regols'
   }
 
   local node_root_dir = lspconfig.util.root_pattern("package.json")
@@ -606,6 +609,12 @@ local lsp_config = function()
 
         opts = {
           root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
+        }
+      elseif ls == 'regols' then
+        opts = {
+          cmd = { 'regols' },
+          filetypes = { 'rego' },
+          root_dir = lspconfig.util.root_pattern('.git')
         }
       elseif ls == 'lua_ls' then
         opts = {
