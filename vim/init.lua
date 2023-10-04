@@ -1221,8 +1221,8 @@ require("lazy").setup({
       'lambdalisue/fern.vim',
       'lambdalisue/nerdfont.vim',
     },
-    config = function ()
-      g['fern#renderer']  = 'nerdfont'
+    config = function()
+      g['fern#renderer'] = 'nerdfont'
     end
   },
   {
