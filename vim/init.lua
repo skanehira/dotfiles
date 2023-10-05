@@ -87,7 +87,7 @@ opt.grepprg = 'rg --vimgrep'
 opt.grepformat = '%f:%l:%c:%m'
 opt.mouse = {}
 opt.foldmethod = 'expr'
-opt.foldexpr= 'nvim_treesitter#foldexpr()'
+opt.foldexpr = 'nvim_treesitter#foldexpr()'
 
 -- file indent
 local filetype_indent_group = api.nvim_create_augroup('fileTypeIndent', { clear = true })
@@ -568,7 +568,7 @@ local lsp_config = function()
     'vimls',
     'marksman',
     'taplo',
-    -- need manual nistall 
+    -- need manual install
     -- https://github.com/kitagry/regols
     'regols'
   }
@@ -1304,8 +1304,12 @@ require("lazy").setup({
         end
       end
 
+      local function egrepify()
+        require('telescope').extensions.egrepify.egrepify({})
+      end
+
       nmap('<C-p>', builtin 'find_files' {})
-      nmap('mg', builtin 'live_grep' {})
+      nmap('mg', egrepify)
       nmap('md', builtin 'diagnostics' {})
       nmap('mf', builtin 'current_buffer_fuzzy_find' {})
       nmap('mh', builtin 'help_tags' { lang = 'ja' })
@@ -1379,6 +1383,16 @@ require("lazy").setup({
     },
     config = function()
       require('octo').setup()
+    end
+  },
+  {
+    "fdschmidt93/telescope-egrepify.nvim",
+    dependencies = {
+      "nvim-telescope/telescope.nvim",
+      "nvim-lua/plenary.nvim"
+    },
+    config = function()
+      require("telescope").load_extension("ui-select")
     end
   }
 })
