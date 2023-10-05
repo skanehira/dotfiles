@@ -976,9 +976,11 @@ end
 
 -- indent_blankline config
 local indent_blankline = function()
-  require("indent_blankline").setup({
-    space_char_blankline = " ",
-  })
+  require('ibl').setup {
+    indent = {
+      tab_char = '>'
+    },
+  }
   cmd([[hi IndentBlanklineChar guifg=#353535]])
 end
 
