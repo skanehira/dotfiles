@@ -1308,15 +1308,15 @@ require("lazy").setup({
         require('telescope').extensions.egrepify.egrepify({})
       end
 
-      nmap('<C-p>', builtin 'find_files' {})
+      nmap('<C-p>', builtin('find_files')())
       nmap('mg', egrepify)
-      nmap('md', builtin 'diagnostics' {})
-      nmap('mf', builtin 'current_buffer_fuzzy_find' {})
-      nmap('mh', builtin 'help_tags' { lang = 'ja' })
-      nmap('mo', builtin 'oldfiles' {})
-      nmap('ms', builtin 'git_status' {})
-      nmap('mc', builtin 'commands' {})
-      nmap('<Leader>s', builtin 'lsp_document_symbols' {})
+      nmap('md', builtin('diagnostics')())
+      nmap('mf', builtin('current_buffer_fuzzy_find')())
+      nmap('mh', builtin('help_tags')({ lang = 'ja' }))
+      nmap('mo', builtin('oldfiles')())
+      nmap('ms', builtin('git_status')())
+      nmap('mc', builtin('commands')())
+      nmap('<Leader>s', builtin('lsp_document_symbols')())
     end,
     config = telescope_config,
   },
