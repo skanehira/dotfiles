@@ -101,8 +101,21 @@ local file_indents = {
     command = 'setlocal tabstop=4 softtabstop=4 shiftwidth=4 expandtab'
   },
   {
-    pattern = { 'javascript', 'typescriptreact', 'typescript', 'vim', 'lua', 'yaml', 'json', 'sh', 'zsh', 'markdown',
-      'wast' },
+    pattern = {
+      'javascript',
+      'typescriptreact',
+      'typescript',
+      'vim',
+      'lua',
+      'yaml',
+      'json',
+      'sh',
+      'zsh',
+      'markdown',
+      'wast',
+      'graphql',
+    },
+
     command = 'setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab smartindent autoindent'
   },
 }
