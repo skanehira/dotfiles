@@ -1119,18 +1119,6 @@ require("lazy").setup({
     'mattn/vim-goimports',
     ft = 'go',
   },
-  -- {
-  --   'skanehira/pinwin.vim'
-  -- },
-  {
-    'skanehira/denops-gh.vim'
-  },
-  -- {
-  --   '4513ECHO/denops-gitter.vim',
-  --   config = function()
-  --     g['gitter#token'] = fn.trim(fn.readfile(fn.expand('~/.config/denops_gitter/token'))[1])
-  --   end
-  -- },
   -- { 'https://git.sr.ht/~whynothugo/lsp_lines.nvim',
   --   config = function()
   --     vim.diagnostic.config({ virtual_text = false })
