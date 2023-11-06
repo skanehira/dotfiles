@@ -922,7 +922,7 @@ end
 
 -- vim-sonictemplate.vim
 local sonictemplate_config = function()
-  imap('<C-l>', '<plug>(sonictemplate-postfix)')
+  imap('<C-g><C-l>', '<plug>(sonictemplate-postfix)')
   g['sonictemplate_author'] = 'skanehira'
   g['sonictemplate_license'] = 'MIT'
   g['sonictemplate_vim_template_dir'] = fn.expand('~/.vim/sonictemplate')
