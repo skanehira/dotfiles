@@ -583,7 +583,8 @@ local lsp_config = function()
     'taplo',
     -- need manual install
     -- https://github.com/kitagry/regols
-    'regols'
+    'regols',
+    'clangd',
   }
 
   local node_root_dir = lspconfig.util.root_pattern("package.json")
