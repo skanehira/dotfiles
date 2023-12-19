@@ -80,7 +80,7 @@ opt.helplang = 'ja'
 opt.autowrite = true
 opt.swapfile = false
 opt.showtabline = 1
--- opt.diffopt = 'vertical,internal'
+opt.diffopt = 'vertical,internal'
 -- opt.wildcharm = ('<Tab>'):byte()
 opt.clipboard:append({ fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
 opt.grepprg = 'rg --vimgrep'
