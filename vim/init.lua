@@ -479,6 +479,7 @@ local gina_config = function()
     { map = 'nmap', buffer = 'status', lhs = 'cm', rhs = '<Cmd>Gina commit<CR>' },
     { map = 'nmap', buffer = 'status', lhs = 'ca', rhs = '<Cmd>Gina commit --amend<CR>' },
     { map = 'nmap', buffer = 'status', lhs = 'dp', rhs = '<Plug>(gina-patch-oneside-tab)' },
+    { map = 'nmap', buffer = 'status', lhs = 'gc', rhs = '<Plug>(gina-chaperon)' },
     { map = 'nmap', buffer = 'status', lhs = 'ga', rhs = '--' },
     { map = 'vmap', buffer = 'status', lhs = 'ga', rhs = '--' },
     { map = 'nmap', buffer = 'log',    lhs = 'dd', rhs = '<Plug>(gina-changes-of)' },
@@ -1400,5 +1401,8 @@ require("lazy").setup({
     config = function()
       require("telescope").load_extension("ui-select")
     end
+  },
+  {
+    'thinca/vim-showtime'
   }
 })
