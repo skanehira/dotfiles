@@ -3,5 +3,5 @@
 dest=$HOME/.gitconfig
 
 if [ ! -e $dest ]; then
-  ln -s "$PWD/gitconfig" $dest
+  ln -s "$PWD/.gitconfig" $dest
 fi

@@ -1,9 +1,11 @@
+# This is Git's per-user configuration file.
 [user]
 	name = skanehira
 	email = sho19921005@gmail.com
 
-#[core]
-#	pager = delta
+[core]
+	#pager = delta
+	quotepath = false
 
 [interactive]
 	diffFilter = delta --color-only
@@ -26,6 +28,12 @@
 [commit]
 	verbose = true
 
+[color "status"]
+  added     = green
+  changed   = red
+  untracked = yellow
+  unmerged  = magenta
+
 [status]
 	showUntrackedFiles = all
 
@@ -33,13 +41,27 @@
 	rebase = true
 
 [push]
-  default = current
+	default = current
+	autoSetupRemote = true
 
 [rebase]
-  autostash = true
+	autostash = true
 
 [init]
 	defaultBranch = main
 
 [alias]
 	c = "!checkout() { git branch --all | fzf | tr -d '[:space:]' | xargs git checkout; }; checkout"
+
+# difftastic
+[diff]
+	tool = difftastic
+
+[difftool]
+	prompt = false
+
+[difftool "difftastic"]
+	cmd = difft "$LOCAL" "$REMOTE"
+
+[pager]
+	difftool = true
