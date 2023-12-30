@@ -1127,11 +1127,11 @@ require("lazy").setup({
   --     require("lsp_lines").setup()
   --   end
   -- },
-  {
-    'lukas-reineke/indent-blankline.nvim',
-    event = 'BufReadPre',
-    config = indent_blankline,
-  },
+  --{
+  --  'lukas-reineke/indent-blankline.nvim',
+  --  event = 'BufReadPre',
+  --  config = indent_blankline,
+  --},
   {
     'ray-x/lsp_signature.nvim',
     event = { 'BufRead', 'BufNewFile' },
@@ -1404,5 +1404,16 @@ require("lazy").setup({
   },
   {
     'thinca/vim-showtime'
-  }
+  },
+  {
+    'shellRaining/hlchunk.nvim',
+    event = { 'UIEnter' },
+    config = function()
+      require('hlchunk').setup({
+        blank = {
+          enable = false,
+        }
+      })
+    end
+  },
 })
