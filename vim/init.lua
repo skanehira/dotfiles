@@ -1,12 +1,5 @@
 ---@diagnostic disable: need-check-nil
 
--- alias to vim's objects
-g = vim.g
-opt = vim.opt
-cmd = vim.cmd
-fn = vim.fn
-api = vim.api
-
 -- disable default plugins
 local disable_plugins = {
   "loaded_gzip",
@@ -39,58 +32,57 @@ local disable_plugins = {
 }
 
 for _, name in pairs(disable_plugins) do
-  g[name] = true
+  vim.g[name] = true
 end
 
--- map functions
-_G['map'] = function(mode, lhs, rhs, opt)
-  vim.keymap.set(mode, lhs, rhs, opt or { silent = true })
-end
-
-for _, mode in pairs({ 'n', 'v', 'i', 'o', 'c', 't', 'x', 't' }) do
-  _G[mode .. 'map'] = function(lhs, rhs, opt)
-    map(mode, lhs, rhs, opt)
-  end
-end
+-- alias
+local keymap = require('keymap')
+local map = keymap.map
+local nmap = keymap.nmap
+local tmap = keymap.tmap
+local cmap = keymap.cmap
+local omap = keymap.omap
+local xmap = keymap.xmap
+local imap = keymap.imap
+local vmap = keymap.vmap
 
 -- options
-cmd('syntax enable')
-cmd('filetype plugin indent on')
+vim.cmd('syntax enable')
+vim.cmd('filetype plugin indent on')
 
-g.mapleader = " "
-g["markdown_recommended_style"] = 0
-opt.breakindent = true
-opt.number = false
-opt.incsearch = true
-opt.ignorecase = true
-opt.smartcase = true
-opt.hlsearch = true
-opt.autoindent = true
-opt.smartindent = true
-opt.virtualedit = "block"
-opt.showtabline = 1
-opt.tabstop = 2
-opt.shiftwidth = 2
-opt.softtabstop = 2
-opt.completeopt = 'menu,menuone,noselect'
-opt.laststatus = 3
-opt.scrolloff = 100
-opt.cursorline = true
-opt.helplang = 'ja'
-opt.autowrite = true
-opt.swapfile = false
-opt.showtabline = 1
-opt.diffopt = 'vertical,internal'
--- opt.wildcharm = ('<Tab>'):byte()
-opt.clipboard:append({ fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
-opt.grepprg = 'rg --vimgrep'
-opt.grepformat = '%f:%l:%c:%m'
-opt.mouse = {}
---opt.foldmethod = 'expr'
---opt.foldexpr = 'nvim_treesitter#foldexpr()'
+vim.g.mapleader = " "
+vim.g["markdown_recommended_style"] = 0
+vim.opt.breakindent = true
+vim.opt.number = false
+vim.opt.incsearch = true
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+vim.opt.hlsearch = true
+vim.opt.autoindent = true
+vim.opt.smartindent = true
+vim.opt.virtualedit = "block"
+vim.opt.showtabline = 1
+vim.opt.tabstop = 2
+vim.opt.shiftwidth = 2
+vim.opt.softtabstop = 2
+vim.opt.completeopt = 'menu,menuone,noselect'
+vim.opt.laststatus = 3
+vim.opt.scrolloff = 100
+vim.opt.cursorline = true
+vim.opt.helplang = 'ja'
+vim.opt.autowrite = true
+vim.opt.swapfile = false
+vim.opt.showtabline = 1
+vim.opt.diffopt = 'vertical,internal'
+vim.opt.clipboard:append({ vim.fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
+vim.opt.grepprg = 'rg --vimgrep'
+vim.opt.grepformat = '%f:%l:%c:%m'
+vim.opt.mouse = {}
+--vim.opt.foldmethod = 'expr'
+--vim.opt.foldexpr = 'nvim_treesitter#foldexpr()'
 
 -- file indent
-local filetype_indent_group = api.nvim_create_augroup('fileTypeIndent', { clear = true })
+local filetype_indent_group = vim.api.nvim_create_augroup('fileTypeIndent', { clear = true })
 local file_indents = {
   {
     pattern = 'go',
@@ -121,7 +113,7 @@ local file_indents = {
 }
 
 for _, indent in pairs(file_indents) do
-  api.nvim_create_autocmd('FileType', {
+  vim.api.nvim_create_autocmd('FileType', {
     pattern = indent.pattern,
     command = indent.command,
     group = filetype_indent_group
@@ -129,101 +121,101 @@ for _, indent in pairs(file_indents) do
 end
 
 -- grep window
-api.nvim_create_autocmd('QuickFixCmdPost', {
+vim.api.nvim_create_autocmd('QuickFixCmdPost', {
   pattern = '*grep*',
   command = 'cwindow',
-  group = api.nvim_create_augroup('grepWindow', { clear = true }),
+  group = vim.api.nvim_create_augroup('grepWindow', { clear = true }),
 })
 
 -- restore cursorline
-api.nvim_create_autocmd('BufReadPost',
+vim.api.nvim_create_autocmd('BufReadPost',
   {
     pattern = '*',
     callback = function()
-      cmd([[
+      vim.cmd([[
     if line("'\"") > 0 && line("'\"") <= line("$")
       exe "normal! g'\""
     endif
     ]])
     end,
-    group = api.nvim_create_augroup('restoreCursorline', { clear = true })
+    group = vim.api.nvim_create_augroup('restoreCursorline', { clear = true })
   })
 
 -- persistent undo
 local ensure_undo_dir = function()
-  local undo_path = fn.expand('~/.config/nvim/undo')
-  if fn.isdirectory(undo_path) == 0 then
-    fn.mkdir(undo_path, 'p')
+  local undo_path = vim.fn.expand('~/.config/nvim/undo')
+  if vim.fn.isdirectory(undo_path) == 0 then
+    vim.fn.mkdir(undo_path --[[@as string]], 'p')
   end
-  opt.undodir = undo_path
-  opt.undofile = true
+  vim.opt.undodir = undo_path
+  vim.opt.undofile = true
 end
 ensure_undo_dir()
 
 -- start insert mode when termopen
-api.nvim_create_autocmd("TermOpen", {
+vim.api.nvim_create_autocmd("TermOpen", {
   pattern = "*",
   callback = function()
-    cmd('startinsert')
-    cmd('setlocal scrolloff=0')
+    vim.cmd('startinsert')
+    vim.cmd('setlocal scrolloff=0')
   end,
-  group = api.nvim_create_augroup("neovimTerminal", { clear = true }),
+  group = vim.api.nvim_create_augroup("neovimTerminal", { clear = true }),
 })
 
 -- auto mkdir
 local auto_mkdir = function(dir)
-  if fn.isdirectory(dir) == 0 then
-    fn.mkdir(dir, 'p')
+  if vim.fn.isdirectory(dir) == 0 then
+    vim.fn.mkdir(dir, 'p')
   end
 end
-api.nvim_create_autocmd('BufWritePre', {
+vim.api.nvim_create_autocmd('BufWritePre', {
   pattern = '*',
   callback = function()
-    auto_mkdir(fn.expand('<afile>:p:h'))
+    auto_mkdir(vim.fn.expand('<afile>:p:h'))
   end,
-  group = api.nvim_create_augroup('autoMkdir', { clear = true })
+  group = vim.api.nvim_create_augroup('autoMkdir', { clear = true })
 })
 
 -- create zenn article
-api.nvim_create_user_command('ZennCreateArticle',
+vim.api.nvim_create_user_command('ZennCreateArticle',
   function(opts)
-    local date = fn.strftime('%Y-%m-%d')
+    local date = vim.fn.strftime('%Y-%m-%d')
     local slug = date .. '-' .. opts.args
     os.execute('npx zenn new:article --emoji 🦍 --slug ' .. slug)
-    cmd('edit ' .. string.format('articles/%s.md', slug))
+    vim.cmd('edit ' .. string.format('articles/%s.md', slug))
   end, { nargs = 1 })
 
 -- insert markdown link
 local insert_markdown_link = function()
-  local old = fn.getreg(9)
-  local link = fn.trim(fn.getreg())
+  local old = vim.fn.getreg('9')
+  local link = vim.fn.trim(vim.fn.getreg())
   if link:match('^http.*') == nil then
-    cmd('normal! p')
+    vim.cmd('normal! p')
     return
   end
-  cmd('normal! "9y')
-  local word = fn.getreg(9)
+  vim.cmd('normal! "9y')
+  local word = vim.fn.getreg('9')
   local text = string.format('[%s](%s)', word, link)
-  fn.setreg(9, text)
-  cmd('normal! gv"9p')
-  fn.setreg(9, old)
+  vim.fn.setreg('9', text)
+  vim.cmd('normal! gv"9p')
+  vim.fn.setreg('9', old)
 end
 
-api.nvim_create_autocmd('FileType', {
+vim.api.nvim_create_autocmd('FileType', {
   pattern = 'markdown',
   callback = function()
     map('x', 'p', function()
       insert_markdown_link()
     end, { silent = true, buffer = true })
   end,
-  group = api.nvim_create_augroup("markdownInsertLink", { clear = true }),
+  group = vim.api.nvim_create_augroup("markdownInsertLink", { clear = true }),
 })
 
 --- syntax clear
--- api.nvim_create_autocmd('FileType', {
+-- vim.api.nvim_create_autocmd('FileType', {
 --   pattern = {'go', 'vim', 'javascript', 'typescript', 'rust', 'json'},
 --   callback = function ()
---     cmd('syntax clear')
+--     vim.cmd('syntax clear')
 --   end
 -- })
 
@@ -274,10 +266,10 @@ xmap("*",
 )
 
 -- help
-api.nvim_create_autocmd("FileType", {
+vim.api.nvim_create_autocmd("FileType", {
   pattern = "help",
   command = "nnoremap <buffer> <silent>q :bw!<CR>",
-  group = api.nvim_create_augroup("helpKeymaps", { clear = true }),
+  group = vim.api.nvim_create_augroup("helpKeymaps", { clear = true }),
 })
 
 -- command line
@@ -288,17 +280,17 @@ cmap('<C-a>', '<Home>', {})
 cmap('<Up>', '<C-p>')
 cmap('<Down>', '<C-n>')
 cmap('<C-n>', function()
-  return fn.pumvisible() == 1 and '<C-n>' or '<Down>'
+  return vim.fn.pumvisible() == 1 and '<C-n>' or '<Down>'
 end, { expr = true })
 cmap('<C-p>', function()
-  return fn.pumvisible() == 1 and '<C-p>' or '<Up>'
+  return vim.fn.pumvisible() == 1 and '<C-p>' or '<Up>'
 end, { expr = true })
-api.nvim_create_autocmd('FileType', {
+vim.api.nvim_create_autocmd('FileType', {
   pattern = 'qf',
   callback = function()
     nmap('q', '<Cmd>q<CR>', { silent = true, buffer = true })
   end,
-  group = api.nvim_create_augroup("qfInit", { clear = true }),
+  group = vim.api.nvim_create_augroup("qfInit", { clear = true }),
 })
 
 -- paste with <C-v>
@@ -355,8 +347,8 @@ local nvim_cmp_config = function()
         option = {
           get_bufnrs = function()
             local bufs = {}
-            for _, win in ipairs(api.nvim_list_wins()) do
-              bufs[api.nvim_win_get_buf(win)] = true
+            for _, win in ipairs(vim.api.nvim_list_wins()) do
+              bufs[vim.api.nvim_win_get_buf(win)] = true
             end
             return vim.tbl_keys(bufs)
           end
@@ -370,7 +362,7 @@ local nvim_cmp_config = function()
     },
     snippet = {
       expand = function(args)
-        fn['vsnip#anonymous'](args.body)
+        vim.fn['vsnip#anonymous'](args.body)
       end
     },
   })
@@ -380,7 +372,9 @@ end
 Lsp_on_attach = function(client, bufnr)
   -- Enable completion triggered by <c-x><c-o>
   client.server_capabilities.semanticTokensProvider = nil
-  api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
+  vim.api.nvim_set_option_value('omnifunc', 'v:lua.vim.lsp.omnifunc', {
+    buf = bufnr
+  })
   local bufopts = { silent = true, buffer = bufnr }
   nmap('K', vim.lsp.buf.hover, bufopts)
   nmap('<Leader>gi', vim.lsp.buf.implementation, bufopts)
@@ -392,7 +386,7 @@ Lsp_on_attach = function(client, bufnr)
     vim.lsp.buf_request(0, 'experimental/externalDocs', vim.lsp.util.make_position_params(),
       function(_, url)
         if url then
-          fn.jobstart({ 'open', url })
+          vim.fn.jobstart({ 'open', url })
         end
       end)
   end, bufopts)
@@ -400,7 +394,7 @@ Lsp_on_attach = function(client, bufnr)
   if client.name == 'denols' then
     nmap('<C-]>', vim.lsp.buf.definition, bufopts)
   else
-    opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
+    vim.opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
   end
   map({ 'n', 'x' }, 'ma', vim.lsp.buf.code_action, bufopts)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
@@ -420,13 +414,13 @@ Lsp_on_attach = function(client, bufnr)
     nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
   end
 
-  -- local augroup = api.nvim_create_augroup("LspFormatting", { clear = false })
+  -- local augroup = vim.api.nvim_create_augroup("LspFormatting", { clear = false })
   -- if client.supports_method("textDocument/formatting") then
   --   nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
   --   if client.name == 'sumneko_lua' then
   --     return
   --   end
-  --   api.nvim_create_autocmd("BufWritePre", {
+  --   vim.api.nvim_create_autocmd("BufWritePre", {
   --     callback = function()
   --       organize_import()
   --       vim.lsp.buf.format()
@@ -439,8 +433,8 @@ end
 
 -- color scheme config
 local colorscheme_config = function()
-  opt.termguicolors = true
-  cmd([[
+  vim.opt.termguicolors = true
+  vim.cmd([[
       colorscheme carbonfox
       hi WinSeparator guifg=#535353
       hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
@@ -451,14 +445,18 @@ end
 
 -- bufferline.nvim
 local bufferline_config = function()
-  require('bufferline').setup({
+  local bufferline = require('bufferline')
+  bufferline.setup({
     options = {
       mode = 'tabs',
       hover = {
         enabled = true,
       },
       diagnostics = 'nvim_lsp',
-      diagnostics_indicator = function(count, level)
+      ---@diagnostic disable-next-line: unused-local
+      diagnostics_indicator = function(count, level, errors, ctx)
+        -- fix by: https://github.com/akinsho/bufferline.nvim/pull/855
+        ---@diagnostic disable-next-line: undefined-field
         local icon = level:match("error") and " " or " "
         return ' ' .. icon .. count
       end,
@@ -490,12 +488,12 @@ local gina_config = function()
     { map = 'nmap', buffer = '/.*',    lhs = 'q',  rhs = '<Cmd>bw<CR>' },
   }
   for _, m in pairs(gina_keymaps) do
-    fn['gina#custom#mapping#' .. m.map](m.buffer, m.lhs, m.rhs, { silent = true })
+    vim.fn['gina#custom#mapping#' .. m.map](m.buffer, m.lhs, m.rhs, { silent = true })
   end
 
-  fn['gina#custom#command#option']('log', '--opener', 'new')
-  fn['gina#custom#command#option']('status', '--opener', 'new')
-  fn['gina#custom#command#option']('branch', '--opener', 'new')
+  vim.fn['gina#custom#command#option']('log', '--opener', 'new')
+  vim.fn['gina#custom#command#option']('status', '--opener', 'new')
+  vim.fn['gina#custom#command#option']('branch', '--opener', 'new')
   nmap('gs', '<Cmd>Gina status<CR>')
   nmap('gl', '<Cmd>Gina log<CR>')
   nmap('gm', '<Cmd>Gina blame<CR>')
@@ -529,12 +527,12 @@ end
 
 -- fern.vim
 local fern_config = function()
-  g['fern#renderer'] = 'nerdfont'
-  g['fern#window_selector_use_popup'] = true
-  g['fern#default_hidden'] = 1
-  g['fern#default_exclude'] = '\\.git$\\|\\.DS_Store'
+  vim.g['fern#renderer'] = 'nerdfont'
+  vim.g['fern#window_selector_use_popup'] = true
+  vim.g['fern#default_hidden'] = 1
+  vim.g['fern#default_exclude'] = '\\.git$\\|\\.DS_Store'
 
-  api.nvim_create_autocmd('FileType', {
+  vim.api.nvim_create_autocmd('FileType', {
     pattern = 'fern',
     callback = function()
       nmap('q', ':q<CR>', { silent = true, buffer = true })
@@ -542,7 +540,7 @@ local fern_config = function()
       nmap('<C-v>', '<Plug>(fern-action-open:vsplit)', { silent = true, buffer = true })
       nmap('<C-t>', '<Plug>(fern-action-tcd)', { silent = true, buffer = true })
     end,
-    group = api.nvim_create_augroup('fernInit', { clear = true }),
+    group = vim.api.nvim_create_augroup('fernInit', { clear = true }),
   })
 end
 
@@ -589,7 +587,7 @@ local lsp_config = function()
   }
 
   local node_root_dir = lspconfig.util.root_pattern("package.json")
-  local is_node_repo = node_root_dir(fn.getcwd()) ~= nil
+  local is_node_repo = node_root_dir(vim.fn.getcwd()) ~= nil
 
   for _, ls in pairs(lss) do
     (function()
@@ -646,7 +644,7 @@ local lsp_config = function()
               },
               workspace = {
                 -- Make the server aware of Neovim runtime files
-                library = api.nvim_get_runtime_file("", true),
+                library = vim.api.nvim_get_runtime_file("", true),
               },
             },
           },
@@ -657,7 +655,8 @@ local lsp_config = function()
             yaml = {
               schemas = {
                 ['https://json.schemastore.org/github-workflow.json'] = "/.github/workflows/*",
-                ['https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json'] = "*compose.y*ml"
+                ['https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json'] =
+                "*compose.y*ml"
               }
             }
           }
@@ -725,51 +724,6 @@ vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
     border = "single"
   })
 
--- twihi.vim config
-local twihi_config = function()
-  nmap('<C-g>n', '<Cmd>TwihiTweet<CR>')
-  nmap('<C-g>m', '<Cmd>TwihiMentions<CR>')
-  nmap('<C-g>h', '<Cmd>TwihiHome<CR>')
-
-  local twihi_timeline_keymap = function()
-    local opt = { buffer = true, silent = true }
-    nmap('<C-g><C-y>', '<Plug>(twihi:tweet:yank)', opt)
-    nmap('R', '<Plug>(twihi:retweet)', opt)
-    nmap('<C-g><C-l>', '<C-g><C-l> <Plug>(twihi:tweet:like)', opt)
-    nmap('<C-o>', '<Plug>(twihi:tweet:open)', opt)
-    nmap('<C-r>', '<Plug>(twihi:reply)', opt)
-    nmap('<C-j>', '<Plug>(twihi:tweet:next)', opt)
-    nmap('<C-k>', '<Plug>(twihi:tweet:prev)', opt)
-  end
-
-  local twihi_media_keymap = function()
-    local opt = { buffer = true, silent = true }
-    nmap('<C-g>m', '<Plug>(twihi:media:add:clipboard)', opt)
-    nmap('<C-g>d', '<Plug>(twihi:media:remove)', opt)
-    nmap('<C-g>o', '<Plug>(twihi:media:open)', opt)
-  end
-
-  local twihi_init_group = api.nvim_create_augroup("twihiInit", { clear = true })
-  api.nvim_create_autocmd('FileType', {
-    pattern = 'twihi-timeline',
-    callback = function()
-      twihi_timeline_keymap()
-    end,
-    group = twihi_init_group,
-  })
-
-  api.nvim_create_autocmd('FileType', {
-    pattern = { 'twihi-reply', 'twihi-tweet', 'twihi-retweet' },
-    callback = function()
-      twihi_media_keymap()
-    end,
-    group = twihi_init_group,
-  })
-
-  -- g['twihi_mention_check_interval'] = 30000 * 10
-  -- g['twihi_notify_ui'] = 'system'
-end
-
 -- k8s.vim
 local k8s_config = function()
   local k8s_pods_keymap = function()
@@ -829,10 +783,10 @@ local k8s_config = function()
     { ft = 'k8s-secrets',     fn = k8s_secrets_keymap },
   }
 
-  local k8s_keymap_group = api.nvim_create_augroup("k8sInit", { clear = true })
+  local k8s_keymap_group = vim.api.nvim_create_augroup("k8sInit", { clear = true })
 
   for _, m in pairs(k8s_keymaps) do
-    api.nvim_create_autocmd('FileType', {
+    vim.api.nvim_create_autocmd('FileType', {
       pattern = m.ft,
       callback = m.fn,
       group = k8s_keymap_group,
@@ -841,13 +795,23 @@ local k8s_config = function()
 end
 
 -- silicon.vim
-g['silicon_options'] = {
+vim.g['silicon_options'] = {
   font = 'Cica',
   no_line_number = true,
   -- background_color = '#434C5E',
   no_window_controls = true,
   theme = 'GitHub',
 }
+
+local denops_config = function()
+  vim.g['denops#server#deno_args'] = {
+    '-q',
+    '--no-lock',
+    '-A',
+    '--unstable-ffi'
+  }
+end
+
 local silicon_config = function()
   nmap('gi', '<Plug>(silicon-generate)')
   xmap('gi', '<Plug>(silicon-generate)')
@@ -855,12 +819,12 @@ end
 
 -- graphql.vim
 local graphql_config = function()
-  api.nvim_create_autocmd('FileType', {
+  vim.api.nvim_create_autocmd('FileType', {
     pattern = 'graphql',
     callback = function()
       nmap('gp', '<Plug>(graphql-execute)')
     end,
-    group = api.nvim_create_augroup("graphqlInit", { clear = true }),
+    group = vim.api.nvim_create_augroup("graphqlInit", { clear = true }),
   })
 end
 
@@ -871,7 +835,7 @@ local translate_config = function()
 end
 
 -- quickrun.vim
-g['quickrun_config'] = {
+vim.g['quickrun_config'] = {
   typescript = {
     command = 'deno',
     tempfile = '%{printf("%s.ts", tempname())}',
@@ -893,51 +857,51 @@ g['quickrun_config'] = {
 }
 
 local quickrun_config = function()
-  api.nvim_create_autocmd('FileType', {
+  vim.api.nvim_create_autocmd('FileType', {
     pattern = 'quickrun',
     callback = function()
       nmap('q', '<Cmd>bw!<CR>', { silent = true, buffer = true })
     end,
-    group = api.nvim_create_augroup('quickrunInit', { clear = true }),
+    group = vim.api.nvim_create_augroup('quickrunInit', { clear = true }),
   })
 end
 
 -- vim-markdown
-g['vim_markdown_folding_disabled'] = true
+vim.g['vim_markdown_folding_disabled'] = true
 
 -- emmet
-g['emmet_html5'] = false
-g['user_emmet_install_global'] = false
-g['user_emmet_settings'] = {
+vim.g['emmet_html5'] = false
+vim.g['user_emmet_install_global'] = false
+vim.g['user_emmet_settings'] = {
   variables = {
     lang = 'ja'
   }
 }
-g['user_emmet_leader_key'] = '<C-g>'
+vim.g['user_emmet_leader_key'] = '<C-g>'
 local emmet_config = function()
-  api.nvim_create_autocmd('FileType', {
+  vim.api.nvim_create_autocmd('FileType', {
     pattern = { 'vue', 'html', 'css', 'typescriptreact' },
     command = 'EmmetInstall',
-    group = api.nvim_create_augroup("emmetInstall", { clear = true }),
+    group = vim.api.nvim_create_augroup("emmetInstall", { clear = true }),
   })
 end
 
 -- vim-sonictemplate.vim
 local sonictemplate_config = function()
   imap('<C-g><C-l>', '<plug>(sonictemplate-postfix)')
-  g['sonictemplate_author'] = 'skanehira'
-  g['sonictemplate_license'] = 'MIT'
-  g['sonictemplate_vim_template_dir'] = fn.expand('~/.vim/sonictemplate')
+  vim.g['sonictemplate_author'] = 'skanehira'
+  vim.g['sonictemplate_license'] = 'MIT'
+  vim.g['sonictemplate_vim_template_dir'] = vim.fn.expand('~/.vim/sonictemplate')
 end
 
 -- vimhelpgenerator
-g['vimhelpgenerator_version'] = ''
-g['vimhelpgenerator_author'] = 'Author: skanehira <sho19921005@gmail.com>'
-g['vimhelpgenerator_uri'] = 'https://github.com/skanehira/'
-g['vimhelpgenerator_defaultlanguage'] = 'en'
+vim.g['vimhelpgenerator_version'] = ''
+vim.g['vimhelpgenerator_author'] = 'Author: skanehira <sho19921005@gmail.com>'
+vim.g['vimhelpgenerator_uri'] = 'https://github.com/skanehira/'
+vim.g['vimhelpgenerator_defaultlanguage'] = 'en'
 
 -- gyazo.vim
-g['gyazo_insert_markdown'] = true
+vim.g['gyazo_insert_markdown'] = true
 local gyazo_config = function()
   nmap('gup', '<Plug>(gyazo-upload)')
 end
@@ -949,9 +913,9 @@ end
 
 -- test.vim
 -- local test_config = function()
---   g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
---   g['test#rust#cargotest#options'] = { all = '-- --nocapture' }
---   g['test#go#gotest#options'] = { all = '-v' }
+--   vim.g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
+--   vim.g['test#rust#cargotest#options'] = { all = '-- --nocapture' }
+--   vim.g['test#go#gotest#options'] = { all = '-v' }
 --   nmap('<Leader>tn', '<Cmd>TestNearest<CR>')
 -- end
 
@@ -976,6 +940,7 @@ end
 
 -- treesitter config
 local treesitter_config = function()
+  ---@diagnostic disable-next-line: missing-fields
   require('nvim-treesitter.configs').setup({
     ensure_installed = {
       'lua', 'rust', 'typescript', 'tsx',
@@ -991,20 +956,12 @@ local treesitter_config = function()
   })
 end
 
--- indent_blankline config
-local indent_blankline = function()
-  require('ibl').setup {
-    indent = {
-      tab_char = '>'
-    },
-  }
-  cmd([[hi IndentBlanklineChar guifg=#353535]])
-end
-
 -- ############################# lazy config section ###############################
 -- lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then
+
+---@diagnostic disable-next-line: undefined-field
+if not vim.uv.fs_stat(lazypath) then
   vim.fn.system({
     "git",
     "clone",
@@ -1014,6 +971,7 @@ if not vim.loop.fs_stat(lazypath) then
     lazypath,
   })
 end
+---@diagnostic disable-next-line: undefined-field
 vim.opt.rtp:prepend(lazypath)
 
 -- lazy settings
@@ -1065,7 +1023,7 @@ require("lazy").setup({
     'github/copilot.vim',
     event = { 'BufRead', 'BufNewFile' },
     config = function()
-      g['copilot_no_tab_map'] = 1
+      vim.g['copilot_no_tab_map'] = 1
       imap('<Plug>(vimrc:copilot-dummy-map)', 'copilot#Accept("\\<Tab>")', { expr = true })
     end
   },
@@ -1081,16 +1039,16 @@ require("lazy").setup({
   {
     'vim-skk/skkeleton',
     init = function()
-      api.nvim_create_autocmd('User', {
+      vim.api.nvim_create_autocmd('User', {
         pattern = 'skkeleton-initialize-pre',
         callback = function()
-          vim.call('skkeleton#config', {
+          vim.fn['skkeleton#config']({
             globalJisyo = vim.fn.expand('~/.config/skk/SKK-JISYO.L'),
             eggLikeNewline = true,
             keepState = true
           })
         end,
-        group = api.nvim_create_augroup('skkelectonInitPre', { clear = true }),
+        group = vim.api.nvim_create_augroup('skkelectonInitPre', { clear = true }),
       })
     end,
     config = function()
@@ -1229,7 +1187,7 @@ require("lazy").setup({
       'lambdalisue/nerdfont.vim',
     },
     config = function()
-      g['fern#renderer'] = 'nerdfont'
+      vim.g['fern#renderer'] = 'nerdfont'
     end
   },
   {
@@ -1255,7 +1213,10 @@ require("lazy").setup({
       { '<C-e>', '<Cmd>WinResizerStartResize<CR>', desc = 'start window resizer' }
     },
   },
-  { 'vim-denops/denops.vim' },
+  {
+    'vim-denops/denops.vim',
+    config = denops_config,
+  },
   {
     'skanehira/denops-silicon.vim',
     config = silicon_config
@@ -1409,7 +1370,9 @@ require("lazy").setup({
     'shellRaining/hlchunk.nvim',
     event = { 'UIEnter' },
     config = function()
+      ---@diagnostic disable-next-line: missing-fields
       require('hlchunk').setup({
+        ---@diagnostic disable-next-line: missing-fields
         blank = {
           enable = false,
         }
