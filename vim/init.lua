@@ -35,17 +35,18 @@ for _, name in pairs(disable_plugins) do
   vim.g[name] = true
 end
 
+-- lsp global settings
+require('my/lsp')
+
 -- keymaps
-local keymaps = require('keymaps')
+local keymaps = require('my/keymaps')
 local map = keymaps.map
 local nmap = keymaps.nmap
-local cmap = keymaps.cmap
 local xmap = keymaps.xmap
-local imap = keymaps.imap
 local vmap = keymaps.vmap
 
 -- options
-require('options')
+require('my/options')
 
 -- file indent
 local filetype_indent_group = vim.api.nvim_create_augroup('fileTypeIndent', { clear = true })
@@ -182,58 +183,6 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 -- ############################# plugin config section ###############################
--- nvim-cmp
-local nvim_cmp_config = function()
-  local cmp = require('cmp')
-  cmp.setup({
-    window = {
-      -- completion = cmp.config.window.bordered(),
-      documentation = cmp.config.window.bordered(),
-    },
-    preselect = cmp.PreselectMode.None,
-    mapping = cmp.mapping.preset.insert({
-      ['<C-b>'] = cmp.mapping.scroll_docs(-4),
-      ['<C-f>'] = cmp.mapping.scroll_docs(4),
-      ["<C-p>"] = cmp.mapping.select_prev_item(),
-      ["<C-n>"] = cmp.mapping.select_next_item(),
-      ['<Tab>'] = cmp.mapping.complete(),
-      ['<CR>'] = cmp.mapping.confirm({ select = true }),
-      ['<C-l>'] = cmp.mapping(function(_)
-        vim.api.nvim_feedkeys(vim.fn['copilot#Accept'](vim.api.nvim_replace_termcodes('<Tab>', true, true, true)), 'n',
-          true)
-      end)
-    }),
-    experimental = {
-      ghost_text = false -- this feature conflict with copilot.vim's preview.
-    },
-    sources = {
-      { name = 'nvim_lsp' },
-      { name = 'vsnip' },
-      {
-        name = 'buffer',
-        option = {
-          get_bufnrs = function()
-            local bufs = {}
-            for _, win in ipairs(vim.api.nvim_list_wins()) do
-              bufs[vim.api.nvim_win_get_buf(win)] = true
-            end
-            return vim.tbl_keys(bufs)
-          end
-        }
-      },
-      { name = 'path' },
-      { name = "crates" },
-    },
-    view = {
-      entries = 'native'
-    },
-    snippet = {
-      expand = function(args)
-        vim.fn['vsnip#anonymous'](args.body)
-      end
-    },
-  })
-end
 
 -- lsp on attach
 Lsp_on_attach = function(client, bufnr)
@@ -298,77 +247,6 @@ Lsp_on_attach = function(client, bufnr)
   -- end
 end
 
--- color scheme config
-local colorscheme_config = function()
-  vim.opt.termguicolors = true
-  vim.cmd([[
-      colorscheme carbonfox
-      hi WinSeparator guifg=#535353
-      hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
-      hi DiffAdd guifg=#25be6a
-      hi DiffDelete guifg=#ee5396
-      ]])
-end
-
--- bufferline.nvim
-local bufferline_config = function()
-  local bufferline = require('bufferline')
-  bufferline.setup({
-    options = {
-      mode = 'tabs',
-      hover = {
-        enabled = true,
-      },
-      diagnostics = 'nvim_lsp',
-      ---@diagnostic disable-next-line: unused-local
-      diagnostics_indicator = function(count, level, errors, ctx)
-        -- fix by: https://github.com/akinsho/bufferline.nvim/pull/855
-        ---@diagnostic disable-next-line: undefined-field
-        local icon = level:match("error") and " " or " "
-        return ' ' .. icon .. count
-      end,
-      indicator = {
-        icon = '',
-      },
-      buffer_close_icon = 'x'
-    }
-  })
-end
-
--- gina.vim
-local gina_config = function()
-  local gina_keymaps = {
-    { map = 'nmap', buffer = 'status', lhs = 'gp', rhs = '<Cmd>Gina push<CR>' },
-    { map = 'nmap', buffer = 'status', lhs = 'gr', rhs = '<Cmd>terminal gh pr create<CR>' },
-    { map = 'nmap', buffer = 'status', lhs = 'gl', rhs = '<Cmd>Gina pull<CR>' },
-    { map = 'nmap', buffer = 'status', lhs = 'cm', rhs = '<Cmd>Gina commit<CR>' },
-    { map = 'nmap', buffer = 'status', lhs = 'ca', rhs = '<Cmd>Gina commit --amend<CR>' },
-    { map = 'nmap', buffer = 'status', lhs = 'dp', rhs = '<Plug>(gina-patch-oneside-tab)' },
-    { map = 'nmap', buffer = 'status', lhs = 'gc', rhs = '<Plug>(gina-chaperon)' },
-    { map = 'nmap', buffer = 'status', lhs = 'ga', rhs = '--' },
-    { map = 'vmap', buffer = 'status', lhs = 'ga', rhs = '--' },
-    { map = 'nmap', buffer = 'log',    lhs = 'dd', rhs = '<Plug>(gina-changes-of)' },
-    { map = 'nmap', buffer = 'branch', lhs = 'n',  rhs = '<Plug>(gina-branch-new)' },
-    { map = 'nmap', buffer = 'branch', lhs = 'D',  rhs = '<Plug>(gina-branch-delete)' },
-    { map = 'nmap', buffer = 'branch', lhs = 'p',  rhs = '<Cmd>terminal gh pr create<CR>' },
-    { map = 'nmap', buffer = 'branch', lhs = 'P',  rhs = '<Cmd>terminal gh pr create<CR>' },
-    { map = 'nmap', buffer = '/.*',    lhs = 'q',  rhs = '<Cmd>bw<CR>' },
-  }
-  for _, m in pairs(gina_keymaps) do
-    vim.fn['gina#custom#mapping#' .. m.map](m.buffer, m.lhs, m.rhs, { silent = true })
-  end
-
-  vim.fn['gina#custom#command#option']('log', '--opener', 'new')
-  vim.fn['gina#custom#command#option']('status', '--opener', 'new')
-  vim.fn['gina#custom#command#option']('branch', '--opener', 'new')
-  nmap('gs', '<Cmd>Gina status<CR>')
-  nmap('gl', '<Cmd>Gina log<CR>')
-  nmap('gm', '<Cmd>Gina blame<CR>')
-  nmap('gb', '<Cmd>Gina branch<CR>')
-  nmap('gu', ':Gina browse --exact --yank :<CR>')
-  vmap('gu', ':Gina browse --exact --yank :<CR>')
-end
-
 -- telescope.vim
 local telescope_config = function()
   require("telescope").load_extension("ui-select")
@@ -390,275 +268,6 @@ local telescope_config = function()
       }
     }
   }
-end
-
--- fern.vim
-local fern_config = function()
-  vim.g['fern#renderer'] = 'nerdfont'
-  vim.g['fern#window_selector_use_popup'] = true
-  vim.g['fern#default_hidden'] = 1
-  vim.g['fern#default_exclude'] = '\\.git$\\|\\.DS_Store'
-
-  vim.api.nvim_create_autocmd('FileType', {
-    pattern = 'fern',
-    callback = function()
-      nmap('q', ':q<CR>', { silent = true, buffer = true })
-      nmap('<C-x>', '<Plug>(fern-action-open:split)', { silent = true, buffer = true })
-      nmap('<C-v>', '<Plug>(fern-action-open:vsplit)', { silent = true, buffer = true })
-      nmap('<C-t>', '<Plug>(fern-action-tcd)', { silent = true, buffer = true })
-    end,
-    group = vim.api.nvim_create_augroup('fernInit', { clear = true }),
-  })
-end
-
--- lsp config
-local lsp_config = function()
-  local signs = { Error = " ", Warn = " ", Hint = "💡", Info = " " }
-  for type, icon in pairs(signs) do
-    local hl = "DiagnosticSign" .. type
-    vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
-  end
-
-  require('mason-lspconfig').setup({
-    automatic_installation = {
-      exclude = {
-        'gopls',
-        'denols',
-      }
-    }
-  })
-
-  local lspconfig = require("lspconfig")
-
-  -- mason-lspconfig will auto install LS when config included in lspconfig
-  local lss = {
-    'denols',
-    'gopls',
-    'rust_analyzer',
-    'tsserver',
-    'volar',
-    'lua_ls',
-    'golangci_lint_ls',
-    'eslint',
-    'graphql',
-    'bashls',
-    'yamlls',
-    'jsonls',
-    'vimls',
-    'marksman',
-    'taplo',
-    -- need manual install
-    -- https://github.com/kitagry/regols
-    'regols',
-    'clangd',
-  }
-
-  local node_root_dir = lspconfig.util.root_pattern("package.json")
-  local is_node_repo = node_root_dir(vim.fn.getcwd()) ~= nil
-
-  for _, ls in pairs(lss) do
-    (function()
-      local opts = {}
-
-      if ls == 'denols' then
-        -- dont start LS in nodejs repository
-        if is_node_repo then
-          return
-        end
-        opts = {
-          cmd = { 'deno', 'lsp' },
-          root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json', '.git'),
-          settings = {
-            deno = {
-              lint = true,
-              unstable = true,
-              suggest = {
-                imports = {
-                  hosts = {
-                    ["https://deno.land"] = true,
-                    ["https://cdn.nest.land"] = true,
-                    ["https://crux.land"] = true,
-                  },
-                },
-              },
-            }
-          },
-        }
-      elseif ls == 'tsserver' then
-        if not is_node_repo then
-          return
-        end
-
-        opts = {
-          root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
-        }
-      elseif ls == 'regols' then
-        opts = {
-          cmd = { 'regols' },
-          filetypes = { 'rego' },
-          root_dir = lspconfig.util.root_pattern('.git')
-        }
-      elseif ls == 'lua_ls' then
-        opts = {
-          settings = {
-            Lua = {
-              runtime = {
-                version = 'LuaJIT'
-              },
-              diagnostics = {
-                -- Get the language server to recognize the `vim` global
-                globals = { "vim" },
-              },
-              workspace = {
-                -- Make the server aware of Neovim runtime files
-                library = vim.api.nvim_get_runtime_file("", true),
-              },
-            },
-          },
-        }
-      elseif ls == 'yamlls' then
-        opts = {
-          settings = {
-            yaml = {
-              schemas = {
-                ['https://json.schemastore.org/github-workflow.json'] = "/.github/workflows/*",
-                ['https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json'] =
-                "*compose.y*ml"
-              }
-            }
-          }
-        }
-      elseif ls == "rust_analyzer" then
-        opts = {
-          settings = {
-            ["rust-analyzer"] = {
-              check = {
-                command = "clippy"
-              },
-              diagnostics = {
-                experimental = {
-                  enable = true,
-                }
-              }
-            }
-          }
-        }
-      end
-
-      opts['on_attach'] = Lsp_on_attach
-
-      lspconfig[ls].setup(opts)
-    end)()
-  end
-end
-
--- gitsigns.nvim
-local gitsigns_config = function()
-  require('gitsigns').setup({
-    current_line_blame = true,
-    on_attach = function(bufnr)
-      local gs = package.loaded.gitsigns
-
-      -- Navigation
-      map('n', ']c', function()
-        if vim.wo.diff then return ']c' end
-        vim.schedule(function() gs.next_hunk() end)
-        return '<Ignore>'
-      end, { expr = true })
-
-      map('n', '[c', function()
-        if vim.wo.diff then return '[c' end
-        vim.schedule(function() gs.prev_hunk() end)
-        return '<Ignore>'
-      end, { expr = true })
-
-      local opts = {
-        buffer = bufnr,
-        silent = true
-      }
-      -- Actions
-      map({ 'n', 'x' }, ']g', ':Gitsigns stage_hunk<CR>', opts)
-      map({ 'n', 'x' }, '[g', ':Gitsigns undo_stage_hunk<CR>', opts)
-      map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>', opts)
-      nmap('mp', ':Gitsigns preview_hunk<CR>', opts)
-    end
-  })
-end
-
--- lsp hover config
-vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
-  vim.lsp.handlers.hover, {
-    border = "single"
-  })
-
--- k8s.vim
-local k8s_config = function()
-  local k8s_pods_keymap = function()
-    nmap('<CR>', '<Plug>(k8s:pods:containers)', { buffer = true })
-    nmap('<C-g><C-l>', '<Plug>(k8s:pods:logs)', { buffer = true })
-    nmap('<C-g><C-d>', '<Plug>(k8s:pods:describe)', { buffer = true })
-    -- nmap('D', '<Plug>(k8s:pods:delete)', { buffer = true })
-    -- nmap('K', '<Plug>(k8s:pods:kill)', { buffer = true })
-    nmap('<C-g><C-y>', '<Plug>(k8s:pods:yaml)', { buffer = true })
-    nmap('<C-e>', '<Plug>(k8s:pods:events)', { buffer = true })
-    nmap('s', '<Plug>(k8s:pods:shell)', { buffer = true })
-    nmap('e', '<Plug>(k8s:pods:exec)', { buffer = true })
-    -- nmap('E', '<Plug>(k8s:pods:edit)', { buffer = true })
-  end
-
-  local k8s_nodes_keymap = function()
-    nmap('<C-g><C-d>', '<Plug>(k8s:nodes:describe)', { buffer = true })
-    nmap('<C-g><C-y>', '<Plug>(k8s:nodes:yaml)', { buffer = true })
-    nmap('<CR>', '<Plug>(k8s:nodes:pods)', { buffer = true })
-    nmap('E', '<Plug>(k8s:nodes:edit)', { buffer = true })
-  end
-
-  local k8s_containers_keymap = function()
-    nmap('s', '<Plug>(k8s:pods:containers:shell)', { buffer = true })
-    nmap('e', '<Plug>(k8s:pods:containers:exec)', { buffer = true })
-  end
-
-  local k8s_deployments_keymap = function()
-    nmap('<C-g><C-d>', '<Plug>(k8s:deployments:describe)', { buffer = true })
-    nmap('<C-g><C-y>', '<Plug>(k8s:deployments:yaml)', { buffer = true })
-    nmap('E', '<Plug>(k8s:deployments:edit)', { buffer = true })
-    nmap('<CR>', '<Plug>(k8s:deployments:pods)', { buffer = true })
-    nmap('D', '<Plug>(k8s:deployments:delete)', { buffer = true })
-  end
-
-  local k8s_services_keymap = function()
-    nmap('<CR>', '<Plug>(k8s:svcs:pods)', { buffer = true })
-    nmap('<C-g><C-d>', '<Plug>(k8s:svcs:describe)', { buffer = true })
-    nmap('D', '<Plug>(k8s:svcs:delete)', { buffer = true })
-    nmap('<C-g><C-y>', '<Plug>(k8s:svcs:yaml)', { buffer = true })
-    nmap('E', '<Plug>(k8s:svcs:edit)', { buffer = true })
-  end
-
-  local k8s_secrets_keymap = function()
-    nmap('<C-g><C-d>', '<Plug>(k8s:secrets:describe)', { buffer = true })
-    nmap('<C-g><C-y>', '<Plug>(k8s:secrets:yaml)', { buffer = true })
-    nmap('E', '<Plug>(k8s:secrets:edit)', { buffer = true })
-    nmap('D', '<Plug>(k8s:secrets:delete)', { buffer = true })
-  end
-
-  local k8s_keymaps = {
-    { ft = 'k8s-pods',        fn = k8s_pods_keymap },
-    { ft = 'k8s-nodes',       fn = k8s_nodes_keymap },
-    { ft = 'k8s-containers',  fn = k8s_containers_keymap },
-    { ft = 'k8s-deployments', fn = k8s_deployments_keymap },
-    { ft = 'k8s-services',    fn = k8s_services_keymap },
-    { ft = 'k8s-secrets',     fn = k8s_secrets_keymap },
-  }
-
-  local k8s_keymap_group = vim.api.nvim_create_augroup("k8sInit", { clear = true })
-
-  for _, m in pairs(k8s_keymaps) do
-    vim.api.nvim_create_autocmd('FileType', {
-      pattern = m.ft,
-      callback = m.fn,
-      group = k8s_keymap_group,
-    })
-  end
 end
 
 -- silicon.vim
@@ -737,29 +346,6 @@ end
 vim.g['vim_markdown_folding_disabled'] = true
 
 -- emmet
-vim.g['emmet_html5'] = false
-vim.g['user_emmet_install_global'] = false
-vim.g['user_emmet_settings'] = {
-  variables = {
-    lang = 'ja'
-  }
-}
-vim.g['user_emmet_leader_key'] = '<C-g>'
-local emmet_config = function()
-  vim.api.nvim_create_autocmd('FileType', {
-    pattern = { 'vue', 'html', 'css', 'typescriptreact' },
-    command = 'EmmetInstall',
-    group = vim.api.nvim_create_augroup("emmetInstall", { clear = true }),
-  })
-end
-
--- vim-sonictemplate.vim
-local sonictemplate_config = function()
-  imap('<C-g><C-l>', '<plug>(sonictemplate-postfix)')
-  vim.g['sonictemplate_author'] = 'skanehira'
-  vim.g['sonictemplate_license'] = 'MIT'
-  vim.g['sonictemplate_vim_template_dir'] = vim.fn.expand('~/.vim/sonictemplate')
-end
 
 -- vimhelpgenerator
 vim.g['vimhelpgenerator_version'] = ''
@@ -773,54 +359,9 @@ local gyazo_config = function()
   nmap('gup', '<Plug>(gyazo-upload)')
 end
 
--- winselector.vim
-local winselector_config = function()
-  nmap('<C-f>', '<Plug>(winselector)')
-end
-
--- test.vim
--- local test_config = function()
---   vim.g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
---   vim.g['test#rust#cargotest#options'] = { all = '-- --nocapture' }
---   vim.g['test#go#gotest#options'] = { all = '-v' }
---   nmap('<Leader>tn', '<Cmd>TestNearest<CR>')
--- end
-
 -- open-browser.vim
 local openbrowser_config = function()
   nmap('gop', '<Plug>(openbrowser-open)')
-end
-
--- lualine
-local lualine_config = function()
-  require('lualine').setup({
-    sections = {
-      lualine_c = {
-        {
-          'filename',
-          path = 3,
-        }
-      }
-    }
-  })
-end
-
--- treesitter config
-local treesitter_config = function()
-  ---@diagnostic disable-next-line: missing-fields
-  require('nvim-treesitter.configs').setup({
-    ensure_installed = {
-      'lua', 'rust', 'typescript', 'tsx',
-      'go', 'gomod', 'sql', 'toml', 'yaml',
-      'html', 'javascript', 'graphql',
-      'markdown', 'markdown_inline',
-    },
-    auto_install = true,
-    highlight = {
-      enable = true,
-      disable = { 'yaml' },
-    }
-  })
 end
 
 -- ############################# lazy config section ###############################
@@ -843,242 +384,60 @@ vim.opt.rtp:prepend(lazypath)
 
 -- lazy settings
 require("lazy").setup({
-  {
-    'jose-elias-alvarez/null-ls.nvim',
-    event = { 'BufRead', 'BufNewFile' },
-    dependencies = {
-      { 'nvim-lua/plenary.nvim' },
-    },
-    config = function()
-      local null_ls = require('null-ls')
-      null_ls.setup({
-        sources = {
-          null_ls.builtins.formatting.prettier.with {
-            prefer_local = 'node_modules/.bin',
-            condition = function(utils)
-              -- https://prettier.io/docs/en/configuration.html
-              return utils.root_has_file {
-                '.prettierrc',
-                '.prettierrc.js',
-                '.prettierrc.cjs',
-                '.prettierrc.json',
-                '.prettierrc.yml',
-                '.prettierrc.yaml',
-                'prettier.config.js',
-                'prettier.config.cjs',
-              }
-            end,
-          },
-          null_ls.builtins.diagnostics.actionlint,
-          null_ls.builtins.diagnostics.textlint.with {
-            prefer_local = 'node_modules/.bin',
-            condition = function(utils)
-              return utils.root_has_file {
-                '.textlintrc',
-                '.textlintrc.js',
-                '.textlintrc.json',
-                '.textlintrc.yml',
-                '.textlintrc.yaml',
-              }
-            end,
-          },
-        }
-      })
-    end
-  },
-  {
-    'github/copilot.vim',
-    event = { 'BufRead', 'BufNewFile' },
-    config = function()
-      vim.g['copilot_no_tab_map'] = 1
-      imap('<Plug>(vimrc:copilot-dummy-map)', 'copilot#Accept("\\<Tab>")', { expr = true })
-    end
-  },
-  {
-    'tyru/operator-camelize.vim',
-    dependencies = {
-      'kana/vim-operator-user'
-    },
-    config = function()
-      vmap('<Leader>c', '<plug>(operator-camelize-toggle)')
-    end
-  },
-  {
-    'vim-skk/skkeleton',
-    init = function()
-      vim.api.nvim_create_autocmd('User', {
-        pattern = 'skkeleton-initialize-pre',
-        callback = function()
-          vim.fn['skkeleton#config']({
-            globalJisyo = vim.fn.expand('~/.config/skk/SKK-JISYO.L'),
-            eggLikeNewline = true,
-            keepState = true
-          })
-        end,
-        group = vim.api.nvim_create_augroup('skkelectonInitPre', { clear = true }),
-      })
-    end,
-    config = function()
-      imap('<C-j>', '<Plug>(skkeleton-toggle)')
-      cmap('<C-j>', '<Plug>(skkeleton-toggle)')
-    end
-  },
-  {
-    'lambdalisue/kensaku.vim'
-  },
-  {
-    'lambdalisue/kensaku-search.vim',
-    config = function()
-      cmap('<CR>', '<Plug>(kensaku-search-replace)<CR>', {})
-    end
-  },
-  {
-    'thinca/vim-qfreplace',
-    event = { 'BufNewFile', 'BufRead' }
-  },
-  {
-    'dhruvasagar/vim-zoom',
-    keys = {
-      { '<C-w>m', '<Cmd>call zoom#toggle()<CR>' }
-    },
-  },
-  {
-    'mattn/vim-goimports',
-    ft = 'go',
-  },
-  -- { 'https://git.sr.ht/~whynothugo/lsp_lines.nvim',
-  --   config = function()
-  --     vim.diagnostic.config({ virtual_text = false })
-  --     require("lsp_lines").setup()
-  --   end
-  -- },
-  --{
-  --  'lukas-reineke/indent-blankline.nvim',
-  --  event = 'BufReadPre',
-  --  config = indent_blankline,
-  --},
-  {
-    'ray-x/lsp_signature.nvim',
-    event = { 'BufRead', 'BufNewFile' },
-    config = function()
-      require('lsp_signature').setup({})
-    end
-  },
-  {
-    'lewis6991/gitsigns.nvim',
-    event = { 'BufRead', 'BufNewFile' },
-    config = gitsigns_config
-  },
-  {
-    'nvim-lualine/lualine.nvim',
-    dependencies = 'kyazdani42/nvim-web-devicons',
-    config = lualine_config,
-  },
-  {
-    'akinsho/bufferline.nvim',
-    dependencies = 'kyazdani42/nvim-web-devicons',
-    config = bufferline_config
-  },
-  {
-    'EdenEast/nightfox.nvim',
-    lazy = false,
-    config = colorscheme_config,
-  },
-  {
-    'kevinhwang91/nvim-bqf',
-    ft = 'qf',
-    event = { 'QuickFixCmdPre' }
-  },
-  {
-    'williamboman/mason-lspconfig.nvim',
-    event = { 'BufReadPre', 'BufNewFile' },
-    dependencies = {
-      { 'neovim/nvim-lspconfig' },
-      {
-        'williamboman/mason.nvim',
-        config = function() require("mason").setup() end,
-      },
-    },
-    config = lsp_config,
-  },
-  {
-    'j-hui/fidget.nvim',
-    tag = "legacy",
-    config = function() require('fidget').setup() end,
-  },
-  {
-    'hrsh7th/nvim-cmp',
-    -- module = { "cmp" },
-    dependencies = {
-      { 'hrsh7th/cmp-nvim-lsp' },
-      { 'hrsh7th/cmp-buffer' },
-      { 'hrsh7th/cmp-path' },
-      { 'hrsh7th/cmp-vsnip' },
-      { 'hrsh7th/vim-vsnip' },
-    },
-    config = nvim_cmp_config,
-    event = { 'InsertEnter' },
-  },
-  {
-    'nvim-treesitter/nvim-treesitter',
-    build = ':TSUpdate',
-    config = treesitter_config
-  },
-  {
-    'windwp/nvim-autopairs',
-    event = { 'InsertEnter' },
-    config = function()
-      require("nvim-autopairs").setup({ map_c_h = true })
-    end,
-  },
-  -- {
-  --   'vim-test/vim-test',
-  --   event = 'BufRead',
-  --   config = test_config,
-  -- },
-  {
-    'lambdalisue/fern-hijack.vim',
-    dependencies = {
-      'lambdalisue/fern.vim',
-      cmd = 'Fern',
-      config = fern_config,
-    },
-    init = function()
-      nmap('<Leader>f', '<Cmd>Fern . -drawer<CR>', { silent = true })
-    end
-  },
-  {
-    'lambdalisue/fern-renderer-nerdfont.vim',
-    dependencies = {
-      'lambdalisue/fern.vim',
-      'lambdalisue/nerdfont.vim',
-    },
-    config = function()
-      vim.g['fern#renderer'] = 'nerdfont'
-    end
-  },
-  {
-    'lambdalisue/gina.vim',
-    config = gina_config,
-  },
+  require('my/plugins/kensaku'),
+  require('my/plugins/treesitter'),
+  require('my/plugins/skkeleton'),
+
+  -- window
+  require('my/plugins/window/zoom'),
+  require('my/plugins/window/winresizer'),
+  require('my/plugins/window/winselector'),
+
+  -- completion
+  require('my/plugins/completion/nvim-cmp'),
+  require('my/plugins/completion/nvim-autopairs'),
+  require('my/plugins/completion/sonictemplate'),
+  require('my/plugins/completion/emmet'),
+  require('my/plugins/completion/copilot'),
+
+  -- filer
+  require('my/plugins/filer/fern'),
+  require('my/plugins/filer/fern-renderer-nerdfont'),
+
+  -- lsp
+  require('my/plugins/lsp/fidget'),
+  require('my/plugins/lsp/null-ls'),
+  require('my/plugins/lsp/lsp_signature'),
+  require('my/plugins/lsp/lsp_lines'),
+  require('my/plugins/lsp/mason'),
+
+  -- git
+  require('my/plugins/git/gitsigns'),
+  require('my/plugins/git/gina'),
+
+  -- languages
+  require('my/plugins/lang/rust/crates'),
+  require('my/plugins/lang/go/goimports'),
+
+  -- quickfix
+  require('my/plugins/quickfix/qfreplace'),
+  require('my/plugins/quickfix/bqf'),
+
+  -- statusline
+  require('my/plugins/statusline/lualine'),
+  require('my/plugins/statusline/bufferline'),
+
+  -- colorscheme
+  require('my/plugins/colorscheme/nightfox'),
+
+  -- testing
+  require('my/plugins/testing'),
+
+  -- infra
+  require('my/plugins/infra/k8s'),
+
   {
     'lambdalisue/guise.vim',
-  },
-  {
-    'mattn/emmet-vim',
-    event = { 'BufRead', 'BufNewFile' },
-    config = emmet_config
-  },
-  {
-    'mattn/vim-sonictemplate',
-    event = { 'InsertEnter' },
-    config = sonictemplate_config,
-  },
-  {
-    'simeji/winresizer',
-    keys = {
-      { '<C-e>', '<Cmd>WinResizerStartResize<CR>', desc = 'start window resizer' }
-    },
   },
   {
     'vim-denops/denops.vim',
@@ -1116,14 +475,6 @@ require("lazy").setup({
     config = graphql_config
   },
   { 'thinca/vim-prettyprint' },
-  {
-    'skanehira/k8s.vim',
-    config = k8s_config,
-  },
-  {
-    'skanehira/winselector.vim',
-    config = winselector_config,
-  },
   {
     'nvim-telescope/telescope.nvim',
     dependencies = {
@@ -1193,20 +544,6 @@ require("lazy").setup({
       vmap("<C-x>", dial.dec_visual())
       vmap("g<C-a>", dial.inc_gvisual())
       vmap("g<C-x>", dial.dec_gvisual())
-    end
-  },
-  {
-    'Saecki/crates.nvim',
-    dependencies = {
-      { 'nvim-lua/plenary.nvim' },
-    },
-    config = function()
-      require('crates').setup({
-        null_ls = {
-          enabled = true,
-          name = "crates.nvim",
-        },
-      })
     end
   },
   {
