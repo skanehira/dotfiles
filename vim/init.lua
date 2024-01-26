@@ -46,40 +46,8 @@ local xmap = keymap.xmap
 local imap = keymap.imap
 local vmap = keymap.vmap
 
--- options
-vim.cmd('syntax enable')
-vim.cmd('filetype plugin indent on')
-
-vim.g.mapleader = " "
-vim.g["markdown_recommended_style"] = 0
-vim.opt.breakindent = true
-vim.opt.number = false
-vim.opt.incsearch = true
-vim.opt.ignorecase = true
-vim.opt.smartcase = true
-vim.opt.hlsearch = true
-vim.opt.autoindent = true
-vim.opt.smartindent = true
-vim.opt.virtualedit = "block"
-vim.opt.showtabline = 1
-vim.opt.tabstop = 2
-vim.opt.shiftwidth = 2
-vim.opt.softtabstop = 2
-vim.opt.completeopt = 'menu,menuone,noselect'
-vim.opt.laststatus = 3
-vim.opt.scrolloff = 100
-vim.opt.cursorline = true
-vim.opt.helplang = 'ja'
-vim.opt.autowrite = true
-vim.opt.swapfile = false
-vim.opt.showtabline = 1
-vim.opt.diffopt = 'vertical,internal'
-vim.opt.clipboard:append({ vim.fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
-vim.opt.grepprg = 'rg --vimgrep'
-vim.opt.grepformat = '%f:%l:%c:%m'
-vim.opt.mouse = {}
---vim.opt.foldmethod = 'expr'
---vim.opt.foldexpr = 'nvim_treesitter#foldexpr()'
+-- option settings
+require('options')
 
 -- file indent
 local filetype_indent_group = vim.api.nvim_create_augroup('fileTypeIndent', { clear = true })
@@ -140,17 +108,6 @@ vim.api.nvim_create_autocmd('BufReadPost',
     end,
     group = vim.api.nvim_create_augroup('restoreCursorline', { clear = true })
   })
-
--- persistent undo
-local ensure_undo_dir = function()
-  local undo_path = vim.fn.expand('~/.config/nvim/undo')
-  if vim.fn.isdirectory(undo_path) == 0 then
-    vim.fn.mkdir(undo_path --[[@as string]], 'p')
-  end
-  vim.opt.undodir = undo_path
-  vim.opt.undofile = true
-end
-ensure_undo_dir()
 
 -- start insert mode when termopen
 vim.api.nvim_create_autocmd("TermOpen", {
