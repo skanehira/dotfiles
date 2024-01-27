@@ -36,17 +36,14 @@ for _, name in pairs(disable_plugins) do
 end
 
 -- lsp global settings
-require('my/lsp')
+require('my/settings/lsp')
 
 -- keymaps
-local keymaps = require('my/keymaps')
+local keymaps = require('my/settings/keymaps')
 local map = keymaps.map
-local nmap = keymaps.nmap
-local xmap = keymaps.xmap
-local vmap = keymaps.vmap
 
 -- options
-require('my/options')
+require('my/settings/options')
 
 -- file indent
 local filetype_indent_group = vim.api.nvim_create_augroup('fileTypeIndent', { clear = true })
@@ -182,154 +179,10 @@ vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("helpKeymaps", { clear = true }),
 })
 
--- ############################# plugin config section ###############################
-
--- lsp on attach
-Lsp_on_attach = function(client, bufnr)
-  -- Enable completion triggered by <c-x><c-o>
-  client.server_capabilities.semanticTokensProvider = nil
-  vim.api.nvim_set_option_value('omnifunc', 'v:lua.vim.lsp.omnifunc', {
-    buf = bufnr
-  })
-  local bufopts = { silent = true, buffer = bufnr }
-  nmap('K', vim.lsp.buf.hover, bufopts)
-  nmap('<Leader>gi', vim.lsp.buf.implementation, bufopts)
-  nmap('<Leader>gr', vim.lsp.buf.references, bufopts)
-  nmap('<Leader>rn', vim.lsp.buf.rename, bufopts)
-  nmap(']d', vim.diagnostic.goto_next, bufopts)
-  nmap('[d', vim.diagnostic.goto_prev, bufopts)
-  nmap('gO', function()
-    vim.lsp.buf_request(0, 'experimental/externalDocs', vim.lsp.util.make_position_params(),
-      function(_, url)
-        if url then
-          vim.fn.jobstart({ 'open', url })
-        end
-      end)
-  end, bufopts)
-  nmap('<C-g><C-d>', vim.diagnostic.open_float, bufopts)
-  if client.name == 'denols' then
-    nmap('<C-]>', vim.lsp.buf.definition, bufopts)
-  else
-    vim.opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
-  end
-  map({ 'n', 'x' }, 'ma', vim.lsp.buf.code_action, bufopts)
-  nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
-
-  -- auto format when save the file
-  local organize_import = function()
-  end
-  local actions = vim.tbl_get(client.server_capabilities, 'codeActionProvider', "codeActionKinds")
-  if actions ~= nil and vim.tbl_contains(actions, "source.organizeImports") then
-    organize_import = function()
-      vim.lsp.buf.code_action({ context = { only = { "source.organizeImports" } }, apply = true })
-    end
-  end
-  nmap('mi', organize_import)
-
-  if client.supports_method("textDocument/formatting") then
-    nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
-  end
-
-  -- local augroup = vim.api.nvim_create_augroup("LspFormatting", { clear = false })
-  -- if client.supports_method("textDocument/formatting") then
-  --   nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
-  --   if client.name == 'sumneko_lua' then
-  --     return
-  --   end
-  --   vim.api.nvim_create_autocmd("BufWritePre", {
-  --     callback = function()
-  --       organize_import()
-  --       vim.lsp.buf.format()
-  --     end,
-  --     group = augroup,
-  --     buffer = bufnr,
-  --   })
-  -- end
-end
-
--- silicon.vim
-vim.g['silicon_options'] = {
-  font = 'Cica',
-  no_line_number = true,
-  -- background_color = '#434C5E',
-  no_window_controls = true,
-  theme = 'GitHub',
-}
-
-local denops_config = function()
-  vim.g['denops#server#deno_args'] = {
-    '-q',
-    '--no-lock',
-    '-A',
-    '--unstable-ffi'
-  }
-end
-
--- graphql.vim
-local graphql_config = function()
-  vim.api.nvim_create_autocmd('FileType', {
-    pattern = 'graphql',
-    callback = function()
-      nmap('gp', '<Plug>(graphql-execute)')
-    end,
-    group = vim.api.nvim_create_augroup("graphqlInit", { clear = true }),
-  })
-end
-
-
--- quickrun.vim
-vim.g['quickrun_config'] = {
-  typescript = {
-    command = 'deno',
-    tempfile = '%{printf("%s.ts", tempname())}',
-    cmdopt = '--no-check --unstable --allow-all',
-    exec = { 'NO_COLOR=1 %C run %o %s' },
-  },
-  ['deno/terminal'] = {
-    command = 'deno',
-    tempfile = '%{printf("%s.ts", tempname())}',
-    cmdopt = '--no-check --unstable --allow-all',
-    exec = { '%C run %o %s' },
-    type = 'typescript',
-    runner = 'neoterm',
-  },
-  ['rust/cargo'] = {
-    command = 'cargo',
-    exec = '%C run --quiet %s %a',
-  },
-}
-
-local quickrun_config = function()
-  vim.api.nvim_create_autocmd('FileType', {
-    pattern = 'quickrun',
-    callback = function()
-      nmap('q', '<Cmd>bw!<CR>', { silent = true, buffer = true })
-    end,
-    group = vim.api.nvim_create_augroup('quickrunInit', { clear = true }),
-  })
-end
-
--- vim-markdown
-vim.g['vim_markdown_folding_disabled'] = true
-
--- emmet
-
--- vimhelpgenerator
-vim.g['vimhelpgenerator_version'] = ''
-vim.g['vimhelpgenerator_author'] = 'Author: skanehira <sho19921005@gmail.com>'
-vim.g['vimhelpgenerator_uri'] = 'https://github.com/skanehira/'
-vim.g['vimhelpgenerator_defaultlanguage'] = 'en'
-
--- open-browser.vim
-local openbrowser_config = function()
-  nmap('gop', '<Plug>(openbrowser-open)')
-end
-
 -- ############################# lazy config section ###############################
 -- lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 
----@diagnostic disable-next-line: undefined-field
 if not vim.uv.fs_stat(lazypath) then
   vim.fn.system({
     "git",
@@ -340,14 +193,18 @@ if not vim.uv.fs_stat(lazypath) then
     lazypath,
   })
 end
+
 ---@diagnostic disable-next-line: undefined-field
 vim.opt.rtp:prepend(lazypath)
 
 -- lazy settings
 require("lazy").setup({
+  -- others
   require('my/plugins/kensaku'),
   require('my/plugins/treesitter'),
   require('my/plugins/skkeleton'),
+  require('my/plugins/denops'),
+  require('my/plugins/hlchunk'),
 
   -- window
   require('my/plugins/window/zoom'),
@@ -414,76 +271,19 @@ require("lazy").setup({
   require('my/plugins/docs/translate'),
   require('my/plugins/docs/vimdoc-ja'),
   require('my/plugins/docs/helpful'),
+  require('my/plugins/docs/helpgenerator'),
 
-  {
-    'lambdalisue/guise.vim',
-  },
-  {
-    'vim-denops/denops.vim',
-    config = denops_config,
-  },
-  {
-    'thinca/vim-quickrun',
-    dependencies = {
-      { 'skanehira/quickrun-neoterm.vim' }
-    },
-    config = quickrun_config,
-  },
-  {
-    'tyru/open-browser-github.vim',
-    dependencies = {
-      {
-        'tyru/open-browser.vim',
-        config = openbrowser_config,
-      },
-    }
-  },
-  {
-    'skanehira/denops-graphql.vim',
-    config = graphql_config
-  },
-  { 'thinca/vim-prettyprint' },
-  -- for develop vim plugins
-  { 'LeafCage/vimhelpgenerator', ft = 'vim' },
-  { 'lambdalisue/vital-Whisky',  ft = 'vim' },
-  { 'vim-jp/vital.vim' },
-  { 'tyru/capture.vim' },
-  {
-    'monaqa/dial.nvim',
-    config = function()
-      local dial = require("dial.map")
-      nmap("<C-a>", dial.inc_normal())
-      nmap("<C-x>", dial.dec_normal())
-      nmap("g<C-a>", dial.inc_gnormal())
-      nmap("g<C-x>", dial.dec_gnormal())
-      vmap("<C-a>", dial.inc_visual())
-      vmap("<C-x>", dial.dec_visual())
-      vmap("g<C-a>", dial.inc_gvisual())
-      vmap("g<C-x>", dial.dec_gvisual())
-    end
-  },
-  {
-    'pwntester/octo.nvim',
-    dependencies = {
-      'nvim-lua/plenary.nvim',
-      'nvim-telescope/telescope.nvim',
-      'kyazdani42/nvim-web-devicons',
-    },
-    config = function()
-      require('octo').setup()
-    end
-  },
-  {
-    'shellRaining/hlchunk.nvim',
-    event = { 'UIEnter' },
-    config = function()
-      ---@diagnostic disable-next-line: missing-fields
-      require('hlchunk').setup({
-        ---@diagnostic disable-next-line: missing-fields
-        blank = {
-          enable = false,
-        }
-      })
-    end
-  },
+  -- develop
+  require('my/plugins/develop/prettyprint'),
+  require('my/plugins/develop/vital'),
+  require('my/plugins/develop/vital-whisky'),
+  require('my/plugins/develop/capture'),
+  require('my/plugins/develop/quickrun'),
+  require('my/plugins/develop/graphql'),
+
+  -- othres
+  require('my/plugins/utils/guise'),
+  require('my/plugins/utils/open-browser'),
+  require('my/plugins/utils/dial'),
+  require('my/plugins/utils/octo'),
 })

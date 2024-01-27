@@ -1,4 +1,4 @@
-local keymaps = require('my/keymaps')
+local keymaps = require('my/settings/keymaps')
 local nmap = keymaps.nmap
 local vmap = keymaps.vmap
 

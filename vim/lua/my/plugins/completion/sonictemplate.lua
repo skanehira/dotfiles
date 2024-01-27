@@ -1,4 +1,4 @@
-local keymaps = require('my/keymaps')
+local keymaps = require('my/settings/keymaps')
 local imap = keymaps.imap
 
 local sonictemplate_config = function()

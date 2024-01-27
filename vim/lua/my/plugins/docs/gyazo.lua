@@ -1,4 +1,4 @@
-local keymaps = require('my/keymaps')
+local keymaps = require('my/settings/keymaps')
 local nmap = keymaps.nmap
 
 vim.g['gyazo_insert_markdown'] = true
