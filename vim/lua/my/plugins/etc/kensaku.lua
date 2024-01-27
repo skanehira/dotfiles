@@ -1,5 +1,5 @@
-local keymaps = require('my/settings/keymaps')
-local cmap = keymaps.cmap
+local utils = require('my/utils')
+local cmap = utils.keymaps.cmap
 
 local kensaku_search = {
   'lambdalisue/kensaku-search.vim',

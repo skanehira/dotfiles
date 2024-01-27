@@ -1,5 +1,5 @@
-local keymaps = require('my/settings/keymaps')
-local nmap = keymaps.nmap
+local utils = require('my/utils')
+local nmap = utils.keymaps.nmap
 
 local config = function()
   local k8s_pods_keymap = function()

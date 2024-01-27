@@ -1,6 +1,6 @@
-local keymaps = require('my/settings/keymaps')
-local vmap = keymaps.vmap
-local nmap = keymaps.nmap
+local utils = require('my/utils')
+local vmap = utils.keymaps.vmap
+local nmap = utils.keymaps.nmap
 
 local gina_config = function()
   local gina_keymaps = {

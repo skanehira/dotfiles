@@ -1,6 +1,6 @@
-local keymaps = require('my/settings/keymaps')
-local map = keymaps.map
-local nmap = keymaps.nmap
+local utils = require('my/utils')
+local map = utils.keymaps.map
+local nmap = utils.keymaps.nmap
 
 Lsp_on_attach = function(client, bufnr)
   -- Enable completion triggered by <c-x><c-o>

@@ -1,6 +1,6 @@
-local keymaps = require('my/settings/keymaps')
-local nmap = keymaps.nmap
-local vmap = keymaps.vmap
+local utils = require('my/utils')
+local nmap = utils.keymaps.nmap
+local vmap = utils.keymaps.vmap
 
 local config = function()
   nmap('gr', '<Plug>(Translate)')

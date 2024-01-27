@@ -1,24 +1,12 @@
-local map = function(mode, lhs, rhs, opt)
-  vim.keymap.set(mode, lhs, rhs, opt or { silent = true })
-end
-
-local keymaps = {
-  map = map,
-}
-
-for _, mode in pairs({ 'n', 'v', 'i', 'o', 'c', 't', 'x', 't' }) do
-  keymaps[mode .. 'map'] = function(lhs, rhs, opt)
-    map(mode, lhs, rhs, opt)
-  end
-end
-
-local nmap = keymaps.nmap
-local omap = keymaps.omap
-local imap = keymaps.imap
-local xmap = keymaps.xmap
-local cmap = keymaps.cmap
-local tmap = keymaps.tmap
-local vmap = keymaps.vmap
+local utils = require('my/utils')
+local nmap = utils.keymaps.nmap
+local omap = utils.keymaps.omap
+local imap = utils.keymaps.imap
+local xmap = utils.keymaps.xmap
+local cmap = utils.keymaps.cmap
+local tmap = utils.keymaps.tmap
+local vmap = utils.keymaps.vmap
+local map = utils.keymaps.map
 
 -- text object
 omap('8', 'i(')
@@ -105,5 +93,3 @@ nmap('<Leader>tm', [[:new | terminal<CR>]])
 tmap('<C-]>', [[<C-\><C-n>]])
 vmap('H', '^')
 vmap('L', 'g_')
-
-return keymaps

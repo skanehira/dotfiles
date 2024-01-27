@@ -1,5 +1,5 @@
-local keymaps = require('my/settings/keymaps')
-local imap = keymaps.imap
+local utils = require('my/utils')
+local imap = utils.keymaps.imap
 
 local config = function()
   vim.g['copilot_no_tab_map'] = 1

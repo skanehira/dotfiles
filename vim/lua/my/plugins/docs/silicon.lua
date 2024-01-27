@@ -1,6 +1,6 @@
-local keymaps = require('my/settings/keymaps')
-local nmap = keymaps.nmap
-local xmap = keymaps.xmap
+local utils = require('my/utils')
+local nmap = utils.keymaps.nmap
+local xmap = utils.keymaps.xmap
 
 vim.g['silicon_options'] = {
   font = 'Cica',

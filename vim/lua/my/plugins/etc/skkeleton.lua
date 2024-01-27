@@ -1,6 +1,6 @@
-local keymaps = require('my/settings/keymaps')
-local imap = keymaps.imap
-local cmap = keymaps.cmap
+local utils = require('my/utils')
+local imap = utils.keymaps.imap
+local cmap = utils.keymaps.cmap
 
 local skkeleton = {
   'vim-skk/skkeleton',
