@@ -1,6 +1,6 @@
 require('my/plugins/disable')
-require('my/plugins/lazy')
 require('my/settings/options')
 require('my/settings/lsp')
 require('my/settings/autocmd')
 require('my/command')
+require('my/plugins/lazy')
