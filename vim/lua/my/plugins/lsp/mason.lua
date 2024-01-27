@@ -2,7 +2,7 @@ local utils = require('my/utils')
 local map = utils.keymaps.map
 local nmap = utils.keymaps.nmap
 
-Lsp_on_attach = function(client, bufnr)
+local lsp_on_attach = function(client, bufnr)
   -- Enable completion triggered by <c-x><c-o>
   client.server_capabilities.semanticTokensProvider = nil
   vim.api.nvim_set_option_value('omnifunc', 'v:lua.vim.lsp.omnifunc', {
@@ -201,7 +201,7 @@ local config = function()
         }
       end
 
-      opts['on_attach'] = Lsp_on_attach
+      opts['on_attach'] = lsp_on_attach
 
       lspconfig[ls].setup(opts)
     end)()
