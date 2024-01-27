@@ -1,3 +1,6 @@
+local keymaps = require('my/keymaps')
+local nmap = keymaps.nmap
+
 local config = function()
   vim.g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
   vim.g['test#rust#cargotest#options'] = { all = '-- --nocapture' }

@@ -247,29 +247,6 @@ Lsp_on_attach = function(client, bufnr)
   -- end
 end
 
--- telescope.vim
-local telescope_config = function()
-  require("telescope").load_extension("ui-select")
-  local actions = require('telescope.actions')
-  require('telescope').setup {
-    pickers = {
-      live_grep = {
-        mappings = {
-          i = {
-            ['<C-o>'] = actions.send_to_qflist + actions.open_qflist,
-            ['<C-l>'] = actions.send_to_loclist + actions.open_loclist,
-          }
-        }
-      }
-    },
-    extensions = {
-      ['ui-select'] = {
-        require('telescope.themes').get_dropdown {}
-      }
-    }
-  }
-end
-
 -- silicon.vim
 vim.g['silicon_options'] = {
   font = 'Cica',
@@ -288,11 +265,6 @@ local denops_config = function()
   }
 end
 
-local silicon_config = function()
-  nmap('gi', '<Plug>(silicon-generate)')
-  xmap('gi', '<Plug>(silicon-generate)')
-end
-
 -- graphql.vim
 local graphql_config = function()
   vim.api.nvim_create_autocmd('FileType', {
@@ -304,11 +276,6 @@ local graphql_config = function()
   })
 end
 
--- translate.vim
-local translate_config = function()
-  nmap('gr', '<Plug>(Translate)')
-  vmap('gr', '<Plug>(Translate)')
-end
 
 -- quickrun.vim
 vim.g['quickrun_config'] = {
@@ -352,12 +319,6 @@ vim.g['vimhelpgenerator_version'] = ''
 vim.g['vimhelpgenerator_author'] = 'Author: skanehira <sho19921005@gmail.com>'
 vim.g['vimhelpgenerator_uri'] = 'https://github.com/skanehira/'
 vim.g['vimhelpgenerator_defaultlanguage'] = 'en'
-
--- gyazo.vim
-vim.g['gyazo_insert_markdown'] = true
-local gyazo_config = function()
-  nmap('gup', '<Plug>(gyazo-upload)')
-end
 
 -- open-browser.vim
 local openbrowser_config = function()
@@ -431,10 +392,28 @@ require("lazy").setup({
   require('my/plugins/colorscheme/nightfox'),
 
   -- testing
-  require('my/plugins/testing'),
+  require('my/plugins/test/test'),
+  require('my/plugins/test/themis'),
 
   -- infra
   require('my/plugins/infra/k8s'),
+  require('my/plugins/infra/docker'),
+
+  -- fuzzifnder
+  require('my/plugins/fuzzyfinder/telescope'),
+  require('my/plugins/fuzzyfinder/telescope-egrepify'),
+
+  -- documentation
+  require('my/plugins/docs/gyazo'),
+  require('my/plugins/docs/silicon'),
+  require('my/plugins/docs/maketable'),
+  require('my/plugins/docs/markdown'),
+  require('my/plugins/docs/previm'),
+  require('my/plugins/docs/memolist'),
+  require('my/plugins/docs/tabular'),
+  require('my/plugins/docs/translate'),
+  require('my/plugins/docs/vimdoc-ja'),
+  require('my/plugins/docs/helpful'),
 
   {
     'lambdalisue/guise.vim',
@@ -442,17 +421,6 @@ require("lazy").setup({
   {
     'vim-denops/denops.vim',
     config = denops_config,
-  },
-  {
-    'skanehira/denops-silicon.vim',
-    config = silicon_config
-  },
-  {
-    'skanehira/denops-docker.vim',
-    config = function()
-      nmap('gdc', '<Cmd>new | DockerContainers<CR>', {})
-      nmap('gdi', '<Cmd>new | DockerImages<CR>', {})
-    end
   },
   {
     'thinca/vim-quickrun',
@@ -475,62 +443,10 @@ require("lazy").setup({
     config = graphql_config
   },
   { 'thinca/vim-prettyprint' },
-  {
-    'nvim-telescope/telescope.nvim',
-    dependencies = {
-      { 'nvim-lua/plenary.nvim' },
-      { 'nvim-telescope/telescope-ui-select.nvim' },
-    },
-    init = function()
-      local function builtin(name)
-        return function(opt)
-          return function()
-            return require('telescope.builtin')[name](opt or {})
-          end
-        end
-      end
-
-      local function egrepify()
-        require('telescope').extensions.egrepify.egrepify({})
-      end
-
-      nmap('<C-p>', builtin('find_files')())
-      nmap('mg', egrepify)
-      nmap('md', builtin('diagnostics')())
-      nmap('mf', builtin('current_buffer_fuzzy_find')())
-      nmap('mh', builtin('help_tags')({ lang = 'ja' }))
-      nmap('mo', builtin('oldfiles')())
-      nmap('ms', builtin('git_status')())
-      nmap('mc', builtin('commands')())
-      nmap('<Leader>s', builtin('lsp_document_symbols')())
-    end,
-    config = telescope_config,
-  },
-  -- for documentation
-  { 'glidenote/memolist.vim', cmd = { 'MemoList', 'MemoNew' } },
-  { 'godlygeek/tabular',      event = { 'BufRead', 'BufNewFile' } },
-  -- { 'gyim/vim-boxdraw' }
-  { 'mattn/vim-maketable',    event = { 'BufRead', 'BufNewFile' } },
-  -- { 'shinespark/vim-list2tree' }
-  {
-    'skanehira/gyazo.vim',
-    config = gyazo_config,
-    ft = 'markdown',
-  },
-  {
-    'skanehira/denops-translate.vim',
-    config = translate_config
-  },
-  { 'vim-jp/vimdoc-ja' },
-  { 'plasticboy/vim-markdown',   ft = 'markdown' },
-  { 'previm/previm',             ft = 'markdown' },
-
   -- for develop vim plugins
   { 'LeafCage/vimhelpgenerator', ft = 'vim' },
   { 'lambdalisue/vital-Whisky',  ft = 'vim' },
-  { 'tweekmonster/helpful.vim' },
   { 'vim-jp/vital.vim' },
-  { 'thinca/vim-themis',         ft = 'vim' },
   { 'tyru/capture.vim' },
   {
     'monaqa/dial.nvim',
@@ -556,19 +472,6 @@ require("lazy").setup({
     config = function()
       require('octo').setup()
     end
-  },
-  {
-    "fdschmidt93/telescope-egrepify.nvim",
-    dependencies = {
-      "nvim-telescope/telescope.nvim",
-      "nvim-lua/plenary.nvim"
-    },
-    config = function()
-      require("telescope").load_extension("ui-select")
-    end
-  },
-  {
-    'thinca/vim-showtime'
   },
   {
     'shellRaining/hlchunk.nvim',
