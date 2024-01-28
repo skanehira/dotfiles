@@ -215,7 +215,10 @@ local mason = {
     { 'neovim/nvim-lspconfig' },
     {
       'williamboman/mason.nvim',
-      config = function() require("mason").setup() end,
+      config = function()
+        require("mason").setup()
+        require('mason-lspconfig').setup()
+      end,
     },
   },
   config = config,
