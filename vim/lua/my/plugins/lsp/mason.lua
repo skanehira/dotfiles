@@ -108,109 +108,107 @@ local config = function()
   local is_node_repo = node_root_dir(vim.fn.getcwd()) ~= nil
 
   for _, ls in pairs(lss) do
-    (function()
-      local opts = {}
+    local opts = {}
 
-      if ls == 'denols' then
-        -- dont start LS in nodejs repository
-        if is_node_repo then
-          return
-        end
-        opts = {
-          cmd = { 'deno', 'lsp' },
-          root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json', '.git'),
-          settings = {
-            deno = {
-              lint = true,
-              unstable = true,
-              suggest = {
-                imports = {
-                  hosts = {
-                    ["https://deno.land"] = true,
-                    ["https://cdn.nest.land"] = true,
-                    ["https://crux.land"] = true,
-                  },
+    if ls == 'denols' then
+      -- dont start LS in nodejs repository
+      if is_node_repo then
+        return
+      end
+      opts = {
+        cmd = { 'deno', 'lsp' },
+        root_dir = lspconfig.util.root_pattern('deps.ts', 'deno.json', 'import_map.json', '.git'),
+        settings = {
+          deno = {
+            lint = true,
+            unstable = true,
+            suggest = {
+              imports = {
+                hosts = {
+                  ["https://deno.land"] = true,
+                  ["https://cdn.nest.land"] = true,
+                  ["https://crux.land"] = true,
                 },
               },
-            }
-          },
-        }
-      elseif ls == 'tsserver' then
-        if not is_node_repo then
-          return
-        end
-
-        opts = {
-          root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
-        }
-      elseif ls == 'regols' then
-        opts = {
-          cmd = { 'regols' },
-          filetypes = { 'rego' },
-          root_dir = lspconfig.util.root_pattern('.git')
-        }
-      elseif ls == 'lua_ls' then
-        opts = {
-          settings = {
-            Lua = {
-              runtime = {
-                version = 'LuaJIT',
-              },
-              diagnostics = {
-                -- Get the language server to recognize the `vim` global
-                globals = { 'vim' },
-              },
-              workspace = {
-                library = vim.list_extend(vim.api.nvim_get_runtime_file('lua', true), {
-                  vim.fs.joinpath(vim.fn.stdpath('config') --[[@as string]], 'lua'),
-                  vim.fs.joinpath(vim.env.VIMRUNTIME, "lua"),
-                  '${3rd}/luv/library',
-                  '${3rd}/busted/library',
-                  '${3rd}/luassert/library',
-                }),
-              },
             },
-          },
-        }
-      elseif ls == 'yamlls' then
-        opts = {
-          settings = {
-            yaml = {
-              schemas = {
-                ['https://json.schemastore.org/github-workflow.json'] = "/.github/workflows/*",
-                ['https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json'] =
-                "*compose.y*ml"
-              }
-            }
           }
-        }
-      elseif ls == "rust_analyzer" then
-        opts = {
-          settings = {
-            ["rust-analyzer"] = {
-              check = {
-                command = "clippy"
-              },
-              diagnostics = {
-                experimental = {
-                  enable = true,
-                }
-              }
-            }
-          }
-        }
+        },
+      }
+    elseif ls == 'tsserver' then
+      if not is_node_repo then
+        return
       end
 
-      opts['on_attach'] = lsp_on_attach
+      opts = {
+        root_dir = lspconfig.util.root_pattern('package.json', 'node_modules'),
+      }
+    elseif ls == 'regols' then
+      opts = {
+        cmd = { 'regols' },
+        filetypes = { 'rego' },
+        root_dir = lspconfig.util.root_pattern('.git')
+      }
+    elseif ls == 'lua_ls' then
+      opts = {
+        settings = {
+          Lua = {
+            runtime = {
+              version = 'LuaJIT',
+            },
+            diagnostics = {
+              -- Get the language server to recognize the `vim` global
+              globals = { 'vim' },
+            },
+            workspace = {
+              library = vim.list_extend(vim.api.nvim_get_runtime_file('lua', true), {
+                vim.fs.joinpath(vim.fn.stdpath('config') --[[@as string]], 'lua'),
+                vim.fs.joinpath(vim.env.VIMRUNTIME, "lua"),
+                '${3rd}/luv/library',
+                '${3rd}/busted/library',
+                '${3rd}/luassert/library',
+              }),
+            },
+          },
+        },
+      }
+    elseif ls == 'yamlls' then
+      opts = {
+        settings = {
+          yaml = {
+            schemas = {
+              ['https://json.schemastore.org/github-workflow.json'] = "/.github/workflows/*",
+              ['https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json'] =
+              "*compose.y*ml"
+            }
+          }
+        }
+      }
+    elseif ls == "rust_analyzer" then
+      opts = {
+        settings = {
+          ["rust-analyzer"] = {
+            check = {
+              command = "clippy"
+            },
+            diagnostics = {
+              experimental = {
+                enable = true,
+              }
+            }
+          }
+        }
+      }
+    end
 
-      lspconfig[ls].setup(opts)
-    end)()
+    opts['on_attach'] = lsp_on_attach
+
+    lspconfig[ls].setup(opts)
   end
 end
 
 local mason = {
   'williamboman/mason-lspconfig.nvim',
-  event = { 'BufReadPre', 'BufNewFile' },
+  event = { 'BufReadPre', 'BufNewFile', 'BufEnter', 'BufNew' },
   dependencies = {
     { 'neovim/nvim-lspconfig' },
     {
