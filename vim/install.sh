@@ -21,3 +21,7 @@ fi
 if [[ ! -e $nvim_path/init.lua ]]; then
   ln -s $PWD/init.lua $nvim_path/init.lua
 fi
+
+if [[ ! -e $nvim_path/lua ]]; then
+  ln -s $PWD/lua $nvim_path/lua
+fi
