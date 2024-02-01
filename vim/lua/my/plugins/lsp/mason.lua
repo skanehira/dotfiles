@@ -101,6 +101,7 @@ local config = function()
     -- https://github.com/kitagry/regols
     'regols',
     'clangd',
+    'terraformls',
   }
 
   local lspconfig = require("lspconfig")
