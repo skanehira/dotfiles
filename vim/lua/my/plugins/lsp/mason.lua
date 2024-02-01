@@ -189,6 +189,9 @@ local config = function()
         opts = {
           settings = {
             ["rust-analyzer"] = {
+              cargo = {
+                features = 'all'
+              },
               check = {
                 command = "clippy"
               },
