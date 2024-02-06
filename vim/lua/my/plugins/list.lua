@@ -74,6 +74,7 @@ local plugins = {
   'docs/vimdoc-ja',
   'docs/helpful',
   'docs/helpgenerator',
+  'docs/list2tree',
 
   -- develop
   'develop/prettyprint',
