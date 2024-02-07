@@ -83,6 +83,7 @@ local plugins = {
   'develop/capture',
   'develop/quickrun',
   'develop/graphql',
+  'develop/ssr',
 
   -- othres
   'utils/guise',
