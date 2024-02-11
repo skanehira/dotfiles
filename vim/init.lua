@@ -1,4 +1,4 @@
-require('my/plugins/disable')
+require('my/settings/disable')
 require('my/settings/options')
 require('my/settings/lsp')
 require('my/settings/autocmd')
