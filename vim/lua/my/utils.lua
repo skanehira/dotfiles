@@ -1,4 +1,3 @@
----@alias functionType fun(plugin: string): table
 ---@param array string[]
 ---@param func functionType
 local function array_map(array, func)
