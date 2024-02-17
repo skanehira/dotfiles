@@ -38,6 +38,7 @@ local plugins = {
   -- languages
   'lang/rust/crates',
   'lang/go/goimports',
+  'lang/go/gomodifytags',
 
   -- quickfix
   'quickfix/qfreplace',
