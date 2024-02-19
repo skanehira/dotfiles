@@ -18,7 +18,7 @@ local plugins = {
   'completion/nvim-autopairs',
   'completion/sonictemplate',
   'completion/emmet',
-  'completion/copilot',
+  -- 'completion/copilot',
 
   -- filer
   'filer/fern',
@@ -28,7 +28,7 @@ local plugins = {
   'lsp/fidget',
   'lsp/null-ls',
   'lsp/lsp_signature',
-  'lsp/lsp_lines',
+  --'lsp/lsp_lines',
   'lsp/mason',
 
   -- git
