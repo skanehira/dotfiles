@@ -88,7 +88,7 @@ local config = function()
     'tsserver',
     'volar',
     'lua_ls',
-    'golangci_lint_ls',
+    --'golangci_lint_ls',
     'eslint',
     'graphql',
     'bashls',
