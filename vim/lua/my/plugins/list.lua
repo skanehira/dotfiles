@@ -34,6 +34,7 @@ local plugins = {
   -- git
   'git/gitsigns',
   'git/gina',
+  'git/diffview',
 
   -- languages
   'lang/rust/crates',
