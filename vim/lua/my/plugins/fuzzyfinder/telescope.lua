@@ -51,7 +51,7 @@ local telescope = {
     nmap('mf', builtin('current_buffer_fuzzy_find')())
     nmap('mh', builtin('help_tags')({ lang = 'ja' }))
     nmap('mo', builtin('oldfiles')())
-    nmap('ms', builtin('git_status')())
+    -- nmap('ms', builtin('git_status')())
     nmap('mc', builtin('commands')())
     nmap('<Leader>s', builtin('lsp_document_symbols')())
   end,
