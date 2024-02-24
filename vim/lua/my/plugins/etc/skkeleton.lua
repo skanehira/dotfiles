@@ -9,7 +9,9 @@ local skkeleton = {
       pattern = 'skkeleton-initialize-pre',
       callback = function()
         vim.fn['skkeleton#config']({
-          globalJisyo = vim.fn.expand('~/.config/skk/SKK-JISYO.L'),
+          globalDictionaries = {
+            vim.fn.expand('~/.config/skk/SKK-JISYO.L'),
+          },
           eggLikeNewline = true,
           keepState = true
         })
