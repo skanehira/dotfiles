@@ -86,7 +86,7 @@ local plugins = {
   'develop/quickrun',
   'develop/graphql',
   'develop/ssr',
-  'develop/dadbot',
+  'develop/dadbod',
 
   -- othres
   'utils/guise',
