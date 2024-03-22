@@ -18,7 +18,7 @@ local plugins = {
   'completion/nvim-autopairs',
   'completion/sonictemplate',
   'completion/emmet',
-  -- 'completion/copilot',
+  'completion/copilot',
 
   -- filer
   'filer/fern',
