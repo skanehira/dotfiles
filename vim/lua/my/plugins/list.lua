@@ -87,6 +87,7 @@ local plugins = {
   'develop/graphql',
   'develop/ssr',
   'develop/dadbod',
+  'develop/sqls',
 
   -- othres
   'utils/guise',
