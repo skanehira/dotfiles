@@ -12,6 +12,7 @@ local config = function()
       exclude = {
         'gopls',
         'denols',
+        'rust_analyzer',
       }
     }
   })
