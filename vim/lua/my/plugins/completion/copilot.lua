@@ -40,6 +40,7 @@ local config = function()
     ['gina-commit'] = true,
     terraform = true,
     hcl = true,
+    wat = true,
   }
 end
 
