@@ -46,6 +46,7 @@ local telescope = {
     end
 
     nmap('<C-p>', builtin('find_files')())
+    nmap('mr', builtin('resume')())
     nmap('mg', egrepify)
     nmap('md', builtin('diagnostics')())
     nmap('mf', builtin('current_buffer_fuzzy_find')())
