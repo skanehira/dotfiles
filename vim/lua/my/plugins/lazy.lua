@@ -1,5 +1,3 @@
-local utils = require('my/utils')
-
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 
 if not vim.uv.fs_stat(lazypath) then
@@ -37,6 +35,7 @@ local plugins = {
   require('my/plugins/completion/sonictemplate'),
   require('my/plugins/completion/emmet'),
   require('my/plugins/completion/copilot'),
+  require('my/plugins/completion/copilot-chat'),
 
   -- filer
   require('my/plugins/filer/fern'),
