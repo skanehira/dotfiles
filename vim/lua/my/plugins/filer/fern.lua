@@ -5,7 +5,7 @@ local config = function()
   vim.g['fern#renderer'] = 'nerdfont'
   vim.g['fern#window_selector_use_popup'] = true
   vim.g['fern#default_hidden'] = 1
-  vim.g['fern#default_exclude'] = '|\\.DS_Store'
+  vim.g['fern#default_exclude'] = '\\.DS_Store'
 
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'fern',
