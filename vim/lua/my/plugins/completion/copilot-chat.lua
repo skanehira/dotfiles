@@ -5,8 +5,8 @@ local copilotChat = {
     { "github/copilot.vim" },
     { "nvim-lua/plenary.nvim" },
   },
+  -- opts がないとコマンド出てこない
   opts = {
-    debug = true
   },
 }
 
