@@ -16,6 +16,9 @@ local keys = {
   -- C-q を2回押さないと行けない問題を回避す
   { key = 'q', mods = 'CTRL',       action = action { SendString = '\x11' } },
   { key = 'm', mods = 'SHIFT|CTRL', action = action.EmitEvent 'window-maximize' },
+  { key = 't', mods = 'CMD',        action = action.SpawnTab 'DefaultDomain' },
+  { key = 'w', mods = 'CMD',        action = wezterm.action.CloseCurrentTab { confirm = true } },
+
   -- { key = "¥", mods = "CMD", action=action{SplitHorizontal={domain="CurrentPaneDomain"}}},
   -- { key = "-", mods = "CMD", action=action{SplitVertical={domain="CurrentPaneDomain"}}},
   -- { key = "h", mods = "LEADER", action=action{AdjustPaneSize={"Left", 5}}},
