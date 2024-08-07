@@ -7,7 +7,7 @@ local config = function()
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'DiffviewFiles',
     callback = function()
-      nmap('q', '<Cmd>tabclose<CR>')
+      nmap('q', '<Cmd>tabclose<CR>', { buffer = true })
     end,
     group = vim.api.nvim_create_augroup('diffviewInit', { clear = true }),
   })
