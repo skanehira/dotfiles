@@ -21,6 +21,14 @@ local config = function()
     extensions = {
       ['ui-select'] = {
         require('telescope.themes').get_dropdown({})
+      },
+      egrepify = {
+        mappings = {
+          i = {
+            ['<C-o>'] = actions.send_to_qflist + actions.open_qflist,
+            ['<C-l>'] = actions.send_to_loclist + actions.open_loclist,
+          }
+        }
       }
     }
   })
@@ -45,14 +53,13 @@ local telescope = {
       require('telescope').extensions.egrepify.egrepify({})
     end
 
-    nmap('<C-p>', builtin('find_files')())
+    nmap('<C-p>', builtin('find_files')({ find_command = { 'rg', '--hidden', '--glob', '!.git/', '--files' } }))
     nmap('mr', builtin('resume')())
     nmap('mg', egrepify)
     nmap('md', builtin('diagnostics')())
     nmap('mf', builtin('current_buffer_fuzzy_find')())
     nmap('mh', builtin('help_tags')({ lang = 'ja' }))
     nmap('mo', builtin('oldfiles')())
-    -- nmap('ms', builtin('git_status')())
     nmap('mc', builtin('commands')())
     nmap('<Leader>s', builtin('lsp_document_symbols')())
   end,
