@@ -77,7 +77,7 @@ case $( uname -s ) in
 esac
 
 # fzf auto complete
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+command -v fzf > /dev/null 2>&1 && source <(fzf --zsh)
 
 # k8s auto complete
 [ -x "$(which kubectl)" ] && source <(kubectl completion zsh)
