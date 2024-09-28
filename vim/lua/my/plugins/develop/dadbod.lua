@@ -1,8 +1,4 @@
 local config = function()
-  vim.g.dbs = {
-    rust_sandbox = 'mysql://sandbox:sandbox@0.0.0.0:3306/rust-sandbox'
-  }
-
   vim.api.nvim_create_autocmd("FileType", {
     pattern = {
       'mysql',
@@ -13,6 +9,13 @@ local config = function()
       -- require('cmp').setup.buffer({ sources = {{ name = 'vim-dadbod-completion' }} })
     end,
     group = vim.api.nvim_create_augroup("dadbod-ui", { clear = true }),
+  })
+
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = { 'dbout' },
+    callback = function()
+      vim.opt.foldenable = false
+    end,
   })
 end
 
