@@ -1,0 +1,8 @@
+modtest$
+	#[cfg(test)]
+	mod tests {
+		#[test]
+		fn {{_cursor_}} {
+
+		}
+	}
