@@ -120,4 +120,7 @@ function gify() {
   ffmpeg -i $file -r 10 -vf scale=1080:-1 ${file%.*}.gif
 }
 
+# atuin
+command -v atuin > /dev/null 2>&1 && eval "$(atuin init zsh)"
+
 zle -N gify
