@@ -10,7 +10,6 @@ end
 
 local sonictemplate = {
   'mattn/vim-sonictemplate',
-  event = { 'InsertEnter' },
   config = sonictemplate_config,
 }
 
