@@ -1,4 +1,9 @@
 local config = function()
+  require('nightfox').setup({
+    options = {
+      transparent = true,
+    }
+  })
   vim.opt.termguicolors = true
   vim.cmd([[
       colorscheme carbonfox
