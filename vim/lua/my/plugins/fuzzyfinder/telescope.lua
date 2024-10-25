@@ -16,6 +16,14 @@ local config = function()
             ['<C-l>'] = actions.send_to_loclist + actions.open_loclist,
           }
         }
+      },
+      current_buffer_fuzzy_find = {
+        mappings = {
+          i = {
+            ['<C-o>'] = actions.send_to_qflist + actions.open_qflist,
+            ['<C-l>'] = actions.send_to_loclist + actions.open_loclist,
+          }
+        }
       }
     },
     extensions = {
