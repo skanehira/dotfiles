@@ -13,6 +13,7 @@ local config = function()
         'gopls',
         'denols',
         'rust_analyzer',
+        'nil_ls',
       }
     }
   })
@@ -39,6 +40,8 @@ local config = function()
     'regols',
     'clangd',
     'terraformls',
+    -- https://github.com/oxalica/nil
+    'nil_ls'
   }
 
   local lspconfig = require("lspconfig")
