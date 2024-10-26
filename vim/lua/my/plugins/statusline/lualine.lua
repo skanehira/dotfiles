@@ -1,5 +1,11 @@
 local config = function()
+  local custom = require('lualine.themes.nightfox')
+
   require('lualine').setup({
+    options = {
+      section_separators = { left = '', right = '' },
+      theme = custom,
+    },
     sections = {
       lualine_c = {
         {
