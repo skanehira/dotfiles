@@ -11,7 +11,6 @@ vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.hlsearch = true
 vim.opt.autoindent = true
-vim.opt.smartindent = true
 vim.opt.virtualedit = "block"
 vim.opt.showtabline = 1
 vim.opt.tabstop = 2

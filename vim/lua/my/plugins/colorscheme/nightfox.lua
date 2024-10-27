@@ -13,6 +13,7 @@ local config = function()
       hi DiffDelete guifg=#ee5396
       hi clear StatusLine
       hi clear StatusLineNC
+      hi clear StatusLineNC
       hi clear TabLineFill
       hi clear TabLine
       ]])
