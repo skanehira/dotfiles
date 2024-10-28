@@ -23,7 +23,7 @@ local config = function()
     'denols',
     'gopls',
     'rust_analyzer',
-    'tsserver',
+    'ts_ls',
     'volar',
     'lua_ls',
     --'golangci_lint_ls',
