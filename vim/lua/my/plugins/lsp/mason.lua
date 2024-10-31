@@ -76,7 +76,7 @@ local config = function()
             }
           },
         }
-      elseif ls == 'tsserver' then
+      elseif ls == 'ts_ls' then
         if not is_node_repo then
           return
         end
