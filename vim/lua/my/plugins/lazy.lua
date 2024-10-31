@@ -47,6 +47,7 @@ local plugins = {
   require('my/plugins/lsp/lsp_signature'),
   -- require('my/plugins/lsp/lsp_lines'),
   require('my/plugins/lsp/mason'),
+  require('my/plugins/lsp/trouble'),
 
   -- git
   require('my/plugins/git/gitsigns'),
