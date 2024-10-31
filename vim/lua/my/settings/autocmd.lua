@@ -22,6 +22,7 @@ local file_indents = {
       'markdown',
       'wast',
       'graphql',
+      'nix'
     },
     command = 'setlocal tabstop=2 softtabstop=2 shiftwidth=2 expandtab smartindent autoindent'
   },
