@@ -17,6 +17,7 @@ alias v="nvim"
 alias t="terraform"
 alias crun="cargo run --quiet"
 alias t="terraform"
+alias y="yazi"
 
 # custom keybindings
 bindkey -v
