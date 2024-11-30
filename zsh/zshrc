@@ -94,6 +94,8 @@ function ghq-fzf() {
 zle -N ghq-fzf
 bindkey '^g' ghq-fzf
 
+bindkey -s '^f' 'yazi\n'
+
 function tmuxpopup() {
   local width='90%'
   local height='90%'
