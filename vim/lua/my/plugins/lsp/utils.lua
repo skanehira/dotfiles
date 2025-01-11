@@ -29,7 +29,7 @@ local lsp_on_attach = function(client, bufnr)
   else
     vim.opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
   end
-  map({ 'n', 'x' }, 'ma', vim.lsp.buf.code_action, bufopts)
+  -- map({ 'n', 'x' }, 'ma', vim.lsp.buf.code_action, bufopts)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
 
   -- auto format when save the file
@@ -63,6 +63,9 @@ local lsp_on_attach = function(client, bufnr)
   --   })
   -- end
 end
+
+-- use tiny-inline-diagnostic instead of virtual text
+vim.diagnostic.config({ virtual_text = false })
 
 return {
   lsp_on_attach = lsp_on_attach

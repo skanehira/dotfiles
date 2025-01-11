@@ -48,6 +48,8 @@ local plugins = {
   -- require('my/plugins/lsp/lsp_lines'),
   require('my/plugins/lsp/mason'),
   require('my/plugins/lsp/trouble'),
+  require('my/plugins/lsp/tiny-inline-diagnostic'),
+  require('my/plugins/lsp/tiny-code-action'),
 
   -- git
   require('my/plugins/git/gitsigns'),
