@@ -1,5 +1,4 @@
 local utils = require('my/utils')
-local map = utils.keymaps.map
 local nmap = utils.keymaps.nmap
 
 local lsp_on_attach = function(client, bufnr)

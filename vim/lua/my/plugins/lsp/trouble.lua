@@ -1,6 +1,5 @@
 local trouble = {
   "folke/trouble.nvim",
-  opts = {},     -- for default options, refer to the configuration section for custom setup.
   cmd = "Trouble",
   keys = {
     {
@@ -9,31 +8,31 @@ local trouble = {
       desc = "Diagnostics (Trouble)",
     },
     {
-      "<leader>xX",
-      "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
-      desc = "Buffer Diagnostics (Trouble)",
+      "<leader>ic",
+      "<cmd>Trouble lsp_incoming_calls<cr>",
     },
     {
-      "<leader>cs",
-      "<cmd>Trouble symbols toggle focus=false<cr>",
-      desc = "Symbols (Trouble)",
-    },
-    {
-      "<leader>cl",
-      "<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
-      desc = "LSP Definitions / references / ... (Trouble)",
-    },
-    {
-      "<leader>xL",
-      "<cmd>Trouble loclist toggle<cr>",
-      desc = "Location List (Trouble)",
-    },
-    {
-      "<leader>xQ",
-      "<cmd>Trouble qflist toggle<cr>",
-      desc = "Quickfix List (Trouble)",
-    },
+      "<Leader>is",
+      "<cmd>Trouble symbols toggle<cr>",
+    }
   },
+  config = function()
+    require('trouble').setup({
+      auto_close = true,
+      win = {
+        size = {
+          width = 60,
+          height = 10,
+        }
+      }
+    })
+
+    -- for transparent background
+    vim.cmd([[
+      hi TroubleNormal ctermbg=none
+      hi TroubleNormalNC ctermbg=none
+    ]])
+  end
 }
 
 return trouble
