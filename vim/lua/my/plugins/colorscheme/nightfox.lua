@@ -11,11 +11,9 @@ local config = function()
       hi Visual ctermfg=159 ctermbg=23 guifg=#b3c3cc guibg=#384851
       hi DiffAdd guifg=#25be6a
       hi DiffDelete guifg=#ee5396
-      hi clear StatusLine
-      hi clear StatusLineNC
-      hi clear StatusLineNC
-      hi clear TabLineFill
-      hi clear TabLine
+
+      hi TabLine ctermbg=none guibg=none
+      hi TabLineFill ctermbg=none guibg=none
       ]])
 end
 

@@ -15,6 +15,12 @@ local config = function()
       }
     }
   })
+
+  vim.cmd([[
+    hi clear StatusLine
+    hi clear StatusLineNC
+    hi clear StatusLineNC
+  ]])
 end
 
 local lualine = {
