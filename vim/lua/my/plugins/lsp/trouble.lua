@@ -4,16 +4,16 @@ local trouble = {
   keys = {
     {
       "<leader>xx",
-      "<cmd>Trouble diagnostics toggle<cr>",
+      "<cmd>Trouble diagnostics toggle<CR>",
       desc = "Diagnostics (Trouble)",
     },
     {
       "<leader>ic",
-      "<cmd>Trouble lsp_incoming_calls<cr>",
+      "<cmd>Trouble lsp_incoming_calls<CR>",
     },
     {
       "<Leader>is",
-      "<cmd>Trouble symbols toggle<cr>",
+      "<cmd>Trouble lsp_document_symbols win.position=right<CR>",
     }
   },
   config = function()
@@ -24,7 +24,8 @@ local trouble = {
           width = 60,
           height = 10,
         }
-      }
+      },
+      focus = true,
     })
 
     -- for transparent background
