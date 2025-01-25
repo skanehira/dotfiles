@@ -63,6 +63,7 @@ local plugins = {
 
   -- quickfix
   require('my/plugins/quickfix/qfreplace'),
+  require('my/plugins/quickfix/quicker'),
   require('my/plugins/quickfix/bqf'),
 
   -- statusline
@@ -107,7 +108,6 @@ local plugins = {
   require('my/plugins/develop/graphql'),
   require('my/plugins/develop/ssr'),
   require('my/plugins/develop/dadbod'),
-  require('my/plugins/develop/sqls'),
 
   -- othres
   require('my/plugins/utils/guise'),
