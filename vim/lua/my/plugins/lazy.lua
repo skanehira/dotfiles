@@ -1,4 +1,5 @@
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+local utils = require('my/utils')
 
 if not vim.uv.fs_stat(lazypath) then
   vim.fn.system({
@@ -14,106 +15,47 @@ end
 ---@diagnostic disable-next-line: undefined-field
 vim.opt.rtp:prepend(lazypath)
 
-local plugins = {
-  -- etc
-  require('my/plugins/etc/kensaku'),
-  require('my/plugins/etc/skkeleton'),
-  require('my/plugins/etc/denops'),
-
-  -- ui
-  require('my/plugins/ui/treesitter'),
-  require('my/plugins/ui/hlchunk'),
-
-  -- windows
-  require('my/plugins/window/zoom'),
-  require('my/plugins/window/winresizer'),
-  require('my/plugins/window/winselector'),
-
-  -- completion
-  require('my/plugins/completion/nvim-cmp'),
-  require('my/plugins/completion/nvim-autopairs'),
-  require('my/plugins/completion/sonictemplate'),
-  require('my/plugins/completion/emmet'),
-  require('my/plugins/completion/copilot'),
-  require('my/plugins/completion/copilot-chat'),
-
-  -- filer
-  require('my/plugins/filer/fern'),
-  require('my/plugins/filer/fern-renderer-nerdfont'),
-
-  -- lsp
-  require('my/plugins/lsp/fidget'),
-  require('my/plugins/lsp/null-ls'),
-  require('my/plugins/lsp/lsp_signature'),
-  -- require('my/plugins/lsp/lsp_lines'),
-  require('my/plugins/lsp/mason'),
-  require('my/plugins/lsp/trouble'),
-  require('my/plugins/lsp/tiny-inline-diagnostic'),
-  require('my/plugins/lsp/tiny-code-action'),
-
-  -- git
-  require('my/plugins/git/gitsigns'),
-  require('my/plugins/git/gina'),
-  require('my/plugins/git/diffview'),
-
-  -- languages
-  require('my/plugins/lang/rust/crates'),
-  require('my/plugins/lang/go/goimports'),
-  require('my/plugins/lang/go/gomodifytags'),
-
-  -- quickfix
-  require('my/plugins/quickfix/qfreplace'),
-  require('my/plugins/quickfix/quicker'),
-  require('my/plugins/quickfix/bqf'),
-
-  -- statusline
-  require('my/plugins/statusline/lualine'),
-  require('my/plugins/statusline/bufferline'),
-
-  -- colorscheme
-  require('my/plugins/colorscheme/nightfox'),
-
-  -- testing
-  require('my/plugins/test/test'),
-  require('my/plugins/test/themis'),
-
-  -- infra
-  require('my/plugins/infra/k8s'),
-  require('my/plugins/infra/docker'),
-
-  -- fuzzifnder
-  require('my/plugins/fuzzyfinder/telescope'),
-  require('my/plugins/fuzzyfinder/telescope-egrepify'),
-
-  -- documentation
-  require('my/plugins/docs/gyazo'),
-  require('my/plugins/docs/silicon'),
-  require('my/plugins/docs/maketable'),
-  require('my/plugins/docs/markdown'),
-  require('my/plugins/docs/previm'),
-  require('my/plugins/docs/memolist'),
-  require('my/plugins/docs/tabular'),
-  require('my/plugins/docs/translate'),
-  require('my/plugins/docs/vimdoc-ja'),
-  require('my/plugins/docs/helpful'),
-  require('my/plugins/docs/helpgenerator'),
-  require('my/plugins/docs/list2tree'),
-
-  -- develop
-  require('my/plugins/develop/prettyprint'),
-  require('my/plugins/develop/vital'),
-  require('my/plugins/develop/vital-whisky'),
-  require('my/plugins/develop/capture'),
-  require('my/plugins/develop/quickrun'),
-  require('my/plugins/develop/graphql'),
-  require('my/plugins/develop/ssr'),
-  require('my/plugins/develop/dadbod'),
-
-  -- othres
-  require('my/plugins/utils/guise'),
-  require('my/plugins/utils/open-browser'),
-  require('my/plugins/utils/dial'),
-  require('my/plugins/utils/octo'),
+local ignore_files = {
+  'disable.lua',
+  'lazy.lua'
 }
+
+local function require_plugins(directory)
+  local function scan_directory(dir)
+    local handle = vim.uv.fs_scandir(dir)
+    if not handle then
+      return {}
+    end
+
+    local plugins = {}
+
+    while true do
+      local name, type = vim.uv.fs_scandir_next(handle)
+      if not name then break end
+
+      local full_path = dir .. "/" .. name
+
+      if type == "file" and name:match("%.lua$") then
+        if vim.tbl_contains(ignore_files, name) then
+          goto continue
+        end
+        local plugin_path = utils.remove_before(full_path, 'my/plugins'):gsub("%.lua$", "")
+        table.insert(plugins, require(plugin_path))
+      elseif type == "directory" then
+        for _, value in ipairs(scan_directory(full_path)) do
+          table.insert(plugins, value)
+        end
+      end
+      ::continue::
+    end
+
+    return plugins
+  end
+
+  return scan_directory(directory)
+end
+
+local plugins_path = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ':h')
+local plugins = require_plugins(plugins_path)
 
 require("lazy").setup(plugins)

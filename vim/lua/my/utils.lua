@@ -22,7 +22,19 @@ for _, mode in pairs({ 'n', 'v', 'i', 'o', 'c', 't', 'x', 't' }) do
   end
 end
 
+
+local function remove_before(text, pattern)
+  local start_pos = text:find(pattern)
+  if start_pos then
+    return text:sub(start_pos)
+  else
+    return text
+  end
+end
+
+
 return {
+  remove_before = remove_before,
   keymaps = keymaps,
   array_map = array_map,
 }
