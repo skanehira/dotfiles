@@ -4,6 +4,7 @@ local nmap = utils.keymaps.nmap
 local config = function()
   vim.g['test#javascript#denotest#options'] = { all = '--parallel --unstable -A' }
   vim.g['test#rust#cargotest#options'] = { all = '-- --nocapture' }
+  vim.g['test#rust#cargonextest#options'] = { all = '--nocapture' }
   vim.g['test#go#gotest#options'] = { all = '-v' }
   nmap('<Leader>tn', '<Cmd>TestNearest<CR>')
 end
