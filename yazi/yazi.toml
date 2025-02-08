@@ -1,7 +1,0 @@
-[manager]
-ratio = [1, 2, 5]
-
-[opener]
-edit = [
-	{ run = '[ -d "$1" ] && cd "$1" && zsh || { [ -f "$1" ] && cd "$(dirname "$1")" && cd "$(git rev-parse --show-toplevel 2>/dev/null)" && $EDITOR "$1"; };', block = true, for = "unix" },
-]
