@@ -2,12 +2,10 @@ local copilotChat = {
   "CopilotC-Nvim/CopilotChat.nvim",
   branch = "main",
   dependencies = {
-    { "github/copilot.vim" },
+    { "zbirenbaum/copilot.lua" },
     { "nvim-lua/plenary.nvim" },
   },
-  -- opts がないとコマンド出てこない
-  opts = {
-  },
+  opts = {},
   keys = {
     {
       "<Leader>cc",
