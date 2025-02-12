@@ -103,7 +103,8 @@ local config = function()
     'clangd',
     'terraformls',
     -- https://github.com/oxalica/nil
-    'nil_ls'
+    'nil_ls',
+    'golangci_lint_ls'
   }
 
   local lspconfig = require("lspconfig")
