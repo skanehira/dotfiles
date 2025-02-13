@@ -33,8 +33,21 @@ local function remove_before(text, pattern)
 end
 
 
+local function get_open_command()
+  if vim.fn.has("mac") == 1 then
+    return "open"
+  elseif vim.fn.has("unix") == 1 then
+    return "xdg-open"
+  elseif vim.fn.has("win32") == 1 then
+    return "start"
+  else
+    return ""
+  end
+end
+
 return {
   remove_before = remove_before,
   keymaps = keymaps,
   array_map = array_map,
+  get_open_command = get_open_command,
 }
