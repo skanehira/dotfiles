@@ -1,13 +1,33 @@
 local utils = require('my/utils')
 local nmap = utils.keymaps.nmap
+local open_cmd = utils.get_open_command()
 
 -- telescope.vim
 local config = function()
   local telescope = require("telescope")
   local actions = require('telescope.actions')
+  local action_state = require("telescope.actions.state")
+
+  local open_file = function(_)
+    local selection = action_state.get_selected_entry()
+    if selection then
+      local filepath = selection.path or selection[1]
+      vim.fn.system(open_cmd .. " " .. vim.fn.shellescape(filepath))
+    end
+  end
 
   telescope.load_extension("ui-select")
   telescope.setup({
+    defaults = {
+      mappings = {
+        i = {
+          ["<C-o>"] = open_file,
+        },
+        n = {
+          ["<C-o>"] = open_file,
+        },
+      },
+    },
     pickers = {
       live_grep = {
         mappings = {
