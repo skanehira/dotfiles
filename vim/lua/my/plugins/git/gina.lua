@@ -1,4 +1,5 @@
 local utils = require('my/utils')
+local vmap = utils.keymaps.vmap
 local nmap = utils.keymaps.nmap
 
 local gina_config = function()
@@ -25,8 +26,12 @@ local gina_config = function()
   vim.fn['gina#custom#command#option']('log', '--opener', 'new')
   vim.fn['gina#custom#command#option']('status', '--opener', 'new')
   vim.fn['gina#custom#command#option']('branch', '--opener', 'new')
+  nmap('gs', '<Cmd>Gina status<CR>')
   nmap('gl', '<Cmd>Gina log<CR>')
   nmap('gm', '<Cmd>Gina blame<CR>')
+  nmap('gb', '<Cmd>Gina branch<CR>')
+  nmap('gu', ':Gina browse --exact --yank :<CR>')
+  vmap('gu', ':Gina browse --exact --yank :<CR>')
 end
 
 local gina = {
