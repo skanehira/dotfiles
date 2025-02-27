@@ -19,6 +19,18 @@ local config = function()
   telescope.load_extension("ui-select")
   telescope.setup({
     defaults = {
+      vimgrep_arguments = {
+        'rg',
+        '--color=never',
+        '--no-heading',
+        '--with-filename',
+        '--line-number',
+        '--column',
+        '--smart-case',
+        '--hidden',
+        '--glob',
+        '!.git/'
+      },
       mappings = {
         i = {
           ["<C-o>"] = open_file,
