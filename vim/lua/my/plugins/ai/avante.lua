@@ -8,6 +8,12 @@ local avante = {
     -- for example
     provider = 'copilot',
     auto_suggestions_provider = 'copilot',
+    mappings = {
+      --- @class AvanteConflictMappings
+      submit = {
+        insert = "<C-l>",
+      },
+    }
   },
   -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
   build = 'make',
