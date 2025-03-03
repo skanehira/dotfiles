@@ -16,7 +16,6 @@ local config = function()
     end
   end
 
-  telescope.load_extension("ui-select")
   telescope.setup({
     defaults = {
       vimgrep_arguments = {
@@ -62,9 +61,12 @@ local config = function()
       ['ui-select'] = {
         require('telescope.themes').get_dropdown({})
       },
-      egrepify = {
+      live_grep_args = {
         mappings = {
           i = {
+            ['<C-f>'] = function()
+              vim.fn.feedkeys(vim.api.nvim_replace_termcodes('<Right>', true, false, true), 'i')
+            end,
             ['<C-o>'] = actions.send_to_qflist + actions.open_qflist,
             ['<C-l>'] = actions.send_to_loclist + actions.open_loclist,
           }
@@ -89,13 +91,13 @@ local telescope = {
       end
     end
 
-    local function egrepify()
-      require('telescope').extensions.egrepify.egrepify({})
+    local function live_grep_args()
+      require('telescope').extensions.live_grep_args.live_grep_args({})
     end
 
     nmap('<C-p>', builtin('find_files')({ find_command = { 'rg', '--hidden', '--glob', '!.git/', '--files' } }))
     nmap('mr', builtin('resume')())
-    nmap('mg', egrepify)
+    nmap('mg', live_grep_args)
     nmap('md', builtin('diagnostics')())
     nmap('mf', builtin('current_buffer_fuzzy_find')())
     nmap('mh', builtin('help_tags')({ lang = 'ja' }))
