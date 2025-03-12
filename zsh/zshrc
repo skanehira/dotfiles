@@ -16,8 +16,9 @@ alias d="docker compose"
 alias v="nvim"
 alias t="terraform"
 alias crun="cargo run --quiet"
+alias c="cargo"
+alias g="git"
 alias t="terraform"
-alias y="yazi"
 
 # custom keybindings
 bindkey -v
