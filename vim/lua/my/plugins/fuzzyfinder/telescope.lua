@@ -7,6 +7,7 @@ local config = function()
   local telescope = require("telescope")
   local actions = require('telescope.actions')
   local action_state = require("telescope.actions.state")
+  local lga_actions = require("telescope-live-grep-args.actions")
 
   local open_file = function(_)
     local selection = action_state.get_selected_entry()
@@ -67,6 +68,7 @@ local config = function()
             ['<C-f>'] = function()
               vim.fn.feedkeys(vim.api.nvim_replace_termcodes('<Right>', true, false, true), 'i')
             end,
+            ["<C-k>"] = lga_actions.quote_prompt(),
             ['<C-o>'] = actions.send_to_qflist + actions.open_qflist,
             ['<C-l>'] = actions.send_to_loclist + actions.open_loclist,
           }
@@ -81,6 +83,7 @@ local telescope = {
   dependencies = {
     { 'nvim-lua/plenary.nvim' },
     { 'nvim-telescope/telescope-ui-select.nvim' },
+    { 'nvim-telescope/telescope-live-grep-args.nvim' },
   },
   init = function()
     local function builtin(name)
