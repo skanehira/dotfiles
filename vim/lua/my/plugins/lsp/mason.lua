@@ -104,6 +104,7 @@ local config = function()
     'terraformls',
     -- https://github.com/oxalica/nil
     'nil_ls',
+    'biome',
   }
 
   local lspconfig = require("lspconfig")
