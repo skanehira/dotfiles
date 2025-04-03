@@ -106,6 +106,7 @@ local telescope = {
     nmap('mh', builtin('help_tags')({ lang = 'ja' }))
     nmap('mo', builtin('oldfiles')())
     nmap('mc', builtin('commands')())
+    nmap('mb', builtin('buffers')())
     nmap('<Leader>s', builtin('lsp_document_symbols')())
   end,
   config = config,
