@@ -14,8 +14,12 @@ local copilotChat = {
         require("CopilotChat.integrations.telescope").pick(actions.prompt_actions())
       end,
       desc = "CopilotChat - Prompt actions",
+      mode = {
+        "n",
+        "v",
+      },
     },
-  }
+  },
 }
 
 return copilotChat
