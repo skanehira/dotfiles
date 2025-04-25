@@ -84,7 +84,7 @@ function ghq-fzf() {
   zle -R -c
 }
 zle -N ghq-fzf
-bindkey '^g' ghq-fzf
+bindkey '^g^g' ghq-fzf
 
 function tmuxpopup() {
   local width='90%'
@@ -105,15 +105,45 @@ function tmuxpopup() {
 }
 zle -N tmuxpopup
 
-function gify() {
-  if [ "$1" = "" ];then
-    return
+gss() {
+  local in_zle=0 saved_buffer saved_cursor
+  if [[ -n $WIDGET ]]; then
+    in_zle=1
+    saved_buffer=$BUFFER
+    saved_cursor=$CURSOR
+    zle -I
   fi
-  local file=$1
-  ffmpeg -i $file -r 10 -vf scale=1080:-1 ${file%.*}.gif
+
+  local branch
+  branch=$(
+    git for-each-ref --sort=-committerdate \
+      --format='%(refname:short)' refs/heads refs/remotes \
+    | grep -vE '^HEAD$' \
+    | fzf --height=40% --reverse --prompt='branch> ' \
+          --preview='git --no-pager log --graph --oneline --decorate -n 20 {}' \
+          --preview-window=down:60%:wrap
+  ) || {
+    local ret=$?
+    if (( in_zle )); then
+      BUFFER=$saved_buffer
+      CURSOR=$saved_cursor
+      zle reset-prompt
+    fi
+    return $ret
+  }
+
+  if [[ $branch == remotes/* ]]; then
+    git switch -C "${branch#remotes/*/}" "$branch"
+  else
+    git switch "$branch"
+  fi
 }
+
+zle -N gss
+bindkey '^g^b' gss
 
 # atuin
 command -v atuin > /dev/null 2>&1 && eval "$(atuin init zsh)"
+. "$HOME/.atuin/bin/env"
 
 zle -N gify
