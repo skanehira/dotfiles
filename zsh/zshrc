@@ -142,8 +142,4 @@ gss() {
 zle -N gss
 bindkey '^g^b' gss
 
-# atuin
-command -v atuin > /dev/null 2>&1 && eval "$(atuin init zsh)"
-. "$HOME/.atuin/bin/env"
-
 zle -N gify
