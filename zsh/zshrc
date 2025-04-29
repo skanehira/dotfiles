@@ -72,9 +72,6 @@ esac
 # fzf auto complete
 command -v fzf > /dev/null 2>&1 && source <(fzf --zsh)
 
-# k8s auto complete
-[ -x "$(which kubectl)" ] && source <(kubectl completion zsh)
-
 function ghq-fzf() {
   local src=$(ghq list | fzf --preview "bat --color=always --style=grid $(ghq root)/{}/README.*")
   if [ -n "$src" ]; then
