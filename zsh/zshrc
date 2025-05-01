@@ -81,7 +81,7 @@ function ghq-fzf() {
   zle -R -c
 }
 zle -N ghq-fzf
-bindkey '^g^g' ghq-fzf
+bindkey '^g' ghq-fzf
 
 function tmuxpopup() {
   local width='90%'
@@ -129,14 +129,13 @@ gss() {
     return $ret
   }
 
-  if [[ $branch == remotes/* ]]; then
-    git switch -C "${branch#remotes/*/}" "$branch"
+  if [[ $branch == origin/* ]]; then
+    git switch -C "${branch#origin/*/}" "$branch"
   else
     git switch "$branch"
   fi
 }
 
 zle -N gss
-bindkey '^g^b' gss
+bindkey '^k' gss
 
-zle -N gify
