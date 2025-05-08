@@ -130,7 +130,7 @@ gss() {
   }
 
   if [[ $branch == origin/* ]]; then
-    git switch -C "${branch#origin/*/}" "$branch"
+    git switch -C "${branch#origin/*}" "$branch"
   else
     git switch "$branch"
   fi
