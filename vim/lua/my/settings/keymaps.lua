@@ -32,7 +32,7 @@ nmap('va7', 'va\'')
 nmap('va@', 'va`')
 
 -- emacs like
-imap('<C-k>', '<C-o>C')
+imap('<C-k>', '<C-o>d$')
 imap('<C-f>', '<Right>')
 imap('<C-b>', '<Left>')
 imap('<C-e>', '<C-o>A')
