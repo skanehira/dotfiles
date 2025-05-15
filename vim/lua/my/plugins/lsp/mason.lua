@@ -105,6 +105,7 @@ local config = function()
     -- https://github.com/oxalica/nil
     'nil_ls',
     'biome',
+    'tsp_server',
   }
 
   local lspconfig = require("lspconfig")
