@@ -25,3 +25,7 @@ fi
 if [[ ! -e $nvim_path/lua ]]; then
   ln -s $PWD/lua $nvim_path/lua
 fi
+
+if [[ ! -e $nvim_path/after ]]; then
+  ln -s $PWD/after $nvim_path/after
+fi
