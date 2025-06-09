@@ -70,7 +70,8 @@ local config = function()
   end
 
   require('mason-lspconfig').setup({
-    automatic_installation = {
+    automatic_enable = true,
+    ensure_installed = {
       exclude = {
         'gopls',
         'denols',
@@ -106,6 +107,7 @@ local config = function()
     'nil_ls',
     'biome',
     'tsp_server',
+    'zls',
   }
 
   local lspconfig = require("lspconfig")
