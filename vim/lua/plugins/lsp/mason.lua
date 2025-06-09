@@ -9,8 +9,9 @@ end
 
 ---@param client vim.lsp.Client
 local lsp_on_attach = function(client, bufnr)
+  -- disable lsp highlight
+  client.server_capabilities.semanticTokensProvider = nil
   -- Enable completion triggered by <c-x><c-o>
-  -- client.server_capabilities.semanticTokensProvider = nil
   vim.api.nvim_set_option_value('omnifunc', 'v:lua.vim.lsp.omnifunc', {
     buf = bufnr
   })
