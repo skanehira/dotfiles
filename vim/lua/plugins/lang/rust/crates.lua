@@ -4,12 +4,7 @@ local crates = {
     { 'nvim-lua/plenary.nvim' },
   },
   config = function()
-    require('crates').setup({
-      null_ls = {
-        enabled = true,
-        name = "crates.nvim",
-      },
-    })
+    require('crates').setup({})
   end
 }
 
