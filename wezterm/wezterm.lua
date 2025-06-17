@@ -9,6 +9,8 @@ local action = wezterm.action
 local keys = {
   { key = "c", mods = "CMD",        action = action.CopyTo 'Clipboard' },
   { key = 'v', mods = 'CMD',        action = action.PasteFrom 'Clipboard' },
+  { key = 'v', mods = 'SHIFT|CTRL', action = action.PasteFrom 'Clipboard' },
+  { key = "c", mods = "SHIFT|CTRL", action = action.CopyTo 'Clipboard' },
   { key = ";", mods = "CMD",        action = action.IncreaseFontSize },
   { key = "-", mods = "CMD",        action = action.DecreaseFontSize },
   { key = " ", mods = "CTRL",       action = action.HideApplication },
@@ -43,7 +45,8 @@ local config = {
   color_scheme = "iceberg-dark",
   font = wezterm.font("Cica"),
   macos_forward_to_ime_modifier_mask = "SHIFT|CTRL",
-  font_size = 16,
+  use_ime = true,
+  font_size = 15,
   adjust_window_size_when_changing_font_size = false,
   disable_default_key_bindings = true,
   -- leader = { key="s", mods="CTRL" },
@@ -85,12 +88,6 @@ local config = {
     },
   }
 }
-
--- タブの形をカスタマイズ
--- タブの左側の装飾
-local SOLID_LEFT_ARROW = wezterm.nerdfonts.ple_lower_right_triangle
--- タブの右側の装飾
-local SOLID_RIGHT_ARROW = wezterm.nerdfonts.ple_upper_left_triangle
 
 wezterm.on("format-tab-title", function(tab, _, _, _, _, max_width)
   local background = "#5c6d74"
