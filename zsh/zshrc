@@ -39,21 +39,23 @@ bindkey -M viins '^U'  backward-kill-line
 bindkey -M viins '^W'  backward-kill-word
 bindkey -M viins '^Y'  yank
 
+# enable zsh-autosuggestions
+autoload -Uz compinit && compinit
+local suggest=$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+if [ -f $suggest ]; then
+  source $suggest
+fi
+
+# asdf settings
+local asdf="$(brew --prefix)/opt/asdf/libexec/asdf.sh"
+if [ -f $asdf ]; then
+  . $asdf
+fi
 
 case $( uname -s ) in
   Linux)
-    . $HOME/.asdf/asdf.sh
     ;;
   Darwin)
-    # enable auto completion
-    autoload -Uz compinit && compinit
-
-    # asdf settings
-    local asdf="$(brew --prefix)/opt/asdf/libexec/asdf.sh"
-    if [ -f $asdf ]; then
-      . $asdf
-    fi
-
     # add homebrew site-functions for completion
     fpath=($(brew --prefix)/share/zsh/site-functions "${fpath[@]}")
 

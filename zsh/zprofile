@@ -17,6 +17,10 @@ export TIMEFMT=$'\n\n========================\nProgram : %J\nCPU     : %P\nuser 
 case $( uname -s ) in
   Linux)
     export SHELL=/usr/bin/zsh
+    brew=/home/linuxbrew/.linuxbrew/bin/brew
+    if [ -f $brew ];then
+      eval "$($brew shellenv)"
+    fi
     ;;
   Darwin)
     export SHELL=/bin/zsh
