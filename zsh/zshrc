@@ -141,3 +141,5 @@ gss() {
 zle -N gss
 bindkey '^k' gss
 
+# direnv
+command -v direnv > /dev/null 2>&1 && eval "$(direnv hook zsh)"
