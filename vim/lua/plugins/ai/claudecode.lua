@@ -35,8 +35,11 @@ return {
       callback = function()
         local bufnr = vim.api.nvim_get_current_buf()
         vim.api.nvim_set_option_value('filetype', 'markdown', { buf = bufnr })
+        vim.api.nvim_set_option_value('buftype', 'nowrite', { buf = bufnr })
         vim.api.nvim_set_option_value('bufhidden', 'wipe', { buf = bufnr })
         vim.api.nvim_set_option_value('buflisted', false, { buf = bufnr })
+        vim.api.nvim_set_option_value('modifiable', true, { buf = bufnr })
+        vim.api.nvim_set_option_value('modified', false, { buf = bufnr })
         vim.api.nvim_buf_set_keymap(bufnr, 'n', 'q', '<Cmd>q<CR>', { noremap = true, silent = true })
 
         vim.cmd('startinsert')
