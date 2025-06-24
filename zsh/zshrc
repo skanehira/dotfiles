@@ -59,12 +59,6 @@ case $( uname -s ) in
     # add homebrew site-functions for completion
     fpath=($(brew --prefix)/share/zsh/site-functions "${fpath[@]}")
 
-    # enable zsh-autosuggestions
-    local suggest=$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-    if [ -f $suggest ]; then
-      source $suggest
-    fi
-
     # colors: https://coderwall.com/p/pb1uzq/z-shell-colors
     #export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=009"
     #export ZSH_AUTOSUGGEST_STRATEGY=(completion history)
