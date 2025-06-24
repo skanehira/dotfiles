@@ -10,7 +10,6 @@ alias gl="git log"
 alias ll="ls -la"
 alias ls="lsd"
 alias ll='lsd -la'
-alias diff="delta"
 alias k="kubectl"
 alias d="docker compose"
 alias v="nvim"
@@ -19,6 +18,7 @@ alias crun="cargo run --quiet"
 alias c="cargo"
 alias g="git"
 alias t="terraform"
+alias ccc="claude --dangerously-skip-permissions"
 
 # custom keybindings
 bindkey -v
@@ -143,3 +143,6 @@ bindkey '^k' gss
 
 # direnv
 command -v direnv > /dev/null 2>&1 && eval "$(direnv hook zsh)"
+
+# Claude Code config directory
+export CLAUDE_CONFIG_DIR="$HOME/.config/claude"
