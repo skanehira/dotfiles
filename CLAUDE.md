@@ -14,6 +14,7 @@ This is a personal dotfiles repository for managing development environment conf
 - **tmux/** - Terminal multiplexer configuration with platform-specific variants
 - **wezterm/** - WezTerm terminal emulator configuration
 - **karabiner/** - macOS keyboard remapping configuration
+- **claude/** - Claude Code custom commands and configuration
 
 ## Installation and Setup
 
@@ -30,6 +31,7 @@ cd ../tmux && ./install.sh
 cd ../zsh && ./install.sh
 cd ../wezterm && ./install.sh
 cd ../karabiner && ./install.sh  # macOS only
+cd ../claude && ./install.sh
 ```
 
 ### Key Dependencies
@@ -75,6 +77,8 @@ LSP configurations are in `vim/after/` for:
 - Git integration: Gina, Gitsigns, Diffview
 - Fuzzy finding: Telescope
 - Code templates: SonicTemplate
+- LSP enhancements: tiny-code-action, tiny-inline-diagnostic
+- Quickfix improvements: bqf, quicker
 
 ## Working with This Repository
 
@@ -94,3 +98,17 @@ LSP configurations are in `vim/after/` for:
 - The repository assumes `$HOME/dev` as the base for ghq-managed repositories
 - Tmux prefix is remapped to `Ctrl+s` (not the default `Ctrl+b`)
 - Many tools expect modern CLI replacements (lsd for ls, delta for diff, etc.)
+
+## Claude Code Integration
+
+### Custom Commands
+The `claude/` directory contains custom slash commands for Claude Code:
+- `/commit` - Intelligent commit creation with conventional commit format and emoji
+- `/review` - Comprehensive PR review with automated worktree management
+
+### Command Features
+- **Commit Command**: Automated pre-commit checks (lint, build, docs), conventional commit format with emoji, automatic commit splitting for complex changes
+- **Review Command**: Systematic 6-phase review process, automatic worktree creation, consistency analysis with existing codebase
+
+### Installation
+Run `cd claude && ./install.sh` to install Claude Code custom commands to `~/.config/claude/`
