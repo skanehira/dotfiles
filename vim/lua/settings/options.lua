@@ -26,6 +26,7 @@ vim.opt.swapfile = false
 vim.opt.showtabline = 1
 vim.opt.diffopt = 'vertical,internal'
 vim.opt.clipboard:append({ vim.fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
+vim.g.clipboard = os.getenv("TMUX") and "tmux" or "osc52"
 vim.opt.grepprg = 'rg --vimgrep'
 vim.opt.grepformat = '%f:%l:%c:%m'
 vim.opt.mouse = {}
