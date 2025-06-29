@@ -11,3 +11,7 @@ fi
 if [[ ! -e $XDG_CONFIG_HOME/claude/commands ]]; then
   ln -s $PWD/commands $XDG_CONFIG_HOME/claude/commands
 fi
+
+if [[ ! -e $XDG_CONFIG_HOME/claude/settings.json ]]; then
+  ln -s $PWD/settings.json $XDG_CONFIG_HOME/claude/settings.json
+fi

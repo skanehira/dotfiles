@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [],
+    "deny": []
+  },
+  "env": {
+    "MAX_THINKING_TOKENS": "31999"
+  },
+  "includeCoAuthoredBy": false
+}
