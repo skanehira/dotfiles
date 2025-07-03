@@ -26,7 +26,13 @@ vim.opt.swapfile = false
 vim.opt.showtabline = 1
 vim.opt.diffopt = 'vertical,internal'
 vim.opt.clipboard:append({ vim.fn.has('mac') == 1 and 'unnamed' or 'unnamedplus' })
-vim.g.clipboard = os.getenv("TMUX") and "tmux" or "osc52"
+local function is_ssh()
+  return os.getenv("SSH_CLIENT") ~= nil or os.getenv("SSH_TTY") ~= nil
+end
+
+if is_ssh() then
+  vim.g.clipboard = os.getenv("TMUX") and "tmux" or "osc52"
+end
 vim.opt.grepprg = 'rg --vimgrep'
 vim.opt.grepformat = '%f:%l:%c:%m'
 vim.opt.mouse = {}
