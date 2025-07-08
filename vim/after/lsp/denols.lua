@@ -24,6 +24,7 @@ return {
       'deno.json',
       'deno.jsonc',
       'deps.ts',
+      '.git'
     }, {
       upward = true,
       path = vim.fs.dirname(vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr))),
