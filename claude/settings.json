@@ -28,6 +28,17 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-run --allow-read $PWD/claude/hooks/format.ts"
+          }
+        ]
+      }
     ]
   }
 }
