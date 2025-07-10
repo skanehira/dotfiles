@@ -15,19 +15,91 @@
 
 ### Test-Driven Development (TDD) is MANDATORY
 
-**Every piece of production code MUST be written using TDD methodology:**
+**Every piece of production code MUST be written using Kent Beck's TDD methodology:**
 
+#### The TDD Cycle
 1. **RED Phase (MUST)**: Write a failing test FIRST before any implementation
+   - Start with the simplest failing test that defines a small increment of functionality
+   - Use meaningful test names that describe behavior (e.g., "shouldSumTwoPositiveNumbers")
+   - Make test failures clear and informative
 2. **GREEN Phase (MUST)**: Write ONLY the minimum code needed to make the test pass
+   - Implement just enough code - no more
+   - Focus only on making the current test pass
 3. **REFACTOR Phase (MUST)**: Improve code quality ONLY after tests are green
+   - Eliminate duplication ruthlessly
+   - Express intent clearly through naming and structure
+   - Keep methods small and focused on a single responsibility
+   - Make dependencies explicit
+   - Minimize state and side effects
+   - Use the simplest solution that works
+
+#### Defect Fixing Process (MUST)
+When fixing a defect:
+1. First write an API-level failing test that demonstrates the bug
+2. Write the smallest possible test that replicates the problem
+3. Get both tests to pass with minimal code changes
+
+#### Testing Trophy
+Prioritize tests in this order:
+- **Unit Tests** (Base): Fast, focused, numerous
+- **Integration Tests** (Middle): Verify component interactions
+- **E2E Tests** (Top): Minimal but critical user flows
+
+#### TDD Principles
+- **Test First**: Always write tests before implementation
+- **Small Steps**: Make tiny changes and run tests frequently
+- **Test Behavior, Not Implementation**: Focus on what the code does, not how
+- **No Production Code Without Tests**: Every line of production code should be driven by a test
 
 **Violations of TDD approach are NOT acceptable:**
 - ❌ Writing production code without a failing test
 - ❌ Writing more code than needed to pass the test
 - ❌ Refactoring when tests are not green
 - ❌ Skipping tests with the intention to "add them later"
+- ❌ Mixing structural and behavioral changes in the same commit
 
 **Remember: No test, no code. This is non-negotiable.**
+
+### Tidy First Approach is MANDATORY
+
+**All changes MUST be separated into two distinct types:**
+
+1. **STRUCTURAL CHANGES**: Rearranging code without changing behavior
+   - Renaming variables, methods, or classes
+   - Extracting methods or classes
+   - Moving code between files
+   - Reformatting code
+   - MUST be validated by running all tests before and after changes
+
+2. **BEHAVIORAL CHANGES**: Adding or modifying actual functionality
+   - Adding new features
+   - Fixing bugs
+   - Changing business logic
+   - MUST be driven by failing tests first
+
+**Tidy First Rules:**
+- **NEVER mix structural and behavioral changes in the same commit**
+- **ALWAYS make structural changes first when both are needed**
+- **VALIDATE structural changes do not alter behavior by running tests**
+- **Each commit MUST clearly state whether it contains structural or behavioral changes**
+
+### Commit Discipline is MANDATORY
+
+**Only commit when ALL of the following conditions are met:**
+
+1. **ALL tests are passing** - No exceptions
+2. **ALL compiler/linter warnings have been resolved**
+3. **The change represents a single logical unit of work**
+4. **Commit messages clearly state:**
+   - Whether the commit contains structural OR behavioral changes
+   - The specific purpose of the change
+   - Format: `[STRUCTURAL]` or `[BEHAVIORAL]` prefix followed by description
+
+**Commit Rules:**
+- Use small, frequent commits rather than large, infrequent ones
+- Each commit should be reversible without breaking functionality
+- Never commit work-in-progress code
+- Keep commits focused on a single purpose
 
 ## Work Cycle
 
@@ -46,10 +118,6 @@ After completing each task, run the following verification steps:
 - **Completion Notification**: Clearly communicate when a task is complete
 - **Await Approval**: Wait for review before proceeding to the next task
 - **Incorporate Feedback**: Address any review comments before moving forward
-
-### 4. Version Control
-- **Clear Messages**: Write descriptive commit messages
-- **Logical Grouping**: Keep commits focused on a single purpose
 
 ## Code Quality Standards
 
@@ -74,26 +142,6 @@ Follow the "Code Tells You How, Comments Tell You Why" principle:
 
 ## Testing Strategy
 
-### Test-Driven Development (TDD)
-Follow t-wada's TDD approach with the Testing Trophy principle:
-
-#### The TDD Cycle
-1. **Red**: Write a failing test first
-2. **Green**: Write the minimum code to make the test pass
-3. **Refactor**: Improve the code while keeping tests green
-
-#### Testing Trophy (by t-wada)
-Prioritize tests in this order:
-- **Unit Tests** (Base): Fast, focused, numerous
-- **Integration Tests** (Middle): Verify component interactions
-- **E2E Tests** (Top): Minimal but critical user flows
-
-#### TDD Principles
-- **Test First**: Always write tests before implementation
-- **Small Steps**: Make tiny changes and run tests frequently
-- **Refactoring**: Clean up code only when all tests are green
-- **No Production Code Without Tests**: Every line of production code should be driven by a test
-
 ### Test Coverage
 - **Unit Tests**: Test individual functions and components
 - **Integration Tests**: Verify component interactions
@@ -102,7 +150,7 @@ Prioritize tests in this order:
 
 ### Test Organization
 - **Co-location**: Keep test files near the code they test
-- **Descriptive Names**: Use clear test descriptions
+- **Descriptive Names**: Use clear test descriptions that explain behavior
 - **Isolated Tests**: Each test should be independent
 - **Fast Execution**: Keep tests fast and focused
 
