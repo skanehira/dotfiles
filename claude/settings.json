@@ -4,7 +4,30 @@
     "allow": [],
     "deny": []
   },
-  "env": {
-  },
-  "includeCoAuthoredBy": false
+  "env": {},
+  "includeCoAuthoredBy": true,
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-run --allow-read $PWD/claude/hooks/notify.ts --type stop"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-run --allow-read $PWD/claude/hooks/notify.ts --type notify"
+          }
+        ]
+      }
+    ]
+  }
 }
