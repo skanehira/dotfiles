@@ -13,7 +13,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "deno run --allow-env --allow-run --allow-read $PWD/claude/hooks/notify.ts --type stop"
+            "command": "deno run --allow-env --allow-run --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/notify.ts --type stop"
           }
         ]
       }
@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "deno run --allow-env --allow-run --allow-read $PWD/claude/hooks/notify.ts --type notify"
+            "command": "deno run --allow-env --allow-run --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/notify.ts --type notify"
           }
         ]
       }
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "deno run --allow-env --allow-run --allow-read $PWD/claude/hooks/format.ts"
+            "command": "deno run --allow-env --allow-run --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/format.ts"
           }
         ]
       }
