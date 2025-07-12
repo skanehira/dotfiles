@@ -13,6 +13,15 @@
 - Ensures consistent behavior across different environments
 - Prevents orphaned processes and resource leaks
 
+**Basic ghost usage:**
+- **Start a process**: `ghost run <command>` - Runs a command as a managed background process
+- **Stop a process**: `ghost stop <id>` - Stops a running process by its ID
+- **List processes**: `ghost list` - Shows all managed processes
+- **View logs**: `ghost logs <id>` - Shows logs for a specific process
+- **Important**: When the command you want to run has options starting with `-`, use `--` before the command
+  - Example: `ghost run ls -- -la`
+  - The `--` separates ghost's options from the command's options
+
 ### Test-Driven Development (TDD) is MANDATORY
 
 **Every piece of production code MUST be written using Kent Beck's TDD methodology:**
@@ -46,10 +55,7 @@ Prioritize tests in this order:
 - **E2E Tests** (Top): Minimal but critical user flows
 
 #### TDD Principles
-- **Test First**: Always write tests before implementation
-- **Small Steps**: Make tiny changes and run tests frequently
 - **Test Behavior, Not Implementation**: Focus on what the code does, not how
-- **No Production Code Without Tests**: Every line of production code should be driven by a test
 
 **Violations of TDD approach are NOT acceptable:**
 - ❌ Writing production code without a failing test
@@ -59,6 +65,15 @@ Prioritize tests in this order:
 - ❌ Mixing structural and behavioral changes in the same commit
 
 **Remember: No test, no code. This is non-negotiable.**
+
+#### Test Coverage
+- **Edge Cases**: Include tests for boundary conditions
+- **Error Scenarios**: Test error handling paths
+
+#### Test Organization
+- **Co-location**: Keep test files near the code they test
+- **Isolated Tests**: Each test should be independent
+- **Fast Execution**: Keep tests fast and focused
 
 ### Tidy First Approach is MANDATORY
 
@@ -139,20 +154,6 @@ Follow the "Code Tells You How, Comments Tell You Why" principle:
 - **Version Pinning**: Lock dependencies to specific versions
 - **Security Updates**: Regularly update dependencies for security patches
 - **Minimal Dependencies**: Only add dependencies that provide significant value
-
-## Testing Strategy
-
-### Test Coverage
-- **Unit Tests**: Test individual functions and components
-- **Integration Tests**: Verify component interactions
-- **Edge Cases**: Include tests for boundary conditions
-- **Error Scenarios**: Test error handling paths
-
-### Test Organization
-- **Co-location**: Keep test files near the code they test
-- **Descriptive Names**: Use clear test descriptions that explain behavior
-- **Isolated Tests**: Each test should be independent
-- **Fast Execution**: Keep tests fast and focused
 
 ## Documentation
 
