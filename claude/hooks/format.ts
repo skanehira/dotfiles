@@ -1,10 +1,9 @@
 import $ from "jsr:@david/dax";
 import { extname } from "jsr:@std/path";
-import type { PostToolUseData, FileModificationToolParams } from "./types.ts";
-
-async function getPostToolUseData(): Promise<PostToolUseData<FileModificationToolParams>> {
-  return await new Response(Deno.stdin.readable).json();
-}
+import type {
+  FileModificationToolParams,
+  PostToolUseHookData,
+} from "./types.ts";
 
 async function formatFile(filePath: string) {
   const ext = extname(filePath);
@@ -70,23 +69,39 @@ async function formatFile(filePath: string) {
 }
 
 async function main() {
-  const data = await getPostToolUseData();
+  try {
+    const data: PostToolUseHookData<FileModificationToolParams> =
+      await new Response(Deno.stdin.readable).json();
 
-  // Handle different tool types
-  switch (data.tool_name) {
-    case "Write":
-    case "Edit":
-    case "MultiEdit": {
-      const filePath = data.tool_params.file_path;
-      if (filePath) {
-        await formatFile(filePath);
+    // Debug logging
+    await $`echo ${JSON.stringify(data)} >> /tmp/claude_hook_format.log`;
+
+    // Handle different tool types
+    switch (data.tool_name) {
+      case "Write":
+      case "Edit":
+      case "MultiEdit": {
+        // Check if tool_input exists
+        if (!data.tool_input) {
+          await $`echo "ERROR: Missing tool_input for ${data.tool_name}" >> /tmp/claude_hook_format.log`;
+          return;
+        }
+
+        const filePath = data.tool_input.file_path;
+        if (filePath) {
+          await formatFile(filePath);
+        }
+        break;
       }
-      break;
-    }
 
-    default:
-      // Ignore other tools
-      break;
+      default:
+        // Ignore other tools
+        break;
+    }
+  } catch (error) {
+    console.error("Error in main function:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    await $`echo ${`FATAL ERROR: ${errorMessage}`} >> /tmp/claude_hook_format.log`;
   }
 }
 

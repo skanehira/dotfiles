@@ -12,13 +12,19 @@ This directory contains custom hooks for Claude Code to enhance the development 
 
 The `types.ts` file provides TypeScript types for Claude Code tool parameters:
 
-### PostToolUseData
+### PostToolUseHookData
 
 ```typescript
-type PostToolUseData<T = ToolParams> = {
+type PostToolUseHookData<T = ToolParams> = {
+  session_id: string;
+  transcript_path: string;
+  hook_event_name: string;
   tool_name: string;
-  tool_params: T;
-  tool_result: string;
+  tool_input: T;
+  tool_response: {
+    filePath?: string;
+    success: boolean;
+  };
 };
 ```
 
