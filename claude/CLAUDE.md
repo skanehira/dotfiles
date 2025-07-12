@@ -17,7 +17,7 @@
 - **Start a process**: `ghost run <command>` - Runs a command as a managed background process
 - **Stop a process**: `ghost stop <id>` - Stops a running process by its ID
 - **List processes**: `ghost list` - Shows all managed processes
-- **View logs**: `ghost logs <id>` - Shows logs for a specific process
+- **View logs**: `ghost log <id>` - Shows logs for a specific process
 - **Important**: When the command you want to run has options starting with `-`, use `--` before the command
   - Example: `ghost run ls -- -la`
   - The `--` separates ghost's options from the command's options
