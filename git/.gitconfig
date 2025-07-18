@@ -5,6 +5,7 @@
 
 [core]
 	quotepath = false
+	precomposeunicode = false
 
 [filter "lfs"]
 	smudge = git-lfs smudge -- %f
