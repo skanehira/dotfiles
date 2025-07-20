@@ -21,7 +21,13 @@ Please strictly follow the MUST rules documented in the global CLAUDE.md (~/.con
    - ALWAYS make structural changes before behavioral changes
    - See "Tidy First Approach is MANDATORY" section in `CLAUDE.md` for details
 
-4. **Commit Discipline is MANDATORY**
+4. **Handling Uncertainties is MANDATORY**
+   - NEVER make assumptions or guess
+   - ALWAYS explicitly state uncertainties
+   - MUST research first, ask for clarification, and be transparent
+   - See "Handling Uncertainties is MANDATORY" section in `CLAUDE.md` for details
+
+5. **Commit Discipline is MANDATORY**
    - ONLY commit when all tests pass
    - MUST use [STRUCTURAL] or [BEHAVIORAL] prefix in commit messages
    - See "Commit Discipline is MANDATORY" section in `CLAUDE.md` for details

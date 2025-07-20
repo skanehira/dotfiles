@@ -98,6 +98,31 @@ Prioritize tests in this order:
 - **VALIDATE structural changes do not alter behavior by running tests**
 - **Each commit MUST clearly state whether it contains structural or behavioral changes**
 
+### Handling Uncertainties is MANDATORY
+
+**When encountering unclear requirements or unknown information:**
+
+1. **NEVER make assumptions**: Do not guess or fill in gaps with assumptions
+2. **ALWAYS explicitly state uncertainties**: Clearly communicate what is unclear or unknown
+3. **MANDATORY actions when uncertain**:
+   - **Research first**: Use available tools to search and understand the codebase
+   - **Ask for clarification**: Request specific information from the user
+   - **State limitations**: Explicitly say "I don't know" or "I'm uncertain about..."
+   - **Provide options**: When unsure, present multiple approaches with trade-offs
+
+**Examples of proper uncertainty handling:**
+- ✅ "I'm not sure which testing framework this project uses. Let me search for test files to understand the setup."
+- ✅ "The requirements for this feature are unclear. Could you specify whether you want X or Y?"
+- ✅ "I don't know the exact API structure. I'll need to examine the existing code first."
+
+**Violations are NOT acceptable:**
+- ❌ Making up file paths or function names
+- ❌ Assuming project structure without verification
+- ❌ Guessing at requirements instead of asking
+- ❌ Implementing features based on assumptions
+
+**Remember: It's always better to ask than to assume. Transparency builds trust.**
+
 ### Commit Discipline is MANDATORY
 
 **Only commit when ALL of the following conditions are met:**
