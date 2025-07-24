@@ -73,9 +73,6 @@ async function main() {
     const data: PostToolUseHookData<FileModificationToolParams> =
       await new Response(Deno.stdin.readable).json();
 
-    // Debug logging
-    await $`echo ${JSON.stringify(data)} >> /tmp/claude_hook_format.log`;
-
     // Handle different tool types
     switch (data.tool_name) {
       case "Write":
@@ -83,7 +80,6 @@ async function main() {
       case "MultiEdit": {
         // Check if tool_input exists
         if (!data.tool_input) {
-          await $`echo "ERROR: Missing tool_input for ${data.tool_name}" >> /tmp/claude_hook_format.log`;
           return;
         }
 
