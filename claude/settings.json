@@ -1,11 +1,11 @@
 {
-  "permissions": {
-    "defaultMode": "bypassPermissions",
-    "allow": [],
-    "deny": []
-  },
   "env": {},
   "includeCoAuthoredBy": true,
+  "permissions": {
+    "allow": [],
+    "deny": [],
+    "defaultMode": "bypassPermissions"
+  },
   "hooks": {
     "Stop": [
       {
