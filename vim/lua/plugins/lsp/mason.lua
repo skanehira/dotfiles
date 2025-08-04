@@ -77,6 +77,14 @@ vim.api.nvim_create_autocmd('LspAttach', {
   callback = function(args)
     local client = vim.lsp.get_client_by_id(args.data.client_id)
     if client then
+      -- Enable marksman only for physical files
+      if client.name == 'marksman' then
+        local bufname = vim.api.nvim_buf_get_name(args.buf)
+        -- Exclude virtual buffers (e.g., claudecode://prompt)
+        if bufname == '' or bufname:match('^%w+://') then
+          return
+        end
+      end
       lsp_on_attach(client, args.buf)
     end
   end,
