@@ -12,6 +12,10 @@ if [[ ! -e $XDG_CONFIG_HOME/claude/commands ]]; then
   ln -s $PWD/commands $XDG_CONFIG_HOME/claude/commands
 fi
 
+if [[ ! -e $XDG_CONFIG_HOME/claude/hooks ]]; then
+  ln -s $PWD/hooks $XDG_CONFIG_HOME/claude/hooks
+fi
+
 if [[ ! -e $XDG_CONFIG_HOME/claude/agents ]]; then
   ln -s $PWD/agents $XDG_CONFIG_HOME/claude/agents
 fi
