@@ -27,7 +27,13 @@ Please strictly follow the MUST rules documented in the global CLAUDE.md (~/.con
    - MUST research first, ask for clarification, and be transparent
    - See "Handling Uncertainties is MANDATORY" section in `CLAUDE.md` for details
 
-5. **Commit Discipline is MANDATORY**
+5. **Documentation Search is MANDATORY**
+   - MUST use context7 for library/framework documentation searches
+   - First call resolve-library-id, then get-library-docs
+   - NEVER use web search when context7 has the documentation
+   - See "Documentation Search is MANDATORY" section in `CLAUDE.md` for details
+
+6. **Commit Discipline is MANDATORY**
    - ONLY commit when all tests pass
    - MUST use [STRUCTURAL] or [BEHAVIORAL] prefix in commit messages
    - See "Commit Discipline is MANDATORY" section in `CLAUDE.md` for details

@@ -169,5 +169,6 @@ Each phase evaluates specific aspects:
 - **Consistency Analysis**: Alignment with existing codebase patterns
 - **Prioritized Action Items**: Critical → Important → Suggestions
 - **Code Examples**: Specific recommendations with before/after samples
+- **Output File**: All review results are written to `result_review.md` in Japanese
 
 This command ensures thorough, consistent, and context-aware code reviews that maintain codebase quality and consistency standards.
