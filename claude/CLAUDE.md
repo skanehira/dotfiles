@@ -123,6 +123,28 @@ Prioritize tests in this order:
 
 **Remember: It's always better to ask than to assume. Transparency builds trust.**
 
+### Documentation Search is MANDATORY
+
+**When searching for library or framework documentation:**
+
+1. **MUST use context7**: Always use the context7 MCP server for documentation searches
+2. **Proper usage flow**:
+   - First call `resolve-library-id` to get the Context7-compatible library ID
+   - Then call `get-library-docs` with the resolved ID
+   - Exception: If user explicitly provides a library ID in `/org/project` format
+
+**Examples of proper documentation search:**
+- ✅ "Let me search for React documentation using context7"
+- ✅ "I'll use context7 to find the latest Next.js API documentation"
+- ✅ "Using context7 to get Supabase documentation for this feature"
+
+**Violations are NOT acceptable:**
+- ❌ Using web search for official documentation when context7 has it
+- ❌ Guessing API methods without checking documentation
+- ❌ Using outdated documentation from memory
+
+**Remember: Always use the most up-to-date documentation available through context7.**
+
 ### Commit Discipline is MANDATORY
 
 **Only commit when ALL of the following conditions are met:**
