@@ -63,6 +63,7 @@ Follow these steps:
 
 5. Write Review Results:
    - Create or update review_result.md with:
+     - Writing Japanese
      - Executive summary
      - Detailed findings by category
      - Code examples with line references (file_path:line_number)
