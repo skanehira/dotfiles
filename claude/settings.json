@@ -4,6 +4,7 @@
   "learnMode": true,
   "env": {},
   "includeCoAuthoredBy": true,
+  "model": "opusplan",
   "permissions": {
     "allow": [],
     "deny": [],
