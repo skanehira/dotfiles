@@ -17,6 +17,19 @@ tools: TodoWrite, Write, Read, Grep, Glob
 
 ## 作業プロセス
 
+### 0. MUSTルール確認（必須）
+```
+作業開始前の必須チェック:
+- [ ] Test-Driven Development (TDD) は MANDATORY
+- [ ] Tidy First Approach は MANDATORY  
+- [ ] Handling Uncertainties は MANDATORY
+- [ ] Background Process Management は MANDATORY
+- [ ] Documentation Search は MANDATORY
+- [ ] Commit Discipline は MANDATORY
+
+これらのルールに従ったタスク分解を行う
+```
+
 ### 1. 要望の理解と分析
 ```
 ユーザーの要望
@@ -59,38 +72,71 @@ Read(file_path="関連ファイル")
 - リソース制約
 ```
 
-### 4. タスク分解
+### 4. タスク分解（MUSTルール準拠）
 ```markdown
 ## フェーズ分け
 Phase 1: 基盤構築
-Phase 2: コア機能実装
+Phase 2: コア機能実装（TDD準拠）
 Phase 3: 品質向上
 Phase 4: ドキュメント整備
 
-## 各フェーズの詳細タスク
+## 各フェーズの詳細タスク（TDDサイクル例）
 Phase 1:
 - [ ] プロジェクト構造の設計
 - [ ] 必要なパッケージの選定
 - [ ] 基本的なセットアップ
+
+Phase 2: TDD準拠の機能実装例
+- [ ] [RED] ユーザー認証機能の振る舞いテストを書く
+- [ ] [GREEN] テストを通すための最小実装
+- [ ] [GREEN] テストがパスするまで実装を調整
+- [ ] [REFACTOR] 重複コードの排除とリファクタリング
+- [ ] [RED] 次の機能（例：ユーザー登録）の振る舞いテストを書く
+- [ ] [GREEN] テストを通すための最小実装
+- [ ] [GREEN] テストがパスするまで実装を調整
+- [ ] [REFACTOR] コード品質の向上
+
+Phase 3:
+- [ ] [STRUCTURAL] コードの整理とリファクタリング（行動変更なし）
+- [ ] [BEHAVIORAL] エラーハンドリングのテスト追加と実装
+- [ ] パフォーマンステストの実装
 ```
 
-### 5. TODOリスト生成
+### 5. TODOリスト生成（MUSTルール準拠）
 ```javascript
 TodoWrite({
   todos: [
     {
       id: "1",
       content: "プロジェクト構造の設計と初期セットアップ",
-      status: "pending",
-      priority: "high"
+      status: "pending"
     },
     {
       id: "2", 
-      content: "データモデルの設計と実装",
-      status: "pending",
-      priority: "high"
+      content: "[RED] ユーザー認証機能の振る舞いテストを書く",
+      status: "pending"
     },
-    // ... 詳細なタスクを継続
+    {
+      id: "3",
+      content: "[GREEN] 認証テストを通すための最小実装",
+      status: "pending"
+    },
+    {
+      id: "4",
+      content: "[GREEN] 認証テストがパスするまで実装を調整",
+      status: "pending"
+    },
+    {
+      id: "5",
+      content: "[REFACTOR] 認証機能のコード品質向上",
+      status: "pending"
+    },
+    {
+      id: "6",
+      content: "[STRUCTURAL] コード整理（行動変更なし）",
+      status: "pending"
+    },
+    // TDDサイクルに従った詳細なタスクを継続
   ]
 })
 ```
@@ -172,8 +218,9 @@ Task D ↗
 
 ## 分析結果の出力
 
-分析完了後、`TODO.md`ファイルに以下の内容を出力します：
+分析完了後、`docs/TODO.md`と`docs/DESIGN.md`ファイルに以下の内容を出力します：
 
+#### docs/TODO.md
 ```markdown
 # TODO: [プロジェクト名]
 
@@ -183,33 +230,77 @@ Task D ↗
 ## 概要
 [プロジェクトの概要と目的]
 
-## 実装タスク一覧
+## 実装タスク一覧（MUSTルール準拠）
 
 ### Phase 1: 基盤構築
-- [ ] タスク1の詳細
-- [ ] タスク2の詳細
+- [ ] プロジェクト構造の設計と初期セットアップ
+- [ ] 開発環境の構築（ghost for background processes）
 
-### Phase 2: コア機能実装
-- [ ] タスク3の詳細
-- [ ] タスク4の詳細
+### Phase 2: TDD準拠のコア機能実装
+- [ ] [RED] 機能Aの振る舞いテストを書く
+- [ ] [GREEN] テストを通すための最小実装
+- [ ] [GREEN] テストがパスするまで実装を調整
+- [ ] [REFACTOR] 重複コードの排除とリファクタリング
+- [ ] [RED] 機能Bの振る舞いテストを書く
+- [ ] [GREEN] テストを通すための最小実装
+- [ ] [GREEN] テストがパスするまで実装を調整
+- [ ] [REFACTOR] コード品質の向上
 
-### Phase 3: 品質向上
-- [ ] タスク5の詳細
+### Phase 3: 品質向上（Tidy First準拠）
+- [ ] [STRUCTURAL] コード整理とリファクタリング（行動変更なし）
+- [ ] [BEHAVIORAL] エラーハンドリングのテスト追加と実装
+- [ ] 全テストの実行と品質確認
 
-## 実装時の注意事項
-- [重要な考慮事項]
-- [技術的な推奨事項]
+## 実装時の注意事項（MUSTルール準拠）
+- TDD: 必ずテストファースト（RED → GREEN → REFACTOR）
+- Tidy First: 構造変更と機能変更を分離してコミット
+- Background Process: ghostを使用（&, nohup等は禁止）
+- 不確実性: 推測せず明確に質問し調査を行う
+- コミット: [STRUCTURAL] or [BEHAVIORAL] のプレフィックス必須
 
 ## 参考資料
-- 要件定義書: [ファイルパス]
+- 設計書: docs/DESIGN.md
 - 関連ドキュメント: [リンク]
+```
+
+#### docs/DESIGN.md
+```markdown
+# [プロジェクト名] 設計書
+
+生成日: [日付]
+生成者: requirements-analyzer
+
+## システム概要
+[システムの目的と全体像]
+
+## アーキテクチャ設計
+[システム構成と技術選択]
+
+## 詳細設計
+[コンポーネント設計、API設計など]
+
+## データ設計
+[データモデル、データフロー]
+
+## セキュリティ設計
+[セキュリティ要件と対策]
+
+## 性能設計
+[性能要件と最適化方針]
 ```
 
 ### ファイル出力処理
 ```javascript
+// TODO.md を docs ディレクトリに出力
 Write(
-    file_path="TODO.md",
+    file_path="docs/TODO.md",
     content=todoContent
+)
+
+// DESIGN.md を docs ディレクトリに出力  
+Write(
+    file_path="docs/DESIGN.md",
+    content=designContent
 )
 ```
 
