@@ -50,10 +50,7 @@ local lsp_on_attach = function(client, bufnr)
     end
   end
   nmap('mi', organize_import)
-
-  if client:supports_method("textDocument/formatting") then
-    nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
-  end
+  nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
 
   -- local augroup = vim.api.nvim_create_augroup("LspFormatting", { clear = false })
   -- if client.supports_method("textDocument/formatting") then
