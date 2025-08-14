@@ -1,3 +1,10 @@
+---
+name: base-rules
+description: サブエージェント間の共通ルール
+color: red
+tools: TodoWrite, Write, Read, Grep, Glob
+---
+
 # 共通ルールベース
 
 このファイルは全てのサブエージェントが守るべき共通ルールを定義しています。

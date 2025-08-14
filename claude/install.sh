@@ -1,25 +1,25 @@
 #!/bin/bash
 
-if [ ! -e $XDG_CONFIG_HOME/claude ]; then
-  mkdir -p $XDG_CONFIG_HOME/claude
+if [ ! -e $HOME/.claude ]; then
+  mkdir -p $HOME/.claude
 fi
 
-if [[ ! -e $XDG_CONFIG_HOME/claude/CLAUDE.md ]]; then
-  ln -s $PWD/CLAUDE.md $XDG_CONFIG_HOME/claude/CLAUDE.md
+if [[ ! -e $HOME/.claude/CLAUDE.md ]]; then
+  ln -s $PWD/CLAUDE.md $HOME/.claude/CLAUDE.md
 fi
 
-if [[ ! -e $XDG_CONFIG_HOME/claude/commands ]]; then
-  ln -s $PWD/commands $XDG_CONFIG_HOME/claude/commands
+if [[ ! -e $HOME/.claude/commands ]]; then
+  ln -s $PWD/commands $HOME/.claude/commands
 fi
 
-if [[ ! -e $XDG_CONFIG_HOME/claude/hooks ]]; then
-  ln -s $PWD/hooks $XDG_CONFIG_HOME/claude/hooks
+if [[ ! -e $HOME/.claude/hooks ]]; then
+  ln -s $PWD/hooks $HOME/.claude/hooks
 fi
 
-if [[ ! -e $XDG_CONFIG_HOME/claude/agents ]]; then
-  ln -s $PWD/agents $XDG_CONFIG_HOME/claude/agents
+if [[ ! -e $HOME/.claude/agents ]]; then
+  ln -s $PWD/agents $HOME/.claude/agents
 fi
 
-if [[ ! -e $XDG_CONFIG_HOME/claude/settings.json ]]; then
-  ln -s $PWD/settings.json $XDG_CONFIG_HOME/claude/settings.json
+if [[ ! -e $HOME/.claude/settings.json ]]; then
+  ln -s $PWD/settings.json $HOME/.claude/settings.json
 fi
