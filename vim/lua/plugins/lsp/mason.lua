@@ -109,6 +109,7 @@ local config = function()
       'zls',
       'regols',
       'gopls',
+      'buf_ls',
       -- 'nil_ls'
     }
   })
