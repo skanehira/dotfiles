@@ -96,7 +96,7 @@ tmap('<C-p>', '<Up>')
 vmap('H', '^')
 vmap('L', 'g_')
 nmap('<C-g><C-g>', ':grep <C-R><C-W><CR>')
-nmap('gk', '<Cmd>TerminalExec gss<CR>')
+nmap('<C-g><C-k>', '<Cmd>TerminalExec gss<CR>')
 nmap('gf', 'gF')
 
 -- copy file path with selected range
