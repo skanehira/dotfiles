@@ -12,19 +12,6 @@ const flags = parseArgs(Deno.args, {
   string: ["type"],
 });
 
-// Check if running in SSH session
-function isSSHSession(): boolean {
-  return Deno.env.get("SSH_CLIENT") !== undefined ||
-    Deno.env.get("SSH_TTY") !== undefined ||
-    Deno.env.get("SSH_CONNECTION") !== undefined;
-}
-
-// Skip notifications if in SSH session
-if (isSSHSession()) {
-  console.log("Running in SSH session, skipping notification");
-  Deno.exit(0);
-}
-
 // When called from Notification hooks
 async function notify() {
   const input: Notification = await new Response(Deno.stdin.readable).json();
