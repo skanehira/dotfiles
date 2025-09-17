@@ -1,6 +1,5 @@
 return {
-  -- 'johnseth97/codex.nvim',
-  dir = '~/dev/github.com/skanehira/codex.nvim',
+  'skanehira/codex.nvim',
   lazy = true,
   cmd = { 'Codex', 'CodexToggle' }, -- Optional: Load only on command execution
   keys = {
