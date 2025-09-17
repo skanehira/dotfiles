@@ -64,9 +64,6 @@ if [ -d $shellspecbin ]; then
   export PATH=$shellspecbin:$PATH
 fi
 
-# Vault
-export VAULT_ADDR=http://pi1:30820
-
 # vim:ft=zsh
 
 # Added by OrbStack: command-line tools and integration
