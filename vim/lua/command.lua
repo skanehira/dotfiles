@@ -12,7 +12,7 @@ vim.api.nvim_create_user_command("TerminalExec", function(opts)
   vim.cmd("botright 20new")
   local buf = vim.api.nvim_get_current_buf()
   vim.fn.jobstart(
-    { "zsh", "-c", "source ~/.zshrc && " .. cmd },
+    { "zsh", "-i", "-c", cmd },
     {
       stdout_buffered = true,
       stderr_buffered = true,
