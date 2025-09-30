@@ -7,7 +7,6 @@
     "deny": [],
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus",
   "enableAllProjectMcpServers": true,
   "hooks": {
     "Stop": [
@@ -43,11 +42,6 @@
         ]
       }
     ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "bun x ccusage statusline",
-    "padding": 0
   },
   "learnMode": true
 }
