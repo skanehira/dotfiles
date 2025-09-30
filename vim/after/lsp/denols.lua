@@ -2,9 +2,9 @@
 return {
   workspace_required = true,
   settings = {
-      lint = true,
-      unstable = true,
-      suggest = {
+    lint = true,
+    unstable = true,
+    suggest = {
       completeFunctionCalls = true,
       names = true,
       paths = true,
