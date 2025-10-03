@@ -23,11 +23,17 @@ async function notifyWhenStop() {
   await $`terminal-notifier -title "Claude Code" -message "Wait next action" -sound default`;
 }
 
-switch (flags.type) {
-  case "notify":
-    await notify();
-    break;
-  case "stop":
-    await notifyWhenStop();
-    break;
+async function main() {
+  switch (flags.type) {
+    case "notify":
+      await notify();
+      break;
+    case "stop":
+      await notifyWhenStop();
+      break;
+  }
+}
+
+if (Deno.build.os === "darwin") {
+  await main();
 }
