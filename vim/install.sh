@@ -14,10 +14,6 @@ if [[ ! -e $HOME/.vimrc ]]; then
   ln -s $PWD/vimrc $HOME/.vimrc
 fi
 
-if [[ ! -e $path/sonictemplate ]]; then
-  ln -s $PWD/sonictemplate $path/sonictemplate
-fi
-
 if [[ ! -e $nvim_path/init.lua ]]; then
   ln -s $PWD/init.lua $nvim_path/init.lua
 fi
