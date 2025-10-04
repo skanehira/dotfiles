@@ -154,6 +154,7 @@ Example of splitting commits:
 
 ## Important Notes
 
+- **CRITICAL**: This command should ONLY create commits when explicitly invoked by the user with `/commit`. Do NOT automatically create commits after running this command unless the user explicitly asks for it.
 - By default, pre-commit checks (`pnpm lint`, `pnpm build`, `pnpm generate:docs`) will run to ensure code quality
 - If these checks fail, you'll be asked if you want to proceed with the commit anyway or fix the issues first
 - If specific files are already staged, the command will only commit those files
@@ -162,3 +163,11 @@ Example of splitting commits:
 - Before committing, the command will review the diff to identify if multiple commits would be more appropriate
 - If suggesting multiple commits, it will help you stage and commit the changes separately
 - Always reviews the commit diff to ensure the message matches the changes
+
+## Behavior After Command Execution
+
+After executing the `/commit` command:
+- **DO NOT** automatically create additional commits without explicit user instruction
+- **DO NOT** assume the user wants to commit every change made after the initial commit
+- **WAIT** for the user to explicitly invoke `/commit` again if they want another commit
+- **ONLY** create commits when the user explicitly requests them
