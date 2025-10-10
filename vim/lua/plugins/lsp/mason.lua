@@ -110,6 +110,7 @@ local config = function()
       'regols',
       'gopls',
       'buf_ls',
+      'gh_actions_ls',
       -- 'nil_ls'
     }
   })
