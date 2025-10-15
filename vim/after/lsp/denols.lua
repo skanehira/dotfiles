@@ -18,7 +18,7 @@ return {
   root_dir = function(bufnr, callback)
     local lspconfig = require("lspconfig")
     local node_root_dir = lspconfig.util.root_pattern("package.json")
-    local is_node_repo = node_root_dir(vim.fn.getcwd()) ~= nil
+    local is_node_repo = node_root_dir(vim.api.nvim_buf_get_name(bufnr)) ~= nil
 
     local found_dirs = vim.fs.find({
       'deno.json',
