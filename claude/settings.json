@@ -43,5 +43,6 @@
       }
     ]
   },
+  "alwaysThinkingEnabled": false,
   "learnMode": true
 }
