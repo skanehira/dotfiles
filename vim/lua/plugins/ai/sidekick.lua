@@ -12,6 +12,14 @@ return {
           keys = {
             nav_left = { '<C-]><C-h>', 'nav_left' }
           }
+        },
+        tools = {
+          claude_resume = {
+            cmd = { 'claude', '-r' },
+          },
+          claude_continue = {
+            cmd = { 'claude', '-c' },
+          },
         }
       },
     })
@@ -45,9 +53,17 @@ return {
       require("sidekick.cli").prompt()
     end, { desc = "Sidekick Select Prompt" })
 
-    -- Example of a keybinding to open Claude directly
     vim.keymap.set("n", "<leader>ac", function()
       require("sidekick.cli").toggle({ name = "claude", focus = true })
     end, { desc = "Sidekick Toggle Claude" })
+
+    vim.keymap.set("n", "<leader>ar", function()
+      require("sidekick.cli").toggle({ name = "claude_resume", focus = true })
+    end, { desc = "Sidekick Toggle Claude Resume" })
+
+    vim.keymap.set("n", "<leader>aC", function()
+      require("sidekick.cli").toggle({ name = "claude_continue", focus = true })
+    end, { desc = "Sidekick Toggle Claude Continue" })
+
   end,
 }
