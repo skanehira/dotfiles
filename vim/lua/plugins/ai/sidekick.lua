@@ -33,10 +33,6 @@ return {
       require("sidekick.cli").select()
     end, { desc = "Select CLI" })
 
-    vim.keymap.set("n", "<leader>ad", function()
-      require("sidekick.cli").close()
-    end, { desc = "Detach a CLI Session" })
-
     vim.keymap.set({ "x", "n" }, "<leader>at", function()
       require("sidekick.cli").send({ msg = "{this}" })
     end, { desc = "Send This" })
