@@ -13,8 +13,10 @@ return {
         claude = {
           on_attach = function(bufnr)
             local win_id = vim.fn.win_findbuf(bufnr)[0]
+            local opts = { buffer = bufnr, nowait = true, silent = true }
             vim.api.nvim_set_option_value('winfixwidth', true, { win = win_id })
-            vim.keymap.set('n', 'qq', '<Cmd>bw!<CR>', { buffer = bufnr, nowait = true, silent = true })
+            vim.keymap.set('n', 'qq', '<Cmd>bw!<CR>', opts)
+            vim.keymap.set('n', '<C-u>', '<PageUp>', opts)
           end
         }
       }
