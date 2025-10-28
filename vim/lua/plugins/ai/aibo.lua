@@ -7,7 +7,6 @@ return {
           local opts = { buffer = bufnr, nowait = true, silent = true }
           vim.keymap.set({ 'n', 'i' }, '<C-c>', '<Plug>(aibo-send)<Esc>', opts)
           vim.keymap.set({ 'n', 'i' }, '<C-d>', '<Plug>(aibo-send)<C-d>', opts)
-          vim.keymap.set('i', '<C-m>', '<Plug>(aibo-submit)<Cmd>q<CR>', opts)
         end,
       },
       tools = {
