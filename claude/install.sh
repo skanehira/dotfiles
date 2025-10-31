@@ -23,3 +23,7 @@ fi
 if [[ ! -e $HOME/.claude/settings.json ]]; then
   ln -s $PWD/settings.json $HOME/.claude/settings.json
 fi
+
+if [[ ! -e $HOME/.claude/skills ]]; then
+  ln -s $PWD/skills $HOME/.claude/skills
+fi
