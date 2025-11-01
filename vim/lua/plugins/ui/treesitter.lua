@@ -24,28 +24,38 @@ local config = function()
       disable = { 'yaml' },
     },
     textobjects = {
+      swap = {
+        enable = true,
+        swap_next = {
+          ["<leader>an"] = "@parameter.inner",
+        },
+        swap_previous = {
+          ["<leader>aN"] = "@parameter.inner",
+        },
+      },
       select = {
         enable = true,
-
         -- Automatically jump forward to textobj, similar to targets.vim
         lookahead = true,
-
         keymaps = {
           ["af"] = "@function.outer",
           ["if"] = "@function.inner",
         },
-        -- You can choose the select mode (default is charwise 'v')
-        --
-        -- Can also be a function which gets passed a table with the keys
-        -- * query_string: eg '@function.inner'
-        -- * method: eg 'v' or 'o'
-        -- and should return the mode ('v', 'V', or '<c-v>') or a table
-        -- mapping query_strings to modes.
         selection_modes = {
           ['@parameter.outer'] = 'v', -- charwise
           ['@function.outer'] = 'V',  -- linewise
         },
         include_surrounding_whitespace = true,
+      },
+      move = {
+        enable = true,
+        set_jumps = true, -- whether to set jumps in the jumplist
+        goto_next_start = {
+          ["]]"] = "@function.outer",
+        },
+        goto_previous_start = {
+          ["[["] = "@function.outer",
+        },
       },
     },
   })
