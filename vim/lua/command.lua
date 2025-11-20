@@ -30,3 +30,7 @@ vim.api.nvim_create_user_command("TerminalExec", function(opts)
     }
   )
 end, { nargs = "+", complete = "shellcmd" })
+
+vim.api.nvim_create_user_command("Ghost", function()
+  vim.cmd("TerminalExec ghost")
+end, {})
