@@ -3,7 +3,7 @@ local trouble = {
   cmd = "Trouble",
   keys = {
     {
-      "<leader>xx",
+      "<leader>ix",
       "<cmd>Trouble diagnostics toggle<CR>",
       desc = "Diagnostics (Trouble)",
     },
