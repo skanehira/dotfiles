@@ -116,9 +116,10 @@ end
 -- @return boolean, string|nil 成功時は (true, nil)、失敗時は (false, エラーメッセージ)
 function M.send_text(pane_id, text)
   -- -l: リテラルモード（特殊キーとして解釈しない）
+  -- --: オプションの終わりを明示（-で始まるテキストをフラグとして解釈させない）
   -- テキストをシングルクォートでエスケープ
   local escaped = text:gsub("'", "'\\''")
-  local cmd = string.format("tmux send-keys -t %s -l '%s'", pane_id, escaped)
+  local cmd = string.format("tmux send-keys -t %s -l -- '%s'", pane_id, escaped)
   local _, err = exec_tmux(cmd)
   if err then
     return false, err
@@ -128,7 +129,7 @@ function M.send_text(pane_id, text)
   return M.send_keys(pane_id, "Enter")
 end
 
--- ペインをスクロール
+-- ペインをスクロール（ハーフページ単位）
 -- @param pane_id string ペインID
 -- @param direction string "up" または "down"
 -- @param lines number スクロールする行数（デフォルト: ハーフページ）
@@ -145,6 +146,35 @@ function M.scroll(pane_id, direction, lines)
   end
 
   -- コピーモードに入ってスクロール、その後コピーモードを抜ける
+  local cmd = string.format(
+    "tmux copy-mode -t %s && tmux send-keys -t %s -X %s",
+    pane_id,
+    pane_id,
+    scroll_cmd
+  )
+
+  local _, err = exec_tmux(cmd)
+  if err then
+    return false, err
+  end
+  return true, nil
+end
+
+-- ペインを1行ずつスクロール
+-- @param pane_id string ペインID
+-- @param direction string "up" または "down"
+-- @return boolean, string|nil 成功時は (true, nil)、失敗時は (false, エラーメッセージ)
+function M.scroll_line(pane_id, direction)
+  local scroll_cmd
+  if direction == "up" then
+    scroll_cmd = "scroll-up"
+  elseif direction == "down" then
+    scroll_cmd = "scroll-down"
+  else
+    return false, "Invalid direction: must be 'up' or 'down'"
+  end
+
+  -- コピーモードに入って1行スクロール
   local cmd = string.format(
     "tmux copy-mode -t %s && tmux send-keys -t %s -X %s",
     pane_id,

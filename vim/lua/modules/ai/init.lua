@@ -170,6 +170,32 @@ local function open_input_buffer(tool_name, args)
         vim.notify(string.format("%sペインの終了に失敗しました:\n%s", tool_name, err or "不明なエラー"), vim.log.levels.ERROR)
       end
     end,
+    on_scroll_line_down = function()
+      -- 最新のペインIDを取得
+      local current_pane = get_current_pane_id()
+      if not current_pane then
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        return
+      end
+
+      local success, err = tmux.scroll_line(current_pane, "down")
+      if not success then
+        vim.notify("ペインの1行スクロールダウンに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+      end
+    end,
+    on_scroll_line_up = function()
+      -- 最新のペインIDを取得
+      local current_pane = get_current_pane_id()
+      if not current_pane then
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        return
+      end
+
+      local success, err = tmux.scroll_line(current_pane, "up")
+      if not success then
+        vim.notify("ペインの1行スクロールアップに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+      end
+    end,
   })
 end
 
