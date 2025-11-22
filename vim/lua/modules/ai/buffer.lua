@@ -63,6 +63,20 @@ local function setup_keymaps(bufnr, config)
       config.on_scroll_up()
     end, vim.tbl_extend("force", opts, { desc = "Scroll tmux pane up" }))
   end
+
+  -- <C-n>: tmuxペインを1行下にスクロール
+  if config.on_scroll_line_down then
+    vim.keymap.set("n", "<C-n>", function()
+      config.on_scroll_line_down()
+    end, vim.tbl_extend("force", opts, { desc = "Scroll tmux pane down 1 line" }))
+  end
+
+  -- <C-p>: tmuxペインを1行上にスクロール
+  if config.on_scroll_line_up then
+    vim.keymap.set("n", "<C-p>", function()
+      config.on_scroll_line_up()
+    end, vim.tbl_extend("force", opts, { desc = "Scroll tmux pane up 1 line" }))
+  end
 end
 
 -- バッファ名でバッファを検索
@@ -98,6 +112,10 @@ local function open_buffer_in_new_window(bufnr)
   local height = math.floor(vim.o.lines / 10)
   vim.cmd(string.format("%dnew", height))
   vim.api.nvim_set_current_buf(bufnr)
+
+  -- ウィンドウの高さを固定
+  local win = vim.api.nvim_get_current_win()
+  vim.wo[win].winfixheight = true
 end
 
 -- 入力用バッファを作成または既存のものを表示
@@ -118,10 +136,14 @@ function M.create_input_buffer(config)
     if win then
       -- ウィンドウに表示されている場合はフォーカス
       vim.api.nvim_set_current_win(win)
+      -- ウィンドウの高さを固定（念のため再設定）
+      vim.wo[win].winfixheight = true
     else
       -- ウィンドウに表示されていない場合は新しいウィンドウで開く
       open_buffer_in_new_window(existing_bufnr)
     end
+    -- インサートモードで開始
+    vim.cmd("startinsert")
     return existing_bufnr
   end
 
@@ -146,6 +168,9 @@ function M.create_input_buffer(config)
 
   -- キーマップを設定（新しいバッファの場合のみ）
   setup_keymaps(bufnr, config)
+
+  -- インサートモードで開始
+  vim.cmd("startinsert")
 
   return bufnr
 end
