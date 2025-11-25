@@ -1,7 +1,7 @@
 # This is Git's per-user configuration file.
 [user]
 	name = skanehira
-	email = sho19921005@gmail.com
+	email = kanehira.sho@techlead-it.com
 
 [core]
 	quotepath = false
