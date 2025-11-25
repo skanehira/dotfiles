@@ -17,6 +17,26 @@ local config = function()
     end,
     group = vim.api.nvim_create_augroup('fernInit', { clear = true }),
   })
+
+  local function is_fern_open()
+    for _, win in ipairs(vim.api.nvim_list_wins()) do
+      local buf = vim.api.nvim_win_get_buf(win)
+      if vim.api.nvim_get_option_value('filetype', { buf = buf }) == 'fern' then
+        return true
+      end
+    end
+    return false
+  end
+
+  vim.api.nvim_create_autocmd('BufRead', {
+    group = vim.api.nvim_create_augroup('fernConfig', { clear = true }),
+    nested = true,
+    callback = function()
+      if vim.bo.filetype ~= "fern" and vim.bo.buftype == "" and is_fern_open() then
+        vim.cmd [[Fern . -reveal=% -drawer -stay]]
+      end
+    end
+  })
 end
 
 
