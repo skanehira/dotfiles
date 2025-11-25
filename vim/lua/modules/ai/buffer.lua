@@ -77,6 +77,13 @@ local function setup_keymaps(bufnr, config)
       config.on_scroll_line_up()
     end, vim.tbl_extend("force", opts, { desc = "Scroll tmux pane up 1 line" }))
   end
+
+  -- <S-Tab>: Shift+Tabをtmux側に送信
+  if config.on_send_shift_tab then
+    vim.keymap.set("n", "<S-Tab>", function()
+      config.on_send_shift_tab()
+    end, vim.tbl_extend("force", opts, { desc = "Send Shift+Tab to tmux pane" }))
+  end
 end
 
 -- バッファ名でバッファを検索
@@ -125,6 +132,10 @@ end
 --   - on_submit: function(content, bufnr) テキスト送信時のコールバック
 --   - on_scroll_down: function() 下スクロール時のコールバック
 --   - on_scroll_up: function() 上スクロール時のコールバック
+--   - on_interrupt: function() プロセス割り込み時のコールバック
+--   - on_scroll_line_down: function() 1行下スクロール時のコールバック
+--   - on_scroll_line_up: function() 1行上スクロール時のコールバック
+--   - on_send_shift_tab: function() Shift+Tab送信時のコールバック
 -- @return number 作成/再利用されたバッファ番号
 function M.create_input_buffer(config)
   -- 既存のバッファを探す
