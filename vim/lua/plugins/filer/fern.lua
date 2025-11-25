@@ -28,7 +28,7 @@ local config = function()
     return false
   end
 
-  vim.api.nvim_create_autocmd('BufRead', {
+  vim.api.nvim_create_autocmd('BufWinEnter', {
     group = vim.api.nvim_create_augroup('fernConfig', { clear = true }),
     nested = true,
     callback = function()
