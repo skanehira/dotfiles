@@ -112,11 +112,15 @@ local function open_input_buffer(tool_name, args)
       -- スクロール中の場合はコピーモードを終了
       tmux.exit_copy_mode(current_pane)
 
+      -- Codexの場合はテキストの末尾に改行を追加（Codexは改行がないと送信されない）
+      local text = content
+      if tool_name == "codex" then
+        text = content .. "\n"
+      end
+
       -- テキストをペインに送信
-      local success, err = tmux.send_text(current_pane, content)
-      if success then
-        vim.notify(string.format("%sに送信しました", tool_name), vim.log.levels.INFO)
-      else
+      local success, err = tmux.send_text(current_pane, text)
+      if not success then
         vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"), vim.log.levels.ERROR)
       end
 
