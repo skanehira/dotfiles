@@ -45,7 +45,7 @@ local function setup_keymaps(bufnr, config)
 
   -- <C-x>: ペインで動いているプロセスを終了
   if config.on_interrupt then
-    vim.keymap.set("n", "<C-x>", function()
+    vim.keymap.set("n", "<C-x><C-x>", function()
       config.on_interrupt()
     end, vim.tbl_extend("force", opts, { desc = "Interrupt process in tmux pane" }))
   end
