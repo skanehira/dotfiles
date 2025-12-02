@@ -1,307 +1,307 @@
 ---
 name: requirements-analysis
-description: Analyze user requirements and break them down into implementable tasks. This skill should be used when user requests are ambiguous, large-scale feature development is needed, or detailed task decomposition is required. Generate TODO.md and DESIGN.md files following MUST rules.
+description: ユーザー要件を分析し、実装可能なタスクに分解する。ユーザーの要求が曖昧な場合、大規模な機能開発が必要な場合、詳細なタスク分解が必要な場合に使用する。MUSTルールに従ってTODO.mdとDESIGN.mdファイルを生成する。
 ---
 
-# Requirements Analysis
+# 要件分析
 
-## Overview
+## 概要
 
-Transform vague user requests into concrete, actionable implementation plans. Deeply understand requirements, verify technical feasibility, structure tasks with dependency consideration, and generate detailed TODO lists that developers can follow without confusion.
+曖昧なユーザーリクエストを具体的で実行可能な実装計画に変換する。要件を深く理解し、技術的実現可能性を検証し、依存関係を考慮したタスク構造化を行い、開発者が迷わず従える詳細なTODOリストを生成する。
 
-## When to Use This Skill
+## このスキルを使用するタイミング
 
-Use this skill when:
-- User requirements are ambiguous or unclear
-- Large-scale feature development requires planning
-- Complex tasks need decomposition into smaller steps
-- Implementation plan needs to be established
-- TODO.md and DESIGN.md documentation is needed
+以下の場合にこのスキルを使用する：
+- ユーザー要件が曖昧または不明確な場合
+- 大規模な機能開発に計画が必要な場合
+- 複雑なタスクを小さなステップに分解する必要がある場合
+- 実装計画を確立する必要がある場合
+- TODO.mdとDESIGN.mdドキュメントが必要な場合
 
-## Core Workflow
+## コアワークフロー
 
-### Step 0: MUST Rules Verification (REQUIRED)
+### ステップ0: MUSTルールの確認（必須）
 
-Before starting any analysis, verify all MUST rules from `references/must-rules.md`:
-- Test-Driven Development (TDD) is MANDATORY
-- Tidy First Approach is MANDATORY
-- Handling Uncertainties is MANDATORY
-- Background Process Management is MANDATORY
-- Documentation Search is MANDATORY
-- Commit Discipline is MANDATORY
+分析を開始する前に、`references/must-rules.md`のすべてのMUSTルールを確認する：
+- テスト駆動開発（TDD）は必須
+- Tidy Firstアプローチは必須
+- 不確実性への対処は必須
+- バックグラウンドプロセス管理は必須
+- ドキュメント検索は必須
+- コミット規律は必須
 
-All task decomposition must comply with these rules.
+すべてのタスク分解はこれらのルールに準拠する必要がある。
 
-### Step 1: Understanding and Analyzing Requirements
+### ステップ1: 要件の理解と分析
 
-Analyze user requests from multiple dimensions:
+ユーザーリクエストを複数の観点から分析する：
 
-**What to Build (What)**
-- Core functionality identification
-- Feature scope definition
-- User interface requirements
+**何を構築するか（What）**
+- コア機能の特定
+- 機能スコープの定義
+- ユーザーインターフェース要件
 
-**Purpose and Value (Why)**
-- Business value analysis
-- Problem being solved
-- Success metrics
+**目的と価値（Why）**
+- ビジネス価値の分析
+- 解決する問題
+- 成功指標
 
-**Usage Patterns (How)**
-- User interaction flows
-- Integration points
-- Performance requirements
+**使用パターン（How）**
+- ユーザーインタラクションフロー
+- 統合ポイント
+- パフォーマンス要件
 
-**Timeline (When)**
-- Delivery expectations
-- Milestone planning
-- Dependency timing
+**タイムライン（When）**
+- 納品期待値
+- マイルストーン計画
+- 依存関係のタイミング
 
-**Target Users (Who)**
-- User personas
-- Access patterns
-- Skill level considerations
+**対象ユーザー（Who）**
+- ユーザーペルソナ
+- アクセスパターン
+- スキルレベルの考慮
 
-### Step 2: Resolving Uncertainties
+### ステップ2: 不確実性の解消
 
-**MANDATORY: Never make assumptions**
+**必須: 決して仮定を立てない**
 
-Use available tools to investigate existing implementations:
+利用可能なツールを使用して既存の実装を調査する：
 ```bash
-# Search for related implementations
+# 関連する実装を検索
 Grep(pattern="relevant-keyword")
 Read(file_path="related-file")
 Glob(pattern="**/*.{js,ts,py}")
 ```
 
-When information is missing, explicitly list unknowns:
+情報が不足している場合、不明点を明示的にリストアップする：
 ```
 「以下の点について確認が必要です:
-- Point 1: Regarding ○○
-- Point 2: Specification of △△
-- Point 3: Constraint of □□」
+- ポイント1: ○○について
+- ポイント2: △△の仕様
+- ポイント3: □□の制約」
 ```
 
-### Step 3: Requirements Definition Creation
+### ステップ3: 要件定義の作成
 
-Structure requirements clearly:
+要件を明確に構造化する：
 
-#### Functional Requirements
-- Required features (MUST have)
-- Optional features (NICE to have)
-- Future extensibility considerations
+#### 機能要件
+- 必須機能（MUST have）
+- オプション機能（NICE to have）
+- 将来の拡張性の考慮
 
-#### Non-Functional Requirements
-- Performance targets
-- Security requirements
-- Maintainability standards
-- Scalability needs
+#### 非機能要件
+- パフォーマンス目標
+- セキュリティ要件
+- 保守性基準
+- スケーラビリティニーズ
 
-#### Constraints
-- Technical constraints (language, framework, dependencies)
-- Time constraints (deadlines, milestones)
-- Resource constraints (team size, infrastructure)
+#### 制約
+- 技術的制約（言語、フレームワーク、依存関係）
+- 時間的制約（締め切り、マイルストーン）
+- リソース制約（チームサイズ、インフラ）
 
-### Step 4: Task Decomposition (MUST Rules Compliant)
+### ステップ4: タスク分解（MUSTルール準拠）
 
-Break down work into phases following TDD and Tidy First principles:
+TDDとTidy Firstの原則に従って作業をフェーズに分解する：
 
-**Phase 1: Foundation**
-- Project structure design
-- Package selection
-- Basic setup
+**フェーズ1: 基盤**
+- プロジェクト構造設計
+- パッケージ選定
+- 基本セットアップ
 
-**Phase 2: Core Implementation (TDD Compliant)**
-Each feature follows RED→GREEN→REFACTOR cycle:
+**フェーズ2: コア実装（TDD準拠）**
+各機能はRED→GREEN→REFACTORサイクルに従う：
 ```markdown
-- [ ] [RED] Write failing test for feature X
-- [ ] [GREEN] Minimal implementation to pass test
-- [ ] [GREEN] Adjust implementation until tests pass
-- [ ] [REFACTOR] Eliminate duplication, improve code quality
-- [ ] [RED] Write failing test for next feature
-- [ ] [GREEN] Minimal implementation
-- [ ] [GREEN] Pass all tests
-- [ ] [REFACTOR] Code improvement
+- [ ] [RED] 機能Xの失敗するテストを書く
+- [ ] [GREEN] テストを通す最小限の実装
+- [ ] [GREEN] テストが通るまで実装を調整
+- [ ] [REFACTOR] 重複を排除し、コード品質を改善
+- [ ] [RED] 次の機能の失敗するテストを書く
+- [ ] [GREEN] 最小限の実装
+- [ ] [GREEN] すべてのテストを通す
+- [ ] [REFACTOR] コード改善
 ```
 
-**Phase 3: Quality Enhancement (Tidy First Compliant)**
+**フェーズ3: 品質向上（Tidy First準拠）**
 ```markdown
-- [ ] [STRUCTURAL] Code cleanup and refactoring (no behavior change)
-- [ ] [BEHAVIORAL] Error handling tests and implementation
-- [ ] Performance testing
+- [ ] [STRUCTURAL] コードクリーンアップとリファクタリング（振る舞い変更なし）
+- [ ] [BEHAVIORAL] エラーハンドリングのテストと実装
+- [ ] パフォーマンステスト
 ```
 
-### Step 5: TODO List Generation
+### ステップ5: TODOリスト生成
 
-Use TodoWrite to create structured task list:
+TodoWriteを使用して構造化されたタスクリストを作成する：
 ```javascript
 TodoWrite({
   todos: [
     {
       id: "1",
-      content: "Project structure design and initial setup",
+      content: "プロジェクト構造設計と初期セットアップ",
       status: "pending"
     },
     {
       id: "2",
-      content: "[RED] Write behavior test for user authentication",
+      content: "[RED] ユーザー認証の振る舞いテストを書く",
       status: "pending"
     },
     {
       id: "3",
-      content: "[GREEN] Minimal implementation to pass auth test",
+      content: "[GREEN] 認証テストを通す最小限の実装",
       status: "pending"
     },
     {
       id: "4",
-      content: "[GREEN] Adjust implementation until auth tests pass",
+      content: "[GREEN] 認証テストが通るまで実装を調整",
       status: "pending"
     },
     {
       id: "5",
-      content: "[REFACTOR] Improve auth code quality",
+      content: "[REFACTOR] 認証コード品質の改善",
       status: "pending"
     },
     {
       id: "6",
-      content: "[STRUCTURAL] Code cleanup (no behavior change)",
+      content: "[STRUCTURAL] コードクリーンアップ（振る舞い変更なし）",
       status: "pending"
     }
-    // Continue with detailed TDD cycle tasks
+    // 詳細なTDDサイクルタスクを続ける
   ]
 })
 ```
 
-### Step 6: Documentation Output
+### ステップ6: ドキュメント出力
 
-Generate two key documents:
+2つの主要ドキュメントを生成する：
 
 #### docs/TODO.md
 ```markdown
-# TODO: [Project Name]
+# TODO: [プロジェクト名]
 
-Generated: [Date]
-Generator: requirements-analysis
+生成日: [日付]
+ジェネレーター: requirements-analysis
 
-## Overview
-[Project overview and objectives]
+## 概要
+[プロジェクト概要と目的]
 
-## Implementation Tasks (MUST Rules Compliant)
+## 実装タスク（MUSTルール準拠）
 
-### Phase 1: Foundation
-- [ ] Project structure design and initial setup
-- [ ] Development environment setup (ghost for background processes)
+### フェーズ1: 基盤
+- [ ] プロジェクト構造設計と初期セットアップ
+- [ ] 開発環境セットアップ（バックグラウンドプロセスにはghost使用）
 
-### Phase 2: TDD-Compliant Core Implementation
-- [ ] [RED] Write behavior test for Feature A
-- [ ] [GREEN] Minimal implementation to pass test
-- [ ] [GREEN] Adjust until tests pass
-- [ ] [REFACTOR] Eliminate duplication and improve quality
-- [ ] [RED] Write behavior test for Feature B
-- [ ] [GREEN] Minimal implementation
-- [ ] [GREEN] Pass all tests
-- [ ] [REFACTOR] Code quality improvement
+### フェーズ2: TDD準拠コア実装
+- [ ] [RED] 機能Aの振る舞いテストを書く
+- [ ] [GREEN] テストを通す最小限の実装
+- [ ] [GREEN] テストが通るまで調整
+- [ ] [REFACTOR] 重複を排除し品質改善
+- [ ] [RED] 機能Bの振る舞いテストを書く
+- [ ] [GREEN] 最小限の実装
+- [ ] [GREEN] すべてのテストを通す
+- [ ] [REFACTOR] コード品質改善
 
-### Phase 3: Quality Enhancement (Tidy First Compliant)
-- [ ] [STRUCTURAL] Code cleanup and refactoring (no behavior change)
-- [ ] [BEHAVIORAL] Error handling tests and implementation
-- [ ] Run all tests and verify quality
+### フェーズ3: 品質向上（Tidy First準拠）
+- [ ] [STRUCTURAL] コードクリーンアップとリファクタリング（振る舞い変更なし）
+- [ ] [BEHAVIORAL] エラーハンドリングのテストと実装
+- [ ] すべてのテストを実行し品質を確認
 
-## Implementation Notes (MUST Rules Compliant)
-- TDD: Always test-first (RED → GREEN → REFACTOR)
-- Tidy First: Separate structural and behavioral changes in commits
-- Background Process: Use ghost (禁止: &, nohup, etc.)
-- Uncertainties: Ask and investigate, never assume
-- Commits: [STRUCTURAL] or [BEHAVIORAL] prefix required
+## 実装ノート（MUSTルール準拠）
+- TDD: 常にテストファースト（RED → GREEN → REFACTOR）
+- Tidy First: コミットで構造変更と振る舞い変更を分離
+- バックグラウンドプロセス: ghost使用（禁止: &, nohup等）
+- 不確実性: 質問して調査、決して仮定しない
+- コミット: [STRUCTURAL]または[BEHAVIORAL]プレフィックス必須
 
-## References
-- Design Document: docs/DESIGN.md
-- Related Documentation: [Links]
+## 参照
+- 設計ドキュメント: docs/DESIGN.md
+- 関連ドキュメント: [リンク]
 ```
 
 #### docs/DESIGN.md
 ```markdown
-# [Project Name] Design Document
+# [プロジェクト名] 設計ドキュメント
 
-Generated: [Date]
-Generator: requirements-analysis
+生成日: [日付]
+ジェネレーター: requirements-analysis
 
-## System Overview
-[System purpose and overall picture]
+## システム概要
+[システムの目的と全体像]
 
-## Architecture Design
-[System configuration and technology choices]
+## アーキテクチャ設計
+[システム構成と技術選定]
 
-## Detailed Design
-[Component design, API design, etc.]
+## 詳細設計
+[コンポーネント設計、API設計など]
 
-## Data Design
-[Data model, data flow]
+## データ設計
+[データモデル、データフロー]
 
-## Security Design
-[Security requirements and countermeasures]
+## セキュリティ設計
+[セキュリティ要件と対策]
 
-## Performance Design
-[Performance requirements and optimization policy]
+## パフォーマンス設計
+[パフォーマンス要件と最適化方針]
 ```
 
-### Step 7: File Output
+### ステップ7: ファイル出力
 
-Write documentation files:
+ドキュメントファイルを書き出す：
 ```javascript
-// Output TODO.md to docs directory
+// docsディレクトリにTODO.mdを出力
 Write(
     file_path="docs/TODO.md",
     content=todoContent
 )
 
-// Output DESIGN.md to docs directory
+// docsディレクトリにDESIGN.mdを出力
 Write(
     file_path="docs/DESIGN.md",
     content=designContent
 )
 ```
 
-## Task Decomposition Principles
+## タスク分解の原則
 
-### SMART Principles
-- **Specific**: Clear and concrete
-- **Measurable**: Clear completion criteria
-- **Achievable**: Realistically achievable
-- **Relevant**: Related to objectives
-- **Time-bound**: Time-estimable
+### SMART原則
+- **Specific（具体的）**: 明確で具体的
+- **Measurable（測定可能）**: 明確な完了基準
+- **Achievable（達成可能）**: 現実的に達成可能
+- **Relevant（関連性）**: 目的に関連
+- **Time-bound（期限）**: 時間見積もりが可能
 
-### Dependency Clarification
+### 依存関係の明確化
 ```
-Task A → Task B → Task C
-         ↗
-Task D ↗
+タスクA → タスクB → タスクC
+           ↗
+タスクD ↗
 ```
 
-### Task Sizing
-- 1 task = 1-4 hours completable
-- If too large, split into subtasks
-- If too small, consolidate
+### タスクサイズ
+- 1タスク = 1〜4時間で完了可能
+- 大きすぎる場合はサブタスクに分割
+- 小さすぎる場合は統合
 
-## Quality Checklist
+## 品質チェックリスト
 
-Before completing analysis:
-- [ ] All requirements reflected in specifications
-- [ ] Technical feasibility verified
-- [ ] Task dependencies are clear
-- [ ] Each task has clear completion criteria
-- [ ] Priorities appropriately set
-- [ ] All MUST rules compliance verified
-- [ ] TODO.md and DESIGN.md generated
+分析完了前に確認：
+- [ ] すべての要件が仕様に反映されている
+- [ ] 技術的実現可能性が確認されている
+- [ ] タスクの依存関係が明確
+- [ ] 各タスクに明確な完了基準がある
+- [ ] 優先度が適切に設定されている
+- [ ] すべてのMUSTルール準拠が確認されている
+- [ ] TODO.mdとDESIGN.mdが生成されている
 
-## Resources
+## リソース
 
 ### ../../shared/references/must-rules.md
-Detailed MUST rules extracted from CLAUDE.md, including:
-- TDD methodology details
-- Tidy First principles
-- Uncertainty handling guidelines
-- Background process management
-- Documentation search procedures
-- Commit discipline standards
+CLAUDE.mdから抽出した詳細なMUSTルール、以下を含む：
+- TDD方法論の詳細
+- Tidy First原則
+- 不確実性対処ガイドライン
+- バックグラウンドプロセス管理
+- ドキュメント検索手順
+- コミット規律基準
 
-Refer to this file for comprehensive rule details during analysis.
+分析中の包括的なルール詳細についてはこのファイルを参照。

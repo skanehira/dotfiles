@@ -4,9 +4,8 @@
 
 **All background processes MUST be managed using ghost:**
 
-1. **MUST use ghost**: Always use https://github.com/skanehira/ghost for running background processes
+1. **MUST use ghost MCP**: Always use ghost-mcp tools (`mcp__ghost-mcp__ghost_run`, `mcp__ghost-mcp__ghost_list`, etc.) for running background processes
 2. **NO traditional methods**: Do NOT use `&`, `nohup`, `screen`, `tmux`, or other traditional background process methods
-3. **Reference documentation**: Always refer to ghost's README.md for detailed usage instructions
 
 **Why ghost is required:**
 - Provides proper process management and monitoring
