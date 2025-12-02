@@ -1,60 +1,60 @@
-# TDD Guidelines Reference
+# TDDガイドラインリファレンス
 
-This document provides detailed guidance on Test-Driven Development practices, patterns, and anti-patterns.
+このドキュメントはテスト駆動開発のプラクティス、パターン、アンチパターンに関する詳細なガイダンスを提供する。
 
-## Advanced Test Patterns
+## 高度なテストパターン
 
-### Test Organization Strategies
+### テスト整理戦略
 
-#### 1. Arrange-Act-Assert (AAA) Pattern
+#### 1. Arrange-Act-Assert (AAA) パターン
 ```javascript
 test('shouldCalculateTotalWithTax', () => {
-  // Arrange: Set up test data and preconditions
+  // Arrange: テストデータと前提条件をセットアップ
   const cart = new ShoppingCart();
   cart.addItem({ price: 100, quantity: 2 });
   const taxRate = 0.1;
 
-  // Act: Execute the behavior being tested
+  // Act: テスト対象の動作を実行
   const total = cart.calculateTotal(taxRate);
 
-  // Assert: Verify the expected outcome
+  // Assert: 期待される結果を検証
   expect(total).toBe(220);
 });
 ```
 
-#### 2. Test Fixtures and Setup
+#### 2. テストフィクスチャとセットアップ
 ```javascript
 describe('UserService', () => {
   let userService;
   let mockDatabase;
 
   beforeEach(() => {
-    // Common setup for all tests
+    // すべてのテストに共通のセットアップ
     mockDatabase = new MockDatabase();
     userService = new UserService(mockDatabase);
   });
 
   afterEach(() => {
-    // Cleanup after each test
+    // 各テスト後のクリーンアップ
     mockDatabase.clear();
   });
 
   test('shouldCreateNewUser', () => {
-    // Test implementation
+    // テストの実装
   });
 });
 ```
 
-### Test Doubles
+### テストダブル
 
-#### 1. Stubs - Provide predetermined responses
+#### 1. スタブ - 事前に決められた応答を提供
 ```javascript
 const emailStub = {
-  send: () => true  // Always returns success
+  send: () => true  // 常に成功を返す
 };
 ```
 
-#### 2. Mocks - Verify interactions
+#### 2. モック - インタラクションを検証
 ```javascript
 const emailMock = {
   send: jest.fn()
@@ -64,7 +64,7 @@ userService.registerUser(user);
 expect(emailMock.send).toHaveBeenCalledWith(user.email);
 ```
 
-#### 3. Fakes - Working implementations
+#### 3. フェイク - 動作する実装
 ```javascript
 class FakeDatabase {
   constructor() {
@@ -81,7 +81,7 @@ class FakeDatabase {
 }
 ```
 
-## Language-Specific TDD Examples
+## 言語別TDDの例
 
 ### JavaScript/TypeScript (Jest)
 ```javascript
@@ -124,18 +124,18 @@ mod tests {
 func TestShouldHashPasswordOnCreation(t *testing.T) {
     user := NewUser("john@example.com", "password123")
     if user.Password == "password123" {
-        t.Error("Password should be hashed")
+        t.Error("パスワードはハッシュ化されるべき")
     }
     if len(user.Password) <= 20 {
-        t.Error("Hashed password should be longer than 20 characters")
+        t.Error("ハッシュ化されたパスワードは20文字より長いべき")
     }
 }
 ```
 
-## Common TDD Anti-Patterns
+## 一般的なTDDアンチパターン
 
-### 1. Testing Implementation Instead of Behavior
-❌ **Bad** - Tightly coupled to implementation:
+### 1. 動作ではなく実装をテストする
+❌ **悪い例** - 実装に密結合:
 ```javascript
 test('shouldCallValidateMethodThreeTimes', () => {
   const validator = new Validator();
@@ -147,7 +147,7 @@ test('shouldCallValidateMethodThreeTimes', () => {
 });
 ```
 
-✅ **Good** - Tests behavior:
+✅ **良い例** - 動作をテスト:
 ```javascript
 test('shouldRejectInvalidData', () => {
   const validator = new Validator();
@@ -159,8 +159,8 @@ test('shouldRejectInvalidData', () => {
 });
 ```
 
-### 2. Overly Complex Tests
-❌ **Bad** - Test logic is too complex:
+### 2. 複雑すぎるテスト
+❌ **悪い例** - テストロジックが複雑すぎる:
 ```javascript
 test('shouldProcessOrders', () => {
   for (let i = 0; i < 10; i++) {
@@ -174,7 +174,7 @@ test('shouldProcessOrders', () => {
 });
 ```
 
-✅ **Good** - Simple, focused tests:
+✅ **良い例** - シンプルで焦点を絞ったテスト:
 ```javascript
 test('shouldApplyDiscountForOrdersOver100', () => {
   const order = createOrder({ total: 150 });
@@ -187,8 +187,8 @@ test('shouldNotApplyDiscountForOrdersUnder100', () => {
 });
 ```
 
-### 3. Fragile Tests (Too Many Assertions)
-❌ **Bad** - Too many assertions make test brittle:
+### 3. 脆弱なテスト（アサーションが多すぎる）
+❌ **悪い例** - アサーションが多すぎてテストが脆弱:
 ```javascript
 test('shouldCreateUser', () => {
   const user = createUser();
@@ -199,11 +199,11 @@ test('shouldCreateUser', () => {
   expect(user.roles).toEqual(['user']);
   expect(user.isActive).toBe(true);
   expect(user.emailVerified).toBe(false);
-  // ... 10 more assertions
+  // ... さらに10個のアサーション
 });
 ```
 
-✅ **Good** - One concept per test:
+✅ **良い例** - 1つのテストに1つのコンセプト:
 ```javascript
 test('shouldAssignDefaultRoleOnCreation', () => {
   const user = createUser();
@@ -216,9 +216,9 @@ test('shouldStartAsActiveUser', () => {
 });
 ```
 
-## Integration Testing with TDD
+## TDDによる統合テスト
 
-### Database Integration Tests
+### データベース統合テスト
 ```javascript
 describe('UserRepository Integration', () => {
   let database;
@@ -248,7 +248,7 @@ describe('UserRepository Integration', () => {
 });
 ```
 
-### API Integration Tests
+### API統合テスト
 ```javascript
 describe('POST /api/users', () => {
   test('shouldCreateNewUser', async () => {
@@ -278,52 +278,52 @@ describe('POST /api/users', () => {
 });
 ```
 
-## E2E Testing with TDD
+## TDDによるE2Eテスト
 
-### Browser-Based E2E Tests
+### ブラウザベースのE2Eテスト
 ```javascript
 describe('User Registration Flow', () => {
   test('shouldCompleteRegistrationSuccessfully', async () => {
-    // Navigate to registration page
+    // 登録ページに移動
     await page.goto('http://localhost:3000/register');
 
-    // Fill in form
+    // フォームに入力
     await page.fill('[name="email"]', 'john@example.com');
     await page.fill('[name="password"]', 'password123');
     await page.fill('[name="confirmPassword"]', 'password123');
 
-    // Submit form
+    // フォームを送信
     await page.click('button[type="submit"]');
 
-    // Verify redirect to success page
+    // 成功ページへのリダイレクトを検証
     await expect(page).toHaveURL('http://localhost:3000/registration-success');
     await expect(page.locator('h1')).toContainText('Welcome!');
   });
 });
 ```
 
-## Test Coverage Guidelines
+## テストカバレッジガイドライン
 
-### What to Measure
-- **Line Coverage**: Percentage of code lines executed
-- **Branch Coverage**: Percentage of decision branches taken
-- **Function Coverage**: Percentage of functions called
-- **Statement Coverage**: Percentage of statements executed
+### 測定すべき指標
+- **行カバレッジ**: 実行されたコード行の割合
+- **ブランチカバレッジ**: 取られた分岐の割合
+- **関数カバレッジ**: 呼び出された関数の割合
+- **ステートメントカバレッジ**: 実行された文の割合
 
-### Coverage Targets
-- **Unit Tests**: Aim for 80-90% coverage
-- **Integration Tests**: Focus on critical paths
-- **E2E Tests**: Cover main user journeys
+### カバレッジ目標
+- **ユニットテスト**: 80-90%のカバレッジを目指す
+- **統合テスト**: クリティカルパスに焦点
+- **E2Eテスト**: 主要なユーザージャーニーをカバー
 
-### Coverage ≠ Quality
+### カバレッジ ≠ 品質
 ```javascript
-// 100% coverage but poor test quality
+// 100%カバレッジだがテスト品質が低い
 test('shouldRunAllCode', () => {
   const result = complexFunction(input);
-  expect(result).toBeDefined();  // Weak assertion
+  expect(result).toBeDefined();  // 弱いアサーション
 });
 
-// Better approach
+// より良いアプローチ
 test('shouldCalculateCorrectResult', () => {
   const result = complexFunction({ x: 5, y: 10 });
   expect(result.total).toBe(15);
@@ -331,18 +331,18 @@ test('shouldCalculateCorrectResult', () => {
 });
 ```
 
-## Continuous Testing Workflow
+## 継続的テストワークフロー
 
-### Watch Mode Development
+### ウォッチモード開発
 ```bash
-# Run tests in watch mode during development
+# 開発中にウォッチモードでテストを実行
 npm test -- --watch
 
-# Run only tests related to changed files
+# 変更されたファイルに関連するテストのみ実行
 npm test -- --watch --onlyChanged
 ```
 
-### Pre-Commit Hooks
+### プリコミットフック
 ```json
 {
   "husky": {
@@ -354,7 +354,7 @@ npm test -- --watch --onlyChanged
 }
 ```
 
-### CI/CD Integration
+### CI/CD統合
 ```yaml
 # .github/workflows/test.yml
 name: Tests
@@ -371,42 +371,42 @@ jobs:
           npm run test:coverage
 ```
 
-## TDD in Different Contexts
+## 異なるコンテキストでのTDD
 
-### Legacy Code
-When adding features to legacy code:
-1. Write characterization tests (document current behavior)
-2. Refactor with safety net of tests
-3. Add new feature using TDD
+### レガシーコード
+レガシーコードに機能を追加する場合：
+1. 特性テストを書く（現在の動作を文書化）
+2. テストのセーフティネットでリファクタリング
+3. TDDを使用して新機能を追加
 
-### Spike Solutions
-When exploring new technologies:
-1. Create time-boxed spike without TDD
-2. Discard spike code
-3. Implement production version with TDD using learnings
+### スパイクソリューション
+新技術を探索する場合：
+1. TDDなしで時間制限付きスパイクを作成
+2. スパイクコードを破棄
+3. 学んだことを使用してTDDで本番バージョンを実装
 
-### Performance-Critical Code
-1. Write functional tests first (correctness)
-2. Add performance benchmarks as tests
-3. Optimize while keeping tests green
+### パフォーマンスクリティカルなコード
+1. まず機能テストを書く（正確性）
+2. パフォーマンスベンチマークをテストとして追加
+3. テストをグリーンに保ちながら最適化
 
-## Resources and Further Reading
+## リソースと参考文献
 
-### Books
+### 書籍
 - "Test-Driven Development: By Example" - Kent Beck
 - "Growing Object-Oriented Software, Guided by Tests" - Freeman & Pryce
 - "Working Effectively with Legacy Code" - Michael Feathers
 
-### Online Resources
+### オンラインリソース
 - Test-driven-development.com
-- Martin Fowler's articles on testing
-- Uncle Bob's Clean Code blog
+- Martin Fowlerのテストに関する記事
+- Uncle BobのClean Codeブログ
 
-### Tools by Language
+### 言語別ツール
 - **JavaScript/TypeScript**: Jest, Mocha, Vitest
 - **Python**: pytest, unittest
 - **Java**: JUnit, TestNG
 - **C#**: NUnit, xUnit
 - **Ruby**: RSpec, Minitest
-- **Go**: testing package
-- **Rust**: built-in test framework
+- **Go**: testingパッケージ
+- **Rust**: 組み込みテストフレームワーク

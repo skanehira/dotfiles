@@ -1,52 +1,52 @@
 ---
 name: development
-description: Implement new features and fix bugs following Test-Driven Development (TDD) methodology. This skill should be used when implementing new functionality, fixing bugs, or extending existing features. Strictly follows RED→GREEN→REFACTOR cycle with test-first approach.
+description: テスト駆動開発（TDD）方法論に従って新機能の実装やバグ修正を行う。新機能の実装、バグ修正、既存機能の拡張時に使用する。RED→GREEN→REFACTORサイクルをテストファーストアプローチで厳格に遵守する。
 ---
 
-# Development (TDD)
+# 開発（TDD）
 
-## Overview
+## 概要
 
-Implement all production code using Kent Beck's Test-Driven Development methodology. Write failing tests first, implement minimal code to pass tests, then refactor for quality. Never write production code without a failing test.
+Kent BeckのTDD方法論を使用してすべての本番コードを実装する。まず失敗するテストを書き、テストを通過させる最小限のコードを実装し、その後品質向上のためリファクタリングを行う。失敗するテストなしに本番コードを書いてはならない。
 
-## When to Use This Skill
+## このスキルを使用するタイミング
 
-Use this skill when:
-- Implementing new features or functionality
-- Fixing bugs in existing code
-- Extending or modifying existing features
-- Any production code changes requiring behavioral modifications
+以下の場合に使用する：
+- 新機能や機能性の実装時
+- 既存コードのバグ修正時
+- 既存機能の拡張や修正時
+- 動作変更を必要とする本番コードの変更時
 
-## TDD Absolute Rules
+## TDD絶対ルール
 
-1. **No code without tests** - No exceptions
-2. **Follow RED→GREEN→REFACTOR cycle** - Strictly enforced
-3. **Minimal implementation** - Only write code to pass current test
-4. **Refactor only when green** - Tests must pass before refactoring
+1. **テストなしにコードを書かない** - 例外なし
+2. **RED→GREEN→REFACTORサイクルに従う** - 厳格に遵守
+3. **最小限の実装** - 現在のテストを通過するコードのみ書く
+4. **グリーンの時のみリファクタリング** - リファクタリング前にテストが通過していなければならない
 
-## Core Workflow
+## コアワークフロー
 
-### Step 1: Work Planning (Using TodoWrite)
+### ステップ1: 作業計画（TodoWriteを使用）
 
-Create a structured task list before starting:
+開始前に構造化されたタスクリストを作成する：
 
 ```bash
-# Example: User authentication feature
-- [ ] Write test for authentication failure
-- [ ] Minimal implementation to pass test
-- [ ] Write test for authentication success
-- [ ] Extend implementation
-- [ ] Refactor (delegate to tidy-first if needed)
+# 例: ユーザー認証機能
+- [ ] 認証失敗のテストを書く
+- [ ] テストを通過させる最小限の実装
+- [ ] 認証成功のテストを書く
+- [ ] 実装を拡張
+- [ ] リファクタリング（必要に応じてtidy-firstに委譲）
 ```
 
-### Step 2: RED Phase - Write Failing Test
+### ステップ2: REDフェーズ - 失敗するテストを書く
 
-**Requirements:**
-- Clear, descriptive test name (e.g., `shouldReturnErrorWhenPasswordIsInvalid`)
-- Test only one behavior at a time
-- Verify test failure (RED)
+**要件:**
+- 明確で説明的なテスト名（例: `shouldReturnErrorWhenPasswordIsInvalid`）
+- 一度に1つの動作のみテスト
+- テストの失敗を確認（RED）
 
-**Example:**
+**例:**
 ```javascript
 describe('UserAuthentication', () => {
   test('shouldReturnErrorWhenPasswordIsInvalid', () => {
@@ -57,60 +57,60 @@ describe('UserAuthentication', () => {
 });
 ```
 
-**Run test and confirm it fails:**
+**テストを実行して失敗を確認:**
 ```bash
-npm test  # or appropriate test command
-# Test should FAIL - this is expected and required
+npm test  # または適切なテストコマンド
+# テストは失敗するべき - これは期待通りで必須
 ```
 
-### Step 3: GREEN Phase - Make Test Pass
+### ステップ3: GREENフェーズ - テストを通過させる
 
-**Requirements:**
-- Write ONLY minimal code to pass the test
-- Hard-coding is acceptable (will refactor later)
-- Ensure all tests pass
+**要件:**
+- テストを通過させるために必要な最小限のコードのみ書く
+- ハードコーディングは許容される（後でリファクタリング）
+- すべてのテストが通過することを確認
 
-**Example (minimal implementation):**
+**例（最小限の実装）:**
 ```javascript
 class UserAuthentication {
   login(email, password) {
-    // Minimal implementation - just make test pass
+    // 最小限の実装 - テストを通過させるだけ
     return { error: 'Invalid credentials' };
   }
 }
 ```
 
-**Run tests again:**
+**再度テストを実行:**
 ```bash
 npm test
-# All tests should PASS - GREEN phase complete
+# すべてのテストが通過するべき - GREENフェーズ完了
 ```
 
-### Step 4: REFACTOR Phase - Improve Quality
+### ステップ4: REFACTORフェーズ - 品質向上
 
-**Only proceed when all tests are green.**
+**すべてのテストがグリーンの場合のみ進める。**
 
-For simple refactoring, proceed directly. For significant structural changes, delegate to tidy-first:
+単純なリファクタリングは直接進める。大規模な構造変更の場合はtidy-firstに委譲する：
 
 ```bash
-# Delegate complex refactoring to tidy-first skill
+# 複雑なリファクタリングをtidy-firstスキルに委譲
 Task(
     subagent_type="tidy-first",
-    prompt="Remove duplication in authentication logic and improve structure",
-    description="Code cleanup"
+    prompt="認証ロジックの重複を排除し、構造を改善する",
+    description="コードクリーンアップ"
 )
 ```
 
-**After refactoring:**
+**リファクタリング後:**
 ```bash
 npm test
-# All tests must still PASS
+# すべてのテストが引き続き通過しなければならない
 ```
 
-## Bug Fixing Process
+## バグ修正プロセス
 
-### Step 1: Reproduce Bug with Test
-Write a test that demonstrates the bug (test should FAIL):
+### ステップ1: テストでバグを再現
+バグを示すテストを書く（テストは失敗するべき）：
 
 ```javascript
 test('shouldHandleNullEmailGracefully', () => {
@@ -120,8 +120,8 @@ test('shouldHandleNullEmailGracefully', () => {
 });
 ```
 
-### Step 2: Fix with Minimal Changes
-Implement the smallest fix to make test pass:
+### ステップ2: 最小限の変更で修正
+テストを通過させる最小限の修正を実装：
 
 ```javascript
 class UserAuthentication {
@@ -129,13 +129,13 @@ class UserAuthentication {
     if (!email) {
       return { error: 'Email is required' };
     }
-    // ... existing logic
+    // ... 既存のロジック
   }
 }
 ```
 
-### Step 3: Add Edge Case Tests
-Cover additional scenarios discovered during fix:
+### ステップ3: エッジケーステストを追加
+修正中に発見した追加シナリオをカバー：
 
 ```javascript
 test('shouldHandleEmptyEmailString', () => {
@@ -145,16 +145,16 @@ test('shouldHandleEmptyEmailString', () => {
 });
 ```
 
-### Step 4: Refactor if Needed
-Once all tests pass, improve code quality if necessary.
+### ステップ4: 必要に応じてリファクタリング
+すべてのテストが通過したら、必要に応じてコード品質を向上させる。
 
-## Meaningful Test Guidelines
+## 意味のあるテストのガイドライン
 
-### What Tests Should Verify
+### テストで検証すべきこと
 
-**Test behavior (what code does), not initialization:**
+**動作（コードが何をするか）をテストし、初期化をテストしない：**
 
-❌ **Bad test** (only checks initialization):
+❌ **悪いテスト**（初期化のみチェック）:
 ```rust
 #[test]
 fn test_new() {
@@ -163,109 +163,109 @@ fn test_new() {
 }
 ```
 
-✅ **Good test** (verifies actual behavior and output):
+✅ **良いテスト**（実際の動作と出力を検証）:
 ```rust
 #[test]
 fn test_profiler_captures_function_samples() {
     let profiler = CpuProfiler::new();
 
-    // Test actual behavior
+    // 実際の動作をテスト
     let report = profiler.profile_workload(|| {
         fibonacci(30);
     }).unwrap();
 
-    // Verify expected output
+    // 期待される出力を検証
     assert!(report.contains_function("fibonacci"));
     assert!(report.sample_count() > 0);
 }
 ```
 
-### Test Design Principles
+### テスト設計の原則
 
-1. **Start with minimal meaningful behavior**
-2. **Clear input → processing → output flow**
-3. **Specific expected results**
-4. **Clear failure reasons**
+1. **最小限の意味のある動作から始める**
+2. **明確な入力 → 処理 → 出力のフロー**
+3. **具体的な期待結果**
+4. **明確な失敗理由**
 
-## Commit Guidelines
+## コミットガイドライン
 
-Use `[BEHAVIORAL]` prefix for feature additions and bug fixes:
-
-```bash
-# Good commit messages
-[BEHAVIORAL] feat: add user authentication system
-[BEHAVIORAL] fix: resolve null pointer error in login
-[BEHAVIORAL] feat: implement password validation
-```
-
-## Quality Assurance (MANDATORY)
-
-After implementation, ALWAYS run these commands:
+機能追加とバグ修正には`[BEHAVIORAL]`プレフィックスを使用：
 
 ```bash
-# 1. Run linter
-npm run lint     # or appropriate lint command
-# Fix any errors before proceeding
-
-# 2. Run formatter
-npm run format   # or appropriate format command
-
-# 3. Run build
-npm run build    # or appropriate build command
-# Fix any build errors
-
-# 4. Run tests
-npm test         # or appropriate test command
-# All tests must pass
+# 良いコミットメッセージ
+[BEHAVIORAL] feat: ユーザー認証システムを追加
+[BEHAVIORAL] fix: ログインのnullポインタエラーを解決
+[BEHAVIORAL] feat: パスワードバリデーションを実装
 ```
 
-**IMPORTANT**: Task is not complete until all quality checks pass.
+## 品質保証（必須）
 
-If commands are unknown, check package.json or README, or ask the user.
+実装後、必ずこれらのコマンドを実行する：
 
-## Prohibited Actions
+```bash
+# 1. リンターを実行
+npm run lint     # または適切なlintコマンド
+# 続行前にエラーを修正
 
-❌ Writing tests "later"
-❌ Implementing before writing tests
-❌ Refactoring when tests are RED
-❌ Implementing multiple features simultaneously
-❌ Committing without passing tests
-❌ Writing meaningless tests that only check initialization
+# 2. フォーマッターを実行
+npm run format   # または適切なformatコマンド
 
-## Required Compliance
+# 3. ビルドを実行
+npm run build    # または適切なbuildコマンド
+# ビルドエラーを修正
 
-**Important**: Refer to `references/must-rules.md` for common rules:
-- Background process management (use ghost)
-- Uncertainty handling (no assumptions)
-- Commit rules (tests must pass)
-- Error handling
-- Work progression (use TodoWrite)
+# 4. テストを実行
+npm test         # または適切なtestコマンド
+# すべてのテストが通過しなければならない
+```
 
-## Collaboration Patterns
+**重要**: すべての品質チェックが通過するまでタスクは完了しない。
 
-1. **Large features** → Split into small tasks and apply TDD
-2. **Refactoring needed** → Delegate to tidy-first skill
-3. **Unclear specifications** → Research or ask before starting TDD
+コマンドが不明な場合は、package.jsonまたはREADMEを確認するか、ユーザーに質問する。
 
-## Resources
+## 禁止事項
+
+❌ テストを「後で」書く
+❌ テストを書く前に実装する
+❌ テストがREDの時にリファクタリング
+❌ 複数の機能を同時に実装
+❌ テストが通過していない状態でコミット
+❌ 初期化のみチェックする意味のないテストを書く
+
+## 必須遵守事項
+
+**重要**: 共通ルールについては`references/must-rules.md`を参照：
+- バックグラウンドプロセス管理（ghostを使用）
+- 不確実性の処理（仮定しない）
+- コミットルール（テストが通過していること）
+- エラー処理
+- 作業進行（TodoWriteを使用）
+
+## 連携パターン
+
+1. **大規模機能** → 小さなタスクに分割してTDDを適用
+2. **リファクタリングが必要** → tidy-firstスキルに委譲
+3. **仕様が不明確** → TDD開始前に調査またはAskUserQuestionツールで質問
+
+## リソース
 
 ### references/tdd-guidelines.md
-Detailed TDD guidelines including:
-- Advanced test patterns
-- Test organization strategies
-- Common TDD anti-patterns
-- Language-specific TDD examples
-- Integration and E2E testing approaches
+以下を含む詳細なTDDガイドライン：
+- 高度なテストパターン
+- テスト整理戦略
+- 一般的なTDDアンチパターン
+- 言語別TDDの例
+- 統合テストとE2Eテストのアプローチ
 
-### ../../shared/references/must-rules.md
-Common MUST rules shared across all skills:
-- Background process management (ghost)
-- Uncertainty handling
-- Commit discipline
-- Work cycle guidelines
+### ../shared/references/must-rules.md
+すべてのスキルで共有される共通MUSTルール：
+- バックグラウンドプロセス管理（ghost）
+- 不確実性の処理
+- コミット規律
+- 作業サイクルガイドライン
 
-Refer to these files for comprehensive guidance during development.
+開発中の包括的なガイダンスについてはこれらのファイルを参照すること。
 
 ---
 
-**Remember: All implementation must be test-driven. No exceptions. This is non-negotiable.**
+**覚えておくこと: すべての実装はテスト駆動でなければならない。例外なし。これは交渉の余地がない。**
