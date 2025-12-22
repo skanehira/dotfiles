@@ -118,6 +118,7 @@ local config = function()
   local lsp_names = {
     'rust_analyzer',
     'denols',
+    'version_ls',
   }
   vim.lsp.enable(lsp_names)
 end
