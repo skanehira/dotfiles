@@ -1,21 +1,134 @@
 ---
 name: development
-description: テスト駆動開発（TDD）方法論に従って新機能の実装やバグ修正を行う。新機能の実装、バグ修正、既存機能の拡張時に使用する。RED→GREEN→REFACTORサイクルをテストファーストアプローチで厳格に遵守する。
+description: テスト駆動開発（TDD）方法論に従って新機能の実装やバグ修正を行う。新機能の実装、バグ修正、既存機能の拡張時に使用する。RED→GREEN→REFACTORサイクルをテストファーストアプローチで厳格に遵守する。高凝集度・低結合度・コロケーションを意識したアーキテクチャ設計を適用する。
 ---
 
-# 開発（TDD）
+# 開発（TDD + アーキテクチャ設計）
 
-## 概要
+Kent BeckのTDD方法論と、高凝集度・低結合度・コロケーションの原則を組み合わせた開発アプローチ。
 
-Kent BeckのTDD方法論を使用してすべての本番コードを実装する。まず失敗するテストを書き、テストを通過させる最小限のコードを実装し、その後品質向上のためリファクタリングを行う。失敗するテストなしに本番コードを書いてはならない。
+## Design Thinking（設計思考）
 
-## このスキルを使用するタイミング
+実装前に以下の観点で設計を検討する：
 
-以下の場合に使用する：
-- 新機能や機能性の実装時
-- 既存コードのバグ修正時
-- 既存機能の拡張や修正時
-- 動作変更を必要とする本番コードの変更時
+### 1. 責務の明確化
+- **この機能の単一責務は何か？**
+- **この変更は既存の責務を侵害しないか？**
+- **テストしやすい単位に分割できるか？**
+
+### 2. 依存関係の分析
+- **このモジュールが依存するものは何か？**（依存方向は内向き？外向き？）
+- **依存を注入可能にできるか？**（テストダブルで置換可能か）
+- **循環依存が発生しないか？**
+
+### 3. 配置の決定
+- **この機能はどこに配置すべきか？**（コロケーション原則に従う）
+- **関連するテスト・型・ヘルパーは同じ場所に配置できるか？**
+- **変更時に影響範囲が最小化されるか？**
+
+## コア原則
+
+### 高凝集度（High Cohesion）
+
+**1つのモジュール/コンポーネントは1つの責務に集中する**
+
+```
+❌ 悪い例: UserDashboard.tsx
+- ユーザー情報の取得
+- グラフの描画
+- 通知の管理
+- 設定の保存
+→ 4つの責務が混在
+
+✅ 良い例:
+src/features/user/
+├── UserProfile.tsx      # ユーザー情報表示のみ
+├── UserProfile.test.tsx # コロケーション
+├── useUserData.ts       # データ取得ロジック
+├── useUserData.test.ts
+└── types.ts             # この機能の型定義
+```
+
+**判断基準:**
+- 変更理由が1つだけか（Single Responsibility）
+- テストが1つの観点に集中できるか
+- 説明が「〜と〜と〜」ではなく「〜」で済むか
+
+### 低結合度（Low Coupling）
+
+**モジュール間の依存は最小限かつ明示的にする**
+
+```typescript
+// ❌ 悪い例: 具体的な実装に依存
+import { fetchUserFromAPI } from '../api/userApi';
+
+function UserProfile() {
+  const user = fetchUserFromAPI(); // テスト困難
+}
+
+// ✅ 良い例: 抽象に依存（依存性注入）
+interface UserDataSource {
+  getUser(): Promise<User>;
+}
+
+function UserProfile({ dataSource }: { dataSource: UserDataSource }) {
+  const user = dataSource.getUser(); // テストでモック可能
+}
+```
+
+**依存の方向性:**
+```
+外部（不安定）  →  ドメイン（安定）
+UI層 → ビジネスロジック層 → ドメインモデル
+```
+
+### コロケーション（Colocation）
+
+**関連するファイルは物理的に近くに配置する**
+
+```
+推奨ディレクトリ構造:
+
+src/
+├── features/              # 機能別ディレクトリ
+│   ├── auth/
+│   │   ├── LoginForm.tsx
+│   │   ├── LoginForm.test.tsx    # テストをコロケーション
+│   │   ├── useAuth.ts
+│   │   ├── useAuth.test.ts
+│   │   ├── authApi.ts
+│   │   ├── authApi.test.ts
+│   │   └── types.ts              # この機能の型
+│   │
+│   └── tasks/
+│       ├── TaskList.tsx
+│       ├── TaskList.test.tsx
+│       ├── TaskItem.tsx
+│       ├── TaskItem.test.tsx
+│       ├── useTaskActions.ts
+│       ├── useTaskActions.test.ts
+│       └── types.ts
+│
+├── components/            # 共有UIコンポーネント
+│   └── ui/
+│       ├── Button.tsx
+│       ├── Button.test.tsx
+│       ├── Modal.tsx
+│       └── Modal.test.tsx
+│
+├── hooks/                 # 共有フック
+│   ├── useDebounce.ts
+│   └── useDebounce.test.ts
+│
+└── types/                 # 共有型定義
+    └── index.ts
+```
+
+**コロケーションの利点:**
+- 変更時のファイル探索が不要
+- 機能削除時にディレクトリごと削除可能
+- レビュー時に関連ファイルが一目瞭然
+- テストとソースの対応関係が明確
 
 ## TDD絶対ルール
 
@@ -24,248 +137,174 @@ Kent BeckのTDD方法論を使用してすべての本番コードを実装す�
 3. **最小限の実装** - 現在のテストを通過するコードのみ書く
 4. **グリーンの時のみリファクタリング** - リファクタリング前にテストが通過していなければならない
 
-## コアワークフロー
+## ワークフロー
 
-### ステップ1: 作業計画（TodoWriteを使用）
+### ステップ1: 設計思考（Design Thinking）
 
-開始前に構造化されたタスクリストを作成する：
-
-```bash
-# 例: ユーザー認証機能
-- [ ] 認証失敗のテストを書く
-- [ ] テストを通過させる最小限の実装
-- [ ] 認証成功のテストを書く
-- [ ] 実装を拡張
-- [ ] リファクタリング（必要に応じてtidy-firstに委譲）
+実装前に問いかける：
+```
+□ この機能の単一責務は何か？
+□ どのディレクトリに配置すべきか？（コロケーション）
+□ 依存は注入可能か？（テスト容易性）
+□ 既存コードへの影響範囲は？
 ```
 
-### ステップ2: REDフェーズ - 失敗するテストを書く
+### ステップ2: 作業計画（TodoWriteを使用）
 
-**要件:**
-- 明確で説明的なテスト名（例: `shouldReturnErrorWhenPasswordIsInvalid`）
-- 一度に1つの動作のみテスト
-- テストの失敗を確認（RED）
+構造化されたタスクリストを作成：
+```
+- [ ] 失敗するテストを書く（RED）
+- [ ] テストを通過させる最小限の実装（GREEN）
+- [ ] リファクタリング（必要に応じて）
+- [ ] 品質チェック（lint, format, build, test）
+```
 
-**例:**
-```javascript
-describe('UserAuthentication', () => {
-  test('shouldReturnErrorWhenPasswordIsInvalid', () => {
-    const auth = new UserAuthentication();
-    const result = auth.login('user@example.com', 'wrong_password');
-    expect(result.error).toBe('Invalid credentials');
+### ステップ3: REDフェーズ - 失敗するテストを書く
+
+**テストファイルの配置（コロケーション）:**
+```
+src/features/auth/
+├── LoginForm.tsx         # 実装
+└── LoginForm.test.tsx    # テスト（同じディレクトリ）
+```
+
+**テストの書き方:**
+```typescript
+// src/features/auth/LoginForm.test.tsx
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { LoginForm } from './LoginForm';
+
+describe('LoginForm', () => {
+  // 依存を注入可能にする
+  const mockOnSubmit = vi.fn();
+
+  test('正しい資格情報でログインできる', async () => {
+    render(<LoginForm onSubmit={mockOnSubmit} />);
+
+    await userEvent.type(screen.getByLabelText('メール'), 'user@example.com');
+    await userEvent.type(screen.getByLabelText('パスワード'), 'password123');
+    await userEvent.click(screen.getByRole('button', { name: 'ログイン' }));
+
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      password: 'password123',
+    });
   });
 });
 ```
 
 **テストを実行して失敗を確認:**
 ```bash
-npm test  # または適切なテストコマンド
+npm test
 # テストは失敗するべき - これは期待通りで必須
 ```
 
-### ステップ3: GREENフェーズ - テストを通過させる
+### ステップ4: GREENフェーズ - テストを通過させる
 
-**要件:**
-- テストを通過させるために必要な最小限のコードのみ書く
-- ハードコーディングは許容される（後でリファクタリング）
-- すべてのテストが通過することを確認
+**最小限の実装:**
+```typescript
+// src/features/auth/LoginForm.tsx
+interface LoginFormProps {
+  onSubmit: (credentials: { email: string; password: string }) => void;
+}
 
-**例（最小限の実装）:**
-```javascript
-class UserAuthentication {
-  login(email, password) {
-    // 最小限の実装 - テストを通過させるだけ
-    return { error: 'Invalid credentials' };
-  }
+export function LoginForm({ onSubmit }: LoginFormProps) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({ email, password });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <label>
+        メール
+        <input value={email} onChange={(e) => setEmail(e.target.value)} />
+      </label>
+      <label>
+        パスワード
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+      </label>
+      <button type="submit">ログイン</button>
+    </form>
+  );
 }
 ```
 
-**再度テストを実行:**
-```bash
-npm test
-# すべてのテストが通過するべき - GREENフェーズ完了
-```
-
-### ステップ4: REFACTORフェーズ - 品質向上
+### ステップ5: REFACTORフェーズ - 品質向上
 
 **すべてのテストがグリーンの場合のみ進める。**
 
-単純なリファクタリングは直接進める。大規模な構造変更の場合はtidy-firstに委譲する：
+リファクタリングの観点：
+- 高凝集度を維持しているか
+- 低結合度を維持しているか
+- 重複を排除できるか
+
+### ステップ6: 品質チェック（必須）
 
 ```bash
-# 複雑なリファクタリングをtidy-firstスキルに委譲
-Task(
-    subagent_type="tidy-first",
-    prompt="認証ロジックの重複を排除し、構造を改善する",
-    description="コードクリーンアップ"
-)
-```
-
-**リファクタリング後:**
-```bash
-npm test
-# すべてのテストが引き続き通過しなければならない
+# すべてのチェックが通過するまでタスクは完了しない
+npm run lint     # リンターを実行
+npm run format   # フォーマッターを実行
+npm run build    # ビルドを実行
+npm test         # テストを実行
 ```
 
 ## バグ修正プロセス
 
-### ステップ1: テストでバグを再現
-バグを示すテストを書く（テストは失敗するべき）：
+1. **テストでバグを再現**（テストは失敗するべき）
+2. **最小限の変更で修正**
+3. **エッジケーステストを追加**
+4. **必要に応じてリファクタリング**
 
-```javascript
-test('shouldHandleNullEmailGracefully', () => {
-  const auth = new UserAuthentication();
-  const result = auth.login(null, 'password');
-  expect(result.error).toBe('Email is required');
-});
-```
+## アンチパターン
 
-### ステップ2: 最小限の変更で修正
-テストを通過させる最小限の修正を実装：
+### 避けるべき設計
 
-```javascript
-class UserAuthentication {
-  login(email, password) {
-    if (!email) {
-      return { error: 'Email is required' };
-    }
-    // ... 既存のロジック
-  }
-}
-```
+❌ **God Component**: 1つのコンポーネントが多すぎる責務を持つ
+❌ **Prop Drilling地獄**: 深いネストで大量のpropsを渡す
+❌ **テストと実装の分離**: `__tests__/`ディレクトリにテストを隔離
+❌ **Feature Envy**: 他モジュールのデータに過度に依存
+❌ **Shotgun Surgery**: 1つの変更で多数のファイルを修正
 
-### ステップ3: エッジケーステストを追加
-修正中に発見した追加シナリオをカバー：
-
-```javascript
-test('shouldHandleEmptyEmailString', () => {
-  const auth = new UserAuthentication();
-  const result = auth.login('', 'password');
-  expect(result.error).toBe('Email is required');
-});
-```
-
-### ステップ4: 必要に応じてリファクタリング
-すべてのテストが通過したら、必要に応じてコード品質を向上させる。
-
-## 意味のあるテストのガイドライン
-
-### テストで検証すべきこと
-
-**動作（コードが何をするか）をテストし、初期化をテストしない：**
-
-❌ **悪いテスト**（初期化のみチェック）:
-```rust
-#[test]
-fn test_new() {
-    let profiler = CpuProfiler::new();
-    assert_eq!(profiler.frequency, 997);
-}
-```
-
-✅ **良いテスト**（実際の動作と出力を検証）:
-```rust
-#[test]
-fn test_profiler_captures_function_samples() {
-    let profiler = CpuProfiler::new();
-
-    // 実際の動作をテスト
-    let report = profiler.profile_workload(|| {
-        fibonacci(30);
-    }).unwrap();
-
-    // 期待される出力を検証
-    assert!(report.contains_function("fibonacci"));
-    assert!(report.sample_count() > 0);
-}
-```
-
-### テスト設計の原則
-
-1. **最小限の意味のある動作から始める**
-2. **明確な入力 → 処理 → 出力のフロー**
-3. **具体的な期待結果**
-4. **明確な失敗理由**
-
-## コミットガイドライン
-
-機能追加とバグ修正には`[BEHAVIORAL]`プレフィックスを使用：
-
-```bash
-# 良いコミットメッセージ
-[BEHAVIORAL] feat: ユーザー認証システムを追加
-[BEHAVIORAL] fix: ログインのnullポインタエラーを解決
-[BEHAVIORAL] feat: パスワードバリデーションを実装
-```
-
-## 品質保証（必須）
-
-実装後、必ずこれらのコマンドを実行する：
-
-```bash
-# 1. リンターを実行
-npm run lint     # または適切なlintコマンド
-# 続行前にエラーを修正
-
-# 2. フォーマッターを実行
-npm run format   # または適切なformatコマンド
-
-# 3. ビルドを実行
-npm run build    # または適切なbuildコマンド
-# ビルドエラーを修正
-
-# 4. テストを実行
-npm test         # または適切なtestコマンド
-# すべてのテストが通過しなければならない
-```
-
-**重要**: すべての品質チェックが通過するまでタスクは完了しない。
-
-コマンドが不明な場合は、package.jsonまたはREADMEを確認するか、ユーザーに質問する。
-
-## 禁止事項
+### 避けるべきTDD違反
 
 ❌ テストを「後で」書く
 ❌ テストを書く前に実装する
 ❌ テストがREDの時にリファクタリング
 ❌ 複数の機能を同時に実装
-❌ テストが通過していない状態でコミット
 ❌ 初期化のみチェックする意味のないテストを書く
 
-## 必須遵守事項
+## コミットガイドライン
 
-**重要**: 共通ルールについては`references/must-rules.md`を参照：
-- バックグラウンドプロセス管理（ghostを使用）
-- 不確実性の処理（仮定しない）
-- コミットルール（テストが通過していること）
-- エラー処理
-- 作業進行（TodoWriteを使用）
+```bash
+# 構造変更（リファクタリング）
+[STRUCTURAL] refactor: コンポーネントをfeatures/ディレクトリに移動
 
-## 連携パターン
-
-1. **大規模機能** → 小さなタスクに分割してTDDを適用
-2. **リファクタリングが必要** → tidy-firstスキルに委譲
-3. **仕様が不明確** → TDD開始前に調査またはAskUserQuestionツールで質問
+# 動作変更（機能追加・バグ修正）
+[BEHAVIORAL] feat: ユーザー認証機能を追加
+[BEHAVIORAL] fix: ログインエラーハンドリングを修正
+```
 
 ## リソース
 
+### references/architecture-patterns.md
+高凝集度・低結合度・コロケーションの詳細パターン：
+- コンポーネント分割戦略
+- 依存性注入パターン
+- ディレクトリ構造の具体例
+- React/TypeScript特有のパターン
+
 ### references/tdd-guidelines.md
-以下を含む詳細なTDDガイドライン：
+詳細なTDDガイドライン：
 - 高度なテストパターン
 - テスト整理戦略
 - 一般的なTDDアンチパターン
 - 言語別TDDの例
-- 統合テストとE2Eテストのアプローチ
-
-### ../shared/references/must-rules.md
-すべてのスキルで共有される共通MUSTルール：
-- バックグラウンドプロセス管理（ghost）
-- 不確実性の処理
-- コミット規律
-- 作業サイクルガイドライン
-
-開発中の包括的なガイダンスについてはこれらのファイルを参照すること。
 
 ---
 
-**覚えておくこと: すべての実装はテスト駆動でなければならない。例外なし。これは交渉の余地がない。**
+**覚えておくこと: 高凝集度・低結合度・コロケーションを意識し、すべての実装はテスト駆動でなければならない。例外なし。**
