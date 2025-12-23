@@ -44,7 +44,7 @@
     ]
   },
   "enabledPlugins": {
-    "document-skills@anthropic-agent-skills": true,
+    "frontend-design@claude-code-plugins": true,
     "example-skills@anthropic-agent-skills": true,
     "rust-analyzer-lsp@claude-plugins-official": true
   },
