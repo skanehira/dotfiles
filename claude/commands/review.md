@@ -82,23 +82,45 @@ git diff --staged
 
 ### テストファイルの検索
 
-Globツールで以下のパターンを検索し、変更ファイルに対応するテストを特定:
-- `**/*_test.*`
-- `**/*.test.*`
-- `**/*_spec.*`
-- `**/test_*.*`
-- `**/__tests__/**`
+Globツールで言語に応じたパターンを検索し、変更ファイルに対応するテストを特定:
 
-対応関係の例:
-- `foo.lua` → `foo_test.lua`, `foo_spec.lua`, `test_foo.lua`
-- `foo.ts` → `foo.test.ts`, `foo.spec.ts`
+#### 言語別テストファイルパターン
+
+| 言語 | パターン | 配置 |
+|------|---------|------|
+| Go | `*_test.go` | 同一ディレクトリ |
+| Rust | `tests/**/*.rs`, モジュール内 `#[cfg(test)]` | 統合テストは `tests/`、単体テストはモジュール内 |
+| TypeScript/React | `*.test.ts`, `*.test.tsx`, `__tests__/**` | 同一ディレクトリまたは `__tests__/` |
+| Lua | `*_test.lua`, `*_spec.lua`, `test_*.lua` | 同一ディレクトリ |
+
+#### 検索パターン
+- `**/*_test.go` (Go)
+- `**/tests/**/*.rs` (Rust統合テスト)
+- `**/*.test.*` (TypeScript/React)
+- `**/*_test.*` (Lua, 汎用)
+- `**/*_spec.*` (Lua, 汎用)
+- `**/__tests__/**` (React)
+
+#### 対応関係の例
+
+| 言語 | 実装ファイル | テストファイル |
+|------|-------------|---------------|
+| Go | `handler.go` | `handler_test.go`（同一ディレクトリ） |
+| Rust | `src/user.rs` | `src/user.rs` 内の `#[cfg(test)] mod tests`、または `tests/user_test.rs` |
+| TypeScript | `LoginForm.tsx` | `LoginForm.test.tsx`（同一ディレクトリ） |
+| Lua | `foo.lua` | `foo_test.lua`, `foo_spec.lua`, `test_foo.lua` |
 
 ### 関連ファイルの特定
 
 変更ファイルに関連するすべての処理を把握するため、以下の手順で依存関係を追跡:
 
 1. **インポート/依存関係の解析**:
-   - 変更ファイル内の`import`, `require`, `from`文をGrepで抽出
+   言語に応じたインポート文をGrepで抽出:
+   | 言語 | パターン |
+   |------|---------|
+   | Go | `import "..."`, `import (...)` |
+   | Rust | `use ...`, `mod ...`, `extern crate` |
+   | TypeScript | `import ... from`, `require(...)` |
    - インポート元のファイルをReadで読み込み
    - 変更が影響を与える可能性のあるファイルを特定
 
@@ -145,11 +167,13 @@ Grepツールで以下を検索:
 
 ### 必須レビュー観点
 
-以下の3観点は**必須**で常にレビューを実施する：
+以下の5観点は**必須**で常にレビューを実施する：
 
 1. **TDD/テスト品質** - テストの有無、カバレッジ、テストファースト準拠
 2. **コード品質** - 可読性、命名、複雑度、重複、凝集度、結合度
-3. **プロジェクトルール** - CLAUDE.md, DESIGN.md, .claude/rules準拠
+3. **セキュリティ** - 脆弱性、認証/認可、入力検証
+4. **アーキテクチャ** - 設計パターン、依存関係、責務分離
+5. **プロジェクトルール** - CLAUDE.md, DESIGN.md, .claude/rules準拠
 
 ### 追加レビュー観点の確認
 
@@ -159,14 +183,13 @@ AskUserQuestionツールで追加のレビュー観点を確認する：
 AskUserQuestion({
   questions: [
     {
-      question: "必須観点（TDD/テスト品質、コード品質、プロジェクトルール）に加えて、追加でレビューしたい観点はありますか？",
+      question: "必須観点（TDD/テスト品質、コード品質、セキュリティ、アーキテクチャ、プロジェクトルール）に加えて、追加でレビューしたい観点はありますか？",
       header: "追加観点",
       options: [
-        { label: "セキュリティ", description: "脆弱性、認証/認可、入力検証" },
-        { label: "アーキテクチャ", description: "設計パターン、依存関係、責務分離" },
-        { label: "追加なし", description: "必須観点のみでレビュー" }
+        { label: "追加なし", description: "必須観点のみでレビュー（推奨）" },
+        { label: "パフォーマンス", description: "実行速度、メモリ使用量、最適化" }
       ],
-      multiSelect: true
+      multiSelect: false
     }
   ]
 })
@@ -174,7 +197,7 @@ AskUserQuestion({
 
 **「Other」選択時の処理**:
 - ユーザーが入力したカスタム観点でレビューを実施
-- 例: 「パフォーマンス」「アクセシビリティ」「国際化対応」など
+- 例: 「アクセシビリティ」「国際化対応」など
 - カスタム観点の場合、その観点に関連するチェック項目を動的に生成
 
 ### レビュー実施
@@ -189,12 +212,20 @@ AskUserQuestion({
 |------------------|----------|--------------------------------------------------------------------------|
 | テストの存在     | Critical | 新規コードに対応するテストファイルが存在するか                           |
 | テストカバレッジ | Warning  | 主要関数がテストされているか、エッジケース・エラーケースのテストがあるか |
-| テスト品質       | Info     | テスト名が動作を説明しているか、AAAパターンに従っているか                |
+| テスト品質       | Critical | テスト名が動作を説明しているか、AAAパターンに従っているか                |
+
+**言語別テスト品質基準**（詳細は `writing-tests` スキルを参照）:
+
+| 言語 | 命名規則 | 構造 |
+|------|---------|------|
+| Go | `Test関数_should結果_when条件` | Table-Driven Tests |
+| Rust | `関数_returns結果_when条件` | `#[test]`, rstest |
+| TypeScript | `describe` + `it` | AAA, Testing Library |
 
 **判定基準**:
 - テストファイルが存在しない新規コード → **Critical**
 - テストはあるがカバレッジ不足 → **Warning**
-- テスト名が不明確 → **Info**
+- テスト名が不明確、AAAパターン未準拠 → **Critical**
 
 ### 3.2 コード品質
 
@@ -231,9 +262,14 @@ AskUserQuestion({
 | インジェクション | Warning  | SQL、コマンド、XSSの脆弱性がないか                      |
 
 **検索パターン**:
-- `password`, `secret`, `api_key`, `token`
-- `ghp_`, `sk-`, `aws_`, `AKIA`
-- `eval(`, `exec(`, `system(`
+
+| カテゴリ | パターン |
+|---------|---------|
+| 秘密情報 | `password`, `secret`, `api_key`, `token` |
+| トークンプレフィックス | `ghp_`, `sk-`, `aws_`, `AKIA` |
+| 危険な関数（共通） | `eval(`, `exec(`, `system(` |
+| 危険な関数（Go） | `os.Exec`, `exec.Command`, `sql.Query`（プレースホルダなし） |
+| 危険な関数（Rust） | `std::process::Command`, `unsafe {` |
 
 **判定基準**:
 - ハードコードされた秘密情報 → **Critical**
