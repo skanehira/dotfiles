@@ -1,184 +1,184 @@
-# MUST Rules Reference
+# MUSTルール リファレンス
 
-This document contains all MUST rules that must be followed during requirements analysis and task decomposition.
+このドキュメントは、要件分析とタスク分解において必ず従うべきMUSTルールをすべて記載しています。
 
-## Background Process Management is MANDATORY
+## バックグラウンドプロセス管理は必須
 
-**All background processes MUST be managed using ghost:**
+**すべてのバックグラウンドプロセスはghostを使用して管理すること：**
 
-1. **MUST use ghost**: Always use https://github.com/skanehira/ghost for running background processes
-2. **NO traditional methods**: Do NOT use `&`, `nohup`, `screen`, `tmux`, or other traditional background process methods
-3. **Reference documentation**: Always refer to ghost's README.md for detailed usage instructions
+1. **ghostを使用すること**: バックグラウンドプロセスの実行には必ず https://github.com/skanehira/ghost を使用
+2. **従来の方法は禁止**: `&`、`nohup`、`screen`、`tmux`などの従来のバックグラウンドプロセス方法は使用しない
+3. **ドキュメント参照**: 詳細な使用方法はghostのREADME.mdを参照
 
-**Why ghost is required:**
-- Provides proper process management and monitoring
-- Ensures consistent behavior across different environments
-- Prevents orphaned processes and resource leaks
+**ghostが必要な理由:**
+- 適切なプロセス管理と監視を提供
+- 異なる環境間で一貫した動作を保証
+- 孤立プロセスやリソースリークを防止
 
-**Basic ghost usage:**
-- **Start a process**: `ghost run <command>` - Runs a command as a managed background process
-- **Stop a process**: `ghost stop <id>` - Stops a running process by its ID
-- **List processes**: `ghost list` - Shows all managed processes
-- **View logs**: `ghost log <id>` - Shows logs for a specific process
-- **Important**: When the command you want to run has options starting with `-`, use `--` before the command
-  - Example: `ghost run ls -- -la`
-  - The `--` separates ghost's options from the command's options
+**基本的なghost使用方法:**
+- **プロセス開始**: `ghost run <command>` - コマンドを管理されたバックグラウンドプロセスとして実行
+- **プロセス停止**: `ghost stop <id>` - IDでプロセスを停止
+- **プロセス一覧**: `ghost list` - すべての管理プロセスを表示
+- **ログ表示**: `ghost log <id>` - 特定プロセスのログを表示
+- **重要**: 実行するコマンドに`-`で始まるオプションがある場合、コマンドの前に`--`を使用
+  - 例: `ghost run ls -- -la`
+  - `--`はghostのオプションとコマンドのオプションを分離する
 
-## Test-Driven Development (TDD) is MANDATORY
+## テスト駆動開発（TDD）は必須
 
-**Every piece of production code MUST be written using Kent Beck's TDD methodology:**
+**すべてのプロダクションコードはKent BeckのTDD方法論を使用して記述すること：**
 
-### The TDD Cycle
-1. **RED Phase (MUST)**: Write a failing test FIRST before any implementation
-   - Start with the simplest failing test that defines a small increment of functionality
-   - Use meaningful test names that describe behavior (e.g., "shouldSumTwoPositiveNumbers")
-   - Make test failures clear and informative
-2. **GREEN Phase (MUST)**: Write ONLY the minimum code needed to make the test pass
-   - Implement just enough code - no more
-   - Focus only on making the current test pass
-3. **REFACTOR Phase (MUST)**: Improve code quality ONLY after tests are green
-   - Eliminate duplication ruthlessly
-   - Express intent clearly through naming and structure
-   - Keep methods small and focused on a single responsibility
-   - Make dependencies explicit
-   - Minimize state and side effects
-   - Use the simplest solution that works
+### TDDサイクル
+1. **REDフェーズ（必須）**: 実装前に失敗するテストを最初に書く
+   - 機能の小さな増分を定義する最もシンプルな失敗テストから開始
+   - 動作を説明する意味のあるテスト名を使用（例：「shouldSumTwoPositiveNumbers」）
+   - テスト失敗を明確で情報量のあるものにする
+2. **GREENフェーズ（必須）**: テストを通過させるための最小限のコードのみを書く
+   - 必要最低限のコードのみを実装 - それ以上は書かない
+   - 現在のテストを通過させることのみに集中
+3. **REFACTORフェーズ（必須）**: テストがグリーンになった後のみコード品質を改善
+   - 重複を徹底的に排除
+   - 命名と構造を通じて意図を明確に表現
+   - メソッドを小さく、単一責任に集中させる
+   - 依存関係を明示的にする
+   - 状態と副作用を最小化
+   - 動作する最もシンプルな解決策を使用
 
-### Defect Fixing Process (MUST)
-When fixing a defect:
-1. First write an API-level failing test that demonstrates the bug
-2. Write the smallest possible test that replicates the problem
-3. Get both tests to pass with minimal code changes
+### バグ修正プロセス（必須）
+バグを修正する際：
+1. まずバグを示すAPI レベルの失敗テストを書く
+2. 問題を再現する最小のテストを書く
+3. 最小限のコード変更で両方のテストを通過させる
 
-### Testing Trophy
-Prioritize tests in this order:
-- **Unit Tests** (Base): Fast, focused, numerous
-- **Integration Tests** (Middle): Verify component interactions
-- **E2E Tests** (Top): Minimal but critical user flows
+### テスティングトロフィー
+テストの優先順位：
+- **ユニットテスト**（基盤）: 高速、集中、多数
+- **統合テスト**（中間）: コンポーネント間の相互作用を検証
+- **E2Eテスト**（頂点）: 最小限だが重要なユーザーフロー
 
-### TDD Principles
-- **Test Behavior, Not Implementation**: Focus on what the code does, not how
+### TDD原則
+- **実装ではなく動作をテスト**: コードが何をするかに焦点を当て、どのように行うかではない
 
-**Violations of TDD approach are NOT acceptable:**
-- ❌ Writing production code without a failing test
-- ❌ Writing more code than needed to pass the test
-- ❌ Refactoring when tests are not green
-- ❌ Skipping tests with the intention to "add them later"
-- ❌ Mixing structural and behavioral changes in the same commit
+**TDDアプローチの違反は許容されない：**
+- ❌ 失敗するテストなしにプロダクションコードを書く
+- ❌ テストを通過させるために必要以上のコードを書く
+- ❌ テストがグリーンでないときにリファクタリングする
+- ❌ 「後で追加する」意図でテストをスキップする
+- ❌ 同じコミットで構造的変更と動作的変更を混ぜる
 
-**Remember: No test, no code. This is non-negotiable.**
+**覚えておくこと: テストなしにコードなし。これは交渉の余地がない。**
 
-### Test Coverage
-- **Edge Cases**: Include tests for boundary conditions
-- **Error Scenarios**: Test error handling paths
+### テストカバレッジ
+- **エッジケース**: 境界条件のテストを含める
+- **エラーシナリオ**: エラーハンドリングパスをテスト
 
-### Test Organization
-- **Co-location**: Keep test files near the code they test
-- **Isolated Tests**: Each test should be independent
-- **Fast Execution**: Keep tests fast and focused
+### テスト整理
+- **コロケーション**: テストファイルをテスト対象コードの近くに配置
+- **独立したテスト**: 各テストは独立していること
+- **高速実行**: テストを高速かつ集中させる
 
-## Tidy First Approach is MANDATORY
+## Tidy Firstアプローチは必須
 
-**All changes MUST be separated into two distinct types:**
+**すべての変更は2つの異なるタイプに分離すること：**
 
-1. **STRUCTURAL CHANGES**: Rearranging code without changing behavior
-   - Renaming variables, methods, or classes
-   - Extracting methods or classes
-   - Moving code between files
-   - Reformatting code
-   - MUST be validated by running all tests before and after changes
+1. **構造的変更**: 動作を変更せずにコードを再配置
+   - 変数、メソッド、クラスのリネーム
+   - メソッドやクラスの抽出
+   - ファイル間でのコード移動
+   - コードのフォーマット
+   - 変更前後にすべてのテストを実行して検証すること
 
-2. **BEHAVIORAL CHANGES**: Adding or modifying actual functionality
-   - Adding new features
-   - Fixing bugs
-   - Changing business logic
-   - MUST be driven by failing tests first
+2. **動作的変更**: 実際の機能を追加または変更
+   - 新機能の追加
+   - バグの修正
+   - ビジネスロジックの変更
+   - 最初に失敗するテストによって駆動されること
 
-**Tidy First Rules:**
-- **NEVER mix structural and behavioral changes in the same commit**
-- **ALWAYS make structural changes first when both are needed**
-- **VALIDATE structural changes do not alter behavior by running tests**
-- **Each commit MUST clearly state whether it contains structural or behavioral changes**
+**Tidy Firstルール:**
+- **同じコミットで構造的変更と動作的変更を混ぜない**
+- **両方が必要な場合は常に構造的変更を先に行う**
+- **テストを実行して構造的変更が動作を変更していないことを検証**
+- **各コミットは構造的変更か動作的変更かを明確に記述すること**
 
-## Handling Uncertainties is MANDATORY
+## 不確実性への対処は必須
 
-**When encountering unclear requirements or unknown information:**
+**不明確な要件や未知の情報に遭遇した場合：**
 
-1. **NEVER make assumptions**: Do not guess or fill in gaps with assumptions
-2. **ALWAYS explicitly state uncertainties**: Clearly communicate what is unclear or unknown
-3. **MANDATORY actions when uncertain**:
-   - **Research first**: Use available tools to search and understand the codebase
-   - **Ask for clarification**: Request specific information from the user
-   - **State limitations**: Explicitly say "I don't know" or "I'm uncertain about..."
-   - **Provide options**: When unsure, present multiple approaches with trade-offs
+1. **仮定を立てない**: 推測や仮定でギャップを埋めない
+2. **不確実性を明示する**: 不明確または未知のことを明確に伝える
+3. **不確実な場合の必須アクション**:
+   - **最初に調査**: 利用可能なツールを使用してコードベースを検索・理解
+   - **明確化を求める**: ユーザーに具体的な情報を要求
+   - **制限を述べる**: 「わかりません」や「〜について不確実です」と明示的に言う
+   - **選択肢を提供**: 不確実な場合、トレードオフを含む複数のアプローチを提示
 
-**Examples of proper uncertainty handling:**
-- ✅ "I'm not sure which testing framework this project uses. Let me search for test files to understand the setup."
-- ✅ "The requirements for this feature are unclear. Could you specify whether you want X or Y?"
-- ✅ "I don't know the exact API structure. I'll need to examine the existing code first."
+**適切な不確実性対処の例:**
+- ✅ 「このプロジェクトがどのテストフレームワークを使用しているかわかりません。テストファイルを検索してセットアップを理解します。」
+- ✅ 「この機能の要件が不明確です。XとYのどちらが必要か指定していただけますか？」
+- ✅ 「正確なAPI構造がわかりません。まず既存のコードを調べる必要があります。」
 
-**Violations are NOT acceptable:**
-- ❌ Making up file paths or function names
-- ❌ Assuming project structure without verification
-- ❌ Guessing at requirements instead of asking
-- ❌ Implementing features based on assumptions
+**違反は許容されない：**
+- ❌ ファイルパスや関数名を作り上げる
+- ❌ 検証なしにプロジェクト構造を仮定する
+- ❌ 質問する代わりに要件を推測する
+- ❌ 仮定に基づいて機能を実装する
 
-**Remember: It's always better to ask than to assume. Transparency builds trust.**
+**覚えておくこと: 仮定するより質問する方が常に良い。透明性は信頼を築く。**
 
-## Documentation Search is MANDATORY
+## ドキュメント検索は必須
 
-**When searching for library or framework documentation:**
+**ライブラリやフレームワークのドキュメントを検索する際：**
 
-1. **MUST use context7**: Always use the context7 MCP server for documentation searches
-2. **Proper usage flow**:
-   - First call `resolve-library-id` to get the Context7-compatible library ID
-   - Then call `get-library-docs` with the resolved ID
-   - Exception: If user explicitly provides a library ID in `/org/project` format
+1. **context7を使用すること**: ドキュメント検索には必ずcontext7 MCPサーバーを使用
+2. **適切な使用フロー**:
+   - まず`resolve-library-id`を呼び出してContext7互換のライブラリIDを取得
+   - 次に解決されたIDで`get-library-docs`を呼び出す
+   - 例外: ユーザーが明示的に`/org/project`形式でライブラリIDを提供した場合
 
-**Examples of proper documentation search:**
-- ✅ "Let me search for React documentation using context7"
-- ✅ "I'll use context7 to find the latest Next.js API documentation"
-- ✅ "Using context7 to get Supabase documentation for this feature"
+**適切なドキュメント検索の例:**
+- ✅ 「context7を使用してReactドキュメントを検索します」
+- ✅ 「context7を使用して最新のNext.js APIドキュメントを見つけます」
+- ✅ 「この機能のためにcontext7を使用してSupabaseドキュメントを取得します」
 
-**Violations are NOT acceptable:**
-- ❌ Using web search for official documentation when context7 has it
-- ❌ Guessing API methods without checking documentation
-- ❌ Using outdated documentation from memory
+**違反は許容されない：**
+- ❌ context7にある公式ドキュメントをWeb検索で探す
+- ❌ ドキュメントを確認せずにAPIメソッドを推測する
+- ❌ 記憶にある古いドキュメントを使用する
 
-**Remember: Always use the most up-to-date documentation available through context7.**
+**覚えておくこと: 常にcontext7を通じて利用可能な最新のドキュメントを使用すること。**
 
-## Commit Discipline is MANDATORY
+## コミット規律は必須
 
-**Only commit when ALL of the following conditions are met:**
+**以下のすべての条件が満たされた場合のみコミットすること：**
 
-1. **ALL tests are passing** - No exceptions
-2. **ALL compiler/linter warnings have been resolved**
-3. **The change represents a single logical unit of work**
-4. **Commit messages clearly state:**
-   - Whether the commit contains structural OR behavioral changes
-   - The specific purpose of the change
-   - Format: `[STRUCTURAL]` or `[BEHAVIORAL]` prefix followed by description
+1. **すべてのテストが通過している** - 例外なし
+2. **すべてのコンパイラ/リンター警告が解決されている**
+3. **変更が単一の論理的な作業単位を表している**
+4. **コミットメッセージに明確に記述：**
+   - コミットが構造的変更か動作的変更かを含む
+   - 変更の具体的な目的
+   - 形式: `[STRUCTURAL]`または`[BEHAVIORAL]`プレフィックスの後に説明
 
-**Commit Rules:**
-- Use small, frequent commits rather than large, infrequent ones
-- Each commit should be reversible without breaking functionality
-- Never commit work-in-progress code
-- Keep commits focused on a single purpose
+**コミットルール:**
+- 大きく頻度の低いコミットより、小さく頻繁なコミットを使用
+- 各コミットは機能を壊さずに元に戻せること
+- 作業中のコードをコミットしない
+- コミットは単一の目的に集中させる
 
-## Work Cycle
+## 作業サイクル
 
-### 1. Task Management
-- **Sequential Processing**: Work on tasks one at a time, not in parallel
-- **Task Tracking**: Maintain a task list with clear status tracking
-- **Atomic Changes**: Each task should result in a self-contained, testable change
+### 1. タスク管理
+- **順次処理**: タスクは並行ではなく一度に1つずつ作業
+- **タスク追跡**: 明確なステータス追跡でタスクリストを維持
+- **アトミックな変更**: 各タスクは自己完結型でテスト可能な変更になること
 
-### 2. Quality Assurance Cycle
-After completing each task, run the following verification steps:
-- **Unit Tests**: Ensure all tests pass
-- **Code Linting**: Verify code meets quality standards
-- **Code Formatting**: Apply consistent formatting
+### 2. 品質保証サイクル
+各タスク完了後、以下の検証ステップを実行：
+- **ユニットテスト**: すべてのテストが通過することを確認
+- **コードリンティング**: コードが品質基準を満たすことを検証
+- **コードフォーマット**: 一貫したフォーマットを適用
 
-### 3. Review Process
-- **Completion Notification**: Clearly communicate when a task is complete
-- **Await Approval**: Wait for review before proceeding to the next task
-- **Incorporate Feedback**: Address any review comments before moving forward
+### 3. レビュープロセス
+- **完了通知**: タスク完了時に明確に伝える
+- **承認を待つ**: 次のタスクに進む前にレビューを待つ
+- **フィードバックを取り込む**: 先に進む前にレビューコメントに対応

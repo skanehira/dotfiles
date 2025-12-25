@@ -5,7 +5,7 @@ argument-hint: "[スキル名] [スキルの説明]"
 
 # /create-skill - スキル作成コマンド
 
-このコマンドは、skill-creatorスキルを使って新しいスキルを作成し、skill-reviewerスキルでレビュー・自動修正を行います。
+このコマンドは、skill-creatorスキルを使って新しいスキルを作成し、reviewing-skillsスキルでレビュー・自動修正を行います。
 
 ## 使い方
 
@@ -91,7 +91,7 @@ TodoWrite({
       status: "in_progress"
     },
     {
-      content: "skill-reviewerでスキルをレビュー",
+      content: "reviewing-skillsでスキルをレビュー",
       activeForm: "スキルをレビューしている",
       status: "pending"
     },
@@ -138,7 +138,7 @@ TodoWrite({
       status: "completed"
     },
     {
-      content: "skill-reviewerでスキルをレビュー",
+      content: "reviewing-skillsでスキルをレビュー",
       activeForm: "スキルをレビューしている",
       status: "in_progress"
     },
@@ -151,25 +151,48 @@ TodoWrite({
 })
 ```
 
-### skill-reviewerの実行
+### reviewing-skillsの実行
 
-Skillツールを使用してskill-reviewerスキルを実行します：
+Skillツールを使用してreviewing-skillsスキルを実行します：
 
 ```javascript
 Skill({
-  skill: "skill-reviewer"
+  skill: "reviewing-skills"
 })
 ```
 
 ### レビュー結果の処理
 
 **問題がない場合**：
-- 完了サマリーを表示
+1. TodoWriteですべてのタスクを完了にする
+2. 完了サマリーを表示して終了
+
+```javascript
+TodoWrite({
+  todos: [
+    {
+      content: "skill-creatorでスキルを作成",
+      activeForm: "スキルを作成している",
+      status: "completed"
+    },
+    {
+      content: "reviewing-skillsでスキルをレビュー",
+      activeForm: "スキルをレビューしている",
+      status: "completed"
+    },
+    {
+      content: "レビュー結果に基づいて自動修正",
+      activeForm: "スキルを自動修正している",
+      status: "completed"
+    }
+  ]
+})
+```
 
 **問題がある場合**：
 1. TodoWriteを更新して自動修正フェーズに移行
 2. 指摘された問題を自動的に修正
-3. 再度skill-reviewerを実行して確認
+3. 再度reviewing-skillsを実行して確認
 4. 問題がなくなるまで繰り返す（最大3回）
 
 ```javascript
@@ -181,7 +204,7 @@ TodoWrite({
       status: "completed"
     },
     {
-      content: "skill-reviewerでスキルをレビュー",
+      content: "reviewing-skillsでスキルをレビュー",
       activeForm: "スキルをレビューしている",
       status: "completed"
     },
@@ -196,7 +219,7 @@ TodoWrite({
 
 ### 自動修正のルール
 
-skill-reviewerから指摘された問題を自動修正する際：
+reviewing-skillsから指摘された問題を自動修正する際：
 
 1. **構造的な問題**: ディレクトリ構造やファイル配置を修正
 2. **内容の問題**: SKILL.mdの内容を修正・改善
@@ -237,5 +260,5 @@ skill-reviewerから指摘された問題を自動修正する際：
 ### エラーハンドリング
 
 - skill-creatorの実行エラー時は明確なエラーメッセージを表示
-- skill-reviewerの実行エラー時はリトライオプションを提供
+- reviewing-skillsの実行エラー時はリトライオプションを提供
 - 修正不可能な問題はユーザーに報告

@@ -46,7 +46,8 @@
   "enabledPlugins": {
     "frontend-design@claude-code-plugins": true,
     "example-skills@anthropic-agent-skills": true,
-    "rust-analyzer-lsp@claude-plugins-official": true
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "lua-lsp@claude-plugins-official": true
   },
   "alwaysThinkingEnabled": true,
   "learnMode": true

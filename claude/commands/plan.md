@@ -1,5 +1,5 @@
 ---
-description: "対話的計画コマンド。requirements-analysisとtask-planningスキルを統合実行してDESIGN.mdとTODO.mdを生成"
+description: "対話的計画コマンド。analyzing-requirementsとplanning-tasksスキルを統合実行してDESIGN.mdとTODO.mdを生成"
 argument-hint: "[タスク説明]"
 allowed-tools: ["Skill", "AskUserQuestion", "Read"]
 ---
@@ -9,7 +9,7 @@ allowed-tools: ["Skill", "AskUserQuestion", "Read"]
 このコマンドは、Claude Code組み込みのplan modeと同等の機能を提供します。
 ユーザーのタスク説明から自動的にDESIGN.md（設計ドキュメント）とTODO.md（タスクリスト）を生成します。
 
-requirements-analysisとtask-planningスキルを統合実行し、対話的に計画を洗練します。
+analyzing-requirementsとplanning-tasksスキルを統合実行し、対話的に計画を洗練します。
 
 ## 使い方
 
@@ -84,20 +84,20 @@ AskUserQuestion({
 
 **「更新」を選択された場合**：
 - 既存のdocs/DESIGN.mdとdocs/TODO.mdをReadツールで読み取る
-- 内容をrequirements-analysisとtask-planningスキルに渡す
+- 内容をanalyzing-requirementsとplanning-tasksスキルに渡す
 
 **「キャンセル」を選択された場合**：
 - コマンドを終了
 
 ---
 
-## [2/4] DESIGN.md生成（requirements-analysis）
+## [2/4] DESIGN.md生成（analyzing-requirements）
 
-requirements-analysisスキルを実行してDESIGN.mdを生成します。
+analyzing-requirementsスキルを実行してDESIGN.mdを生成します。
 
 ### スキル実行
 
-以下の情報をrequirements-analysisスキルに渡してください：
+以下の情報をanalyzing-requirementsスキルに渡してください：
 
 ```
 タスク説明: [取得したタスク説明]
@@ -105,7 +105,7 @@ requirements-analysisスキルを実行してDESIGN.mdを生成します。
 既存DESIGN.md: [存在する場合は内容を含める]
 ```
 
-Skillツールを使用してrequirements-analysisスキルを実行してください。
+Skillツールを使用してanalyzing-requirementsスキルを実行してください。
 
 ### 生成確認
 
@@ -132,10 +132,6 @@ AskUserQuestion({
           description: "次のフェーズ（TODO.md生成）に進む"
         },
         {
-          label: "修正が必要",
-          description: "修正内容を入力して再生成"
-        },
-        {
           label: "却下",
           description: "コマンドを終了"
         }
@@ -146,27 +142,29 @@ AskUserQuestion({
 })
 ```
 
-### 修正対応
+### 承認フロー
 
-**「修正が必要」を選択された場合**：
-1. ユーザーに修正内容の詳細を質問（AskUserQuestionまたは会話で収集）
-2. 修正内容を含めてrequirements-analysisを再実行
-3. 最大3回まで再試行
-4. 3回目でも承認されない場合、「直接 docs/DESIGN.md を編集することをお勧めします」と提案
+**「承認」を選択された場合**：
+- 次のフェーズ（TODO.md生成）に進む
 
 **「却下」を選択された場合**：
 - コマンドを終了
 - 「計画を中断しました。再度実行する場合は /plan を使用してください」と表示
 
+**ユーザーが修正内容を入力した場合（Other選択）**：
+1. 入力された修正内容を反映してDESIGN.mdを更新
+2. 再度ユーザー承認を取得（このセクションに戻る）
+3. 承認されるまで繰り返す
+
 ---
 
-## [3/4] TODO.md生成（task-planning）
+## [3/4] TODO.md生成（planning-tasks）
 
-task-planningスキルを実行してTODO.mdを生成します。
+planning-tasksスキルを実行してTODO.mdを生成します。
 
 ### スキル実行
 
-以下の情報をtask-planningスキルに渡してください：
+以下の情報をplanning-tasksスキルに渡してください：
 
 ```
 DESIGN.mdの場所: docs/DESIGN.md
@@ -174,7 +172,7 @@ DESIGN.mdの場所: docs/DESIGN.md
 既存TODO.md: [存在する場合は内容を含める]
 ```
 
-Skillツールを使用してtask-planningスキルを実行してください。
+Skillツールを使用してplanning-tasksスキルを実行してください。
 
 ### 生成確認
 
@@ -200,14 +198,6 @@ AskUserQuestion({
           description: "このタスクリストで完了"
         },
         {
-          label: "優先順位を調整",
-          description: "タスクの順序や優先順位を変更"
-        },
-        {
-          label: "修正が必要",
-          description: "タスク内容を修正して再生成"
-        },
-        {
           label: "却下",
           description: "コマンドを終了"
         }
@@ -218,17 +208,20 @@ AskUserQuestion({
 })
 ```
 
-### 修正対応
+### 承認フロー
 
-**「優先順位を調整」または「修正が必要」を選択された場合**：
-1. ユーザーに調整/修正内容の詳細を質問（AskUserQuestionまたは会話で収集）
-2. 内容を含めてtask-planningを再実行
-3. 最大3回まで再試行
-4. 3回目でも承認されない場合、「直接 docs/TODO.md を編集することをお勧めします」と提案
+**「承認」を選択された場合**：
+- 次のフェーズ（完了と実装開始）に進む
 
 **「却下」を選択された場合**：
 - コマンドを終了
 - 「計画を中断しました。再度実行する場合は /plan を使用してください」と表示
+
+**ユーザーが修正内容を入力した場合（Other選択）**：
+1. 入力された修正内容を反映してTODO.mdを更新
+2. 再度ユーザー承認を取得（このセクションに戻る）
+3. 承認されるまで繰り返す（最大3回）
+4. 3回目でも承認されない場合、「直接 docs/TODO.md を編集することをお勧めします」と提案
 
 ---
 
@@ -271,8 +264,8 @@ Skill({
 ## 重要な注意事項
 
 ### 依存関係
-- requirements-analysisスキルが必須です
-- task-planningスキルが必須です
+- analyzing-requirementsスキルが必須です
+- planning-tasksスキルが必須です
 - 両スキルが正しくインストールされていることを確認してください
 
 ### エラーハンドリング
