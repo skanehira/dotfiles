@@ -61,14 +61,16 @@ TODO.mdの構造例：
 
 - [ ] [RED] calculate_latest_patch のテスト作成
 - [ ] [GREEN] calculate_latest_patch の実装
+- [ ] [REFACTOR] calculate_latest_patch のリファクタリング
 - [ ] [RED] calculate_latest_minor のテスト作成
 - [ ] [GREEN] calculate_latest_minor の実装
-- [ ] [REFACTOR] バージョン計算関数のコード品質改善
+- [ ] [REFACTOR] calculate_latest_minor のリファクタリング
 
 ### フェーズ2: API統合 (api.rs)
 
 - [ ] [RED] fetch_versions のテスト作成
 - [ ] [GREEN] fetch_versions の実装
+- [ ] [REFACTOR] fetch_versions のリファクタリング
 ```
 
 **docs/DESIGN.mdが存在する場合**：
@@ -86,12 +88,13 @@ TODO.mdの構造例：
 ```javascript
 TodoWrite({
   todos: [
-    // フェーズ内の各タスクを登録
+    // 各機能ごとにRED→GREEN→REFACTORサイクルを登録
     { content: "[RED] calculate_latest_patch のテスト作成", activeForm: "テストを作成している", status: "pending" },
     { content: "[GREEN] calculate_latest_patch の実装", activeForm: "実装している", status: "pending" },
+    { content: "[REFACTOR] calculate_latest_patch のリファクタリング", activeForm: "リファクタリングしている", status: "pending" },
     { content: "[RED] calculate_latest_minor のテスト作成", activeForm: "テストを作成している", status: "pending" },
     { content: "[GREEN] calculate_latest_minor の実装", activeForm: "実装している", status: "pending" },
-    { content: "[REFACTOR] コード品質改善", activeForm: "リファクタリングしている", status: "pending" }
+    { content: "[REFACTOR] calculate_latest_minor のリファクタリング", activeForm: "リファクタリングしている", status: "pending" }
   ]
 })
 ```
