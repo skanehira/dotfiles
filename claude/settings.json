@@ -51,6 +51,26 @@
     "claude-mem@thedotmack": true,
     "gopls-lsp@claude-plugins-official": true
   },
+  "extraKnownMarketplaces": {
+    "anthropic-agent-skills": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/skills"
+      }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "thedotmack": {
+      "source": {
+        "source": "github",
+        "repo": "thedotmack/claude-mem"
+      }
+    }
+  },
   "alwaysThinkingEnabled": true,
   "learnMode": true
 }
