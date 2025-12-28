@@ -99,11 +99,13 @@ nmap('gf', 'gF')
 
 -- copy file path with selected range
 xmap('gl', function()
-  local file_path = vim.fn.expand('%:p'):gsub(vim.fn.expand('$HOME'), '~')
+  local file_path = vim.fn.expand('%:p')
   local start_line = vim.fn.line('v')
   local end_line = vim.fn.line('.')
-  local relative_path = vim.fn.fnamemodify(file_path, ':.')
-  local copy_text = string.format('%s#L%d-%d', relative_path, start_line, end_line)
+  if start_line > end_line then
+    start_line, end_line = end_line, start_line
+  end
+  local copy_text = string.format('%s#L%d-%d', file_path, start_line, end_line)
   vim.fn.setreg('+', copy_text)
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'n', false)
   print('Copied: ' .. copy_text)
