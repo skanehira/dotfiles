@@ -23,3 +23,7 @@ fi
 if [[ ! -e $HOME/.claude/skills ]]; then
   ln -s $PWD/skills $HOME/.claude/skills
 fi
+
+if [[ ! -e $HOME/.claude/rules ]]; then
+  ln -s $PWD/rules $HOME/.claude/rules
+fi
