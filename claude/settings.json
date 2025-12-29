@@ -48,7 +48,7 @@
     "rust-analyzer-lsp@claude-plugins-official": true,
     "lua-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "claude-mem@thedotmack": true,
+    "claude-mem@thedotmack": false,
     "gopls-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
@@ -71,6 +71,7 @@
       }
     }
   },
+  "spinnerTipsEnabled": false,
   "alwaysThinkingEnabled": true,
   "learnMode": true
 }
