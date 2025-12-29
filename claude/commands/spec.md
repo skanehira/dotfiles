@@ -28,7 +28,7 @@ analyzing-requirementsとplanning-tasksスキルを統合実行し、対話的�
 
 ---
 
-## [1/4] タスク説明の準備
+## [1/5] タスク説明の準備
 
 ### タスク説明の取得
 
@@ -91,7 +91,7 @@ AskUserQuestion({
 
 ---
 
-## [2/4] DESIGN.md生成（analyzing-requirements）
+## [2/5] DESIGN.md生成（analyzing-requirements）
 
 analyzing-requirementsスキルを実行してDESIGN.mdを生成します。
 
@@ -124,12 +124,12 @@ AskUserQuestionツールを使用してユーザー承認を取得してくだ�
 AskUserQuestion({
   questions: [
     {
-      question: "DESIGN.mdが生成されました。内容を確認してください。\n\n生成場所: docs/DESIGN.md\n\nこのまま次のフェーズ（TODO.md生成）に進めてよろしいですか？",
+      question: "DESIGN.mdが生成されました。内容を確認してください。\n\n生成場所: docs/DESIGN.md\n\nこのまま次のフェーズ（インタビューによる深掘り）に進めてよろしいですか？",
       header: "DESIGN.md承認",
       options: [
         {
           label: "承認",
-          description: "次のフェーズ（TODO.md生成）に進む"
+          description: "次のフェーズ（インタビュー）に進む"
         },
         {
           label: "却下",
@@ -145,7 +145,7 @@ AskUserQuestion({
 ### 承認フロー
 
 **「承認」を選択された場合**：
-- 次のフェーズ（TODO.md生成）に進む
+- 次のフェーズ（インタビュー）に進む
 
 **「却下」を選択された場合**：
 - コマンドを終了
@@ -158,7 +158,33 @@ AskUserQuestion({
 
 ---
 
-## [3/4] TODO.md生成（planning-tasks）
+## [3/5] DESIGN.mdの深掘り（interview）
+
+interviewコマンドを実行してDESIGN.mdをブラッシュアップします。
+
+### スキル実行
+
+Skillツールを使用してinterviewコマンドを実行してください：
+
+```javascript
+Skill({
+  skill: "interview",
+  args: "docs/DESIGN.md"
+})
+```
+
+interviewコマンドが以下を実行します：
+- DESIGN.mdを読み込み
+- 技術実装、UI/UX、懸念点、トレードオフについて深掘りインタビュー
+- 収集した仕様をDESIGN.mdに追記・更新
+
+### 完了確認
+
+インタビューが完了したら、次のフェーズ（TODO.md生成）に進みます。
+
+---
+
+## [4/5] TODO.md生成（planning-tasks）
 
 planning-tasksスキルを実行してTODO.mdを生成します。
 
@@ -225,7 +251,7 @@ AskUserQuestion({
 
 ---
 
-## [4/4] 完了と実装開始
+## [5/5] 完了と実装開始
 
 ### サマリー表示
 
@@ -265,8 +291,9 @@ Skill({
 
 ### 依存関係
 - analyzing-requirementsスキルが必須です
+- interviewコマンドが必須です
 - planning-tasksスキルが必須です
-- 両スキルが正しくインストールされていることを確認してください
+- これらが正しくインストールされていることを確認してください
 
 ### エラーハンドリング
 - スキル実行エラー時は明確なエラーメッセージを表示してください
