@@ -67,12 +67,14 @@ Read(file_path="docs/DESIGN.md")
 - [ ] [RED] [機能A]の動作テストを作成
 - [ ] [GREEN] テストを通過させる最小限の実装
 - [ ] [REFACTOR] コード品質の改善
+- [ ] [CHECK] lint/format/build の実行と確認
 
 ### フェーズ3: [機能名B] の実装
 
 - [ ] [RED] [機能B]の動作テストを作成
 - [ ] [GREEN] テストを通過させる最小限の実装
 - [ ] [REFACTOR] コード品質の改善
+- [ ] [CHECK] lint/format/build の実行と確認
 
 ### フェーズN: 品質保証
 
@@ -83,7 +85,8 @@ Read(file_path="docs/DESIGN.md")
 ## 実装ノート
 
 ### MUSTルール遵守事項
-- TDD: RED → GREEN → REFACTOR サイクルを厳守
+- TDD: RED → GREEN → REFACTOR → CHECK サイクルを厳守
+- CHECK: 各フェーズ完了時に lint/format/build を実行
 - Tidy First: 構造変更と動作変更を分離
 - コミット: [BEHAVIORAL] または [STRUCTURAL] プレフィックス必須
 
@@ -110,7 +113,7 @@ Write(
 #### レビュー観点
 
 1. **完全性**: DESIGN.mdのすべての要件がタスク化されているか
-2. **TDD準拠**: 各タスクにRED/GREEN/REFACTORフェーズが明示されているか
+2. **TDD準拠**: 各タスクにRED/GREEN/REFACTOR/CHECKフェーズが明示されているか
 3. **依存関係**: タスクの順序が依存関係を正しく反映しているか
 4. **粒度**: 各タスクが適切なサイズ（1-4時間）か
 5. **明確性**: タスク内容が具体的で実装者が迷わないか
@@ -132,9 +135,10 @@ Write(
 - [ ] 依存関係の順序が正しい
 
 **TDD準拠**
-- [ ] すべてのタスクにRED/GREEN/REFACTORが明示されている
+- [ ] すべてのタスクにRED/GREEN/REFACTOR/CHECKが明示されている
 - [ ] テストファーストの順序になっている
 - [ ] リファクタリングタスクが適切に配置されている
+- [ ] 各フェーズ末尾に品質チェックステップがある
 
 **実装可能性**
 - [ ] 各タスクが1-4時間で完了可能な粒度
@@ -192,6 +196,7 @@ AskUserQuestion({
 - [ ] [RED] Delete機能のテスト作成
 - [ ] [GREEN] Delete機能の実装
 - [ ] [REFACTOR] CRUD処理の共通化
+- [ ] [CHECK] lint/format/build の実行と確認
 ```
 
 ### パターン2: API実装
@@ -206,6 +211,7 @@ AskUserQuestion({
 - [ ] [RED] エラーハンドリングのテスト作成
 - [ ] [GREEN] エラーハンドリングの実装
 - [ ] [REFACTOR] レスポンス形式の統一
+- [ ] [CHECK] lint/format/build の実行と確認
 ```
 
 ### パターン3: UIコンポーネント
@@ -220,13 +226,15 @@ AskUserQuestion({
 - [ ] [RED] エッジケーステスト作成
 - [ ] [GREEN] エッジケース対応
 - [ ] [REFACTOR] スタイルとロジックの分離
+- [ ] [CHECK] lint/format/build の実行と確認
 ```
 
 ## 品質チェックリスト
 
 TODO.md完了前に確認：
 - [ ] すべての設計項目がタスクに反映されている
-- [ ] 各タスクにTDDフェーズ（RED/GREEN/REFACTOR）が明示されている
+- [ ] 各タスクにTDDフェーズ（RED/GREEN/REFACTOR/CHECK）が明示されている
+- [ ] 各フェーズの最後に品質チェック（lint/format/build）ステップが含まれている
 - [ ] タスクの依存関係が順序に反映されている
 - [ ] 各タスクの粒度が適切（1-4時間）
 - [ ] MUSTルール遵守事項が記載されている
