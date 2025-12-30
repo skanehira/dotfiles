@@ -54,7 +54,7 @@ local function get_or_create_pane(tool_name, args)
   -- 新規ペインを作成（30%）、ツールを起動
   -- コマンド終了時にペインも自動的に閉じられる
   local err
-  pane_id, err = tmux.create_pane(30, command)
+  pane_id, err = tmux.create_pane(40, command)
   if not pane_id then
     vim.notify("tmuxペインの作成に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.ERROR)
     return nil
