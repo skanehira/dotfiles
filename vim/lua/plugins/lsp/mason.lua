@@ -105,6 +105,7 @@ local config = function()
       'clangd',
       'terraformls',
       'biome',
+      'oxlint',
       'tsp_server',
       'zls',
       'regols',
