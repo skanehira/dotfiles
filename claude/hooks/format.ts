@@ -29,13 +29,42 @@ async function formatFile(filePath: string) {
         const nodeModulesExists = await $.path("node_modules").exists();
 
         if (nodeModulesExists) {
-          // Use biome for Node.js projects
-          try {
-            await $`npx @biomejs/biome format --write ${filePath}`;
-            console.log(
-              `Formatted TypeScript/JavaScript file with Biome: ${filePath}`,
-            );
-          } catch {
+          // Check for biome config
+          const biomeConfigExists = await $.path("biome.json").exists() ||
+            await $.path("biome.jsonc").exists();
+
+          // Check for oxfmt config
+          const oxfmtConfigExists = await $.path("oxfmt.toml").exists();
+
+          let formatted = false;
+
+          // Use biome for formatting if config exists
+          if (biomeConfigExists) {
+            try {
+              await $`npx @biomejs/biome format --write ${filePath}`;
+              console.log(
+                `Formatted TypeScript/JavaScript file with Biome: ${filePath}`,
+              );
+              formatted = true;
+            } catch {
+              // biome not available or failed
+            }
+          }
+
+          // Use oxfmt for formatting if config exists
+          if (oxfmtConfigExists) {
+            try {
+              await $`npx oxfmt ${filePath}`;
+              console.log(
+                `Formatted TypeScript/JavaScript file with oxfmt: ${filePath}`,
+              );
+              formatted = true;
+            } catch {
+              // oxfmt not available or failed
+            }
+          }
+
+          if (!formatted) {
             console.log(`No formatter available for: ${filePath}`);
           }
         } else {
