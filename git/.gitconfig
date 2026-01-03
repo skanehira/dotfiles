@@ -38,10 +38,6 @@
 [init]
 	defaultBranch = main
 
-[alias]
-	c = "!checkout() { git branch --all | fzf | tr -d '[:space:]' | xargs git checkout; }; checkout"
-
-# difftastic
 [diff]
 	tool = difftastic
 
