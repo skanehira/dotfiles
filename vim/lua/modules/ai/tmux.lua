@@ -77,12 +77,14 @@ function M.pane_exists(pane_id)
   return false
 end
 
--- 特定のコマンドを実行しているペインを検索
+-- 現在のウィンドウ内で特定のコマンドを実行しているペインを検索
 -- @param pattern string コマンド名のパターン（部分一致）
 -- @return string|nil ペインID、見つからない場合はnil
 function M.find_pane_by_command(pattern)
-  -- pane_current_commandを使ってコマンド名を取得
-  local cmd = "tmux list-panes -a -F '#{pane_id}:#{pane_current_command}'"
+  -- pane_start_commandを使ってペイン起動時のコマンドを取得
+  -- pane_current_commandは実行中プロセス名になるため不正確
+  -- -aなし: 現在のウィンドウ内のペインのみを検索
+  local cmd = "tmux list-panes -F '#{pane_id}:#{pane_start_command}'"
   local result, _ = exec_tmux(cmd)
   if not result then
     return nil
