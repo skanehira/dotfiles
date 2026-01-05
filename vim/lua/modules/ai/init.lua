@@ -40,6 +40,19 @@ local function get_or_create_pane(tool_name, args)
     pane_id = validate_pane(state.codex_pane)
   end
 
+  -- メモリ上にない場合、現在のウィンドウ内でコマンド名で検索して復元
+  if not pane_id then
+    pane_id = tmux.find_pane_by_command(tool_name)
+    if pane_id then
+      -- 状態を復元
+      if tool_name == "claude" then
+        state.claude_pane = pane_id
+      elseif tool_name == "codex" then
+        state.codex_pane = pane_id
+      end
+    end
+  end
+
   -- ペインが存在すれば再利用
   if pane_id then
     return pane_id
