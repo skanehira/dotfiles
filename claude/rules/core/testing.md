@@ -139,3 +139,29 @@ assert(result.version == "4.17.21")
 - テストのセットアップロジックがケース間で大きく異なる
 - テストが異なる振る舞いを検証（単なる異なる入力ではない）
 - 各テストが固有のアサーションやエラーハンドリングを必要とする
+
+## テスト構造パターン
+
+### AAA (Arrange-Act-Assert) パターン
+
+すべてのテストはAAAパターンに従う：
+
+```javascript
+test('should calculate total with tax', () => {
+  // Arrange: テストデータと前提条件をセットアップ
+  const cart = new ShoppingCart();
+  cart.addItem({ price: 100, quantity: 2 });
+  const taxRate = 0.1;
+
+  // Act: テスト対象の動作を実行
+  const total = cart.calculateTotal(taxRate);
+
+  // Assert: 期待される結果を検証
+  expect(total).toBe(220);
+});
+```
+
+## 参照
+
+- 言語別テスト命名規則: `references/test-naming.md`
+- テストダブル（スタブ/モック/フェイク）: `references/test-doubles.md`
