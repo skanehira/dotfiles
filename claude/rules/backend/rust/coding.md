@@ -65,6 +65,8 @@ if let Some(value) = optional_value {
 
 ## 命名規則
 
+共通の命名規則は `core/design.md` を参照。
+
 ### トレイト名
 
 データ型ではなく**役割**や**振る舞い**を説明する名前：
@@ -84,36 +86,6 @@ pub trait Config { ... }
 サフィックスガイドライン：
 - `-er`: アクションを実行するトレイト（Resolver, Fetcher, Provider, Handler）
 - `-able`: 能力を表すトレイト（Readable, Serializable）
-
-### 関数名
-
-`check`、`process`、`handle`のような曖昧な名前を避け、**具体的なアクション**を説明：
-
-```rust
-// Good: 関数が実際に何をするか説明
-pub fn compare_version(...) -> VersionCompareResult { ... }
-pub fn validate_semver(...) -> bool { ... }
-pub fn fetch_latest_version(...) -> Option<String> { ... }
-
-// Bad: 曖昧すぎる
-pub fn check_version(...) -> CheckResult { ... }
-pub fn process_package(...) -> Result { ... }
-pub fn handle_request(...) -> Response { ... }
-```
-
-### 戻り値の型名
-
-**操作の結果**を説明する型名：
-
-```rust
-// Good: 型名が操作結果を反映
-pub struct VersionCompareResult { ... }  // バージョン比較の結果
-pub struct ParsedPackage { ... }         // パッケージ解析の結果
-
-// Bad: 汎用的または不明確な名前
-pub struct CheckResult { ... }
-pub struct Data { ... }
-```
 
 ## Option/Resultの適切な使用
 
