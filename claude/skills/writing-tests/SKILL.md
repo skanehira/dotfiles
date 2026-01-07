@@ -1,6 +1,6 @@
 ---
 name: writing-tests
-description: TDD方法論に従ってテストを作成します。「テストを書いて」「テストを作成」「単体テストを追加」などのリクエストで起動します。
+description: TDD方法論に従ってテストを作成します。テスト対象コードの分析、AAA/Given-When-Thenパターンの適用、正常系・エッジケース・エラー系のカバレッジを確保します。「テストを書いて」「テストを作成」「単体テストを追加」などのリクエストで起動します。
 ---
 
 # テスト作成
@@ -23,15 +23,24 @@ TDD方法論に従ってテストを作成する。
 - エッジケースと境界条件
 - 依存関係（モックが必要か）
 
-### ステップ2: 言語/フレームワークの特定
+### ステップ2: リファレンスの読み込み（必須）
 
-プロジェクトの言語を特定し、対応するリファレンスを参照する：
+**Claude指示: テストを書く前に、必ず対応するリファレンスファイルをReadツールで読み込んでください。**
+
+プロジェクトの言語を特定し、以下のリファレンスをReadツールで読み込む：
 
 | 言語/フレームワーク | リファレンス |
 |-------------------|-------------|
 | React + TypeScript | [references/react-typescript.md](references/react-typescript.md) |
 | Go | [references/go.md](references/go.md) |
 | Rust | [references/rust.md](references/rust.md) |
+
+```javascript
+// 例: Goプロジェクトの場合
+Read(file_path=".claude/skills/writing-tests/references/go.md")
+```
+
+リファレンスを読まずにテストを書くことは禁止です。
 
 ### ステップ3: テストファイルの配置
 

@@ -5,6 +5,14 @@ description: 承認済みの設計書（DESIGN.md）からTDD準拠のTODO.mdを
 
 # タスク計画
 
+## 参照ルール（必須）
+
+**Claude指示: タスク分解を開始する前に、必ず以下のルールファイルをReadツールで読み込んでください。**
+
+- TDDルール: `rules/core/tdd.md`
+- 設計原則: `rules/core/design.md`
+- コミットルール: `rules/core/commit.md`
+
 ## 概要
 
 承認済みの設計書（DESIGN.md）を読み込み、TDD（テスト駆動開発）に準拠したTODO.mdを作成する。生成されるTODO.mdはdevelopingスキルで直接使用できる形式となる。
@@ -260,13 +268,3 @@ AskUserQuestion({
 - [ ] [REFACTOR] スタイルとロジックの分離
 - [ ] [CHECK] lint/format/build の実行と確認
 ```
-
-## リソース
-
-### ../shared/references/must-rules.md
-すべてのスキルで共有される共通MUSTルール：
-- TDD方法論の詳細
-- Tidy First原則
-- コミット規律
-
-タスク分解時はこのファイルを参照してMUSTルール準拠を確認すること。
