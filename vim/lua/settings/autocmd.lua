@@ -161,3 +161,6 @@ vim.api.nvim_create_autocmd({ "BufReadCmd" }, {
   pattern = { "deno:/*" },
   callback = virtual_text_document,
 })
+
+-- markdown table format
+require('modules.markdown.table_format').setup()
