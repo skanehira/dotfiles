@@ -92,7 +92,7 @@ end
 local function find_buffer_by_name(name)
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(buf) then
-      local buf_name = vim.api.nvim_buf_get_name(buf)
+      local buf_name = vim.b[buf].ai_buffer_name
       if buf_name == name then
         return buf
       end
@@ -171,7 +171,7 @@ function M.create_input_buffer(config)
   end
 
   if config.name then
-    vim.api.nvim_buf_set_name(bufnr, config.name)
+    vim.b[bufnr].ai_buffer_name = config.name
   end
 
   -- 新しいウィンドウを作成してバッファを開く
