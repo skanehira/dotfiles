@@ -29,11 +29,11 @@ TDD方法論に従ってテストを作成する。
 
 プロジェクトの言語を特定し、以下のリファレンスをReadツールで読み込む：
 
-| 言語/フレームワーク | リファレンス |
-|-------------------|-------------|
-| React + TypeScript | [references/react-typescript.md](references/react-typescript.md) |
-| Go | [references/go.md](references/go.md) |
-| Rust | [references/rust.md](references/rust.md) |
+| 言語/フレームワーク | リファレンス                                                     |
+| ------------------- | ---------------------------------------------------------------- |
+| React + TypeScript  | [references/react-typescript.md](references/react-typescript.md) |
+| Go                  | [references/go.md](references/go.md)                             |
+| Rust                | [references/rust.md](references/rust.md)                         |
 
 ```javascript
 // 例: Goプロジェクトの場合
