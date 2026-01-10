@@ -195,9 +195,17 @@ local function open_input_buffer(tool_name, args)
         return
       end
 
-      local success, err = tmux.scroll_line(current_pane, "down")
-      if not success then
-        vim.notify("ペインの1行スクロールダウンに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+      -- コピーモードなら1行スクロール、そうでなければC-nを送信
+      if tmux.is_in_copy_mode(current_pane) then
+        local success, err = tmux.scroll_line(current_pane, "down")
+        if not success then
+          vim.notify("ペインの1行スクロールダウンに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      else
+        local success, err = tmux.send_keys(current_pane, "C-n")
+        if not success then
+          vim.notify("C-nの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
       end
     end,
     on_scroll_line_up = function()
@@ -208,9 +216,17 @@ local function open_input_buffer(tool_name, args)
         return
       end
 
-      local success, err = tmux.scroll_line(current_pane, "up")
-      if not success then
-        vim.notify("ペインの1行スクロールアップに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+      -- コピーモードなら1行スクロール、そうでなければC-pを送信
+      if tmux.is_in_copy_mode(current_pane) then
+        local success, err = tmux.scroll_line(current_pane, "up")
+        if not success then
+          vim.notify("ペインの1行スクロールアップに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      else
+        local success, err = tmux.send_keys(current_pane, "C-p")
+        if not success then
+          vim.notify("C-pの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
       end
     end,
     on_send_shift_tab = function()
@@ -221,10 +237,20 @@ local function open_input_buffer(tool_name, args)
         return
       end
 
-      local success, err = tmux.send_keys(current_pane, "S-Tab")
+      local success, err = tmux.send_keys(current_pane, "BTab")
       if not success then
         vim.notify("Shift+Tabの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
       end
+    end,
+    on_exit_copy_mode = function()
+      -- 最新のペインIDを取得
+      local current_pane = get_current_pane_id()
+      if not current_pane then
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        return
+      end
+
+      tmux.exit_copy_mode(current_pane)
     end,
   })
 end

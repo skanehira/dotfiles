@@ -197,6 +197,15 @@ function M.get_current_pane()
   return exec_tmux("tmux display-message -p '#{pane_id}'")
 end
 
+-- ペインがコピーモード（スクロールモード）かどうかを判定
+-- @param pane_id string ペインID
+-- @return boolean コピーモードならtrue
+function M.is_in_copy_mode(pane_id)
+  local cmd = string.format("tmux display-message -p -t %s '#{pane_in_mode}'", pane_id)
+  local result, _ = exec_tmux(cmd)
+  return result == "1"
+end
+
 -- コピーモード（スクロールモード）を終了
 -- @param pane_id string ペインID
 -- @return boolean, string|nil 成功時は (true, nil)、失敗時は (false, エラーメッセージ)
