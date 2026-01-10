@@ -84,6 +84,13 @@ local function setup_keymaps(bufnr, config)
       config.on_send_shift_tab()
     end, vim.tbl_extend("force", opts, { desc = "Send Shift+Tab to tmux pane" }))
   end
+
+  -- <C-c>: コピーモードを終了
+  if config.on_exit_copy_mode then
+    vim.keymap.set("n", "<C-c>", function()
+      config.on_exit_copy_mode()
+    end, vim.tbl_extend("force", opts, { desc = "Exit tmux copy mode" }))
+  end
 end
 
 -- バッファ名でバッファを検索
