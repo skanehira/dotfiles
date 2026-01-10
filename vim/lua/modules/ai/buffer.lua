@@ -78,6 +78,13 @@ local function setup_keymaps(bufnr, config)
     end, vim.tbl_extend("force", opts, { desc = "Scroll tmux pane up 1 line" }))
   end
 
+  -- <Tab>: Tabをtmux側に送信
+  if config.on_send_tab then
+    vim.keymap.set("n", "<Tab>", function()
+      config.on_send_tab()
+    end, vim.tbl_extend("force", opts, { desc = "Send Tab to tmux pane" }))
+  end
+
   -- <S-Tab>: Shift+Tabをtmux側に送信
   if config.on_send_shift_tab then
     vim.keymap.set("n", "<S-Tab>", function()
