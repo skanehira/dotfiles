@@ -68,6 +68,7 @@ local function get_skills()
   end
 
   cache.skills = {}
+  local seen = {}
   local dirs = {
     vim.fn.expand("~/.claude/skills"),
     vim.fn.getcwd() .. "/.claude/skills",
@@ -85,11 +86,15 @@ local function get_skills()
         if not skill_name or skill_name == "" then
           skill_name = vim.fn.fnamemodify(file, ":h:t")
         end
-        table.insert(cache.skills, {
-          name = "/" .. skill_name,
-          description = fm.description or "",
-          type = "skill",
-        })
+        -- 重複を排除
+        if not seen[skill_name] then
+          seen[skill_name] = true
+          table.insert(cache.skills, {
+            name = "/" .. skill_name,
+            description = fm.description or "",
+            type = "skill",
+          })
+        end
       end
     end
   end
