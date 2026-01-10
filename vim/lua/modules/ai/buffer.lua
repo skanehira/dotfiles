@@ -19,6 +19,14 @@ function M.close_buffer(bufnr)
   end
 end
 
+-- バッファの内容をクリアする
+-- @param bufnr number バッファ番号
+function M.clear_buffer(bufnr)
+  if vim.api.nvim_buf_is_valid(bufnr) then
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+  end
+end
+
 -- バッファローカルキーマップを設定
 -- @param bufnr number バッファ番号
 -- @param config table コールバック設定
@@ -92,6 +100,13 @@ local function setup_keymaps(bufnr, config)
     end, vim.tbl_extend("force", opts, { desc = "Send Shift+Tab to tmux pane" }))
   end
 
+  -- <Space>: スペースをtmux側に送信
+  if config.on_send_space then
+    vim.keymap.set("n", "<Space>", function()
+      config.on_send_space()
+    end, vim.tbl_extend("force", opts, { desc = "Send Space to tmux pane" }))
+  end
+
   -- <C-c>: コピーモードを終了
   if config.on_exit_copy_mode then
     vim.keymap.set("n", "<C-c>", function()
@@ -99,9 +114,9 @@ local function setup_keymaps(bufnr, config)
     end, vim.tbl_extend("force", opts, { desc = "Exit tmux copy mode" }))
   end
 
-  -- <C-f>: ファイル検索（telescope）
+  -- <C-r>: ファイル検索（telescope）
   local complete = require("modules.ai.complete")
-  vim.keymap.set("i", "<C-f>", function()
+  vim.keymap.set("i", "<C-r>", function()
     complete.pick_file()
   end, vim.tbl_extend("force", opts, { desc = "Search and insert file path" }))
 

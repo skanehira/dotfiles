@@ -1,5 +1,5 @@
 -- AI入力バッファ用のtelescope補完
--- <C-f>: ファイル検索
+-- <C-r>: ファイル検索
 -- <C-l>: コマンド・スキル検索
 
 local M = {}
@@ -79,22 +79,19 @@ local function get_skills()
     for _, file in ipairs(skill_files) do
       local lines = vim.fn.readfile(file)
       local fm = parse_frontmatter(table.concat(lines, "\n"))
-      -- user-invocable: true のもののみ
-      if fm["user-invocable"] == "true" then
-        -- nameがない場合はディレクトリ名を使用
-        local skill_name = fm.name
-        if not skill_name or skill_name == "" then
-          skill_name = vim.fn.fnamemodify(file, ":h:t")
-        end
-        -- 重複を排除
-        if not seen[skill_name] then
-          seen[skill_name] = true
-          table.insert(cache.skills, {
-            name = "/" .. skill_name,
-            description = fm.description or "",
-            type = "skill",
-          })
-        end
+      -- nameがない場合はディレクトリ名を使用
+      local skill_name = fm.name
+      if not skill_name or skill_name == "" then
+        skill_name = vim.fn.fnamemodify(file, ":h:t")
+      end
+      -- 重複を排除
+      if not seen[skill_name] then
+        seen[skill_name] = true
+        table.insert(cache.skills, {
+          name = "/" .. skill_name,
+          description = fm.description or "",
+          type = "skill",
+        })
       end
     end
   end
@@ -126,39 +123,39 @@ function M.pick_file()
   local action_state = require("telescope.actions.state")
 
   pickers
-    .new({}, {
-      prompt_title = "Insert File Path",
-      finder = finders.new_oneshot_job({ "rg", "--files" }, {}),
-      sorter = conf.generic_sorter({}),
-      attach_mappings = function(prompt_bufnr, map)
-        local function restore_insert_mode()
-          vim.schedule(function()
-            vim.cmd("startinsert")
-            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Right>", true, false, true), "n", false)
-          end)
-        end
-
-        actions.select_default:replace(function()
-          actions.close(prompt_bufnr)
-          local selection = action_state.get_selected_entry()
-          if selection then
-            insert_at_cursor("@" .. selection[1])
+      .new({}, {
+        prompt_title = "Insert File Path",
+        finder = finders.new_oneshot_job({ "rg", "--files" }, {}),
+        sorter = conf.generic_sorter({}),
+        attach_mappings = function(prompt_bufnr, map)
+          local function restore_insert_mode()
+            vim.schedule(function()
+              vim.cmd("startinsert")
+              vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Right>", true, false, true), "n", false)
+            end)
           end
-          restore_insert_mode()
-        end)
 
-        actions.close:enhance({
-          post = restore_insert_mode,
-        })
+          actions.select_default:replace(function()
+            actions.close(prompt_bufnr)
+            local selection = action_state.get_selected_entry()
+            if selection then
+              insert_at_cursor("@" .. selection[1])
+            end
+            restore_insert_mode()
+          end)
 
-        map("i", "<C-c>", function()
-          actions.close(prompt_bufnr)
-        end)
+          actions.close:enhance({
+            post = restore_insert_mode,
+          })
 
-        return true
-      end,
-    })
-    :find()
+          map("i", "<C-c>", function()
+            actions.close(prompt_bufnr)
+          end)
+
+          return true
+        end,
+      })
+      :find()
 end
 
 -- コマンド・スキル検索（telescope）
@@ -179,48 +176,48 @@ function M.pick_command()
   end
 
   pickers
-    .new({}, {
-      prompt_title = "Insert Command/Skill",
-      finder = finders.new_table({
-        results = items,
-        entry_maker = function(entry)
-          return {
-            value = entry,
-            display = string.format("%s  %s", entry.name, entry.description),
-            ordinal = entry.name .. " " .. entry.description,
-          }
-        end,
-      }),
-      sorter = conf.generic_sorter({}),
-      attach_mappings = function(prompt_bufnr, map)
-        local function restore_insert_mode()
-          vim.schedule(function()
-            vim.cmd("startinsert")
-            vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Right>", true, false, true), "n", false)
-          end)
-        end
-
-        actions.select_default:replace(function()
-          actions.close(prompt_bufnr)
-          local selection = action_state.get_selected_entry()
-          if selection then
-            insert_at_cursor(selection.value.name)
+      .new({}, {
+        prompt_title = "Insert Command/Skill",
+        finder = finders.new_table({
+          results = items,
+          entry_maker = function(entry)
+            return {
+              value = entry,
+              display = string.format("%s  %s", entry.name, entry.description),
+              ordinal = entry.name .. " " .. entry.description,
+            }
+          end,
+        }),
+        sorter = conf.generic_sorter({}),
+        attach_mappings = function(prompt_bufnr, map)
+          local function restore_insert_mode()
+            vim.schedule(function()
+              vim.cmd("startinsert")
+              vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Right>", true, false, true), "n", false)
+            end)
           end
-          restore_insert_mode()
-        end)
 
-        actions.close:enhance({
-          post = restore_insert_mode,
-        })
+          actions.select_default:replace(function()
+            actions.close(prompt_bufnr)
+            local selection = action_state.get_selected_entry()
+            if selection then
+              insert_at_cursor(selection.value.name)
+            end
+            restore_insert_mode()
+          end)
 
-        map("i", "<C-c>", function()
-          actions.close(prompt_bufnr)
-        end)
+          actions.close:enhance({
+            post = restore_insert_mode,
+          })
 
-        return true
-      end,
-    })
-    :find()
+          map("i", "<C-c>", function()
+            actions.close(prompt_bufnr)
+          end)
+
+          return true
+        end,
+      })
+      :find()
 end
 
 return M

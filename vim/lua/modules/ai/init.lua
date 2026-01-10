@@ -137,8 +137,8 @@ local function open_input_buffer(tool_name, args)
         vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"), vim.log.levels.ERROR)
       end
 
-      -- バッファを閉じる
-      buffer.close_buffer(bufnr)
+      -- バッファをクリア
+      buffer.clear_buffer(bufnr)
     end,
     on_scroll_down = function()
       -- 最新のペインIDを取得
@@ -253,6 +253,19 @@ local function open_input_buffer(tool_name, args)
       local success, err = tmux.send_keys(current_pane, "BTab")
       if not success then
         vim.notify("Shift+Tabの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+      end
+    end,
+    on_send_space = function()
+      -- 最新のペインIDを取得
+      local current_pane = get_current_pane_id()
+      if not current_pane then
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        return
+      end
+
+      local success, err = tmux.send_keys(current_pane, "Space")
+      if not success then
+        vim.notify("Spaceの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
       end
     end,
     on_exit_copy_mode = function()
