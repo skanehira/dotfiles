@@ -91,6 +91,17 @@ local function setup_keymaps(bufnr, config)
       config.on_exit_copy_mode()
     end, vim.tbl_extend("force", opts, { desc = "Exit tmux copy mode" }))
   end
+
+  -- <C-f>: ファイル検索（telescope）
+  local complete = require("modules.ai.complete")
+  vim.keymap.set("i", "<C-f>", function()
+    complete.pick_file()
+  end, vim.tbl_extend("force", opts, { desc = "Search and insert file path" }))
+
+  -- <C-l>: コマンド・スキル検索（telescope）
+  vim.keymap.set("i", "<C-l>", function()
+    complete.pick_command()
+  end, vim.tbl_extend("force", opts, { desc = "Search and insert command/skill" }))
 end
 
 -- バッファ名でバッファを検索
