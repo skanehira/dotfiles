@@ -46,7 +46,7 @@
     ]
   },
   "enabledPlugins": {
-    "example-skills@anthropic-agent-skills": false,
+    "example-skills@anthropic-agent-skills": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "lua-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
@@ -74,7 +74,7 @@
       }
     }
   },
+  "language": "Japanese",
   "spinnerTipsEnabled": false,
-  "alwaysThinkingEnabled": true,
-  "language": "Japanese"
+  "alwaysThinkingEnabled": true
 }
