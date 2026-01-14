@@ -99,14 +99,21 @@ local function open_input_buffer(tool_name, args)
     return
   end
 
-  -- 最新のペインIDを取得する関数
+  -- 最新のペインIDを取得する関数（存在しない場合は状態をクリアしてnilを返す）
   local function get_current_pane_id()
+    local pane_id
     if tool_name == "claude" then
-      return state.claude_pane
+      pane_id = validate_pane(state.claude_pane)
+      if not pane_id then
+        state.claude_pane = nil
+      end
     elseif tool_name == "codex" then
-      return state.codex_pane
+      pane_id = validate_pane(state.codex_pane)
+      if not pane_id then
+        state.codex_pane = nil
+      end
     end
-    return nil
+    return pane_id
   end
 
   -- 入力バッファを作成
@@ -118,7 +125,7 @@ local function open_input_buffer(tool_name, args)
       -- 最新のペインIDを取得
       local current_pane = get_current_pane_id()
       if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
         return
       end
 
@@ -144,7 +151,7 @@ local function open_input_buffer(tool_name, args)
       -- 最新のペインIDを取得
       local current_pane = get_current_pane_id()
       if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
         return
       end
 
@@ -157,7 +164,7 @@ local function open_input_buffer(tool_name, args)
       -- 最新のペインIDを取得
       local current_pane = get_current_pane_id()
       if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
         return
       end
 
@@ -170,7 +177,7 @@ local function open_input_buffer(tool_name, args)
       -- 最新のペインIDを取得
       local current_pane = get_current_pane_id()
       if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
         return
       end
 
@@ -191,7 +198,7 @@ local function open_input_buffer(tool_name, args)
       -- 最新のペインIDを取得
       local current_pane = get_current_pane_id()
       if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
         return
       end
 
@@ -212,7 +219,7 @@ local function open_input_buffer(tool_name, args)
       -- 最新のペインIDを取得
       local current_pane = get_current_pane_id()
       if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
         return
       end
 
@@ -233,7 +240,7 @@ local function open_input_buffer(tool_name, args)
       -- 最新のペインIDを取得
       local current_pane = get_current_pane_id()
       if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
         return
       end
 
@@ -246,7 +253,7 @@ local function open_input_buffer(tool_name, args)
       -- 最新のペインIDを取得
       local current_pane = get_current_pane_id()
       if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
         return
       end
 
@@ -259,7 +266,7 @@ local function open_input_buffer(tool_name, args)
       -- 最新のペインIDを取得
       local current_pane = get_current_pane_id()
       if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
         return
       end
 
@@ -272,7 +279,7 @@ local function open_input_buffer(tool_name, args)
       -- 最新のペインIDを取得
       local current_pane = get_current_pane_id()
       if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.ERROR)
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
         return
       end
 
