@@ -164,3 +164,6 @@ vim.api.nvim_create_autocmd({ "BufReadCmd" }, {
 
 -- markdown table format
 require('modules.markdown.table_format').setup()
+
+-- ascii box format
+require('modules.markdown.ascii_format').setup()
