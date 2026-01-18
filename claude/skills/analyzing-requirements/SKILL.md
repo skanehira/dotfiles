@@ -17,6 +17,39 @@ description: ユーザー要件を分析し、システム設計ドキュメン�
 
 ## コアワークフロー
 
+### ステップ0: 前提ドキュメントの読み込み
+
+前のステップの出力ファイルを読み込む。
+
+#### 読み込み対象
+- `docs/USECASES.md`
+- `docs/FEASIBILITY.md`
+- `docs/GLOSSARY.md`
+- `docs/DOMAIN_MODEL.md`
+
+```javascript
+Read({ file_path: "docs/USECASES.md" })
+Read({ file_path: "docs/FEASIBILITY.md" })
+Read({ file_path: "docs/GLOSSARY.md" })
+Read({ file_path: "docs/DOMAIN_MODEL.md" })
+```
+
+#### ファイルが存在する場合
+
+読み込んだ内容から以下を抽出：
+- ユースケース: 機能要件の元
+- 技術検証結果: 技術選定の制約
+- 用語集: データモデルの元
+- ドメインモデル: エンティティ設計の元
+
+**遷移条件**: ステップ1へ（要件理解を効率化）
+
+#### ファイルが存在しない場合
+
+ステップ1でAskUserQuestionを使って要件を確認。
+
+**遷移条件**: ステップ1へ
+
 ### ステップ1: 要件の理解と分析
 
 ユーザーリクエストを複数の観点から分析する：

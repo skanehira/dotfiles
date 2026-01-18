@@ -22,9 +22,41 @@ description: ドメインエキスパートとの対話を通じてユビキタ�
 
 ## ワークフロー
 
+### フェーズ0: 前提ドキュメントの読み込み
+
+前のステップの出力ファイルを読み込む。
+
+#### 読み込み対象
+- `docs/USECASES.md`
+- `docs/FEASIBILITY.md`
+- `docs/USER_STORIES.md`
+
+```javascript
+Read({ file_path: "docs/USECASES.md" })
+Read({ file_path: "docs/FEASIBILITY.md" })
+Read({ file_path: "docs/USER_STORIES.md" })
+```
+
+#### ファイルが存在する場合
+
+読み込んだ内容から以下を抽出：
+- ユースケースのアクター（エンティティ候補）
+- ビジネスルール（ドメインロジック候補）
+- 用語（ユビキタス言語候補）
+
+**遷移条件**: フェーズ1へ（ドメイン概要把握を効率化）
+
+#### ファイルが存在しない場合
+
+フェーズ1でAskUserQuestionを使ってドメインを確認。
+
+**遷移条件**: フェーズ1へ
+
 ### フェーズ1: ドメインの概要把握
 
 対象ドメインの全体像を理解する。
+
+**注**: フェーズ0で前提ドキュメントを読み込み済みの場合、それらの情報を元にドメイン概要を確認・補完する。
 
 ```javascript
 AskUserQuestion({
