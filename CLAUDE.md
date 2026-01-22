@@ -4,27 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a personal dotfiles repository for managing development environment configurations across macOS and Linux systems. The repository uses a modular structure where each tool has its own directory with configuration files and an installation script.
+dotfilesリポジトリ。macOSとLinux向けの開発環境設定を管理。各ツールは独自のディレクトリに設定ファイルとインストールスクリプトを持つモジュール構造。
 
-## Repository Structure
+## Installation
 
-- **git/** - Git configuration with GPG signing, aliases, and difftastic integration
-- **vim/** - Extensive Neovim configuration using Lua and lazy.nvim plugin manager
-- **zsh/** - Z shell configuration with custom aliases, functions, and key bindings
-- **tmux/** - Terminal multiplexer configuration with platform-specific variants
-- **wezterm/** - WezTerm terminal emulator configuration
-- **karabiner/** - macOS keyboard remapping configuration
-- **claude/** - Claude Code custom commands and configuration
-
-## Installation and Setup
-
-### Full Installation
 ```bash
-# Clone repository
-git clone https://github.com/skanehira/dotfiles.git
-cd dotfiles
-
-# Run individual installers (main install.sh is incomplete)
+# 各ツールのインストーラーを個別に実行
 cd git && ./install.sh
 cd ../vim && ./install.sh
 cd ../tmux && ./install.sh
@@ -34,81 +19,76 @@ cd ../karabiner && ./install.sh  # macOS only
 cd ../claude && ./install.sh
 ```
 
-### Key Dependencies
-- Homebrew (package manager)
-- Neovim
-- Zsh with zsh-autosuggestions
-- asdf (version manager)
-- fzf, ripgrep, bat, lsd, delta, ghq, lazygit
-- Docker, kubectl, terraform (for development)
+## Directory Structure
 
-## Common Commands and Workflows
-
-### Essential Aliases
-- `v` - Open Neovim
-- `lg` - Launch lazygit
-- `gs` - Git status
-- `ll` - List files with details (using lsd)
-- `k` - kubectl
-- `d` - docker compose
-- `t` - terraform
-
-### Key Bindings
-- `Ctrl+g` - Fuzzy search and switch to ghq-managed repositories
-- `Ctrl+k` - Interactive git branch switcher with preview
-- `Ctrl+q` - Toggle tmux popup window
-
-### Development Paths
-- Go binaries: `$HOME/go/bin`
-- ghq repositories: `$HOME/dev`
-- Deno binaries: `$HOME/.deno/bin`
+- **git/** - GPG署名、エイリアス、difftastic統合
+- **vim/** - Neovim設定（Lua、lazy.nvim）
+- **zsh/** - Zsh設定（エイリアス、関数、キーバインド）
+- **tmux/** - tmux設定（プラットフォーム別）
+- **wezterm/** - WezTermターミナル設定
+- **karabiner/** - macOSキーボードリマッピング
+- **claude/** - Claude Code設定（スキル、ルール、フック）
 
 ## Neovim Configuration
 
-### Plugin Management
-Uses lazy.nvim as the plugin manager. Configuration files are in `vim/lua/plugins/`.
+### Structure
+- `vim/lua/plugins/` - lazy.nvimプラグイン設定
+- `vim/lua/settings/` - 基本設定（options.lua, keymaps.lua, lsp.lua, autocmd.lua）
+- `vim/lua/modules/` - カスタムモジュール（AI、markdown）
+- `vim/after/lsp/` - LSP個別設定（denols, ts_ls, rust_analyzer, lua_ls, yamlls）
 
-### LSP Support
-LSP configurations are in `vim/after/` for:
-- Deno, TypeScript, Rust, Lua, YAML
-
-### Key Features
-- AI integration: Copilot, Copilot Chat, Claude Code
-- Git integration: Gina, Gitsigns, Diffview
-- Fuzzy finding: Telescope
-- Code templates: SonicTemplate
-- LSP enhancements: tiny-code-action, tiny-inline-diagnostic
-- Quickfix improvements: bqf, quicker
-
-## Working with This Repository
-
-### When modifying configurations:
-1. Each tool's configuration is self-contained in its directory
-2. Test changes by running the tool's install script to update symlinks
-3. Platform-specific code should check for Darwin (macOS) or Linux
-
-### When adding new tools:
-1. Create a new directory for the tool
-2. Add configuration files
-3. Create an `install.sh` script that symlinks configurations to appropriate locations
-4. Update the main `install.sh` or `install_linux.sh` if needed
-
-### Important Notes
-- Git is configured with GPG signing - ensure GPG is set up
-- The repository assumes `$HOME/dev` as the base for ghq-managed repositories
-- Tmux prefix is remapped to `Ctrl+s` (not the default `Ctrl+b`)
-- Many tools expect modern CLI replacements (lsd for ls, delta for diff, etc.)
+### Key Paths
+- ghqリポジトリ: `$HOME/dev`
+- Goバイナリ: `$HOME/go/bin`
+- Denoバイナリ: `$HOME/.deno/bin`
 
 ## Claude Code Integration
 
-### Custom Commands
-The `claude/` directory contains custom slash commands for Claude Code:
-- `/commit` - Intelligent commit creation with conventional commit format and emoji
-- `/review` - Comprehensive PR review with automated worktree management
+### Development Workflow Skills
 
-### Command Features
-- **Commit Command**: Automated pre-commit checks (lint, build, docs), conventional commit format with emoji, automatic commit splitting for complex changes
-- **Review Command**: Systematic 6-phase review process, automatic worktree creation, consistency analysis with existing codebase
+```
+アイデア・企画 → 要件・設計 → 実装
+```
+
+詳細は `claude/skills/README.md` を参照。主要スキル：
+- `/ideation` - problem-definition → competitor-analysis → slc-ideation
+- `/requirements` - user-story → ui-sketch → usecase-description → feasibility-check → ddd-modeling → analyzing-requirements
+- `/developing` - TDD（RED→GREEN→REFACTOR）で実装
+
+### Commands
+- `/commit-push` - Conventional Commit形式でコミット＆プッシュ
+- `/review` - コードレビュー（TDD、品質、セキュリティ、アーキテクチャ）
+- `/impl` - TDDで実装
+- `/spec` - 設計書（DESIGN.md）とタスクリスト（TODO.md）を生成
+
+### Hooks (settings.json)
+- **Stop/Notification** - 完了時にmacOS通知を送信
+- **PostToolUse** - Write/Edit後に自動フォーマット実行
+
+### Rules (claude/rules/)
+- `core/tdd.md` - TDD方法論（RED→GREEN→REFACTOR、Tidy Firstアプローチ）
+- `core/commit.md` - Conventional Commit形式（emoji + type）
+- `backend/go/`, `backend/rust/` - 言語別コーディング規約
 
 ### Installation
-Run `cd claude && ./install.sh` to install Claude Code custom commands to `~/.config/claude/`
+```bash
+cd claude && ./install.sh
+```
+`~/.config/claude/`にシンボリックリンクを作成。
+
+## Working with This Repository
+
+### 設定変更時
+1. 各ツールの設定は独自ディレクトリに自己完結
+2. `install.sh`を実行してシンボリックリンクを更新
+3. プラットフォーム固有コードはDarwin/Linuxを判定
+
+### 新規ツール追加時
+1. 新ディレクトリを作成
+2. 設定ファイルを追加
+3. `install.sh`スクリプトを作成（適切な場所にシンボリックリンク）
+
+### 重要事項
+- Gitは GPG署名を使用
+- Tmuxプレフィックスは`Ctrl+s`（デフォルトの`Ctrl+b`ではない）
+- モダンCLIツールを想定（lsd, delta, batなど）
