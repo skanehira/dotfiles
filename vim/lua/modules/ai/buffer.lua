@@ -124,6 +124,13 @@ local function setup_keymaps(bufnr, config)
   vim.keymap.set("i", "<C-l>", function()
     complete.pick_command()
   end, vim.tbl_extend("force", opts, { desc = "Search and insert command/skill" }))
+
+  -- <C-v>: Ctrl+Vをtmux側に送信
+  if config.on_send_ctrl_v then
+    vim.keymap.set("i", "<C-v>", function()
+      config.on_send_ctrl_v()
+    end, vim.tbl_extend("force", opts, { desc = "Send Ctrl+V to tmux pane" }))
+  end
 end
 
 -- バッファ名でバッファを検索

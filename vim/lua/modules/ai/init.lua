@@ -285,6 +285,19 @@ local function open_input_buffer(tool_name, args)
 
       tmux.exit_copy_mode(current_pane)
     end,
+    on_send_ctrl_v = function()
+      -- 最新のペインIDを取得
+      local current_pane = get_current_pane_id()
+      if not current_pane then
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+        return
+      end
+
+      local success, err = tmux.send_keys(current_pane, "C-v")
+      if not success then
+        vim.notify("Ctrl+Vの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+      end
+    end,
   })
 end
 
