@@ -31,6 +31,10 @@ vim.api.nvim_create_user_command("TerminalExec", function(opts)
   )
 end, { nargs = "+", complete = "shellcmd" })
 
-vim.api.nvim_create_user_command("Ghost", function()
-  vim.cmd("TerminalExec ghost")
-end, {})
+vim.api.nvim_create_user_command("Ghost", function(opts)
+  local cmd = "ghost"
+  if opts.args ~= "" then
+    cmd = cmd .. " " .. opts.args
+  end
+  vim.cmd("TerminalExec " .. cmd)
+end, { nargs = "*" })
