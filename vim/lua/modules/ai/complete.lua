@@ -32,12 +32,13 @@ local function parse_frontmatter(content)
 end
 
 -- コマンド一覧を取得（キャッシュあり）
--- @return table { {name = "/ask", description = "..."}, ... }
+---@return table { {name = "/ask", description = "..."}, ... }
 local function get_commands()
   if cache.commands then
     return cache.commands
   end
 
+  ---@type table
   cache.commands = {}
   local dirs = {
     vim.fn.expand("~/.claude/commands"),
@@ -61,12 +62,13 @@ local function get_commands()
 end
 
 -- スキル一覧を取得（user-invocable: trueのみ、キャッシュあり）
--- @return table { {name = "/impl", description = "..."}, ... }
+---@return table { {name = "/impl", description = "..."}, ... }
 local function get_skills()
   if cache.skills then
     return cache.skills
   end
 
+  ---@type table
   cache.skills = {}
   local seen = {}
   local dirs = {

@@ -131,6 +131,34 @@ local function setup_keymaps(bufnr, config)
       config.on_send_ctrl_v()
     end, vim.tbl_extend("force", opts, { desc = "Send Ctrl+V to tmux pane" }))
   end
+
+  -- <Up>: 上矢印をtmux側に送信
+  if config.on_send_up then
+    vim.keymap.set("n", "<Up>", function()
+      config.on_send_up()
+    end, vim.tbl_extend("force", opts, { desc = "Send Up to tmux pane" }))
+  end
+
+  -- <Down>: 下矢印をtmux側に送信
+  if config.on_send_down then
+    vim.keymap.set("n", "<Down>", function()
+      config.on_send_down()
+    end, vim.tbl_extend("force", opts, { desc = "Send Down to tmux pane" }))
+  end
+
+  -- <Left>: 左矢印をtmux側に送信
+  if config.on_send_left then
+    vim.keymap.set("n", "<Left>", function()
+      config.on_send_left()
+    end, vim.tbl_extend("force", opts, { desc = "Send Left to tmux pane" }))
+  end
+
+  -- <Right>: 右矢印をtmux側に送信
+  if config.on_send_right then
+    vim.keymap.set("n", "<Right>", function()
+      config.on_send_right()
+    end, vim.tbl_extend("force", opts, { desc = "Send Right to tmux pane" }))
+  end
 end
 
 -- バッファ名でバッファを検索
