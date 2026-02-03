@@ -101,19 +101,19 @@ local function open_input_buffer(tool_name, args)
 
   -- 最新のペインIDを取得する関数（存在しない場合は状態をクリアしてnilを返す）
   local function get_current_pane_id()
-    local pane_id
+    local current_id
     if tool_name == "claude" then
-      pane_id = validate_pane(state.claude_pane)
-      if not pane_id then
+      current_id = validate_pane(state.claude_pane)
+      if not current_id then
         state.claude_pane = nil
       end
     elseif tool_name == "codex" then
-      pane_id = validate_pane(state.codex_pane)
-      if not pane_id then
+      current_id = validate_pane(state.codex_pane)
+      if not current_id then
         state.codex_pane = nil
       end
     end
-    return pane_id
+    return current_id
   end
 
   -- 入力バッファを作成
@@ -298,12 +298,70 @@ local function open_input_buffer(tool_name, args)
         vim.notify("Ctrl+Vの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
       end
     end,
+    on_send_up = function()
+      -- 最新のペインIDを取得
+      local current_pane = get_current_pane_id()
+      if not current_pane then
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+        return
+      end
+
+      local success, err = tmux.send_keys(current_pane, "Up")
+      if not success then
+        vim.notify("Upの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+      end
+    end,
+    on_send_down = function()
+      -- 最新のペインIDを取得
+      local current_pane = get_current_pane_id()
+      if not current_pane then
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+        return
+      end
+
+      local success, err = tmux.send_keys(current_pane, "Down")
+      if not success then
+        vim.notify("Downの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+      end
+    end,
+    on_send_left = function()
+      -- 最新のペインIDを取得
+      local current_pane = get_current_pane_id()
+      if not current_pane then
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+        return
+      end
+
+      local success, err = tmux.send_keys(current_pane, "Left")
+      if not success then
+        vim.notify("Leftの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+      end
+    end,
+    on_send_right = function()
+      -- 最新のペインIDを取得
+      local current_pane = get_current_pane_id()
+      if not current_pane then
+        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+        return
+      end
+
+      local success, err = tmux.send_keys(current_pane, "Right")
+      if not success then
+        vim.notify("Rightの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+      end
+    end,
   })
 end
 
 -- Claudeを開く
 -- @param args string|nil コマンド引数
 function M.open_claude(args)
+  local base_args = '--append-system-prompt="論理的かつ批判的な姿勢で作業すること"'
+  if args and args ~= "" then
+    args = base_args .. " " .. args
+  else
+    args = base_args
+  end
   open_input_buffer("claude", args)
 end
 
