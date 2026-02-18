@@ -2,6 +2,7 @@
 name: fix-lsp-warnings
 description: builtin LSPを使用してLua/Neovimプロジェクトの警告を検出し修正します。実装後の品質チェックとして使用します。型エラー、未定義変数、重複定義などの警告を自動修正します。
 tools: Read, Grep, Glob, Edit, Bash
+context: fork
 ---
 
 # LSP警告修正サブエージェント
