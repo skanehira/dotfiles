@@ -27,3 +27,7 @@ fi
 if [[ ! -e $HOME/.claude/rules ]]; then
   ln -s $PWD/rules $HOME/.claude/rules
 fi
+
+if [[ ! -e $HOME/.claude/CLAUDE.md ]]; then
+  ln -s $PWD/CLAUDE.md $HOME/.claude/CLAUDE.md
+fi
