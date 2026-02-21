@@ -1,4 +1,5 @@
 ---
+name: create-skill
 description: "スキルを作成し、レビュー・自動修正まで行う"
 argument-hint: "[スキル名] [スキルの説明]"
 ---
@@ -26,15 +27,10 @@ argument-hint: "[スキル名] [スキルの説明]"
 ### 引数の解析
 
 引数からスキル情報を取得します：
-- `$1`: スキル名
-- `$2`以降: スキルの説明
+- `$ARGUMENTS`の最初の単語: スキル名
+- `$ARGUMENTS`の残りの部分: スキルの説明
 
-```
-スキル名: $1
-スキルの説明: $ARGUMENTS から $1 を除いた部分
-```
-
-$1が空の場合、AskUserQuestionツールを使用して以下を質問してください：
+$ARGUMENTSが空の場合、AskUserQuestionツールを使用して以下を質問してください：
 
 ```javascript
 AskUserQuestion({
@@ -167,55 +163,11 @@ Skill({
 1. TodoWriteですべてのタスクを完了にする
 2. 完了サマリーを表示して終了
 
-```javascript
-TodoWrite({
-  todos: [
-    {
-      content: "skill-creatorでスキルを作成",
-      activeForm: "スキルを作成している",
-      status: "completed"
-    },
-    {
-      content: "reviewing-skillsでスキルをレビュー",
-      activeForm: "スキルをレビューしている",
-      status: "completed"
-    },
-    {
-      content: "レビュー結果に基づいて自動修正",
-      activeForm: "スキルを自動修正している",
-      status: "completed"
-    }
-  ]
-})
-```
-
 **問題がある場合**：
 1. TodoWriteを更新して自動修正フェーズに移行
 2. 指摘された問題を自動的に修正
 3. 再度reviewing-skillsを実行して確認
 4. 問題がなくなるまで繰り返す（最大3回）
-
-```javascript
-TodoWrite({
-  todos: [
-    {
-      content: "skill-creatorでスキルを作成",
-      activeForm: "スキルを作成している",
-      status: "completed"
-    },
-    {
-      content: "reviewing-skillsでスキルをレビュー",
-      activeForm: "スキルをレビューしている",
-      status: "completed"
-    },
-    {
-      content: "レビュー結果に基づいて自動修正",
-      activeForm: "スキルを自動修正している",
-      status: "in_progress"
-    }
-  ]
-})
-```
 
 ### 自動修正のルール
 

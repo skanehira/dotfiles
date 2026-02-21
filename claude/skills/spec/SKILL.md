@@ -1,7 +1,8 @@
 ---
+name: spec
 description: "対話的計画コマンド。analyzing-requirementsとplanning-tasksスキルを統合実行してDESIGN.mdとTODO.mdを生成"
 argument-hint: "[タスク説明]"
-allowed-tools: ["Skill", "AskUserQuestion", "Read"]
+allowed-tools: Skill, AskUserQuestion, Read
 ---
 
 # /spec - 対話的計画コマンド
@@ -33,14 +34,14 @@ analyzing-requirementsとplanning-tasksスキルを統合実行し、対話的�
 ### タスク説明の取得
 
 引数からタスク説明を取得します：
-- `$1`が存在する場合: そのまま使用
-- `$1`が空の場合: ユーザーに質問
+- `$ARGUMENTS`が存在する場合: そのまま使用
+- `$ARGUMENTS`が空の場合: ユーザーに質問
 
 ```
-タスク説明: $1
+タスク説明: $ARGUMENTS
 ```
 
-$1が空の場合、以下の質問をしてください：
+$ARGUMENTSが空の場合、以下の質問をしてください：
 
 「どのようなタスクの計画を作成しますか？具体的なタスク説明を入力してください。
 
@@ -160,11 +161,11 @@ AskUserQuestion({
 
 ## [3/5] DESIGN.mdの深掘り（interview）
 
-interviewコマンドを実行してDESIGN.mdをブラッシュアップします。
+interviewスキルを実行してDESIGN.mdをブラッシュアップします。
 
 ### スキル実行
 
-Skillツールを使用してinterviewコマンドを実行してください：
+Skillツールを使用してinterviewスキルを実行してください：
 
 ```javascript
 Skill({
@@ -173,7 +174,7 @@ Skill({
 })
 ```
 
-interviewコマンドが以下を実行します：
+interviewスキルが以下を実行します：
 - DESIGN.mdを読み込み
 - 技術実装、UI/UX、懸念点、トレードオフについて深掘りインタビュー
 - 収集した仕様をDESIGN.mdに追記・更新
@@ -297,7 +298,7 @@ Skill({
 
 ### 依存関係
 - analyzing-requirementsスキルが必須です
-- interviewコマンドが必須です
+- interviewスキルが必須です
 - planning-tasksスキルが必須です
 - これらが正しくインストールされていることを確認してください
 
@@ -315,13 +316,13 @@ Skill({
 3. 例外: ユーザーが明示的に`/org/project`形式でライブラリIDを提供した場合
 
 **適切な使用例:**
-- ✅ 「context7を使用してReactドキュメントを検索します」
-- ✅ 「context7を使用して最新のNext.js APIドキュメントを見つけます」
+- 「context7を使用してReactドキュメントを検索します」
+- 「context7を使用して最新のNext.js APIドキュメントを見つけます」
 
 **禁止:**
-- ❌ context7にある公式ドキュメントをWeb検索で探す
-- ❌ ドキュメントを確認せずにAPIメソッドを推測する
-- ❌ 記憶にある古いドキュメントを使用する
+- context7にある公式ドキュメントをWeb検索で探す
+- ドキュメントを確認せずにAPIメソッドを推測する
+- 記憶にある古いドキュメントを使用する
 
 ### 参照ルール
 計画ドキュメントは以下のルールを参照します：

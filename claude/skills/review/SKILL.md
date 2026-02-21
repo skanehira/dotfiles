@@ -1,7 +1,8 @@
 ---
+name: review
 description: "ローカルのgit差分を自動検出し、TDD/テスト品質、コード品質、セキュリティ、アーキテクチャ、プロジェクトルール準拠の5観点でコードレビューを実施。改善点があれば具体的な修正コードを提案。"
 argument-hint: "[--staged | --all]"
-allowed-tools: ["Bash(git status:*)", "Bash(git diff:*)", "Bash(git rev-parse:*)", "Read", "Glob", "Grep", "AskUserQuestion"]
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git rev-parse:*), Read, Glob, Grep, AskUserQuestion
 ---
 
 # /review - コードレビューコマンド
