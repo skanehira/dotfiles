@@ -75,7 +75,7 @@ AskUserQuestion({
 ```
 
 ```javascript
-Skill({ skill: "user-story" })
+Skill({ skill: "requirements-user-story" })
 ```
 
 完了後、確認：
@@ -109,7 +109,7 @@ AskUserQuestion({
 ```
 
 ```javascript
-Skill({ skill: "ui-sketch" })
+Skill({ skill: "requirements-ui-sketch" })
 ```
 
 完了後、同様に確認。
@@ -129,7 +129,7 @@ Skill({ skill: "ui-sketch" })
 ```
 
 ```javascript
-Skill({ skill: "usecase-description" })
+Skill({ skill: "requirements-usecase-description" })
 ```
 
 完了後、同様に確認。
@@ -149,7 +149,7 @@ Skill({ skill: "usecase-description" })
 ```
 
 ```javascript
-Skill({ skill: "feasibility-check" })
+Skill({ skill: "requirements-feasibility-check" })
 ```
 
 完了後、同様に確認。
@@ -169,7 +169,7 @@ Skill({ skill: "feasibility-check" })
 ```
 
 ```javascript
-Skill({ skill: "ddd-modeling" })
+Skill({ skill: "requirements-ddd-modeling" })
 ```
 
 完了後、同様に確認。
@@ -189,7 +189,7 @@ Skill({ skill: "ddd-modeling" })
 ```
 
 ```javascript
-Skill({ skill: "analyzing-requirements" })
+Skill({ skill: "requirements-analyzing-requirements" })
 ```
 
 ### 完了

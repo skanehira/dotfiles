@@ -60,7 +60,7 @@ AskUserQuestion({
 Skill toolで起動：
 
 ```javascript
-Skill({ skill: "problem-definition" })
+Skill({ skill: "ideation-problem-definition" })
 ```
 
 完了後、確認：
@@ -95,7 +95,7 @@ AskUserQuestion({
 Skill toolで起動：
 
 ```javascript
-Skill({ skill: "competitor-analysis" })
+Skill({ skill: "ideation-competitor-analysis" })
 ```
 
 完了後、確認：
@@ -130,7 +130,7 @@ AskUserQuestion({
 Skill toolで起動：
 
 ```javascript
-Skill({ skill: "slc-ideation" })
+Skill({ skill: "ideation-slc-ideation" })
 ```
 
 ### 完了
