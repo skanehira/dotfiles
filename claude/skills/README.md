@@ -65,6 +65,17 @@
 | [developing](./developing/)         | TDD（RED→GREEN→REFACTOR）で実装       | コード         |
 | [writing-tests](./writing-tests/)   | テストコードを作成                    | テストファイル |
 
+### ワークフロースキル
+
+| スキル                        | 説明                                                                              |
+| ----------------------------- | --------------------------------------------------------------------------------- |
+| [spec](./spec/)               | DESIGN.md + TODO.mdを対話的に生成（analyzing-requirements + planning-tasks統合）  |
+| [impl](./impl/)               | TDD（RED→GREEN→REFACTOR）でフェーズ単位の実装                                     |
+| [review](./review/)           | git差分を5観点でコードレビュー（TDD、品質、セキュリティ、アーキテクチャ、ルール） |
+| [ask](./ask/)                 | インタビュー → 確認 → 実行の3段階タスク実行                                       |
+| [interview](./interview/)     | DESIGN.mdを深掘りインタビューして仕様追記                                         |
+| [commit-push](./commit-push/) | Conventional Commit形式でコミット＆プッシュ                                       |
+
 ### ユーティリティ
 
 | スキル                                  | 説明                                         |
@@ -72,6 +83,8 @@
 | [creating-rules](./creating-rules/)     | .claude/rules/にルールファイルを作成         |
 | [reviewing-skills](./reviewing-skills/) | スキルをベストプラクティスに基づいてレビュー |
 | [fix-lsp-warnings](./fix-lsp-warnings/) | LSP警告を検出・修正                          |
+| [create-skill](./create-skill/)         | スキル作成 + レビュー・自動修正              |
+| [codex](./codex/)                       | Codex CLIでセカンドオピニオン取得            |
 
 ## 使い方
 
@@ -81,17 +94,21 @@
 /problem-definition    # 問題定義を開始
 /user-story           # ユーザーストーリー作成を開始
 /developing           # TDD開発を開始
+/spec                 # 設計書+タスクリスト生成
+/impl                 # TDD実装開始
+/review               # コードレビュー
+/commit-push          # コミット＆プッシュ
 ```
 
-## フェーズコマンド
+## フェーズスキル
 
-開発フローのフェーズ全体を実行するコマンド：
+開発フローのフェーズ全体を実行するスキル：
 
-| コマンド | フェーズ | 実行スキル |
-|---------|----------|-----------|
-| `/ideation` | アイデア・企画 | problem-definition → competitor-analysis → slc-ideation |
-| `/requirements` | 要件・設計 | user-story → ui-sketch → usecase-description → feasibility-check → ddd-modeling → analyzing-requirements |
-| `/implementation` | 実装 | planning-tasks → developing |
+| スキル          | フェーズ       | 実行スキル                                                                                               |
+| --------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
+| `/ideation`     | アイデア・企画 | problem-definition → competitor-analysis → slc-ideation                                                  |
+| `/requirements` | 要件・設計     | user-story → ui-sketch → usecase-description → feasibility-check → ddd-modeling → analyzing-requirements |
+| `/spec`         | 設計+計画      | analyzing-requirements → interview → planning-tasks                                                      |
 
 各スキル完了後に確認が入り、途中で終了することも可能。
 既存ドキュメントがある場合は、スキップして途中から開始できる。

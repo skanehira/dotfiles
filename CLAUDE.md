@@ -55,11 +55,13 @@ cd ../claude && ./install.sh
 - `/requirements` - user-story → ui-sketch → usecase-description → feasibility-check → ddd-modeling → analyzing-requirements
 - `/developing` - TDD（RED→GREEN→REFACTOR）で実装
 
-### Commands
+### Workflow Skills
+- `/spec` - 設計書（DESIGN.md）とタスクリスト（TODO.md）を対話的に生成
+- `/impl` - TDD（RED→GREEN→REFACTOR）で実装
+- `/review` - コードレビュー（TDD、品質、セキュリティ、アーキテクチャ、ルール準拠）
+- `/ask` - インタビュー→確認→実行の3段階タスク実行
+- `/interview` - DESIGN.mdの深掘りインタビュー
 - `/commit-push` - Conventional Commit形式でコミット＆プッシュ
-- `/review` - コードレビュー（TDD、品質、セキュリティ、アーキテクチャ）
-- `/impl` - TDDで実装
-- `/spec` - 設計書（DESIGN.md）とタスクリスト（TODO.md）を生成
 
 ### Hooks (settings.json)
 - **Stop/Notification** - 完了時にmacOS通知を送信

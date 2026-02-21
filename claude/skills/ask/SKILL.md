@@ -1,4 +1,5 @@
 ---
+name: ask
 description: "作業開始前にインタビューを行い、認識を合わせてから実行する"
 argument-hint: "[タスク説明]"
 ---

@@ -1,7 +1,8 @@
 ---
+name: interview
 description: "DESIGN.mdを読み込み、技術実装・UI/UX・懸念点・トレードオフについて深掘りインタビューを実施し、仕様をDESIGN.mdに書き出す"
 argument-hint: "[DESIGN.mdパス]"
-allowed-tools: ["Read", "Write", "Edit", "AskUserQuestion", "Glob"]
+allowed-tools: Read, Write, Edit, AskUserQuestion, Glob
 ---
 
 # /interview - 深掘りインタビューコマンド

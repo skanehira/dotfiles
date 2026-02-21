@@ -4,10 +4,6 @@ if [ ! -e $HOME/.claude ]; then
   mkdir -p $HOME/.claude
 fi
 
-if [[ ! -e $HOME/.claude/commands ]]; then
-  ln -s $PWD/commands $HOME/.claude/commands
-fi
-
 if [[ ! -e $HOME/.claude/hooks ]]; then
   ln -s $PWD/hooks $HOME/.claude/hooks
 fi
