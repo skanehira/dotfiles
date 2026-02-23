@@ -75,6 +75,7 @@ Read(file_path="docs/DESIGN.md")
 - [ ] [RED] [機能A]の動作テストを作成
 - [ ] [GREEN] テストを通過させる最小限の実装
 - [ ] [REFACTOR] コード品質の改善
+- [ ] [REVIEW] /workflow-review でレビューし、ユーザー確認不要の指摘を修正
 - [ ] [CHECK] lint/format/build の実行と確認
 
 ### フェーズ3: [機能名B] の実装
@@ -82,19 +83,22 @@ Read(file_path="docs/DESIGN.md")
 - [ ] [RED] [機能B]の動作テストを作成
 - [ ] [GREEN] テストを通過させる最小限の実装
 - [ ] [REFACTOR] コード品質の改善
+- [ ] [REVIEW] /workflow-review でレビューし、ユーザー確認不要の指摘を修正
 - [ ] [CHECK] lint/format/build の実行と確認
 
 ### フェーズN: 品質保証
 
 - [ ] [STRUCTURAL] コード整理（動作変更なし）
 - [ ] 全テスト実行と確認
-- [ ] lint/format/buildの確認
+- [ ] [REVIEW] /workflow-review で最終レビューし、ユーザー確認不要の指摘を修正
+- [ ] [CHECK] lint/format/build の実行と確認
 
 ## 実装ノート
 
 ### MUSTルール遵守事項
-- TDD: RED → GREEN → REFACTOR → CHECK サイクルを厳守
-- CHECK: 各フェーズ完了時に lint/format/build を実行
+- TDD: RED → GREEN → REFACTOR → REVIEW → CHECK サイクルを厳守
+- REVIEW: 各フェーズ完了時に /workflow-review で実装内容をレビューし、ユーザー確認不要の指摘は自動修正
+- CHECK: REVIEW後に lint/format/build を実行して最終確認
 - Tidy First: 構造変更と動作変更を分離
 - コミット: [BEHAVIORAL] または [STRUCTURAL] プレフィックス必須
   - [BEHAVIORAL]: 動作を変更するコミット（機能追加、バグ修正、テスト追加）
@@ -168,10 +172,10 @@ Write(
 - [ ] DESIGN.mdを再読み込みして、見落としがないか最終確認した
 
 **TDD準拠**
-- [ ] すべてのタスクにRED/GREEN/REFACTOR/CHECKが明示されている
+- [ ] すべてのタスクにRED/GREEN/REFACTOR/REVIEW/CHECKが明示されている
 - [ ] テストファーストの順序になっている
 - [ ] リファクタリングタスクが適切に配置されている
-- [ ] 各フェーズ末尾に品質チェックステップがある
+- [ ] 各フェーズにREVIEW（レビュー＋自動修正）→ CHECK（最終確認）の順で配置されている
 
 **実装可能性**
 - [ ] 各タスクが1-4時間で完了可能な粒度
@@ -236,6 +240,7 @@ AskUserQuestion({
 - [ ] [RED] Delete機能のテスト作成
 - [ ] [GREEN] Delete機能の実装
 - [ ] [REFACTOR] CRUD処理の共通化
+- [ ] [REVIEW] /workflow-review でレビューし、ユーザー確認不要の指摘を修正
 - [ ] [CHECK] lint/format/build の実行と確認
 ```
 
@@ -251,6 +256,7 @@ AskUserQuestion({
 - [ ] [RED] エラーハンドリングのテスト作成
 - [ ] [GREEN] エラーハンドリングの実装
 - [ ] [REFACTOR] レスポンス形式の統一
+- [ ] [REVIEW] /workflow-review でレビューし、ユーザー確認不要の指摘を修正
 - [ ] [CHECK] lint/format/build の実行と確認
 ```
 
@@ -266,5 +272,6 @@ AskUserQuestion({
 - [ ] [RED] エッジケーステスト作成
 - [ ] [GREEN] エッジケース対応
 - [ ] [REFACTOR] スタイルとロジックの分離
+- [ ] [REVIEW] /workflow-review でレビューし、ユーザー確認不要の指摘を修正
 - [ ] [CHECK] lint/format/build の実行と確認
 ```
