@@ -29,7 +29,7 @@ analyzing-requirementsとplanning-tasksスキルを統合実行し、対話的�
 
 ---
 
-## [1/5] タスク説明の準備
+## [1/6] タスク説明の準備
 
 ### タスク説明の取得
 
@@ -92,7 +92,7 @@ AskUserQuestion({
 
 ---
 
-## [2/5] DESIGN.md生成（analyzing-requirements）
+## [2/6] DESIGN.md生成（analyzing-requirements）
 
 analyzing-requirementsスキルを実行してDESIGN.mdを生成します。
 
@@ -159,7 +159,7 @@ AskUserQuestion({
 
 ---
 
-## [3/5] DESIGN.mdの深掘り（interview）
+## [3/6] DESIGN.mdの深掘り（interview）
 
 interviewスキルを実行してDESIGN.mdをブラッシュアップします。
 
@@ -187,11 +187,101 @@ interviewスキルが以下を実行します：
 
 繰り返しごとにDESIGN.mdを更新し、より詳細な仕様を蓄積していく。
 
-すべてのインタビューが完了したら、次のフェーズ（TODO.md生成）に進みます。
+すべてのインタビューが完了したら、次のフェーズ（検証手順の確認と補完）に進みます。
 
 ---
 
-## [4/5] TODO.md生成（planning-tasks）
+## [4/6] 検証手順の確認と補完
+
+DESIGN.mdに記載された「ゴールと検証手順」セクションを精査し、不足を補完する。
+
+### 情報収集
+
+以下のソースから検証に関する情報を収集する：
+
+1. **DESIGN.mdの確認**: 「ゴールと検証手順」セクションを読み取り、現状の充実度を評価
+2. **既存プロジェクトの検証手段**: テストファイル、CI設定、Makefile、package.jsonのscriptsを検索
+3. **テスト戦略との整合**: DESIGN.mdの「テスト戦略」セクションと「検証手順」の整合性を確認
+
+### 充実度の評価
+
+以下の観点で検証手順の充実度を評価する：
+
+- ゴールが具体的かつ検証可能か
+- 手動検証の手順が操作レベルで記述されているか
+- 自動検証（テストコマンド等）が明記されているか
+- 完了条件チェックリストがゴールを網羅しているか
+
+### 不足の補完
+
+不足がある場合、AskUserQuestionツールで確認する：
+
+```javascript
+AskUserQuestion({
+  questions: [
+    {
+      question: "検証手順について確認させてください。\n\n現在のゴール:\n[DESIGN.mdから抽出したゴール一覧]\n\n以下の点が不明です:\n- [不明点1]\n- [不明点2]\n\nどのように検証しますか？",
+      header: "検証手順",
+      options: [
+        { label: "選択肢1", description: "..." },
+        { label: "選択肢2", description: "..." }
+      ],
+      multiSelect: false
+    }
+  ]
+})
+```
+
+具体的な質問例：
+- 「この機能の動作確認はどの環境で行いますか？（ローカル / ステージング / 本番）」
+- 「パフォーマンス要件の検証方法は？（負荷テストツール / 手動計測 / APM）」
+- 「E2Eテストは必要ですか？必要な場合、どのシナリオをカバーしますか？」
+
+### DESIGN.md更新
+
+収集した情報でDESIGN.mdの「ゴールと検証手順」セクションを更新する。
+
+### ユーザー承認
+
+AskUserQuestionツールで確認：
+
+```javascript
+AskUserQuestion({
+  questions: [
+    {
+      question: "検証手順を更新しました。確認してください。次のフェーズ（TODO.md生成）に進めてよろしいですか？",
+      header: "検証手順承認",
+      options: [
+        {
+          label: "承認",
+          description: "次のフェーズ（TODO.md生成）に進む"
+        },
+        {
+          label: "却下",
+          description: "コマンドを終了"
+        }
+      ],
+      multiSelect: false
+    }
+  ]
+})
+```
+
+**「承認」を選択された場合**：
+- 次のフェーズ（TODO.md生成）に進む
+
+**「却下」を選択された場合**：
+- コマンドを終了
+- 「計画を中断しました。再度実行する場合は /spec を使用してください」と表示
+
+**ユーザーが修正内容を入力した場合（Other選択）**：
+1. 入力された修正内容を反映してDESIGN.mdの検証手順を更新
+2. 再度ユーザー承認を取得（このセクションに戻る）
+3. 承認されるまで繰り返す
+
+---
+
+## [5/6] TODO.md生成（planning-tasks）
 
 planning-tasksスキルを実行してTODO.mdを生成します。
 
@@ -258,7 +348,7 @@ AskUserQuestion({
 
 ---
 
-## [5/5] 完了と実装開始
+## [6/6] 完了と実装開始
 
 ### サマリー表示
 
