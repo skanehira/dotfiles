@@ -43,7 +43,8 @@
     "gopls-lsp@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
-    "ui-ux-pro-max@ui-ux-pro-max-skill": true
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true,
+    "deploy-on-aws@agent-plugins-for-aws": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
@@ -62,6 +63,12 @@
       "source": {
         "source": "github",
         "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
+      }
+    },
+    "agent-plugins-for-aws": {
+      "source": {
+        "source": "github",
+        "repo": "awslabs/agent-plugins"
       }
     }
   },
