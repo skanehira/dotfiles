@@ -211,8 +211,21 @@ local function find_code_blocks(bufnr)
   local code_blocks = {}
   for id, node, _ in query:iter_captures(root, bufnr, 0, -1) do
     if query.captures[id] == "code" then
-      local start_row, _, end_row, _ = node:range()
-      table.insert(code_blocks, { start_row = start_row, end_row = end_row })
+      -- info_stringが"ascii"のコードブロックのみ対象
+      local is_ascii = false
+      for child in node:iter_children() do
+        if child:type() == "info_string" then
+          local lang = vim.treesitter.get_node_text(child, bufnr)
+          if lang and vim.trim(lang) == "ascii" then
+            is_ascii = true
+          end
+          break
+        end
+      end
+      if is_ascii then
+        local start_row, _, end_row, _ = node:range()
+        table.insert(code_blocks, { start_row = start_row, end_row = end_row })
+      end
     end
   end
 
