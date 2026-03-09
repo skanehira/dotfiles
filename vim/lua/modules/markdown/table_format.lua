@@ -1,8 +1,16 @@
 local M = {}
 
+local PIPE_PLACEHOLDER = "\x01"
+
 local function parse_table_row(line)
+  -- バッククォート内の|をプレースホルダーに置き換えてからパース
+  local replaced = line:gsub("`([^`]*)`", function(content)
+    return "`" .. content:gsub("|", PIPE_PLACEHOLDER) .. "`"
+  end)
+
   local cells = {}
-  for cell in line:gmatch("|([^|]+)") do
+  for cell in replaced:gmatch("|([^|]+)") do
+    cell = cell:gsub(PIPE_PLACEHOLDER, "|")
     table.insert(cells, vim.fn.trim(cell))
   end
   return cells
