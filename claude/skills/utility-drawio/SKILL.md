@@ -154,6 +154,76 @@ Every diagram must have this structure:
 | `dashed=1`                         | 0 or 1        | Dashed lines           |
 | `swimlane`                         | style keyword | Swimlane containers    |
 
+## CRITICAL: Edge routing - avoid overlapping shapes
+
+Edges MUST NOT cross over unrelated shapes. This is the most common layout problem and must be actively prevented.
+
+### Waypoints
+
+Add explicit waypoints (`mxPoint`) to route edges around obstacles:
+
+```xml
+<mxCell id="10" value="" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="2" target="8" parent="1">
+  <mxGeometry relative="1" as="geometry">
+    <Array as="points">
+      <mxPoint x="50" y="400"/>
+      <mxPoint x="50" y="600"/>
+    </Array>
+  </mxGeometry>
+</mxCell>
+```
+
+The `Array as="points"` contains intermediate coordinates the edge must pass through, allowing it to detour around intervening shapes.
+
+### When to add waypoints
+
+Before generating each edge, mentally trace its path from source to target:
+1. Identify all shapes that lie between source and target
+2. If the straight/orthogonal path would cross any shape, add waypoints to route around it
+3. Route edges through empty "corridors" between shapes, or around the outer perimeter of shape groups
+
+### Routing strategies
+
+- **Route around the outside**: When an edge must travel past intermediate shapes, route it along the outer edge of the diagram area (left/right/top/bottom margins)
+- **Use routing channels**: Leave 60-80px gaps between rows/columns of shapes specifically for edge routing
+- **Stagger parallel edges**: When multiple edges share a similar path, offset them by 20-30px to prevent overlap
+- **Exit/entry direction**: Use `exitX`, `exitY`, `entryX`, `entryY` (0-1 range) to control which side of a shape an edge connects to, making it easier to avoid crossings
+
+```xml
+<mxCell id="11" value="" style="edgeStyle=orthogonalEdgeStyle;exitX=0;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="2" target="8" parent="1">
+  <mxGeometry relative="1" as="geometry">
+    <Array as="points">
+      <mxPoint x="40" y="180"/>
+      <mxPoint x="40" y="580"/>
+    </Array>
+  </mxGeometry>
+</mxCell>
+```
+
+### Jump style (fallback for unavoidable crossings)
+
+When crossings are truly unavoidable, add visual indicators:
+
+```xml
+style="edgeStyle=orthogonalEdgeStyle;jumpStyle=arc;jumpSize=10;"
+```
+
+| Jump style        | Effect                       |
+| ----------------- | ---------------------------- |
+| `jumpStyle=arc`   | Small arc at crossing points |
+| `jumpStyle=gap`   | Gap at crossing points       |
+| `jumpStyle=sharp` | Sharp angle at crossings     |
+
+### Layout planning guidelines
+
+To minimize edge crossings from the start:
+
+1. **Plan the layout before writing XML** - sketch the node positions mentally, ensuring data flows in a consistent direction (left-to-right or top-to-bottom)
+2. **Allocate routing corridors** - leave 60-80px empty channels between rows/columns of shapes for edges to pass through
+3. **Place closely connected nodes adjacent** - nodes with direct edges should be neighbors, not separated by other nodes
+4. **Group related nodes** - use spatial clustering so edges between groups travel along the periphery
+5. **Minimum spacing** - maintain at least 100px between unconnected shapes to provide routing space
+
 ## CRITICAL: XML well-formedness
 
 - **NEVER use double hyphens (`--`) inside XML comments.** `--` is illegal inside `<!-- -->` per the XML spec and causes parse errors. Use single hyphens or rephrase.
