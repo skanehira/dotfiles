@@ -1,6 +1,6 @@
 ---
 name: workflow-spec
-description: "対話的計画コマンド。analyzing-requirementsとplanning-tasksスキルを統合実行してDESIGN.mdとTODO.mdを生成"
+description: "対話的計画コマンド。requirements-analyzing-requirementsとimplementation-planning-tasksスキルを統合実行してDESIGN.mdとTODO.mdを生成"
 argument-hint: "[タスク説明]"
 allowed-tools: Skill, AskUserQuestion, Read
 ---
@@ -10,7 +10,7 @@ allowed-tools: Skill, AskUserQuestion, Read
 このコマンドは、Claude Code組み込みのplan modeと同等の機能を提供します。
 ユーザーのタスク説明から自動的にDESIGN.md（設計ドキュメント）とTODO.md（タスクリスト）を生成します。
 
-analyzing-requirementsとplanning-tasksスキルを統合実行し、対話的に計画を洗練します。
+requirements-analyzing-requirementsとimplementation-planning-tasksスキルを統合実行し、対話的に計画を洗練します。
 
 ## 使い方
 
@@ -85,20 +85,20 @@ AskUserQuestion({
 
 **「更新」を選択された場合**：
 - 既存のdocs/DESIGN.mdとdocs/TODO.mdをReadツールで読み取る
-- 内容をanalyzing-requirementsとplanning-tasksスキルに渡す
+- 内容をanalyzing-requirementsとimplementation-planning-tasksスキルに渡す
 
 **「キャンセル」を選択された場合**：
 - コマンドを終了
 
 ---
 
-## [2/6] DESIGN.md生成（analyzing-requirements）
+## [2/6] DESIGN.md生成（requirements-analyzing-requirements）
 
-analyzing-requirementsスキルを実行してDESIGN.mdを生成します。
+requirements-analyzing-requirementsスキルを実行してDESIGN.mdを生成します。
 
 ### スキル実行
 
-以下の情報をanalyzing-requirementsスキルに渡してください：
+以下の情報をrequirements-analyzing-requirementsスキルに渡してください：
 
 ```
 タスク説明: [取得したタスク説明]
@@ -106,7 +106,7 @@ analyzing-requirementsスキルを実行してDESIGN.mdを生成します。
 既存DESIGN.md: [存在する場合は内容を含める]
 ```
 
-Skillツールを使用してanalyzing-requirementsスキルを実行してください。
+Skillツールを使用してrequirements-analyzing-requirementsスキルを実行してください。
 
 ### 生成確認
 
@@ -159,13 +159,13 @@ AskUserQuestion({
 
 ---
 
-## [3/6] DESIGN.mdの深掘り（interview）
+## [3/6] DESIGN.mdの深掘り（requirements-interview）
 
-interviewスキルを実行してDESIGN.mdをブラッシュアップします。
+requirements-interviewスキルを実行してDESIGN.mdをブラッシュアップします。
 
 ### スキル実行
 
-Skillツールを使用してinterviewスキルを実行してください：
+Skillツールを使用してrequirements-interviewスキルを実行してください：
 
 ```javascript
 Skill({
@@ -174,7 +174,7 @@ Skill({
 })
 ```
 
-interviewスキルが以下を実行します：
+requirements-interviewスキルが以下を実行します：
 - DESIGN.mdを読み込み
 - 技術実装、UI/UX、懸念点、トレードオフについて深掘りインタビュー
 - 収集した仕様をDESIGN.mdに追記・更新
@@ -281,13 +281,13 @@ AskUserQuestion({
 
 ---
 
-## [5/6] TODO.md生成（planning-tasks）
+## [5/6] TODO.md生成（implementation-planning-tasks）
 
-planning-tasksスキルを実行してTODO.mdを生成します。
+implementation-planning-tasksスキルを実行してTODO.mdを生成します。
 
 ### スキル実行
 
-以下の情報をplanning-tasksスキルに渡してください：
+以下の情報をimplementation-planning-tasksスキルに渡してください：
 
 ```
 DESIGN.mdの場所: docs/DESIGN.md
@@ -295,7 +295,7 @@ DESIGN.mdの場所: docs/DESIGN.md
 既存TODO.md: [存在する場合は内容を含める]
 ```
 
-Skillツールを使用してplanning-tasksスキルを実行してください。
+Skillツールを使用してimplementation-planning-tasksスキルを実行してください。
 
 ### 生成確認
 
@@ -387,9 +387,9 @@ Skill({
 ## 重要な注意事項
 
 ### 依存関係
-- analyzing-requirementsスキルが必須です
-- interviewスキルが必須です
-- planning-tasksスキルが必須です
+- requirements-analyzing-requirementsスキルが必須です
+- requirements-interviewスキルが必須です
+- implementation-planning-tasksスキルが必須です
 - これらが正しくインストールされていることを確認してください
 
 ### エラーハンドリング

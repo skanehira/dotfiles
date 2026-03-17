@@ -1,6 +1,6 @@
 ---
 name: requirements
-description: 要件・設計フェーズを実行。user-story → ui-sketch → usecase-description → feasibility-check → ddd-modeling → analyzing-requirements を順次実行し、DESIGN.md を生成。「設計フェーズを開始」「要件を整理したい」「/requirements」などで起動。
+description: 要件・設計フェーズを実行。requirements-user-story → requirements-ui-sketch → requirements-usecase-description → requirements-feasibility-check → requirements-ddd-modeling → requirements-analyzing-requirements を順次実行し、DESIGN.md を生成。「設計フェーズを開始」「要件を整理したい」「/requirements」などで起動。
 ---
 
 # 要件・設計フェーズ
@@ -11,12 +11,12 @@ description: 要件・設計フェーズを実行。user-story → ui-sketch →
 
 ## 実行スキル
 
-1. **user-story** → docs/USER_STORIES.md
-2. **ui-sketch** → docs/UI_SKETCH.md
-3. **usecase-description** → docs/USECASES.md
-4. **feasibility-check** → docs/FEASIBILITY.md
-5. **ddd-modeling** → docs/GLOSSARY.md, docs/MODEL.md
-6. **analyzing-requirements** → docs/DESIGN.md
+1. **requirements-user-story** → docs/USER_STORIES.md
+2. **requirements-ui-sketch** → docs/UI_SKETCH.md
+3. **requirements-usecase-description** → docs/USECASES.md
+4. **requirements-feasibility-check** → docs/FEASIBILITY.md
+5. **requirements-ddd-modeling** → docs/GLOSSARY.md, docs/MODEL.md
+6. **requirements-analyzing-requirements** → docs/DESIGN.md
 
 ## 前提条件
 
@@ -66,12 +66,12 @@ AskUserQuestion({
 
 ```
 📍 要件・設計フェーズ [1/6]
-   ├─ ▶ user-story（実行中）
-   ├─ ○ ui-sketch
-   ├─ ○ usecase-description
-   ├─ ○ feasibility-check
-   ├─ ○ ddd-modeling
-   └─ ○ analyzing-requirements
+   ├─ ▶ requirements-user-story（実行中）
+   ├─ ○ requirements-ui-sketch
+   ├─ ○ requirements-usecase-description
+   ├─ ○ requirements-feasibility-check
+   ├─ ○ requirements-ddd-modeling
+   └─ ○ requirements-analyzing-requirements
 ```
 
 ```javascript
@@ -100,12 +100,12 @@ AskUserQuestion({
 
 ```
 📍 要件・設計フェーズ [2/6]
-   ├─ ✓ user-story（完了）
-   ├─ ▶ ui-sketch（実行中）
-   ├─ ○ usecase-description
-   ├─ ○ feasibility-check
-   ├─ ○ ddd-modeling
-   └─ ○ analyzing-requirements
+   ├─ ✓ requirements-user-story（完了）
+   ├─ ▶ requirements-ui-sketch（実行中）
+   ├─ ○ requirements-usecase-description
+   ├─ ○ requirements-feasibility-check
+   ├─ ○ requirements-ddd-modeling
+   └─ ○ requirements-analyzing-requirements
 ```
 
 ```javascript
@@ -120,12 +120,12 @@ Skill({ skill: "requirements-ui-sketch" })
 
 ```
 📍 要件・設計フェーズ [3/6]
-   ├─ ✓ user-story（完了）
-   ├─ ✓ ui-sketch（完了）
-   ├─ ▶ usecase-description（実行中）
-   ├─ ○ feasibility-check
-   ├─ ○ ddd-modeling
-   └─ ○ analyzing-requirements
+   ├─ ✓ requirements-user-story（完了）
+   ├─ ✓ requirements-ui-sketch（完了）
+   ├─ ▶ requirements-usecase-description（実行中）
+   ├─ ○ requirements-feasibility-check
+   ├─ ○ requirements-ddd-modeling
+   └─ ○ requirements-analyzing-requirements
 ```
 
 ```javascript
@@ -140,12 +140,12 @@ Skill({ skill: "requirements-usecase-description" })
 
 ```
 📍 要件・設計フェーズ [4/6]
-   ├─ ✓ user-story（完了）
-   ├─ ✓ ui-sketch（完了）
-   ├─ ✓ usecase-description（完了）
-   ├─ ▶ feasibility-check（実行中）
-   ├─ ○ ddd-modeling
-   └─ ○ analyzing-requirements
+   ├─ ✓ requirements-user-story（完了）
+   ├─ ✓ requirements-ui-sketch（完了）
+   ├─ ✓ requirements-usecase-description（完了）
+   ├─ ▶ requirements-feasibility-check（実行中）
+   ├─ ○ requirements-ddd-modeling
+   └─ ○ requirements-analyzing-requirements
 ```
 
 ```javascript
@@ -160,12 +160,12 @@ Skill({ skill: "requirements-feasibility-check" })
 
 ```
 📍 要件・設計フェーズ [5/6]
-   ├─ ✓ user-story（完了）
-   ├─ ✓ ui-sketch（完了）
-   ├─ ✓ usecase-description（完了）
-   ├─ ✓ feasibility-check（完了）
-   ├─ ▶ ddd-modeling（実行中）
-   └─ ○ analyzing-requirements
+   ├─ ✓ requirements-user-story（完了）
+   ├─ ✓ requirements-ui-sketch（完了）
+   ├─ ✓ requirements-usecase-description（完了）
+   ├─ ✓ requirements-feasibility-check（完了）
+   ├─ ▶ requirements-ddd-modeling（実行中）
+   └─ ○ requirements-analyzing-requirements
 ```
 
 ```javascript
@@ -180,12 +180,12 @@ Skill({ skill: "requirements-ddd-modeling" })
 
 ```
 📍 要件・設計フェーズ [6/6]
-   ├─ ✓ user-story（完了）
-   ├─ ✓ ui-sketch（完了）
-   ├─ ✓ usecase-description（完了）
-   ├─ ✓ feasibility-check（完了）
-   ├─ ✓ ddd-modeling（完了）
-   └─ ▶ analyzing-requirements（実行中）
+   ├─ ✓ requirements-user-story（完了）
+   ├─ ✓ requirements-ui-sketch（完了）
+   ├─ ✓ requirements-usecase-description（完了）
+   ├─ ✓ requirements-feasibility-check（完了）
+   ├─ ✓ requirements-ddd-modeling（完了）
+   └─ ▶ requirements-analyzing-requirements（実行中）
 ```
 
 ```javascript
