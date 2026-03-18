@@ -1,5 +1,5 @@
 ---
-name: drawio
+name: utility-drawio
 description: Generate draw.io diagrams as .drawio files, optionally export to PNG/SVG/PDF with embedded XML
 allowed-tools: Bash, Write
 ---
