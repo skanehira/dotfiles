@@ -4,10 +4,9 @@
 
 local M = {}
 
--- キャッシュ（コマンドとスキルは変更が少ないためメモリに保持）
+-- キャッシュ（コマンドは変更が少ないためメモリに保持）
 local cache = {
   commands = nil,
-  skills = nil,
 }
 
 -- YAMLフロントマターをパース（簡易実装）
@@ -61,49 +60,62 @@ local function get_commands()
   return cache.commands
 end
 
--- スキル一覧を取得（user-invocable: trueのみ、キャッシュあり）
+-- スキル一覧を取得（user-invocable: trueのみ、都度取得）
 ---@return table { {name = "/impl", description = "..."}, ... }
 local function get_skills()
-  if cache.skills then
-    return cache.skills
-  end
-
-  ---@type table
-  cache.skills = {}
+  local skills = {}
   local seen = {}
   local dirs = {
     vim.fn.expand("~/.claude/skills"),
     vim.fn.getcwd() .. "/.claude/skills",
+    vim.fn.expand("~/.claude/plugins/marketplaces"),
   }
 
+  -- 存在するディレクトリのみ収集
+  local search_dirs = {}
   for _, dir in ipairs(dirs) do
-    local skill_files = vim.fn.glob(dir .. "/*/SKILL.md", false, true)
-    for _, file in ipairs(skill_files) do
-      local lines = vim.fn.readfile(file)
-      local fm = parse_frontmatter(table.concat(lines, "\n"))
-      -- nameがない場合はディレクトリ名を使用
-      local skill_name = fm.name
-      if not skill_name or skill_name == "" then
-        skill_name = vim.fn.fnamemodify(file, ":h:t")
-      end
-      -- 重複を排除
-      if not seen[skill_name] then
-        seen[skill_name] = true
-        table.insert(cache.skills, {
-          name = "/" .. skill_name,
-          description = fm.description or "",
-          type = "skill",
-        })
-      end
+    if vim.fn.isdirectory(dir) == 1 then
+      table.insert(search_dirs, dir)
     end
   end
-  return cache.skills
+  if #search_dirs == 0 then
+    return skills
+  end
+
+  -- rgでSKILL.mdを高速検索
+  local cmd = { "rg", "--files", "--glob", "SKILL.md" }
+  for _, dir in ipairs(search_dirs) do
+    table.insert(cmd, dir)
+  end
+  local skill_files = vim.fn.systemlist(cmd)
+  if vim.v.shell_error ~= 0 then
+    return skills
+  end
+
+  for _, file in ipairs(skill_files) do
+    local lines = vim.fn.readfile(file)
+    local fm = parse_frontmatter(table.concat(lines, "\n"))
+    -- nameがない場合はディレクトリ名を使用
+    local skill_name = fm.name
+    if not skill_name or skill_name == "" then
+      skill_name = vim.fn.fnamemodify(file, ":h:t")
+    end
+    -- 重複を排除
+    if not seen[skill_name] then
+      seen[skill_name] = true
+      table.insert(skills, {
+        name = "/" .. skill_name,
+        description = fm.description or "",
+        type = "skill",
+      })
+    end
+  end
+  return skills
 end
 
 -- キャッシュクリア
 function M.clear_cache()
   cache.commands = nil
-  cache.skills = nil
 end
 
 -- カーソル位置にテキストを挿入
