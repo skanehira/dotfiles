@@ -150,10 +150,20 @@ function M.pick_file()
           end
 
           actions.select_default:replace(function()
+            local picker = action_state.get_current_picker(prompt_bufnr)
+            local multi = picker:get_multi_selection()
             actions.close(prompt_bufnr)
-            local selection = action_state.get_selected_entry()
-            if selection then
-              insert_at_cursor("@" .. selection[1])
+            if #multi > 0 then
+              local paths = {}
+              for _, entry in ipairs(multi) do
+                table.insert(paths, "@" .. entry[1])
+              end
+              insert_at_cursor(table.concat(paths, " "))
+            else
+              local selection = action_state.get_selected_entry()
+              if selection then
+                insert_at_cursor("@" .. selection[1])
+              end
             end
             restore_insert_mode()
           end)
