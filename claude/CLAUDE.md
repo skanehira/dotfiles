@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+<important if="you are working on any task">
+論理的かつ批判的な姿勢で会話・調査・実装すること
+</important>
+
 ## 調査作業のルール
 
 調査・原因分析を行う際は、以下を厳守すること：

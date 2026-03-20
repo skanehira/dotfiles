@@ -356,7 +356,7 @@ end
 -- Claudeを開く
 -- @param args string|nil コマンド引数
 function M.open_claude(args)
-  local base_args = '--append-system-prompt="論理的かつ批判的な姿勢で作業すること"'
+  local base_args = '--effort max'
   if args and args ~= "" then
     args = base_args .. " " .. args
   else
