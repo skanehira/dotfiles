@@ -56,7 +56,6 @@ local nvim_cmp = {
     { 'hrsh7th/cmp-path' },
     { 'hrsh7th/cmp-vsnip' },
     { 'hrsh7th/vim-vsnip' },
-    { 'uga-rosa/cmp-skkeleton' },
   },
   config = config,
   event = { 'InsertEnter' },
