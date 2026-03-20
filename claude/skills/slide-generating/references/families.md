@@ -79,6 +79,19 @@
       style="background: var(--color-accent)">ラベル</span>
 ```
 
+**画像キャプション（スクリーンショット等の補足ラベル）:**
+
+画像の**上部中央**に配置する。absoluteで浮かせるのではなく、画像とセットでflex-colにまとめる。
+
+```html
+<div class="relative flex flex-col items-center">
+  <span class="text-[14px] font-bold px-4 py-1 rounded-full text-white mb-3"
+        style="background: var(--color-primary)">キャプション</span>
+  <img src="screenshot.png" alt="説明" class="rounded-xl shadow-2xl object-contain"
+       style="max-width: 880px; max-height: 620px;" />
+</div>
+```
+
 **矢印コネクタ:**
 ```html
 <svg width="40" height="24" viewBox="0 0 40 24" fill="none">
