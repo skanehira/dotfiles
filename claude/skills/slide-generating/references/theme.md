@@ -200,6 +200,12 @@ body {
     overflow: visible;
   }
 
+  #slide-container {
+    width: auto;
+    height: auto;
+    overflow: visible;
+  }
+
   .slide {
     position: relative;
     top: auto;
@@ -210,13 +216,18 @@ body {
     page-break-after: always;
   }
 
+  /* box-shadow は印刷時に描画差異が出るため除去 */
+  * {
+    box-shadow: none !important;
+  }
+
   #slide-nav,
   #slide-progress {
     display: none !important;
   }
 
   @page {
-    size: 1920px 1080px landscape;
+    size: 1920px 1080px;
     margin: 0;
   }
 }
