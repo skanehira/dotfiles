@@ -231,8 +231,7 @@ const { chromium } = require('playwright-core');
       path: '{出力PDFパス}',
       width: '1920px',
       height: '1080px',
-      printBackground: true,
-      landscape: true
+      printBackground: true
     });
     await browser.close();
     console.log('PDF出力完了: {出力PDFパス}');
