@@ -29,6 +29,11 @@ diagram family の各 variant は異なる semantic_pattern に属する。varia
 | venn      | relationship     | 要素の重なり・共通部分         | 共通領域の可視化、2-3要素              |
 | pyramid   | hierarchy        | スケール階層（上→小 or 上→大） | TAM-SAM-SOM、組織階層                  |
 | tree      | hierarchy        | 分類・分解の木構造             | ユニットエコノミクス分解、カテゴリ分類 |
+| concentric | relationship    | 同心円の包括関係               | TAM/SAM/SOM、市場規模の入れ子         |
+| mutual    | relationship     | 双方向の相互作用               | サービスと関係者の価値交換             |
+| staircase | hierarchy        | 段階的な成長・成熟度           | 成熟度モデル、レベル表現               |
+| scale-compare | compare      | 規模の大小を視覚的に比較       | 市場規模比較、競合比較                 |
+| box-flow  | process          | 分岐・合流のある複雑フロー     | 条件分岐、承認フロー、業務フロー       |
 
 **org-chart vs pyramid vs tree の使い分け:**
 - org-chart: 「誰が誰に報告するか」（人・組織の関係）
@@ -103,46 +108,46 @@ diagram family の各 variant は異なる semantic_pattern に属する。varia
 | 並列・横並び                   | parallel     | テキスト量少: grid.cards (横並び) / テキスト量多: single-column.bullet-list (縦並び)          |
 | 並列・縦並び                   | parallel     | 説明文が長い: single-column.bullet-list / 短い+アイコンあり: grid.cards (1列縦)               |
 | 並列・複数羅列                 | parallel     | 4個以下: grid.cards (1行) / 5個以上: grid.cards (2x3等の複数行)                               |
-| 比較・規模比較                 | compare      | 数値差を強調: hero.big-number (並置) / 視覚的サイズ差: split.comparison (大小の図)            |
+| 比較・規模比較                 | compare      | 数値差を強調: hero.big-number (並置) / 視覚的サイズ差: diagram.scale-compare (異なるサイズの円) / split.comparison (大小の図) |
 | 比較・項目比較                 | compare      | 2項目: split.comparison / 3項目以上: grid.cards + 差異ハイライト                              |
 | 比較・表での比較               | compare      | 機能比較: table.feature-comparison / 料金比較: table.pricing                                  |
 | フロー・横型                   | process      | アイコンあり+項目4以下: sequence.steps / アイコンなし+項目多い: diagram.flow                  |
 | フロー・縦型                   | process      | 各ステップに説明文あり: single-column.bullet-list (番号付き) / 説明少: sequence.steps (縦)    |
-| フロー・箱型                   | process      | 分岐・合流あり: diagram.flow / 単純な直列: sequence.steps                                     |
+| フロー・箱型                   | process      | 分岐・合流あり: diagram.box-flow / 単純な直列: sequence.steps                                 |
 | サイクル・円                   | cycle        | 2-3要素: diagram.cycle (円形配置)                                                             |
 | サイクル・四角                 | cycle        | 4要素以上: diagram.cycle (四角配置)                                                           |
 | ピラミッド型                   | hierarchy    | 量・重要度が上→小: diagram.pyramid (正三角形)                                                 |
-| じょうろ型                     | hierarchy    | ファネル・量が上→大: diagram.pyramid (逆三角形)                                               |
+| じょうろ型                     | hierarchy    | ファネル・量が上→大: funnel.funnel / funnel.funnel-bar（リッチ版）/ diagram.pyramid (シンプル版) |
 | マトリクス                     | compare      | 2軸×2軸の4象限分析: diagram.matrix                                                            |
 | ベン図                         | relationship | 2-3要素の重なり: diagram.venn / 4要素以上は matrix か table に変更                            |
 | ツリー図                       | hierarchy    | 論理分解・カテゴリ分類: diagram.tree / 人の報告ラインなら diagram.org-chart                   |
-| 数式                           | relationship | A = B / C 等の演算関係: split.two-column (左に式、右に解説)                                   |
-| 掛け算                         | relationship | A × B の相乗効果: split.two-column (要素間に × 記号)                                          |
-| 足し算                         | relationship | A + B の組み合わせ: split.two-column (要素間に + 記号)                                        |
+| 数式                           | relationship | A = B / C 等の演算関係: formula.equation (分数スタイル) / split.two-column (左に式、右に解説)  |
+| 掛け算                         | relationship | A × B の相乗効果: formula.multiply (円アイコン+×記号) / split.two-column (要素間に × 記号)     |
+| 足し算                         | relationship | A + B の組み合わせ: formula.addition (カード+→結果) / split.two-column (要素間に + 記号)       |
 | 領域                           | relationship | 対応範囲の可視化: split.two-column (左右で対応線) / 多対多: diagram.flow                      |
-| 階段                           | hierarchy    | 段階的成長・ステップアップ: sequence.steps (階段状CSS) / 段階数多い: diagram.pyramid (横向き) |
-| 重複                           | relationship | 共有部分の可視化: diagram.venn (重なり強調)                                                   |
-| 包括                           | relationship | A ⊂ B の包含: diagram.venn (入れ子円) / 多段包含: diagram.pyramid                             |
-| 相互関係                       | relationship | 双方向矢印: diagram.flow (双方向) / 2要素: split.two-column (矢印付き)                        |
+| 階段                           | hierarchy    | 段階的成長・ステップアップ: diagram.staircase (階段型棒) / sequence.steps (階段状CSS) / 段階数多い: diagram.pyramid (横向き) |
+| 重複                           | relationship | 共有部分の可視化: diagram.venn (重なり強調) / 共有ヘッダー: table.overlap                      |
+| 包括                           | relationship | A ⊂ B の包含: diagram.concentric (同心円) / diagram.venn (入れ子円) / 多段包含: diagram.pyramid |
+| 相互関係                       | relationship | 双方向矢印: diagram.mutual (双方向矢印) / diagram.flow (双方向) / 2要素: split.two-column (矢印付き) |
 | ビフォーアフター               | compare      | 画像比較: split.comparison (左右に画像) / テキスト比較: split.comparison (左右にテキスト)     |
-| グラフ（棒/円/折線）           | data-viz     | 推移: Chart.js 折線 / 比率: Chart.js 円 / 比較: Chart.js 棒                                   |
-| キャプチャ（羅列/拡大/フロー） | evidence     | 1枚+説明: split.text-image / 複数枚羅列: grid.cards / フロー形式: sequence.steps (画像付き)   |
+| グラフ（棒/円/折線）           | data-viz     | 縦棒: chart.bar-vertical / 横棒: chart.bar-horizontal / 円: chart.pie-simple / 推移: Chart.js 折線 |
+| キャプチャ（羅列/拡大/フロー） | evidence     | 1枚+説明: split.text-image / 拡大表示: split.capture-zoom / 複数枚羅列: grid.cards / フロー形式: sequence.steps (画像付き) |
 | 料金体系                       | compare      | プラン比較: table.pricing / 単一プラン詳細: single-column.text-block                          |
-| 表                             | compare      | 項目数少+比較目的: table.feature-comparison / 情報一覧: table.data-table                      |
+| 表                             | compare      | 項目数少+比較目的: table.feature-comparison / 項目数少+定義リスト型: table.data-table          |
 | 拠点                           | evidence     | 地図+拠点マーク: split.text-image (左に地図、右にリスト) / リストのみ: grid.cards             |
-| スケジュール                   | process      | 時系列: sequence.timeline / マイルストーン少: sequence.steps                                  |
-| ランキング                     | data-viz     | 数値差を強調: Chart.js 横棒グラフ / 順位のみ: single-column.bullet-list (番号付き)            |
-| 事例                           | evidence     | 画像+テキスト: split.text-image / 複数事例: grid.cards                                        |
+| スケジュール                   | process      | 時系列: sequence.timeline / ガントチャート: sequence.gantt / マイルストーン少: sequence.steps  |
+| ランキング                     | data-viz     | 横バー: ranking.bar-ranking / テーブル: ranking.table-ranking / 順位のみ: single-column.bullet-list (番号付き) |
+| 事例                           | evidence     | 画像+テキスト: case-study.photo-text / 複数事例KPI: case-study.metric-cards / split.text-image / grid.cards |
 | テキストのみ                   | page-role    | 短文メッセージ: hero.big-number / 長文説明: single-column.text-block                          |
 | Q&A                            | page-role    | 1問1答: split.two-column (左Q右A) / 複数Q&A: single-column.bullet-list                        |
 | 名言                           | page-role    | 引用+出典: hero.quote                                                                         |
 | ピクトグラム                   | page-role    | アイコン+短テキスト: grid.cards (アイコン付き) / 1つのアイコン強調: hero.big-number           |
 | 表紙                           | page-role    | タイトル+サブタイトル: hero.cover                                                             |
-| 目次                           | page-role    | 項目数少: hero.section-divider / 項目数多: single-column.bullet-list                          |
-| 会社概要                       | page-role    | 項目一覧: table.data-table / 概要+画像: split.text-image                                      |
-| メンバー紹介                   | page-role    | 写真+名前+役職: grid.team-members                                                             |
+| 目次                           | page-role    | リスト型: toc.list / グループ型: toc.grouped / 円型: toc.circle / シンプル: hero.section-divider |
+| 会社概要                       | page-role    | ロゴ付き: company-profile.standard / テキストのみ: company-profile.text-only / ロゴ一覧付き: company-profile.with-clients |
+| メンバー紹介                   | page-role    | 1名詳細: grid.team-member-1 / 2名紹介: grid.team-member-2 / 3名以上: grid.team-members        |
 | MVV提示                        | page-role    | 短い標語: hero.big-number / 長い説明付き: hero.quote                                          |
 | 背景静止画                     | page-role    | 画像全面+テキストオーバーレイ: hero.cover (背景画像指定)                                      |
 | 会社沿革                       | process      | 年表形式: sequence.timeline                                                                   |
-| 導入実績                       | evidence     | ロゴ一覧: grid.logos / 社名+説明: grid.cards                                                  |
+| 導入実績                       | evidence     | ロゴ一覧: grid.logos / 社名+説明: grid.cards / 数値押し出し: grid.achievement-metric / 月桂冠: grid.achievement-award |
 | 組織図                         | hierarchy    | 人・部門の報告ライン: diagram.org-chart                                                       |
