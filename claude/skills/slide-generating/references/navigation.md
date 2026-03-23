@@ -1,5 +1,18 @@
 # スライドナビゲーション
 
+## スクリプト配置順序
+
+ナビゲーションJSは、テンプレート関数によるスライド生成（`document.getElementById('slide-container').innerHTML = [...]`）の**後**に配置すること。スライドのDOM要素が存在しない状態でナビゲーションJSが実行されるとエラーになる。
+
+```html
+<script>
+  /* テンプレート関数定義 + スライド生成 */
+</script>
+<script>
+  /* ナビゲーションJS（この script ブロック） */
+</script>
+```
+
 ## 機能
 
 - キーボード操作（←→ / スペース / Home / End）
@@ -159,12 +172,12 @@
 
 ## キーボード操作一覧
 
-| キー | 動作 |
-|------|------|
-| → / Space / PageDown | 次のスライド |
-| ← / PageUp | 前のスライド |
-| Home | 最初のスライド |
-| End | 最後のスライド |
+| キー                 | 動作           |
+| -------------------- | -------------- |
+| → / Space / PageDown | 次のスライド   |
+| ← / PageUp           | 前のスライド   |
+| Home                 | 最初のスライド |
+| End                  | 最後のスライド |
 
 ## 品質レビュー時のスライド移動
 
@@ -176,11 +189,11 @@ navigateToSlide(3); // 3枚目のスライドに移動
 
 ## エッジケース処理
 
-| ケース | 操作 | 動作 |
-|--------|------|------|
-| 最初のスライド（currentSlide = 0） | ← キー | `showSlide(-1)` → index < 0 で return、何も起きない |
-| 最後のスライド（currentSlide = totalSlides - 1） | → キー | `showSlide(totalSlides)` → index >= totalSlides で return、何も起きない |
-| スライド1枚のみ | ← or → | 同上、移動しない |
-| URLハッシュが不正（#abc, #999） | ページ読み込み | `parseInt` が NaN or 範囲外 → `getInitialSlide()` が 0 を返す |
+| ケース                                           | 操作           | 動作                                                                    |
+| ------------------------------------------------ | -------------- | ----------------------------------------------------------------------- |
+| 最初のスライド（currentSlide = 0）               | ← キー         | `showSlide(-1)` → index < 0 で return、何も起きない                     |
+| 最後のスライド（currentSlide = totalSlides - 1） | → キー         | `showSlide(totalSlides)` → index >= totalSlides で return、何も起きない |
+| スライド1枚のみ                                  | ← or →         | 同上、移動しない                                                        |
+| URLハッシュが不正（#abc, #999）                  | ページ読み込み | `parseInt` が NaN or 範囲外 → `getInitialSlide()` が 0 を返す           |
 
 すべてのエッジケースでエラーは発生せず、静かに無視される設計。

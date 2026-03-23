@@ -84,27 +84,27 @@ family のベースライン HTML テンプレート（`families.md`）に対し
 
 ### 必ずビジュアルを入れるべきスライド
 
-| 状況 | semantic_pattern | 推奨ビジュアル |
-|------|-----------------|-------------|
-| プロダクト・サービス紹介 | evidence | スクリーンショット、デバイスモックアップ |
-| 人物紹介・チーム紹介 | page-role | 顔写真（丸切り抜き） |
-| Before/After・比較 | compare | 左右にアイコンまたは図解 |
-| 数字・KPI | data-viz | big-number variant + 補助的なチャートやアイコン |
-| プロセス・フロー | process | sequence variant のステップにアイコン |
-| デモ・実演 | evidence | 画面スクリーンショット or 操作画面 |
-| 会社紹介 | page-role | オフィス写真、ロゴ |
-| 循環関係 | cycle | diagram.cycle でノード接続 |
-| 階層・分類 | hierarchy | diagram.pyramid / tree / org-chart |
-| 要素の重なり | relationship | diagram.venn |
-| 4象限分析 | compare | diagram.matrix |
+| 状況                     | semantic_pattern | 推奨ビジュアル                                  |
+| ------------------------ | ---------------- | ----------------------------------------------- |
+| プロダクト・サービス紹介 | evidence         | スクリーンショット、デバイスモックアップ        |
+| 人物紹介・チーム紹介     | page-role        | 顔写真（丸切り抜き）                            |
+| Before/After・比較       | compare          | 左右にアイコンまたは図解                        |
+| 数字・KPI                | data-viz         | big-number variant + 補助的なチャートやアイコン |
+| プロセス・フロー         | process          | sequence variant のステップにアイコン           |
+| デモ・実演               | evidence         | 画面スクリーンショット or 操作画面              |
+| 会社紹介                 | page-role        | オフィス写真、ロゴ                              |
+| 循環関係                 | cycle            | diagram.cycle でノード接続                      |
+| 階層・分類               | hierarchy        | diagram.pyramid / tree / org-chart              |
+| 要素の重なり             | relationship     | diagram.venn                                    |
+| 4象限分析                | compare          | diagram.matrix                                  |
 
 ### テキストのみで良いスライド
 
-| 状況 | semantic_pattern | 理由 |
-|------|-----------------|------|
-| 目次・アジェンダ | page-role | 構造自体がビジュアル（番号 + 見出し） |
-| 引用・キーメッセージ | page-role | テキストの「大きさ」がビジュアル要素 |
-| Q&A | page-role | Q/Aのアイコンレターが視覚的アクセント |
+| 状況                 | semantic_pattern | 理由                                  |
+| -------------------- | ---------------- | ------------------------------------- |
+| 目次・アジェンダ     | page-role        | 構造自体がビジュアル（番号 + 見出し） |
+| 引用・キーメッセージ | page-role        | テキストの「大きさ」がビジュアル要素  |
+| Q&A                  | page-role        | Q/Aのアイコンレターが視覚的アクセント |
 
 ### アイコンで補強すべきスライド
 
@@ -276,15 +276,15 @@ placehold.jpパラメータ:
 
 Spatial Style の装飾プロパティと family の組み合わせで推奨される装飾パターン:
 
-| family | geometric | organic | minimal | textured |
-|--------|-----------|---------|---------|----------|
-| hero (cover/divider) | 三角形アクセント | 波形+ブロブ | 縦線+水平線 | ノイズオーバーレイ |
-| split | 斜線ストライプ（分割側） | 曲線分割線 | 単一縦線 | — |
-| grid | ドットグリッド（背景） | ブロブ（角） | — | ノイズ（カード内） |
-| sequence | 矢印+直線コネクタ | 曲線コネクタ | 直線のみ | — |
-| table | ヘッダー幾何学パターン | — | 罫線のみ | — |
-| diagram | — | — | — | — |
-| single-column | ドットグリッド | ブロブ（隅） | アクセント線 | ノイズ |
+| family               | geometric                | organic      | minimal      | textured           |
+| -------------------- | ------------------------ | ------------ | ------------ | ------------------ |
+| hero (cover/divider) | 三角形アクセント         | 波形+ブロブ  | 縦線+水平線  | ノイズオーバーレイ |
+| split                | 斜線ストライプ（分割側） | 曲線分割線   | 単一縦線     | —                  |
+| grid                 | ドットグリッド（背景）   | ブロブ（角） | —            | ノイズ（カード内） |
+| sequence             | 矢印+直線コネクタ        | 曲線コネクタ | 直線のみ     | —                  |
+| table                | ヘッダー幾何学パターン   | —            | 罫線のみ     | —                  |
+| diagram              | —                        | —            | —            | —                  |
+| single-column        | ドットグリッド           | ブロブ（隅） | アクセント線 | ノイズ             |
 
 **diagram family は装飾を追加しない**（図自体がビジュアル要素のため）。
 **「—」は該当パターンを推奨しない**ことを示す。
