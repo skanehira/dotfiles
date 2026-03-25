@@ -99,12 +99,8 @@
     }
   });
 
-  // クリックで次スライド（ナビ部分は除外）
-  document.getElementById('slide-container').addEventListener('click', function(e) {
-    if (!e.target.closest('#slide-nav')) {
-      nextSlide();
-    }
-  });
+  // クリックでのスライド移動は無効（誤操作防止）
+  // キーボード操作のみでスライドを移動する
 
   // ウィンドウリサイズ時のスケーリング
   function scaleSlides() {
