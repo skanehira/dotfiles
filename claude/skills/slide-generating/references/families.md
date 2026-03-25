@@ -57,7 +57,7 @@ const _L = 'assets/logo.svg';
 
 ### スライドシェル関数
 
-**S(n, fam, v, content, o={})** — 通常スライド（白背景 + ロゴ + フッター）
+**S(n, fam, v, content, o={})** — 通常スライド（白背景 + ロゴ）
 
 ```javascript
 function S(n, fam, v, content, o={}) {
@@ -65,11 +65,9 @@ function S(n, fam, v, content, o={}) {
   return `<section class="slide" data-slide="${n}" data-family="${fam}" data-variant="${v}">
   <div class="w-[1920px] h-[1080px] relative overflow-hidden" style="background: ${bg}; padding: var(--spacing-slide-padding)">
     <div class="absolute top-16 left-20"><img src="${_L}" alt="ロゴ" class="h-10" /></div>
-    <div style="margin-top: var(--spacing-gap-lg); display: flex; flex-direction: column; height: calc(100% - 6rem)">
+    <div style="margin-top: var(--spacing-gap-lg); display: flex; flex-direction: column; height: calc(100% - 3rem)">
       ${content}
     </div>
-    <div class="absolute bottom-8 left-20 text-sm" style="color: var(--color-text-muted)"><span style="margin-right: var(--spacing-gap-sm)">${n}</span><span>${o.sec || ''}</span></div>
-    <div class="absolute bottom-8 right-8 text-sm" style="color: var(--color-text-muted)">&copy; ${_C}</div>
   </div></section>`;
 }
 ```
@@ -81,7 +79,6 @@ function S(n, fam, v, content, o={}) {
 | `v`        | variant名                               |
 | `content`  | コンテンツHTML                          |
 | `o.bg`     | 背景色（デフォルト: `var(--color-bg)`） |
-| `o.sec`    | セクション名（フッター表示用）          |
 
 **D(n, v, content, o={})** — 暗い背景スライド（family は常に `hero`）
 
@@ -91,7 +88,6 @@ function D(n, v, content, o={}) {
   return `<section class="slide" data-slide="${n}" data-family="hero" data-variant="${v}">
   <div class="w-[1920px] h-[1080px] relative overflow-hidden" style="background: ${bg}">
     ${content}
-    <div class="absolute bottom-8 right-8 text-white/30 text-sm">&copy; ${_C}</div>
   </div></section>`;
 }
 ```
@@ -105,8 +101,6 @@ function SFlex(n, fam, v, content, o={}) {
   <div class="w-[1920px] h-[1080px] relative overflow-hidden flex" style="background: ${bg}">
     <div class="absolute top-16 left-20 z-10"><img src="${_L}" alt="ロゴ" class="h-10" /></div>
     ${content}
-    <div class="absolute bottom-8 left-20 text-sm z-10" style="color: var(--color-text-muted)"><span style="margin-right: var(--spacing-gap-sm)">${n}</span><span>${o.sec || ''}</span></div>
-    <div class="absolute bottom-8 right-8 text-sm z-10" style="color: var(--color-text-muted)">&copy; ${_C}</div>
   </div></section>`;
 }
 ```
