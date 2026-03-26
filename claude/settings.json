@@ -9,6 +9,7 @@
     "deny": [],
     "defaultMode": "bypassPermissions"
   },
+  "model": "opus[1m]",
   "enableAllProjectMcpServers": true,
   "hooks": {
     "Stop": [
@@ -43,7 +44,9 @@
     "code-simplifier@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
-    "deploy-on-aws@agent-plugins-for-aws": true
+    "deploy-on-aws@agent-plugins-for-aws": true,
+    "feature-dev@claude-plugins-official": true,
+    "swift-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
@@ -75,7 +78,6 @@
   "spinnerTipsEnabled": false,
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
-  "skipDangerousModePermissionPrompt": true,
   "voiceEnabled": true,
-  "model": "opus[1m]"
+  "skipDangerousModePermissionPrompt": true
 }
