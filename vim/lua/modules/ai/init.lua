@@ -356,7 +356,7 @@ end
 -- Claudeを開く
 -- @param args string|nil コマンド引数
 function M.open_claude(args)
-  local base_args = '--effort max'
+  local base_args = ''
   if args and args ~= "" then
     args = base_args .. " " .. args
   else
