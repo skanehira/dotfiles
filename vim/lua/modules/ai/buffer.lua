@@ -19,13 +19,6 @@ function M.close_buffer(bufnr)
   end
 end
 
--- バッファの内容をクリアする
--- @param bufnr number バッファ番号
-function M.clear_buffer(bufnr)
-  if vim.api.nvim_buf_is_valid(bufnr) then
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
-  end
-end
 
 -- バッファローカルキーマップを設定
 -- @param bufnr number バッファ番号
@@ -33,23 +26,22 @@ end
 local function setup_keymaps(bufnr, config)
   local opts = { buffer = bufnr, noremap = true, silent = true }
 
-  -- <CR>: ノーマルモードでEnterキーを押してテキストを送信
+  -- <CR>: ノーマルモードでEnterキーを押してテキストを送信し、バッファをクリア
   if config.on_submit then
     vim.keymap.set("n", "<CR>", function()
       local content = M.get_buffer_content(bufnr)
       config.on_submit(content, bufnr)
-    end, vim.tbl_extend("force", opts, { desc = "Submit and close buffer" }))
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+    end, vim.tbl_extend("force", opts, { desc = "Submit and clear buffer" }))
   end
 
-  -- q: バッファを閉じる（変更がある場合は閉じない）
+  -- q: ウィンドウだけ閉じる（バッファは保持）
   vim.keymap.set("n", "q", function()
-    local modified = vim.bo[bufnr].modified
-    if modified then
-      vim.notify("No write since last change (add ! to override)", vim.log.levels.WARN)
-    else
-      M.close_buffer(bufnr)
+    local win = vim.api.nvim_get_current_win()
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
     end
-  end, vim.tbl_extend("force", opts, { desc = "Close buffer" }))
+  end, vim.tbl_extend("force", opts, { desc = "Close float window" }))
 
   -- <C-x>: ペインで動いているプロセスを終了
   if config.on_interrupt then
@@ -107,11 +99,18 @@ local function setup_keymaps(bufnr, config)
     end, vim.tbl_extend("force", opts, { desc = "Send Space to tmux pane" }))
   end
 
-  -- <C-c>: コピーモードを終了
-  if config.on_exit_copy_mode then
+  -- <C-c>: C-cをtmux側に送信
+  if config.on_send_ctrl_c then
     vim.keymap.set("n", "<C-c>", function()
-      config.on_exit_copy_mode()
-    end, vim.tbl_extend("force", opts, { desc = "Exit tmux copy mode" }))
+      config.on_send_ctrl_c()
+    end, vim.tbl_extend("force", opts, { desc = "Send C-c to tmux pane" }))
+  end
+
+  -- <Esc>: Escapeをtmux側に送信
+  if config.on_send_escape then
+    vim.keymap.set("n", "<Esc>", function()
+      config.on_send_escape()
+    end, vim.tbl_extend("force", opts, { desc = "Send Escape to tmux pane" }))
   end
 
   -- <C-r>: ファイル検索（telescope）
@@ -188,16 +187,31 @@ local function find_window_with_buffer(bufnr)
   return nil
 end
 
--- 新しいウィンドウでバッファを開く（高さは画面の1/4）
+-- フローティングウィンドウでバッファを開く
 -- @param bufnr number バッファ番号
-local function open_buffer_in_new_window(bufnr)
-  local height = math.floor(vim.o.lines / 10)
-  vim.cmd(string.format("%dnew", height))
-  vim.api.nvim_set_current_buf(bufnr)
+-- @param title string|nil ウィンドウタイトル
+local function open_buffer_in_float_window(bufnr, title)
+  local width = math.min(math.floor(vim.o.columns * 0.8), 120)
+  local height = 5
+  local row = math.floor((vim.o.lines - height - 2) / 2)
+  local col = math.floor((vim.o.columns - width - 2) / 2)
 
-  -- ウィンドウの高さを固定
-  local win = vim.api.nvim_get_current_win()
-  vim.wo[win].winfixheight = true
+  local opts = {
+    relative = "editor",
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    border = "rounded",
+  }
+
+  if title then
+    opts.title = " " .. title .. " "
+    opts.title_pos = "center"
+  end
+
+  local win = vim.api.nvim_open_win(bufnr, true, opts)
+  vim.wo[win].winhighlight = "Normal:Normal,FloatBorder:FloatBorder"
 end
 
 -- 入力用バッファを作成または既存のものを表示
@@ -222,13 +236,10 @@ function M.create_input_buffer(config)
     if win then
       -- ウィンドウに表示されている場合はフォーカス
       vim.api.nvim_set_current_win(win)
-      -- ウィンドウの高さを固定（念のため再設定）
-      vim.wo[win].winfixheight = true
     else
-      -- ウィンドウに表示されていない場合は新しいウィンドウで開く
-      open_buffer_in_new_window(existing_bufnr)
+      -- ウィンドウに表示されていない場合は新しいfloatで開く
+      open_buffer_in_float_window(existing_bufnr, config.name)
     end
-    -- インサートモードで開始
     vim.cmd("startinsert")
     return existing_bufnr
   end
@@ -238,7 +249,7 @@ function M.create_input_buffer(config)
 
   -- バッファオプションを設定
   vim.bo[bufnr].buftype = "nofile"
-  vim.bo[bufnr].bufhidden = "wipe"
+  vim.bo[bufnr].bufhidden = "hide"
   vim.bo[bufnr].swapfile = false
 
   if config.filetype then
@@ -249,13 +260,12 @@ function M.create_input_buffer(config)
     vim.b[bufnr].ai_buffer_name = config.name
   end
 
-  -- 新しいウィンドウを作成してバッファを開く
-  open_buffer_in_new_window(bufnr)
+  -- フローティングウィンドウでバッファを開く
+  open_buffer_in_float_window(bufnr, config.name)
 
   -- キーマップを設定（新しいバッファの場合のみ）
   setup_keymaps(bufnr, config)
 
-  -- インサートモードで開始
   vim.cmd("startinsert")
 
   return bufnr

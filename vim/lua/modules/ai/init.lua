@@ -86,7 +86,8 @@ end
 -- 入力バッファを開く共通処理
 -- @param tool_name string ツール名（"claude" または "codex"）
 -- @param args string|nil コマンド引数
-local function open_input_buffer(tool_name, args)
+-- @param context string|nil ビジュアル選択コンテキスト（送信時にプロンプト先頭に付与）
+local function open_input_buffer(tool_name, args, context)
   -- tmuxセッション内かチェック
   if not tmux.is_in_tmux() then
     vim.notify("エラー: このコマンドはtmuxセッション内でのみ使用できます", vim.log.levels.ERROR)
@@ -116,259 +117,294 @@ local function open_input_buffer(tool_name, args)
     return current_id
   end
 
-  -- 入力バッファを作成
+  -- tmuxペイン作成後、Neovimのリサイズが反映されてからfloatを作成
   local buffer_name = string.format("[%s Input]", tool_name:gsub("^%l", string.upper))
-  buffer.create_input_buffer({
-    name = buffer_name,
-    filetype = "markdown",
-    on_submit = function(content, bufnr)
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
-
-      -- スクロール中の場合はコピーモードを終了
-      tmux.exit_copy_mode(current_pane)
-
-      -- Codexの場合はテキストの末尾に改行を追加（Codexは改行がないと送信されない）
-      local text = content
-      if tool_name == "codex" then
-        text = content .. "\n"
-      end
-
-      -- テキストをペインに送信
-      local success, err = tmux.send_text(current_pane, text)
-      if not success then
-        vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"), vim.log.levels.ERROR)
-      end
-
-      -- バッファをクリア
-      buffer.clear_buffer(bufnr)
-    end,
-    on_scroll_down = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
-
-      local success, err = tmux.scroll(current_pane, "down")
-      if not success then
-        vim.notify("ペインのスクロールダウンに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-      end
-    end,
-    on_scroll_up = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
-
-      local success, err = tmux.scroll(current_pane, "up")
-      if not success then
-        vim.notify("ペインのスクロールアップに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-      end
-    end,
-    on_interrupt = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
-
-      local success, err = tmux.kill_pane(current_pane)
-      if success then
-        -- ペインを削除したので状態もクリア
-        if tool_name == "claude" then
-          state.claude_pane = nil
-        elseif tool_name == "codex" then
-          state.codex_pane = nil
+  vim.schedule(function()
+    local bufnr = buffer.create_input_buffer({
+      name = buffer_name,
+      filetype = "markdown",
+      on_submit = function(content, submit_bufnr)
+        -- 最新のペインIDを取得
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
         end
-        vim.notify(string.format("%sペインを終了しました", tool_name), vim.log.levels.INFO)
-      else
-        vim.notify(string.format("%sペインの終了に失敗しました:\n%s", tool_name, err or "不明なエラー"), vim.log.levels.ERROR)
-      end
-    end,
-    on_scroll_line_down = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
 
-      -- コピーモードなら1行スクロール、そうでなければC-nを送信
-      if tmux.is_in_copy_mode(current_pane) then
-        local success, err = tmux.scroll_line(current_pane, "down")
+        -- スクロール中の場合はコピーモードを終了
+        tmux.exit_copy_mode(current_pane)
+
+        -- ビジュアル選択コンテキストがあればプロンプトの先頭に付与
+        local text = content
+        local ctx = vim.b[submit_bufnr] and vim.b[submit_bufnr].ai_visual_context or nil
+        if ctx then
+          text = ctx .. text
+        end
+
+        -- Codexの場合はテキストの末尾に改行を追加（Codexは改行がないと送信されない）
+        if tool_name == "codex" then
+          text = text .. "\n"
+        end
+
+        -- テキストをペインに送信
+        local success, err = tmux.send_text(current_pane, text)
         if not success then
-          vim.notify("ペインの1行スクロールダウンに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+          vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"), vim.log.levels.ERROR)
         end
-      else
-        local success, err = tmux.send_keys(current_pane, "C-n")
+      end,
+      on_scroll_down = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
+
+        local success, err = tmux.scroll(current_pane, "down")
         if not success then
-          vim.notify("C-nの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+          vim.notify("ペインのスクロールダウンに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
         end
-      end
-    end,
-    on_scroll_line_up = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
+      end,
+      on_scroll_up = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
 
-      -- コピーモードなら1行スクロール、そうでなければC-pを送信
-      if tmux.is_in_copy_mode(current_pane) then
-        local success, err = tmux.scroll_line(current_pane, "up")
+        local success, err = tmux.scroll(current_pane, "up")
         if not success then
-          vim.notify("ペインの1行スクロールアップに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+          vim.notify("ペインのスクロールアップに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
         end
-      else
-        local success, err = tmux.send_keys(current_pane, "C-p")
+      end,
+      on_interrupt = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
+
+        local success, err = tmux.kill_pane(current_pane)
+        if success then
+          if tool_name == "claude" then
+            state.claude_pane = nil
+          elseif tool_name == "codex" then
+            state.codex_pane = nil
+          end
+          vim.notify(string.format("%sペインを終了しました", tool_name), vim.log.levels.INFO)
+        else
+          vim.notify(string.format("%sペインの終了に失敗しました:\n%s", tool_name, err or "不明なエラー"), vim.log.levels.ERROR)
+        end
+      end,
+      on_scroll_line_down = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
+
+        if tmux.is_in_copy_mode(current_pane) then
+          local success, err = tmux.scroll_line(current_pane, "down")
+          if not success then
+            vim.notify("ペインの1行スクロールダウンに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+          end
+        else
+          local success, err = tmux.send_keys(current_pane, "C-n")
+          if not success then
+            vim.notify("C-nの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+          end
+        end
+      end,
+      on_scroll_line_up = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
+
+        if tmux.is_in_copy_mode(current_pane) then
+          local success, err = tmux.scroll_line(current_pane, "up")
+          if not success then
+            vim.notify("ペインの1行スクロールアップに失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+          end
+        else
+          local success, err = tmux.send_keys(current_pane, "C-p")
+          if not success then
+            vim.notify("C-pの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+          end
+        end
+      end,
+      on_send_tab = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
+
+        local success, err = tmux.send_keys(current_pane, "Tab")
         if not success then
-          vim.notify("C-pの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+          vim.notify("Tabの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
         end
-      end
-    end,
-    on_send_tab = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
+      end,
+      on_send_shift_tab = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
 
-      local success, err = tmux.send_keys(current_pane, "Tab")
-      if not success then
-        vim.notify("Tabの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-      end
-    end,
-    on_send_shift_tab = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
+        local success, err = tmux.send_keys(current_pane, "BTab")
+        if not success then
+          vim.notify("Shift+Tabの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end,
+      on_send_space = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
 
-      local success, err = tmux.send_keys(current_pane, "BTab")
-      if not success then
-        vim.notify("Shift+Tabの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-      end
-    end,
-    on_send_space = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
+        local success, err = tmux.send_keys(current_pane, "Space")
+        if not success then
+          vim.notify("Spaceの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end,
+      on_send_ctrl_c = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
 
-      local success, err = tmux.send_keys(current_pane, "Space")
-      if not success then
-        vim.notify("Spaceの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-      end
-    end,
-    on_exit_copy_mode = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
+        local success, err = tmux.send_keys(current_pane, "C-c")
+        if not success then
+          vim.notify("C-cの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end,
+      on_send_escape = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
 
-      tmux.exit_copy_mode(current_pane)
-    end,
-    on_send_ctrl_v = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
+        local success, err = tmux.send_keys(current_pane, "Escape")
+        if not success then
+          vim.notify("Escapeの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end,
+      on_send_ctrl_v = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
 
-      local success, err = tmux.send_keys(current_pane, "C-v")
-      if not success then
-        vim.notify("Ctrl+Vの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-      end
-    end,
-    on_send_up = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
+        local success, err = tmux.send_keys(current_pane, "C-v")
+        if not success then
+          vim.notify("Ctrl+Vの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end,
+      on_send_up = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
 
-      local success, err = tmux.send_keys(current_pane, "Up")
-      if not success then
-        vim.notify("Upの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-      end
-    end,
-    on_send_down = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
+        local success, err = tmux.send_keys(current_pane, "Up")
+        if not success then
+          vim.notify("Upの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end,
+      on_send_down = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
 
-      local success, err = tmux.send_keys(current_pane, "Down")
-      if not success then
-        vim.notify("Downの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-      end
-    end,
-    on_send_left = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
+        local success, err = tmux.send_keys(current_pane, "Down")
+        if not success then
+          vim.notify("Downの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end,
+      on_send_left = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
 
-      local success, err = tmux.send_keys(current_pane, "Left")
-      if not success then
-        vim.notify("Leftの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-      end
-    end,
-    on_send_right = function()
-      -- 最新のペインIDを取得
-      local current_pane = get_current_pane_id()
-      if not current_pane then
-        vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-        return
-      end
+        local success, err = tmux.send_keys(current_pane, "Left")
+        if not success then
+          vim.notify("Leftの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end,
+      on_send_right = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
 
-      local success, err = tmux.send_keys(current_pane, "Right")
-      if not success then
-        vim.notify("Rightの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-      end
-    end,
-  })
+        local success, err = tmux.send_keys(current_pane, "Right")
+        if not success then
+          vim.notify("Rightの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end,
+    })
+    -- ビジュアル選択コンテキストをバッファ変数に保存（送信時に参照）
+    if context and context ~= "" then
+      vim.b[bufnr].ai_visual_context = context
+    else
+      vim.b[bufnr].ai_visual_context = nil
+    end
+  end)
 end
 
 -- Claudeを開く
 -- @param args string|nil コマンド引数
-function M.open_claude(args)
+-- @param context string|nil ビジュアル選択コンテキスト
+function M.open_claude(args, context)
   local base_args = ''
   if args and args ~= "" then
     args = base_args .. " " .. args
   else
     args = base_args
   end
-  open_input_buffer("claude", args)
+  open_input_buffer("claude", args, context)
 end
 
 -- Codexを開く
 -- @param args string|nil コマンド引数
-function M.open_codex(args)
-  open_input_buffer("codex", args)
+-- @param context string|nil ビジュアル選択コンテキスト
+function M.open_codex(args, context)
+  open_input_buffer("codex", args, context)
+end
+
+-- ビジュアル選択からファイルコンテキストを取得
+-- @return string "@/path/to/file#Lstart-end " 形式のコンテキスト
+local function get_visual_context()
+  local file_path = vim.fn.expand("%:p")
+  local start_line = vim.fn.line("v")
+  local end_line = vim.fn.line(".")
+  if start_line > end_line then
+    start_line, end_line = end_line, start_line
+  end
+  return string.format("@%s#L%d-%d ", file_path, start_line, end_line)
+end
+
+-- ビジュアルモード用キーマップのヘルパー
+-- @param open_fn function(context) ツールを開く関数
+local function visual_keymap_handler(open_fn)
+  return function()
+    local ctx = get_visual_context()
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
+    vim.schedule(function()
+      open_fn(ctx)
+    end)
+  end
 end
 
 -- モジュールを初期化してコマンドとキーマップを登録
@@ -389,43 +425,53 @@ function M.setup()
     desc = "Open Codex in tmux pane with input buffer",
   })
 
-  -- キーマップ: Claude
-  vim.keymap.set("n", "<leader>ac", "<Cmd>Claude<CR>", {
-    noremap = true,
-    silent = true,
-    desc = "Open Claude",
-  })
+  local map_opts = { noremap = true, silent = true }
 
-  vim.keymap.set("n", "<leader>ar", "<Cmd>Claude -r<CR>", {
-    noremap = true,
-    silent = true,
-    desc = "Open Claude with -r",
-  })
+  -- キーマップ: Claude（ノーマルモード）
+  vim.keymap.set("n", "<leader>ac", "<Cmd>Claude<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open Claude" }))
 
-  vim.keymap.set("n", "<leader>aC", "<Cmd>Claude -c<CR>", {
-    noremap = true,
-    silent = true,
-    desc = "Open Claude with -c",
-  })
+  vim.keymap.set("n", "<leader>ar", "<Cmd>Claude -r<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open Claude with -r" }))
 
-  -- キーマップ: Codex
-  vim.keymap.set("n", "<leader>xx", "<Cmd>Codex<CR>", {
-    noremap = true,
-    silent = true,
-    desc = "Open Codex",
-  })
+  vim.keymap.set("n", "<leader>aC", "<Cmd>Claude -c<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open Claude with -c" }))
 
-  vim.keymap.set("n", "<leader>xr", "<Cmd>Codex resume<CR>", {
-    noremap = true,
-    silent = true,
-    desc = "Open Codex resume",
-  })
+  -- キーマップ: Claude（ビジュアルモード）
+  vim.keymap.set("x", "<leader>ac", visual_keymap_handler(function(ctx)
+    M.open_claude("", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open Claude with selection context" }))
 
-  vim.keymap.set("n", "<leader>xc", "<Cmd>Codex resume --last<CR>", {
-    noremap = true,
-    silent = true,
-    desc = "Open Codex resume --last",
-  })
+  vim.keymap.set("x", "<leader>ar", visual_keymap_handler(function(ctx)
+    M.open_claude("-r", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open Claude -r with selection context" }))
+
+  vim.keymap.set("x", "<leader>aC", visual_keymap_handler(function(ctx)
+    M.open_claude("-c", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open Claude -c with selection context" }))
+
+  -- キーマップ: Codex（ノーマルモード）
+  vim.keymap.set("n", "<leader>xx", "<Cmd>Codex<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open Codex" }))
+
+  vim.keymap.set("n", "<leader>xr", "<Cmd>Codex resume<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open Codex resume" }))
+
+  vim.keymap.set("n", "<leader>xc", "<Cmd>Codex resume --last<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open Codex resume --last" }))
+
+  -- キーマップ: Codex（ビジュアルモード）
+  vim.keymap.set("x", "<leader>xx", visual_keymap_handler(function(ctx)
+    M.open_codex("", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open Codex with selection context" }))
+
+  vim.keymap.set("x", "<leader>xr", visual_keymap_handler(function(ctx)
+    M.open_codex("resume", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open Codex resume with selection context" }))
+
+  vim.keymap.set("x", "<leader>xc", visual_keymap_handler(function(ctx)
+    M.open_codex("resume --last", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open Codex resume --last with selection context" }))
 end
 
 return M
