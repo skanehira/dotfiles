@@ -46,7 +46,8 @@
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "deploy-on-aws@agent-plugins-for-aws": true,
     "feature-dev@claude-plugins-official": true,
-    "swift-lsp@claude-plugins-official": true
+    "swift-lsp@claude-plugins-official": true,
+    "postgres-best-practices@supabase-agent-skills": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
@@ -71,6 +72,12 @@
       "source": {
         "source": "github",
         "repo": "awslabs/agent-plugins"
+      }
+    },
+    "supabase-agent-skills": {
+      "source": {
+        "source": "github",
+        "repo": "supabase/agent-skills"
       }
     }
   },
