@@ -192,7 +192,7 @@ end
 -- @param title string|nil ウィンドウタイトル
 local function open_buffer_in_float_window(bufnr, title)
   local width = math.min(math.floor(vim.o.columns * 0.8), 120)
-  local height = 5
+  local height = 10
   local row = math.floor((vim.o.lines - height - 2) / 2)
   local col = math.floor((vim.o.columns - width - 2) / 2)
 
