@@ -1,0 +1,8 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "CHANGE_ME_PROJECT_NAME",
+  "compatibility_date": "YYYY-MM-DD",
+  "assets": {
+    "directory": "./dist/"
+  }
+}
