@@ -127,6 +127,17 @@ jobs:
   export CF_ACCOUNT_1P_REF="op://Personal/Cloudflare Token/account_id"
   ```
 
+### 事前確認：1Password から Master Token / Account ID を取得できること
+
+スクリプトを走らせる前に、1Password CLI でアイテムが参照できるか確認しておく。未認証なら `eval $(op signin)` を先に実行する：
+
+```bash
+# アイテム全体を JSON で取得（credential / account_id 両方のフィールドが見える）
+op item get "Cloudflare Token" --vault Personal --format json
+```
+
+`fields[].id == "credential"` と `fields[].id == "account_id"` の value が入っていれば OK。スクリプトはこの2つのフィールドを内部で読み取って Cloudflare API を叩く。
+
 ### スクリプト実行（スキル配下のローカルスクリプト）
 
 スクリプトはこのスキルの `assets/cf-issue-deploy-token.sh` に同梱されている。`claude/install.sh` により `~/.claude/skills/demo-site-builder/` に symlink されるため、固定パスで参照可能：
