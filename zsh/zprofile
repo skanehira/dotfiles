@@ -69,3 +69,7 @@ fi
 # Added by OrbStack: command-line tools and integration
 # This won't be added again if you remove it.
 [ -f ~/.orbstack/shell/init.zsh ] && source ~/.orbstack/shell/init.zsh 2>/dev/null || :
+
+## Cloudflare
+export CF_TOKEN_1P_REF="op://Personal/Cloudflare Token/credential"
+export CF_ACCOUNT_1P_REF="op://Personal/Cloudflare Token/account_id"
