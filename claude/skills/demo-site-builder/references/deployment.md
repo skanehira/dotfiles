@@ -119,33 +119,20 @@ jobs:
 
 ## Step 7: Deploy Token を gist スクリプトで発行
 
-**前提**: 1Password に `Cloudflare Token` という API認証情報アイテムを作成済み：
-- `credential` フィールドに **Master Token**（`User API Tokens: Edit` + `User Details: Read` 権限付与済み）
-- `account_id` フィールドに Account ID
+**前提（セットアップ済み）**:
+- 1Password に `Cloudflare Token` アイテムがあり、`credential` に Master Token（`User API Tokens: Edit` + `User Details: Read` 権限付与済み）、`account_id` に Account ID を保持
+- `~/.zprofile` に以下が設定済み：
+  ```bash
+  export CF_TOKEN_1P_REF="op://Personal/Cloudflare Token/credential"
+  export CF_ACCOUNT_1P_REF="op://Personal/Cloudflare Token/account_id"
+  ```
 
-### .zshrc に参照を設定
-```bash
-export CF_TOKEN_1P_REF="op://<vault>/Cloudflare Token/credential"
-export CF_ACCOUNT_1P_REF="op://<vault>/Cloudflare Token/account_id"
+### スクリプト実行（スキル配下のローカルスクリプト）
+
+スクリプトはこのスキルの `assets/cf-issue-deploy-token.sh` に同梱されている。`claude/install.sh` により `~/.claude/skills/demo-site-builder/` に symlink されるため、固定パスで参照可能：
+
 ```
-
-vault 名に日本語（"個人" など）が含まれる場合は op ref で使えないため、英語 vault 名（通常 "Personal"）を使用。`op vault list` で確認。
-
-### スクリプト URL (gist)
-
-このスキルは汎用スクリプトの gist 化を想定している。初回のみユーザが自分の gist を作成：
-
-```bash
-# 初回のみ（ユーザ固有）
-gh gist create cf-issue-deploy-token.sh --desc "Cloudflare deploy token issuer"
-# 出力の gist ID を控える
-```
-
-運用時は gist の raw URL を `.zshrc` に環境変数で保持しておくと便利：
-
-```bash
-# ~/.zshrc
-export CF_DEPLOY_TOKEN_URL="https://gist.githubusercontent.com/<user>/<gist-id>/raw/cf-issue-deploy-token.sh"
+~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh
 ```
 
 各プロジェクトでの実行：
@@ -154,23 +141,16 @@ export CF_DEPLOY_TOKEN_URL="https://gist.githubusercontent.com/<user>/<gist-id>/
 cd <新プロジェクトのルート>
 
 # dry-run で事前検証
-curl -sSL "$CF_DEPLOY_TOKEN_URL" | bash -s -- --dry-run <project-name>
+bash ~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh --dry-run <project-name>
 
 # 本番実行
-curl -sSL "$CF_DEPLOY_TOKEN_URL" | bash -s -- <project-name>
+bash ~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh <project-name>
 ```
 
 スクリプトがやること：
 1. `op read` で Master Token / Account ID を 1Password から取得
 2. Cloudflare API `POST /user/tokens` で `<project-name>-deploy` という名前の子 token を発行（権限: `Workers Scripts Write` のみ、account スコープ限定）
 3. `gh secret set` で対象 repo に `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` を登録
-
-スクリプト未作成の場合、対話フロー：
-
-1. `AskUserQuestion` で 1Password 参照パス、設置場所（gist / dotfiles / ローカル）、GitHub Secrets 自動登録の要否を確認
-2. `/tmp/` にスクリプトを生成
-3. `bash -n` で syntax チェック
-4. dry-run → 本番実行
 
 ## Step 8: 初回デプロイ
 

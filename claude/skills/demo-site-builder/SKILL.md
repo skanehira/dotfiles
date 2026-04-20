@@ -41,7 +41,7 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 6. **Repository 層 TDD** — KVStorage 抽象 + InMemory/LocalStorage 実装
 7. **コンポーネント/ページ TDD** — `features/` コロケーションで機能単位に
 8. **Cloudflare Workers デプロイ設定** — `wrangler.jsonc` + GitHub Actions
-9. **デプロイ実行 & 動作確認** — `deploy token 発行 gist` → push → chrome-devtools MCP
+9. **デプロイ実行 & 動作確認** — `assets/cf-issue-deploy-token.sh` で deploy token 発行 → push → chrome-devtools MCP
 
 詳細な各ステップは下記の references を参照。
 
@@ -52,16 +52,17 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 | [references/scaffold.md](references/scaffold.md)         | ステップ 2〜3 の具体コマンドと設定ファイル                        | セットアップ時 |
 | [references/architecture.md](references/architecture.md) | Domain / Repository / Service の分離パターン、localStorage 永続化 | 設計時         |
 | [references/tdd.md](references/tdd.md)                   | TDD RED→GREEN→REFACTOR の具体例（ドメイン・Repo・Component）      | コード書き始め |
-| [references/deployment.md](references/deployment.md)     | `wrangler.jsonc` + GitHub Actions + deploy token 発行（gist）     | デプロイ準備時 |
+| [references/deployment.md](references/deployment.md)     | `wrangler.jsonc` + GitHub Actions + deploy token 発行（同梱スクリプト） | デプロイ準備時 |
 
 ## バンドル済みアセット（assets/）
 
 テンプレートとしてコピーして使う：
 
-| ファイル                                                 | 用途                                                                |
-| -------------------------------------------------------- | ------------------------------------------------------------------- |
-| [assets/wrangler.jsonc](assets/wrangler.jsonc)           | プロジェクト名だけ書き換えて `<project-root>/wrangler.jsonc` に配置 |
-| [assets/deploy-workflow.yml](assets/deploy-workflow.yml) | `.github/workflows/deploy.yml` として配置                           |
+| ファイル                                                                 | 用途                                                                                                                  |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| [assets/wrangler.jsonc](assets/wrangler.jsonc)                           | プロジェクト名だけ書き換えて `<project-root>/wrangler.jsonc` に配置                                                   |
+| [assets/deploy-workflow.yml](assets/deploy-workflow.yml)                 | `.github/workflows/deploy.yml` として配置                                                                             |
+| [assets/cf-issue-deploy-token.sh](assets/cf-issue-deploy-token.sh)       | Cloudflare deploy token 発行スクリプト。`bash ~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh <project-name>` で実行 |
 
 ## 連携する他スキル
 
@@ -86,6 +87,8 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 固定前提：
 - **パッケージマネージャ**：`pnpm`（v10+）
 - **ルーティング**：React Router v7 の `HashRouter`（`#/path` 形式）
+- **テーマ**：**ダークテーマ禁止**（ライトテーマのみ。`@theme` ブロックで dark variant を定義しない、`dark:` prefix も使わない）
+- **デザイン/実装フロー**：Step 4 以降の実装ステップ（5-7）でも、UI プリミティブや画面を新規作成する際は **`frontend-design` スキルを必ず起動**してコンセプトとの整合を取ること（Step 4 の初回確立だけで終わらせない）
 
 "localStorage 永続化" を選んだ場合、Repository パターンが必須になる（→ `architecture.md` 参照）。
 
@@ -138,6 +141,13 @@ Skill({
 
 ## Step 8-9: デプロイ
 
+**デプロイ前の必須ゲート**：ローカルで以下を完了したうえで `AskUserQuestion` による**ユーザ承認**を取得してから push / `wrangler deploy` を実行する。承認なしにデプロイしない。
+
+1. `pnpm test` / `pnpm typecheck` / `pnpm build` がすべてグリーン
+2. `pnpm dev` を起動し `chrome-devtools` MCP で Step 1 で合意した対応デバイスの viewport にて主要フローを動作確認（下記「viewport の選び方」参照）
+3. 確認結果（通ったフロー・スクリーンショット・console エラー有無）をユーザに提示
+4. "このままデプロイしてよいか" を `AskUserQuestion` で明示的に確認 → **承認後にのみ** Step 9 を実行
+
 `references/deployment.md` の手順に従う。核となる判断：
 
 - **Cloudflare Workers Static Assets (assets-only モード) を使う**（Pages ではなく）
@@ -145,7 +155,7 @@ Skill({
   - `wrangler.jsonc` に `"assets": { "directory": "./dist/", "not_found_handling": "single-page-application" }` だけで SPA 完結
   - Worker コード（`main`）は**書かない**
 - **GitHub Actions で自動デプロイ**（push → test → typecheck → build → deploy）
-- **deploy token は gist スクリプトで発行**（1Password + gh CLI）— 手動 dashboard 作業を排除
+- **deploy token は `assets/cf-issue-deploy-token.sh` で発行**（1Password + gh CLI）— 手動 dashboard 作業を排除
 
 ## 検証方法
 
@@ -153,9 +163,19 @@ Skill({
 
 1. `gh run watch <run-id>` で Actions 完走確認
 2. `gh run view <run-id> --log | grep 'workers.dev'` でデプロイ URL 取得
-3. `chrome-devtools:new_page` → `emulate` で iPhone viewport (390x844x3) → 全画面スクリーンショット
+3. `chrome-devtools:new_page` → `emulate`/`resize_page` で対応デバイスに合わせた viewport → 全画面スクリーンショット
 4. `list_console_messages` でエラーなし確認
 5. 主要ユーザフロー（ログイン → ダッシュボード）を実際に動かす
+
+### viewport の選び方
+
+Step 1 で合意した "対応デバイス" に応じて切り替える：
+
+| 対応デバイス  | viewport                                         | 備考                                                 |
+| ------------- | ------------------------------------------------ | ---------------------------------------------------- |
+| モバイルのみ  | 390x844（iPhone 14 相当、DPR 3）                 | `emulate` でモバイルエミュレーション                 |
+| モバイル + PC | 390x844 + 1440x900 の両方で確認                  | 両方スクリーンショットしてユーザに提示               |
+| PC 中心       | 1440x900（必要に応じて 1920x1080 / 1280x800 も） | `resize_page` で十分。モバイルエミュレーションは不要 |
 
 ## よくある落とし穴
 
