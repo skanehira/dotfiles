@@ -6,7 +6,7 @@
 
 <important if="you are working on any task">
 - モジュールの低結合度、高凝集度を意識すること
-- TDD(RED>GREEN>REFACTOR)で実装すること
+- TDD(RED>GREEN>REFACTOR>SELF REVIEW)で実装すること
 - APIの実装はクリーンアーキテクチャ、DDD手法を用いること
 </important>
 
