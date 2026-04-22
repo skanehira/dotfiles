@@ -47,7 +47,8 @@
     "deploy-on-aws@agent-plugins-for-aws": true,
     "feature-dev@claude-plugins-official": true,
     "swift-lsp@claude-plugins-official": true,
-    "postgres-best-practices@supabase-agent-skills": true
+    "postgres-best-practices@supabase-agent-skills": true,
+    "codex@openai-codex": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
@@ -78,6 +79,12 @@
       "source": {
         "source": "github",
         "repo": "supabase/agent-skills"
+      }
+    },
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
       }
     }
   },
