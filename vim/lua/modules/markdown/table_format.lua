@@ -110,6 +110,12 @@ local function format_table(lines)
 end
 
 function M.format_markdown_tables(bufnr)
+  vim.cmd(
+    string.format("keepjumps lua require('modules.markdown.table_format')._format_tables(%d)", bufnr)
+  )
+end
+
+function M._format_tables(bufnr)
   local ok, parser = pcall(vim.treesitter.get_parser, bufnr, "markdown")
   if not ok or not parser then
     return
@@ -133,12 +139,28 @@ function M.format_markdown_tables(bufnr)
     end
   end
 
+  if #tables == 0 then
+    return
+  end
+
+  local winid = vim.fn.bufwinid(bufnr)
+  local view
+  if winid ~= -1 then
+    view = vim.api.nvim_win_call(winid, vim.fn.winsaveview)
+  end
+
   for i = #tables, 1, -1 do
     local node = tables[i]
     local start_row, _, end_row, _ = node:range()
     local lines = vim.api.nvim_buf_get_lines(bufnr, start_row, end_row + 1, false)
     local formatted = format_table(lines)
     vim.api.nvim_buf_set_lines(bufnr, start_row, end_row + 1, false, formatted)
+  end
+
+  if winid ~= -1 and view then
+    vim.api.nvim_win_call(winid, function()
+      vim.fn.winrestview(view)
+    end)
   end
 end
 
