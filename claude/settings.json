@@ -93,5 +93,7 @@
   "alwaysThinkingEnabled": true,
   "effortLevel": "xhigh",
   "skipDangerousModePermissionPrompt": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "remoteControlAtStartup": false,
+  "tui": "fullscreen"
 }

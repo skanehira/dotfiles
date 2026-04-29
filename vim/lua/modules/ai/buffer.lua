@@ -50,32 +50,25 @@ local function setup_keymaps(bufnr, config)
     end, vim.tbl_extend("force", opts, { desc = "Interrupt process in tmux pane" }))
   end
 
-  -- <C-d>: tmuxペインを下にスクロール
+  -- <C-d>: PageDownをtmuxペインに送信
   if config.on_scroll_down then
     vim.keymap.set("n", "<C-d>", function()
       config.on_scroll_down()
-    end, vim.tbl_extend("force", opts, { desc = "Scroll tmux pane down" }))
+    end, vim.tbl_extend("force", opts, { desc = "Send PageDown to tmux pane" }))
   end
 
-  -- <C-u>: tmuxペインを上にスクロール
+  -- <C-u>: PageUpをtmuxペインに送信
   if config.on_scroll_up then
     vim.keymap.set("n", "<C-u>", function()
       config.on_scroll_up()
-    end, vim.tbl_extend("force", opts, { desc = "Scroll tmux pane up" }))
+    end, vim.tbl_extend("force", opts, { desc = "Send PageUp to tmux pane" }))
   end
 
-  -- <C-n>: tmuxペインを1行下にスクロール
-  if config.on_scroll_line_down then
-    vim.keymap.set("n", "<C-n>", function()
-      config.on_scroll_line_down()
-    end, vim.tbl_extend("force", opts, { desc = "Scroll tmux pane down 1 line" }))
-  end
-
-  -- <C-p>: tmuxペインを1行上にスクロール
-  if config.on_scroll_line_up then
-    vim.keymap.set("n", "<C-p>", function()
-      config.on_scroll_line_up()
-    end, vim.tbl_extend("force", opts, { desc = "Scroll tmux pane up 1 line" }))
+  -- <C-g><C-b>: Ctrl+Endをtmuxペインに送信（ジャンプ・トゥ・ボトム）
+  if config.on_scroll_to_bottom then
+    vim.keymap.set("n", "<C-g><C-b>", function()
+      config.on_scroll_to_bottom()
+    end, vim.tbl_extend("force", opts, { desc = "Send Ctrl+End to tmux pane (jump to bottom)" }))
   end
 
   -- <Tab>: Tabをtmux側に送信
@@ -221,9 +214,8 @@ end
 --   - on_submit: function(content, bufnr) テキスト送信時のコールバック
 --   - on_scroll_down: function() 下スクロール時のコールバック
 --   - on_scroll_up: function() 上スクロール時のコールバック
+--   - on_scroll_to_bottom: function() 最下部へジャンプ時のコールバック
 --   - on_interrupt: function() プロセス割り込み時のコールバック
---   - on_scroll_line_down: function() 1行下スクロール時のコールバック
---   - on_scroll_line_up: function() 1行上スクロール時のコールバック
 --   - on_send_shift_tab: function() Shift+Tab送信時のコールバック
 -- @return number 作成/再利用されたバッファ番号
 function M.create_input_buffer(config)
