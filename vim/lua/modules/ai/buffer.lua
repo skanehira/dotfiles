@@ -124,16 +124,22 @@ local function setup_keymaps(bufnr, config)
     end, vim.tbl_extend("force", opts, { desc = "Send Ctrl+V to tmux pane" }))
   end
 
-  -- <Up>: 上矢印をtmux側に送信
+  -- <Up> / <C-p>: 上矢印をtmux側に送信
   if config.on_send_up then
     vim.keymap.set("n", "<Up>", function()
       config.on_send_up()
     end, vim.tbl_extend("force", opts, { desc = "Send Up to tmux pane" }))
+    vim.keymap.set("n", "<C-p>", function()
+      config.on_send_up()
+    end, vim.tbl_extend("force", opts, { desc = "Send Up to tmux pane" }))
   end
 
-  -- <Down>: 下矢印をtmux側に送信
+  -- <Down> / <C-n>: 下矢印をtmux側に送信
   if config.on_send_down then
     vim.keymap.set("n", "<Down>", function()
+      config.on_send_down()
+    end, vim.tbl_extend("force", opts, { desc = "Send Down to tmux pane" }))
+    vim.keymap.set("n", "<C-n>", function()
       config.on_send_down()
     end, vim.tbl_extend("force", opts, { desc = "Send Down to tmux pane" }))
   end
