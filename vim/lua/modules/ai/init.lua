@@ -264,6 +264,19 @@ local function open_input_buffer(tool_name, args, context)
           vim.notify("Escapeの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
         end
       end,
+      on_send_double_escape = function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
+
+        -- 1コマンドで2連送信することで、Claudeのrewind検出タイムウィンドウ内に確実に届ける
+        local success, err = tmux.send_keys(current_pane, "Escape Escape")
+        if not success then
+          vim.notify("Escape x2の送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end,
       on_send_ctrl_v = function()
         local current_pane = get_current_pane_id()
         if not current_pane then
