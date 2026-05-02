@@ -30,6 +30,7 @@
     gh
     ghq
     git-filter-repo
+    gnupg
     golangci-lint
     graphviz
     grpcurl

@@ -10,10 +10,9 @@
       cleanup = "none";  # 初期は破壊しない、安定後 "uninstall" に
     };
 
-    # 残す formula (Nix 移行困難 / Darwin ビルド失敗)
+    # 残す formula (Darwin 非対応のため Nix 移行不可)
     brews = [
-      "gnupg"
-      "ppsspp"
+      "ppsspp"  # nixpkgs では platforms = linux のみ、Darwin unsupported
     ];
 
     # GUI アプリ・macOS 専用 CLI
