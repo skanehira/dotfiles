@@ -1,1 +1,5 @@
 .DS_Store
+
+# nix build / darwin-rebuild build の出力 symlink
+result
+result-*
