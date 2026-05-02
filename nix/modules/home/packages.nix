@@ -19,7 +19,6 @@
     reviewdog
     supabase-cli
     terraform
-    tmux
     uv
     vite-plus  # ryoppippi/nix-vite-plus overlay 経由 (vp コマンド)
     difftastic
