@@ -95,7 +95,7 @@ nix/
 
 - **darwinConfigurations の key**: ホスト名ではなく `username = "skanehira"` を使用。複数マシンでも同じ設定が走る前提。
 - **system 値**: `aarch64-darwin` 固定。将来 Linux/Intel Mac 対応時に `forAllSystems` パターンへ。
-- **Homebrew**: GUI app (cask) のみ残す。formula は全て Nix 管理に移行済 (brews 配列は空)。`onActivation.cleanup = "none"` で宣言外を破壊しない。
+- **Homebrew**: GUI app (cask) と cask の依存になるコア formula のみ管理。CLI ツールは全て Nix 管理に移行済。`brews` には `ca-certificates` / `openssl@3` / `sqlite` を保険として明示宣言 (cask 依存リンクが切れた時の巻き添え削除を防止)。`onActivation.cleanup = "uninstall"` で宣言外は drs 時に自動撤去。
 - **Touch ID for sudo**: `security.pam.services.sudo_local.touchIdAuth + reattach` で tmux 内含めて指紋認証。
 
 ## sudo の扱い（重要）
