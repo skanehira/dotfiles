@@ -92,8 +92,8 @@
   "spinnerTipsEnabled": false,
   "alwaysThinkingEnabled": true,
   "effortLevel": "xhigh",
+  "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
-  "voiceEnabled": true,
   "remoteControlAtStartup": false,
-  "tui": "fullscreen"
+  "voiceEnabled": true
 }

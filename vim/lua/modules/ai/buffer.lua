@@ -106,6 +106,13 @@ local function setup_keymaps(bufnr, config)
     end, vim.tbl_extend("force", opts, { desc = "Send Escape to tmux pane" }))
   end
 
+  -- <C-r>: Escape x2をtmux側に送信（Claudeのrewind用）
+  if config.on_send_double_escape then
+    vim.keymap.set("n", "<C-r>", function()
+      config.on_send_double_escape()
+    end, vim.tbl_extend("force", opts, { desc = "Send Escape x2 to tmux pane (rewind)" }))
+  end
+
   -- <C-r>: ファイル検索（telescope）
   local complete = require("modules.ai.complete")
   vim.keymap.set("i", "<C-r>", function()
