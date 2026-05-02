@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-dotfiles リポジトリ。macOS は **Nix (nix-darwin + Home Manager)** で宣言的管理を主軸とする。一部のツール (vim, tmux, wezterm, karabiner, claude) は移行途中で `install.sh` ベースの symlink 方式が残存。Linux は将来対応予定。
+dotfiles リポジトリ。macOS は **Nix (nix-darwin + Home Manager)** で宣言的管理を主軸とする。一部のツール (vim, tmux, wezterm, claude) は移行途中で `install.sh` ベースの symlink 方式が残存。Linux は将来対応予定。
 
 ## Installation
 
@@ -28,14 +28,13 @@ drs   # alias: sudo darwin-rebuild switch --flake ~/dev/.../nix#skanehira
 
 `drs` alias は `home.nix` 経由で zsh に注入される。手動で `darwin-rebuild` を叩くより楽。
 
-### 一部ツール（vim/tmux/wezterm/karabiner/claude）
+### 一部ツール（vim/tmux/wezterm/claude）
 
 ```bash
 # それぞれのディレクトリの install.sh を実行（symlink 方式、現時点で残存）
 cd vim && ./install.sh
 cd ../tmux && ./install.sh
 cd ../wezterm && ./install.sh
-cd ../karabiner && ./install.sh   # macOS only
 cd ../claude && ./install.sh
 ```
 
@@ -57,7 +56,6 @@ cd ../claude && ./install.sh
 - **vim/** — Neovim 設定 (Lua, lazy.nvim)
 - **tmux/** — tmux 設定（プラットフォーム別 conf あり）
 - **wezterm/** — WezTerm ターミナル設定
-- **karabiner/** — macOS キーボードリマッピング
 - **claude/** — Claude Code 設定（skills, rules, hooks）
 
 ### Nix 補助
@@ -65,6 +63,8 @@ cd ../claude && ./install.sh
 - **zsh/** — `programs.zsh.initContent` から `builtins.readFile` で取り込まれる残置ファイル
   - `zshrc` — bindkey 群 + 関数 source loop
   - `functions/{ghq-fzf,gss,tmuxpopup}.zsh` — カスタム zsh 関数
+- **karabiner/** — Karabiner-Elements 設定 (Goku DSL)
+  - `karabiner.edn` — EDN で書いたルール、switch 時に goku が `~/.config/karabiner/karabiner.json` を生成
 
 ### 廃止済
 
@@ -88,6 +88,7 @@ nix/
     │   ├── zsh.nix       — programs.zsh (history, completion, prompt)
     │   ├── fzf.nix       — programs.fzf (default command/options, zsh integration)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
+    │   ├── karabiner.nix — goku で karabiner.edn → karabiner.json 自動生成
     │   └── aliases.nix   — programs.zsh.shellAliases
     └── darwin/
         ├── homebrew.nix  — declarative brews / casks
