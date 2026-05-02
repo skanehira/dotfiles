@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-dotfiles リポジトリ。macOS は **Nix (nix-darwin + Home Manager)** で宣言的管理を主軸とする。一部のツール (vim, claude) は移行途中で `install.sh` ベースの symlink 方式が残存。Linux は将来対応予定。
+dotfiles リポジトリ。macOS は **Nix (nix-darwin + Home Manager)** で宣言的管理を主軸とする。一部のツール (vim) は移行途中で `install.sh` ベースの symlink 方式が残存。Linux は将来対応予定。
 
 ## Installation
 
@@ -28,12 +28,11 @@ drs   # alias: sudo darwin-rebuild switch --flake ~/dev/.../nix#skanehira
 
 `drs` alias は `home.nix` 経由で zsh に注入される。手動で `darwin-rebuild` を叩くより楽。
 
-### 一部ツール（vim/claude）
+### 一部ツール（vim）
 
 ```bash
 # それぞれのディレクトリの install.sh を実行（symlink 方式、現時点で残存）
 cd vim && ./install.sh
-cd ../claude && ./install.sh
 ```
 
 これらは将来 Nix 化予定。現在は混在状態。
@@ -52,7 +51,6 @@ cd ../claude && ./install.sh
 ### ツール別ディレクトリ（symlink 方式、移行途中）
 
 - **vim/** — Neovim 設定 (Lua, lazy.nvim)
-- **claude/** — Claude Code 設定（skills, rules, hooks）
 
 ### Nix 補助
 
@@ -63,6 +61,8 @@ cd ../claude && ./install.sh
   - `karabiner.edn` — EDN で書いたルール、switch 時に goku が `~/.config/karabiner/karabiner.json` を生成
 - **wezterm/** — WezTerm 設定（`programs.wezterm.extraConfig` から `builtins.readFile` で取り込み）
   - `wezterm.lua` — Lua の編集体験 (lua_ls) を保つため別ファイルとして残置
+- **claude/** — Claude Code 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
+  - `CLAUDE.md` / `settings.json` / `agents/` / `hooks/` / `rules/` / `skills/` — 編集即反映、`drs` 不要
 
 ### 廃止済
 
@@ -80,6 +80,7 @@ nix/
 ├── install.sh         ← 初回 bootstrap
 └── modules/
     ├── home/
+    │   ├── claude.nix    — Claude Code (bootstrap install + mkOutOfStoreSymlink で設定 live edit)
     │   ├── env.nix       — sessionVariables / sessionPath
     │   ├── git.nix       — programs.git (LFS, alias, difftastic)
     │   ├── packages.nix  — home.packages 群（CLI 50+）
