@@ -3,6 +3,7 @@
 {
   imports = [
     ./modules/home/aliases.nix
+    ./modules/home/claude.nix
     ./modules/home/direnv.nix
     ./modules/home/env.nix
     ./modules/home/fzf.nix
