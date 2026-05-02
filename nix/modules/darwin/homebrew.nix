@@ -7,11 +7,16 @@
     onActivation = {
       autoUpdate = false;
       upgrade = false;
-      cleanup = "none";  # 初期は破壊しない、安定後 "uninstall" に
+      cleanup = "uninstall";
     };
 
-    # formula は全て Nix 管理に移行済 (必要が出たら追加)
-    brews = [ ];
+    # cask の依存になりやすいコア formula を明示宣言。
+    # 暗黙の依存だけだと cask 依存リンクが切れた時に巻き添えで消されるので保険として固定する。
+    brews = [
+      "ca-certificates"
+      "openssl@3"
+      "sqlite"
+    ];
 
     # GUI アプリ・macOS 専用 CLI
     casks = [
