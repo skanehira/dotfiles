@@ -10,6 +10,7 @@
     ./modules/home/karabiner.nix
     ./modules/home/packages.nix
     ./modules/home/tmux.nix
+    ./modules/home/wezterm.nix
     ./modules/home/zsh.nix
   ];
 

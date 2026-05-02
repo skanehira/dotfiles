@@ -1,3 +1,5 @@
+-- HM が同じ require をプリアンブルに注入するため二重宣言となるが、Lua の local 宣言は
+-- shadowing で問題なく動作する。lua_ls の補完を維持するためソース側にも宣言を残す
 local wezterm = require 'wezterm';
 
 wezterm.on('window-maximize', function(window, _)

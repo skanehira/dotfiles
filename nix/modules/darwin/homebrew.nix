@@ -36,7 +36,6 @@
       "tableplus"
       "transmission"
       "vlc"
-      "wezterm@nightly"
       "wine-stable"
       "xquartz"
       "zap"
