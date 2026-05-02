@@ -1,5 +1,8 @@
-{ username, ... }:
+{ ... }:
 
+# クロスプラットフォームな Home Manager の共通 base。
+# karabiner.nix のような macOS 専用 module と、username / homeDirectory の
+# プラットフォーム依存値は home-darwin.nix / home-linux.nix で設定する。
 {
   imports = [
     ./modules/home/aliases.nix
@@ -8,7 +11,6 @@
     ./modules/home/env.nix
     ./modules/home/fzf.nix
     ./modules/home/git.nix
-    ./modules/home/karabiner.nix
     ./modules/home/neovim.nix
     ./modules/home/packages.nix
     ./modules/home/rustup.nix
@@ -16,9 +18,6 @@
     ./modules/home/wezterm.nix
     ./modules/home/zsh.nix
   ];
-
-  home.username = username;
-  home.homeDirectory = "/Users/${username}";
 
   # 初回セットアップ時の Home Manager リリース。互換性維持のため変更しない
   home.stateVersion = "25.05";
