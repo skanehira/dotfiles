@@ -1,16 +1,11 @@
-# nixpkgs に対する変更（既存パッケージの上書き / 新規パッケージ追加）を集約。
-# overlays は「pkgs 集合を入力 → 変更後の集合を返す関数」の集まり。
-# このモジュールは nix-darwin と home-manager 両方の pkgs を共有設定する。
+# nix-darwin / Home Manager (useGlobalPkgs) 共通の nixpkgs 設定。
+# overlay の実体は modules/overlays-list.nix に切り出し、Linux 側 (HM standalone)
+# でも `import nixpkgs { overlays = ...; }` で再利用できるようにしてある。
 { inputs, ... }:
 
 {
   nixpkgs.config.allowUnfreePredicate = pkg:
     builtins.elem (inputs.nixpkgs.lib.getName pkg) [ "terraform" ];
 
-  nixpkgs.overlays = [
-    # neovim を stable から nightly に置換
-    inputs.neovim-nightly-overlay.overlays.default
-    # vite-plus (nixpkgs 未収録) を pkgs.vite-plus として追加
-    inputs.nix-vite-plus.overlays.default
-  ];
+  nixpkgs.overlays = import ./overlays-list.nix { inherit inputs; };
 }
