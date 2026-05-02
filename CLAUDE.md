@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-dotfiles リポジトリ。macOS は **Nix (nix-darwin + Home Manager)** で宣言的管理を主軸とする。一部のツール (vim, wezterm, claude) は移行途中で `install.sh` ベースの symlink 方式が残存。Linux は将来対応予定。
+dotfiles リポジトリ。macOS は **Nix (nix-darwin + Home Manager)** で宣言的管理を主軸とする。一部のツール (vim, claude) は移行途中で `install.sh` ベースの symlink 方式が残存。Linux は将来対応予定。
 
 ## Installation
 
@@ -28,12 +28,11 @@ drs   # alias: sudo darwin-rebuild switch --flake ~/dev/.../nix#skanehira
 
 `drs` alias は `home.nix` 経由で zsh に注入される。手動で `darwin-rebuild` を叩くより楽。
 
-### 一部ツール（vim/wezterm/claude）
+### 一部ツール（vim/claude）
 
 ```bash
 # それぞれのディレクトリの install.sh を実行（symlink 方式、現時点で残存）
 cd vim && ./install.sh
-cd ../wezterm && ./install.sh
 cd ../claude && ./install.sh
 ```
 
@@ -53,7 +52,6 @@ cd ../claude && ./install.sh
 ### ツール別ディレクトリ（symlink 方式、移行途中）
 
 - **vim/** — Neovim 設定 (Lua, lazy.nvim)
-- **wezterm/** — WezTerm ターミナル設定
 - **claude/** — Claude Code 設定（skills, rules, hooks）
 
 ### Nix 補助
@@ -63,6 +61,8 @@ cd ../claude && ./install.sh
   - `functions/{ghq-fzf,gss,tmuxpopup}.zsh` — カスタム zsh 関数
 - **karabiner/** — Karabiner-Elements 設定 (Goku DSL)
   - `karabiner.edn` — EDN で書いたルール、switch 時に goku が `~/.config/karabiner/karabiner.json` を生成
+- **wezterm/** — WezTerm 設定（`programs.wezterm.extraConfig` から `builtins.readFile` で取り込み）
+  - `wezterm.lua` — Lua の編集体験 (lua_ls) を保つため別ファイルとして残置
 
 ### 廃止済
 
@@ -88,6 +88,7 @@ nix/
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── karabiner.nix — goku で karabiner.edn → karabiner.json 自動生成
     │   ├── tmux.nix      — programs.tmux (prefix C-s, vi, plugins: resurrect + themepack, extraConfig 直書き)
+    │   ├── wezterm.nix   — programs.wezterm (extraConfig は wezterm.lua を readFile)
     │   └── aliases.nix   — programs.zsh.shellAliases
     └── darwin/
         ├── homebrew.nix  — declarative brews / casks
