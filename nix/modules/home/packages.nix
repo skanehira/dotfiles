@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 
 let
   # 言語ランタイム / コンパイラ (バージョンは明示ピン)
@@ -24,7 +24,11 @@ let
     luarocks
     pkg-config
     sqlc
-    vite-plus      # ryoppippi/nix-vite-plus overlay (vp コマンド)
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
+    # ryoppippi/nix-vite-plus overlay (vp コマンド)。aarch64-linux では installCheckPhase
+    # で SIGABRT になり build 失敗 (上流側の問題)。Linux 対応が必要になったら overlay 側
+    # の修正か doCheck=false の wrap を検討
+    vite-plus
   ];
 
   # Lint / Format
@@ -94,7 +98,8 @@ let
     gnupg
     graphviz
     rclone
-    terminal-notifier
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
+    terminal-notifier  # macOS notification API。Linux では notify.ts 側で no-op
   ];
 in
 {

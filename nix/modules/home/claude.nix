@@ -11,11 +11,13 @@ in
   # 以後の更新は `claude update` の self-update に任せる (Nix で version pin しない方針)
   #
   # claude.ai/install.sh は downloads.claude.ai/claude-code-releases/bootstrap.sh に
-  # リダイレクトされる Anthropic 公式の bootstrap スクリプト
+  # リダイレクトされる Anthropic 公式の bootstrap スクリプト。
+  # PATH に curl を載せておかないと、install.sh が内部で curl/wget を再帰的に呼ぶ際に
+  # 「Either curl or wget is required」で落ちる (Linux の HM activation は PATH が最小)
   home.activation.bootstrapClaudeCode = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ ! -x "$HOME/.local/bin/claude" ]; then
       echo "Bootstrapping Claude Code..." >&2
-      run sh -c '${pkgs.curl}/bin/curl -fsSL https://claude.ai/install.sh | bash'
+      run sh -c 'export PATH=${pkgs.curl}/bin:$PATH && ${pkgs.curl}/bin/curl -fsSL https://claude.ai/install.sh | bash'
     fi
   '';
 
