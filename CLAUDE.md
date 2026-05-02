@@ -95,7 +95,7 @@ nix/
 
 - **darwinConfigurations の key**: ホスト名ではなく `username = "skanehira"` を使用。複数マシンでも同じ設定が走る前提。
 - **system 値**: `aarch64-darwin` 固定。将来 Linux/Intel Mac 対応時に `forAllSystems` パターンへ。
-- **Homebrew**: GUI app (cask) と Nix で動かない formula (gnupg, ppsspp) のみ残す。`onActivation.cleanup = "none"` で宣言外を破壊しない。
+- **Homebrew**: GUI app (cask) と Darwin 非対応 formula (ppsspp は nixpkgs で linux 専用) のみ残す。`onActivation.cleanup = "none"` で宣言外を破壊しない。
 - **Touch ID for sudo**: `security.pam.services.sudo_local.touchIdAuth + reattach` で tmux 内含めて指紋認証。
 
 ## sudo の扱い（重要）
@@ -196,7 +196,7 @@ cd claude && ./install.sh
 
 ### 重要事項
 
-- Git は GPG 署名を使用（gnupg は brew、設定は `programs.git` で）
+- gnupg は Nix 管理 (packages.nix)。GPG 署名フローは現状未設定（必要になったら別途整備）
 - Tmux プレフィックスは `Ctrl+s`（デフォルトの `Ctrl+b` ではない）
 - モダン CLI を前提（lsd, fzf, direnv, bat, difftastic 等、すべて Nix）
 - zsh 起動時間は ~0.10s に最適化済（compinit ハイブリッド）。新たに重い init を入れるときは startup time に注意
