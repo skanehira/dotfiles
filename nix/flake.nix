@@ -1,5 +1,5 @@
 {
-  description = "skanehira's macOS configuration (nix-darwin + Home Manager)";
+  description = "skanehira's macOS / Linux configuration (nix-darwin + Home Manager)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -23,10 +23,24 @@
       # マシン共通の所有者名。複数 mac で同じ設定が走る前提で固定
       # (将来 user 変更時はここ 1 箇所のみ書き換え)
       username = "skanehira";
-      system = "aarch64-darwin";
+
+      # Linux 側 (Home Manager standalone) のエントリビルダ。
+      # nix-darwin と違い HM standalone は module system 経由で nixpkgs.overlays /
+      # nixpkgs.config を設定できないので、import nixpkgs に直接渡す。
+      # overlays は modules/overlays-list.nix で nix-darwin と共有。
+      mkLinuxHome = system: home-manager.lib.homeManagerConfiguration {
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = import ./modules/overlays-list.nix { inherit inputs; };
+          config.allowUnfreePredicate = pkg:
+            builtins.elem (nixpkgs.lib.getName pkg) [ "terraform" ];
+        };
+        extraSpecialArgs = { inherit username; };
+        modules = [ ./home-linux.nix ];
+      };
     in {
       darwinConfigurations.${username} = nix-darwin.lib.darwinSystem {
-        inherit system;
+        system = "aarch64-darwin";
         specialArgs = { inherit username inputs; };
         modules = [
           ./modules/overlays.nix
@@ -39,6 +53,13 @@
             home-manager.users.${username} = import ./home-darwin.nix;
           }
         ];
+      };
+
+      # Home Manager standalone (非 NixOS Linux 想定。Ubuntu/Arch 等)
+      # 使い方: nix run home-manager/master -- switch --flake .#skanehira
+      homeConfigurations = {
+        "${username}"          = mkLinuxHome "x86_64-linux";
+        "${username}-aarch64"  = mkLinuxHome "aarch64-linux";
       };
     };
 }

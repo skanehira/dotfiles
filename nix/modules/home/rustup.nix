@@ -8,11 +8,13 @@
   #  との連携は rustup の責任範囲とする)
   #
   # sh.rustup.rs は公式 installer (https://rustup.rs)。--no-modify-path で zsh の
-  # PATH 設定 (~/.cargo/env を envExtra で source 済) と衝突しないようにする
+  # PATH 設定 (~/.cargo/env を envExtra で source 済) と衝突しないようにする。
+  # PATH に curl を載せておかないと、installer 内部で curl を再帰的に呼ぶ際に落ちる
+  # (Linux の HM activation は PATH が最小。claude.nix と同じ理由)
   home.activation.bootstrapRustup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ ! -x "$HOME/.cargo/bin/rustup" ]; then
       echo "Bootstrapping rustup..." >&2
-      run sh -c '${pkgs.curl}/bin/curl --proto "=https" --tlsv1.2 -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path'
+      run sh -c 'export PATH=${pkgs.curl}/bin:$PATH && ${pkgs.curl}/bin/curl --proto "=https" --tlsv1.2 -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path'
     fi
   '';
 }
