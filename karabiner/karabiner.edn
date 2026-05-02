@@ -1,0 +1,29 @@
+;; Karabiner-Elements 設定 (Goku DSL)
+;; goku が ~/.config/karabiner/karabiner.json を生成する
+;;
+;; 修飾子: ! = mandatory / # = optional / ## = optional any
+;; キー:   T = left_control, C = left_command, S = left_shift, O = left_option
+
+{:profiles
+ {:Default
+  {:default true
+   :sim     50      ; basic.simultaneous_threshold_milliseconds
+   :delay   500     ; basic.to_delayed_action_delay_milliseconds
+   :alone   1000    ; basic.to_if_alone_timeout_milliseconds
+   :held    500}}   ; basic.to_if_held_down_threshold_milliseconds
+
+ :applications
+ {:wezterm   ["^com\\.github\\.wez\\.wezterm$"]
+  :terminals ["^com\\.googlecode\\.iterm2$"
+              "^com\\.github\\.wez\\.wezterm$"
+              "^com\\.apple\\.QuickTimePlayerX$"]}
+
+ :main
+ [{:des   "CTRL-Space to wezterm"
+   :rules [[:!Tspacebar "open -a 'wezterm'" [:!wezterm]]]}
+
+  {:des   "Emacs-style ctrl arrow keys (outside terminals)"
+   :rules [[:!T##b :left_arrow  [:!terminals]]
+           [:!T##n :down_arrow  [:!terminals]]
+           [:!T##p :up_arrow    [:!terminals]]
+           [:!T##f :right_arrow [:!terminals]]]}]}
