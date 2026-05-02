@@ -73,6 +73,7 @@ let
     lsd
     tree
     yazi
+    just           # コマンドランナー
   ];
 
   # メディア / ファイル
@@ -92,7 +93,6 @@ let
   systemUtils = with pkgs; [
     gnupg
     graphviz
-    just           # コマンドランナー
     rclone
     terminal-notifier
   ];
