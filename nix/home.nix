@@ -11,6 +11,7 @@
     ./modules/home/karabiner.nix
     ./modules/home/neovim.nix
     ./modules/home/packages.nix
+    ./modules/home/rustup.nix
     ./modules/home/tmux.nix
     ./modules/home/wezterm.nix
     ./modules/home/zsh.nix

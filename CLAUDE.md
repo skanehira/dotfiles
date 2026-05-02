@@ -82,6 +82,7 @@ nix/
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── karabiner.nix — goku で karabiner.edn → karabiner.json 自動生成
     │   ├── neovim.nix    — vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
+    │   ├── rustup.nix    — bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
     │   ├── tmux.nix      — programs.tmux (prefix C-s, vi, plugins: resurrect + themepack, extraConfig 直書き)
     │   ├── wezterm.nix   — programs.wezterm (extraConfig は wezterm.lua を readFile)
     │   └── aliases.nix   — programs.zsh.shellAliases
