@@ -63,9 +63,6 @@ cd ../claude && ./install.sh
   - `functions/{ghq-fzf,gss,tmuxpopup}.zsh` — カスタム zsh 関数
 - **karabiner/** — Karabiner-Elements 設定 (Goku DSL)
   - `karabiner.edn` — EDN で書いたルール、switch 時に goku が `~/.config/karabiner/karabiner.json` を生成
-- **tmux/** — tmux 設定（`programs.tmux.extraConfig` から `builtins.readFile` で取り込み）
-  - `tmux.conf` — bind-key、ステータス更新、popup 等の手書き残置
-  - `tmux.conf.mac` / `tmux.conf.linux` — プラットフォーム別 (`lib.optionalString` で連結)
 
 ### 廃止済
 
@@ -90,7 +87,7 @@ nix/
     │   ├── fzf.nix       — programs.fzf (default command/options, zsh integration)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── karabiner.nix — goku で karabiner.edn → karabiner.json 自動生成
-    │   ├── tmux.nix      — programs.tmux (prefix C-s, vi, plugins: resurrect + themepack)
+    │   ├── tmux.nix      — programs.tmux (prefix C-s, vi, plugins: resurrect + themepack, extraConfig 直書き)
     │   └── aliases.nix   — programs.zsh.shellAliases
     └── darwin/
         ├── homebrew.nix  — declarative brews / casks
