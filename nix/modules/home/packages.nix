@@ -24,6 +24,7 @@ let
     luarocks
     pkg-config
     sqlc
+    tree-sitter    # CLI; nvim-treesitter main が parser compile に要求
   ] ++ lib.optionals pkgs.stdenv.isDarwin [
     # ryoppippi/nix-vite-plus overlay (vp コマンド)。aarch64-linux では installCheckPhase
     # で SIGABRT になり build 失敗 (上流側の問題)。Linux 対応が必要になったら overlay 側
