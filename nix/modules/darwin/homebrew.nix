@@ -22,9 +22,7 @@
     casks = [
       "1password-cli"
       "calibre"
-      "chatgpt-atlas"
       "codex"
-      "cursor"
       "discord"
       "drawio"
       "font-cica"
@@ -32,7 +30,6 @@
       "gstreamer-runtime"
       "karabiner-elements"
       "keycastr"
-      "openmtp"
       "orbstack"
       "ppsspp-emulator"  # PSP emulator GUI (formula 版 ppsspp は nixpkgs 未対応のため cask 利用)
       "session-manager-plugin"
