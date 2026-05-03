@@ -65,5 +65,15 @@
         "${username}"          = mkLinuxHome "x86_64-linux";
         "${username}-aarch64"  = mkLinuxHome "aarch64-linux";
       };
+
+      # 自前 derivation (nixpkgs 未収録 LSP)。`packages.nix` からも callPackage で
+      # 参照されるが、ここに出すことで `nix build .#tsp-server` 等で個別 build できる
+      packages = nixpkgs.lib.genAttrs
+        [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ]
+        (system:
+          let pkgs = import nixpkgs { inherit system; }; in {
+            tsp-server                 = pkgs.callPackage ./pkgs/tsp-server.nix {};
+            gh-actions-language-server = pkgs.callPackage ./pkgs/gh-actions-language-server.nix {};
+          });
     };
 }

@@ -126,6 +126,9 @@ let
     buf                                 # buf_ls (`buf beta lsp`)
     rust-analyzer                       # rust_analyzer
   ] ++ [
+    # nixpkgs 未収録の自前 derivation
+    (pkgs.callPackage ../../pkgs/tsp-server.nix {})                   # tsp_server
+    (pkgs.callPackage ../../pkgs/gh-actions-language-server.nix {})   # gh_actions_ls
     inputs.version-lsp.packages.${pkgs.stdenv.hostPlatform.system}.default  # version_ls (flake input)
   ];
 in
