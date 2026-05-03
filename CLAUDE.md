@@ -114,11 +114,6 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `init.lua` / `lua/` / `after/` — 編集即反映、`drs` 不要
   - `.luarc.json` — lua_ls の dotfiles 内 lua 編集用設定 (track 対象)
 
-### 廃止済
-
-- ~~`git/`~~ — `programs.git` (Home Manager) に完全移行、削除済
-- ~~`zsh/install.sh`、`zsh/zprofile`~~ — `programs.zsh` に移行、削除済
-
 ## Nix モジュール構成（詳細）
 
 ```
@@ -242,24 +237,8 @@ cd claude && ./install.sh
 2. `git add` で staging（flake は tracked file しか見ない）
 3. `drs` で適用（`sudo darwin-rebuild switch` を Touch ID 経由で）
 
-### 既存設定の変更（symlink 方式側、vim/tmux 等）
-
-1. 該当ディレクトリのファイルを編集
-2. すでに symlink 済みなので即反映（再 `install.sh` は不要）
-
 ### 新規ツール追加
 
-**Nix で扱える場合（推奨）**：
 - CLI: `modules/home/packages.nix` に追記
 - 設定ファイル: `programs.<tool>` モジュールがあれば使う、無ければ `home.file.*` で配置
 - macOS GUI app: `modules/darwin/homebrew.nix` の `casks` に追記
-
-**Nix で扱えない場合**：
-- ディレクトリ作成 → `install.sh` で symlink 配置（旧来方式）
-
-### 重要事項
-
-- gnupg は Nix 管理 (packages.nix)。GPG 署名フローは現状未設定（必要になったら別途整備）
-- Tmux プレフィックスは `Ctrl+s`（デフォルトの `Ctrl+b` ではない）
-- モダン CLI を前提（lsd, fzf, direnv, bat, difftastic 等、すべて Nix）
-- zsh 起動時間は ~0.10s に最適化済（compinit ハイブリッド）。新たに重い init を入れるときは startup time に注意

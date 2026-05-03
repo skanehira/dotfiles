@@ -1,7 +1,8 @@
 # CLAUDE.md
 
 <important if="you are working on any task">
-論理的かつ批判的な姿勢で会話・調査・実装すること
+- 論理的かつ批判的な姿勢で会話・調査・実装すること
+- 質問に対する回答を持っていない場合は必要な情報を収集してから回答すること
 </important>
 
 <important if="you are working on any task">
