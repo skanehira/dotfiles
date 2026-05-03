@@ -16,6 +16,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-vite-plus.url = "github:ryoppippi/nix-vite-plus";
+    version-lsp = {
+      url = "github:skanehira/version-lsp";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs@{ nixpkgs, home-manager, nix-darwin, ... }:
@@ -35,7 +39,7 @@
           config.allowUnfreePredicate = pkg:
             builtins.elem (nixpkgs.lib.getName pkg) [ "terraform" ];
         };
-        extraSpecialArgs = { inherit username; };
+        extraSpecialArgs = { inherit username inputs; };
         modules = [ ./home-linux.nix ];
       };
     in {
@@ -49,7 +53,7 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.extraSpecialArgs = { inherit username; };
+            home-manager.extraSpecialArgs = { inherit username inputs; };
             home-manager.users.${username} = import ./home-darwin.nix;
           }
         ];
