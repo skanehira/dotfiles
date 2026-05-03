@@ -37,6 +37,7 @@ let
     actionlint
     golangci-lint
     luaPackages.luacheck
+    nixfmt-rfc-style    # nixd の formatting コマンドが呼ぶ
     reviewdog
     shellcheck
     stylua
@@ -125,8 +126,7 @@ let
     regols                              # regols (OPA Rego)
     gopls                               # gopls
     buf                                 # buf_ls (`buf beta lsp`)
-    rust-analyzer                       # rust_analyzer
-    # denols は languageRuntimes の deno に同梱
+    nixd                                # nixd (Nix)
   ] ++ [
     # nixpkgs 未収録の自前 derivation
     (pkgs.callPackage ../../pkgs/tsp-server.nix {})                   # tsp_server

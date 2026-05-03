@@ -77,7 +77,7 @@ local servers = {
   'ts_ls', 'vue_ls', 'lua_ls', 'eslint', 'jsonls', 'graphql',
   'bashls', 'yamlls', 'vimls', 'marksman', 'taplo', 'clangd',
   'terraformls', 'biome', 'oxlint', 'zls', 'regols', 'gopls',
-  'buf_ls', 'rust_analyzer', 'denols',
+  'buf_ls', 'rust_analyzer', 'denols', 'nixd',
   -- 自前 derivation (nix/pkgs/) / flake input (skanehira/version-lsp)
   'tsp_server', 'gh_actions_ls', 'version_ls',
 }
