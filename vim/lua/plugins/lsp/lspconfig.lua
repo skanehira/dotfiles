@@ -1,7 +1,7 @@
 local utils = require('utils')
 local nmap = utils.keymaps.nmap
 
-local signs = { Error = " ", Warn = " ", Hint = "💡", Info = " " }
+local signs = { Error = " ", Warn = " ", Hint = "💡", Info = " " }
 for type, icon in pairs(signs) do
   local hl = "DiagnosticSign" .. type
   vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
@@ -37,7 +37,6 @@ local lsp_on_attach = function(client, bufnr)
   else
     vim.opt.tagfunc = 'v:lua.vim.lsp.tagfunc'
   end
-  -- map({ 'n', 'x' }, 'ma', vim.lsp.buf.code_action, bufopts)
   nmap('<Leader>gl', vim.lsp.codelens.run, bufopts)
 
   -- auto format when save the file
@@ -51,22 +50,6 @@ local lsp_on_attach = function(client, bufnr)
   end
   nmap('mi', organize_import)
   nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
-
-  -- local augroup = vim.api.nvim_create_augroup("LspFormatting", { clear = false })
-  -- if client.supports_method("textDocument/formatting") then
-  --   nmap(']f', vim.lsp.buf.format, { buffer = bufnr })
-  --   if client.name == 'sumneko_lua' then
-  --     return
-  --   end
-  --   vim.api.nvim_create_autocmd("BufWritePre", {
-  --     callback = function()
-  --       organize_import()
-  --       vim.lsp.buf.format()
-  --     end,
-  --     group = augroup,
-  --     buffer = bufnr,
-  --   })
-  -- end
 end
 
 vim.api.nvim_create_autocmd('LspAttach', {
@@ -87,58 +70,22 @@ vim.api.nvim_create_autocmd('LspAttach', {
   end,
 })
 
-local config = function()
-  require('mason-lspconfig').setup({
-    automatic_enable = true,
-    ensure_installed = {
-      'ts_ls',
-      'vue_ls',
-      'lua_ls',
-      'eslint',
-      'graphql',
-      'bashls',
-      'yamlls',
-      'jsonls',
-      'vimls',
-      'marksman',
-      'taplo',
-      'clangd',
-      'terraformls',
-      'biome',
-      'oxlint',
-      'tsp_server',
-      'zls',
-      'regols',
-      'gopls',
-      'buf_ls',
-      'gh_actions_ls',
-      -- 'nil_ls'
-    }
-  })
-
-  local lsp_names = {
-    'rust_analyzer',
-    'denols',
-    'version_ls',
-  }
-  vim.lsp.enable(lsp_names)
-end
-
-local mason = {
-  'williamboman/mason-lspconfig.nvim',
-  event = { 'BufReadPre', 'BufNewFile', 'BufEnter', 'BufNew' },
-  dependencies = {
-    {
-      'mason-org/mason.nvim',
-      dependencies = {
-        { 'neovim/nvim-lspconfig' },
-      },
-      config = function()
-        require("mason").setup()
-      end,
-    },
-  },
-  config = config,
+-- 全 LSP server を有効化。binary は Nix で /nix/store/... に提供済
+-- (nix/modules/home/packages.nix の lspServers セクション)。Mason は廃止。
+local servers = {
+  -- nixpkgs 由来
+  'ts_ls', 'vue_ls', 'lua_ls', 'eslint', 'jsonls', 'graphql',
+  'bashls', 'yamlls', 'vimls', 'marksman', 'taplo', 'clangd',
+  'terraformls', 'biome', 'oxlint', 'zls', 'regols', 'gopls',
+  'buf_ls', 'rust_analyzer', 'denols',
+  -- 自前 derivation (nix/pkgs/) / flake input (skanehira/version-lsp)
+  'tsp_server', 'gh_actions_ls', 'version_ls',
 }
 
-return mason
+return {
+  'neovim/nvim-lspconfig',
+  event = { 'BufReadPre', 'BufNewFile', 'BufEnter', 'BufNew' },
+  config = function()
+    vim.lsp.enable(servers)
+  end,
+}

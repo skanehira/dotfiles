@@ -125,6 +125,7 @@ let
     gopls                               # gopls
     buf                                 # buf_ls (`buf beta lsp`)
     rust-analyzer                       # rust_analyzer
+    # denols は languageRuntimes の deno に同梱
   ] ++ [
     # nixpkgs 未収録の自前 derivation
     (pkgs.callPackage ../../pkgs/tsp-server.nix {})                   # tsp_server
