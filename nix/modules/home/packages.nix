@@ -1,4 +1,4 @@
-{ lib, pkgs, ... }:
+{ inputs, lib, pkgs, ... }:
 
 let
   # 言語ランタイム / コンパイラ (バージョンは明示ピン)
@@ -125,6 +125,8 @@ let
     gopls                               # gopls
     buf                                 # buf_ls (`buf beta lsp`)
     rust-analyzer                       # rust_analyzer
+  ] ++ [
+    inputs.version-lsp.packages.${pkgs.stdenv.hostPlatform.system}.default  # version_ls (flake input)
   ];
 in
 {
