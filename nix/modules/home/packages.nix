@@ -101,6 +101,31 @@ let
   ] ++ lib.optionals pkgs.stdenv.isDarwin [
     terminal-notifier  # macOS notification API。Linux では notify.ts 側で no-op
   ];
+
+  # LSP servers (Mason 廃止、全て Nix declarative 管理)。
+  # vim/lua/plugins/lsp/lspconfig.lua の vim.lsp.enable(servers) で起動される。
+  # mason の名前 → nixpkgs attr の対応は CLAUDE.md 参照。
+  lspServers = with pkgs; [
+    typescript-language-server          # ts_ls
+    vue-language-server                 # vue_ls
+    lua-language-server                 # lua_ls
+    vscode-langservers-extracted        # eslint + jsonls (1 パッケージで両方提供)
+    graphql-language-service-cli        # graphql (graphql-lsp バイナリ)
+    bash-language-server                # bashls
+    yaml-language-server                # yamlls
+    vim-language-server                 # vimls
+    marksman                            # marksman (markdown)
+    taplo                               # taplo (TOML)
+    clang-tools                         # clangd 同梱
+    terraform-ls                        # terraformls
+    biome                               # biome
+    oxlint                              # oxlint
+    zls                                 # zls (Zig)
+    regols                              # regols (OPA Rego)
+    gopls                               # gopls
+    buf                                 # buf_ls (`buf beta lsp`)
+    rust-analyzer                       # rust_analyzer
+  ];
 in
 {
   # HM module 経由で導入されているもの (ここには書かない):
@@ -118,5 +143,6 @@ in
     ++ modernCli
     ++ mediaTools
     ++ editors
-    ++ systemUtils;
+    ++ systemUtils
+    ++ lspServers;
 }
