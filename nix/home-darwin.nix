@@ -6,6 +6,7 @@
   imports = [
     ./home.nix
     ./modules/home/karabiner.nix
+    ./modules/home/wezterm.nix
   ];
 
   home.username = username;
