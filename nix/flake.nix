@@ -11,10 +11,6 @@
       url = "github:nix-darwin/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    neovim-nightly-overlay = {
-      url = "github:nix-community/neovim-nightly-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     nix-vite-plus.url = "github:ryoppippi/nix-vite-plus";
     version-lsp = {
       url = "github:skanehira/version-lsp";
