@@ -95,5 +95,7 @@
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "remoteControlAtStartup": false,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "verbose": true,
+  "preferredNotifChannel": "terminal_bell"
 }
