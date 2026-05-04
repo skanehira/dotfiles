@@ -108,6 +108,9 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `karabiner.edn` — EDN で書いたルール、switch 時に goku が `~/.config/karabiner/karabiner.json` を生成
 - **wezterm/** — WezTerm 設定（`programs.wezterm.extraConfig` から `builtins.readFile` で取り込み）
   - `wezterm.lua` — Lua の編集体験 (lua_ls) を保つため別ファイルとして残置
+- **tmux/** — tmux 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
+  - `tmux.conf` — 編集即反映、`prefix + r` で reload。`drs` 不要
+  - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
 - **claude/** — Claude Code 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `CLAUDE.md` / `settings.json` / `agents/` / `hooks/` / `rules/` / `skills/` — 編集即反映、`drs` 不要
 - **vim/** — Neovim 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
@@ -139,7 +142,7 @@ nix/
     │   ├── neovim.nix    — vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
     │   ├── packages.nix  — home.packages 群（CLI 50+、terminal-notifier は darwin only）
     │   ├── rustup.nix    — bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
-    │   ├── tmux.nix      — programs.tmux (prefix C-s, vi, plugins、xsel/pbcopy 分岐済)
+    │   ├── tmux.nix      — tmux/tmux.conf を mkOutOfStoreSymlink で live edit。plugins.conf のみ Nix 生成 (resurrect + themepack)
     │   ├── wezterm.nix   — programs.wezterm (extraConfig は wezterm.lua を readFile)
     │   └── zsh.nix       — programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済)
     └── darwin/
