@@ -49,6 +49,11 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
+            # 既存ファイル衝突時に *.hm-backup へ退避してから symlink を張る。
+            # 初回 bootstrap で claude/install.sh などが先に置いた dotfiles 直
+            # symlink と HM の mkOutOfStoreSymlink が同 path を要求するケースで
+            # activation が止まらないようにする
+            home-manager.backupFileExtension = "hm-backup";
             home-manager.extraSpecialArgs = { inherit username inputs; };
             home-manager.users.${username} = import ./home-darwin.nix;
           }
