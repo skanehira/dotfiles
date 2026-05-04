@@ -25,13 +25,11 @@
     # GUI アプリ・macOS 専用 CLI
     casks = [
       "1password-cli"
-      "calibre"
       "codex"
       "discord"
       "drawio"
       "font-cica"
       "gcloud-cli"
-      "gstreamer-runtime"
       "karabiner-elements"
       "keycastr"
       "orbstack"
@@ -41,8 +39,6 @@
       "transmission"
       "vlc"
       "xquartz"
-      "zap"
-      "zulu@17"
       "tailscale-app"
     ];
   };
