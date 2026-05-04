@@ -96,6 +96,7 @@ let
   editors = with pkgs; [
     neovim         # nixpkgs-unstable の stable release (cache.nixos.org でキャッシュ済)
     slides         # markdown TUI presentation
+    tmux           # 設定は modules/home/tmux.nix で mkOutOfStoreSymlink により live edit
   ];
 
   # システムユーティリティ
