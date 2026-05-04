@@ -10,12 +10,16 @@
       cleanup = "uninstall";
     };
 
-    # cask の依存になりやすいコア formula を明示宣言。
-    # 暗黙の依存だけだと cask 依存リンクが切れた時に巻き添えで消されるので保険として固定する。
+    # brews:
+    # - cask の依存になりやすいコア formula (暗黙依存だけだと cask 依存リンクが
+    #   切れた時に巻き添え削除されるので保険として固定)
+    # - nixpkgs 未収録の CLI ツール
     brews = [
+      # cask 依存の保険
       "ca-certificates"
       "openssl@3"
       "sqlite"
+      "aqua"
     ];
 
     # GUI アプリ・macOS 専用 CLI
@@ -36,10 +40,10 @@
       "tableplus"
       "transmission"
       "vlc"
-      "wine-stable"
       "xquartz"
       "zap"
       "zulu@17"
+      "tailscale-app"
     ];
   };
 }
