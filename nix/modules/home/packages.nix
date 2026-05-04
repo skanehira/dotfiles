@@ -91,7 +91,7 @@ let
 
   # エディタ / TUI
   editors = with pkgs; [
-    neovim         # nightly overlay 経由で master を取得
+    neovim         # nixpkgs-unstable の stable release (cache.nixos.org でキャッシュ済)
     slides         # markdown TUI presentation
   ];
 

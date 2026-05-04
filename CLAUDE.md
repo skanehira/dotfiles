@@ -189,7 +189,7 @@ sudo darwin-rebuild switch ...
 
 ### Neovim 本体
 
-`pkgs.neovim`（nightly）を **`neovim-nightly-overlay`** 経由で取得。`flake.nix` の `inputs.neovim-nightly-overlay` 参照。アップデートは `nix flake update neovim-nightly-overlay`。
+`pkgs.neovim` を nixpkgs-unstable の **stable release** から取得 (`cache.nixos.org` 経由でビルド済)。アップデートは `nix flake update nixpkgs`。
 
 ## Claude Code Integration
 
