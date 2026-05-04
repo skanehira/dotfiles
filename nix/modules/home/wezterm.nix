@@ -1,10 +1,5 @@
-{ config, ... }:
+{ config, dotfilesRoot, ... }:
 
-let
-  # dotfiles repo の絶対 path。mkOutOfStoreSymlink は Nix 評価時の path ではなく
-  # 実機の path を要求するため $HOME ベースで構築する (neovim.nix / claude.nix と同方針)
-  dotfiles = "${config.home.homeDirectory}/dev/github.com/skanehira/dotfiles";
-in
 {
   programs.wezterm = {
     enable = true;
@@ -20,5 +15,5 @@ in
   # wezterm.lua を dotfiles へ直接 symlink (mkOutOfStoreSymlink)
   # → 編集が drs 不要で即反映 (live edit)。neovim.nix / claude.nix と同じ方針
   home.file.".config/wezterm/wezterm.lua".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/wezterm/wezterm.lua";
+    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/wezterm/wezterm.lua";
 }
