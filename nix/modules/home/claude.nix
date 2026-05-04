@@ -1,10 +1,5 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, dotfilesRoot, ... }:
 
-let
-  # dotfiles repo の絶対 path。mkOutOfStoreSymlink は Nix 評価時の path ではなく
-  # 実機の path を要求するため、$HOME ベースで構築する
-  dotfiles = "${config.home.homeDirectory}/dev/github.com/skanehira/dotfiles";
-in
 {
   # Bootstrap install: ~/.local/bin/claude が無い時のみ Anthropic 公式インストーラを実行
   # 既存マシンでは no-op、新規マシンでは drs 一発で claude がセットアップされる
@@ -25,11 +20,11 @@ in
   # → skills/rules/hooks/CLAUDE.md の編集が drs 不要で即反映される (live edit)
   # 通常の home.file.X.source = ./path だと /nix/store にコピーされ drs 必須になる
   home.file = {
-    ".claude/CLAUDE.md".source     = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/claude/CLAUDE.md";
-    ".claude/settings.json".source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/claude/settings.json";
-    ".claude/agents".source        = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/claude/agents";
-    ".claude/hooks".source         = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/claude/hooks";
-    ".claude/rules".source         = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/claude/rules";
-    ".claude/skills".source        = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/claude/skills";
+    ".claude/CLAUDE.md".source     = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/CLAUDE.md";
+    ".claude/settings.json".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/settings.json";
+    ".claude/agents".source        = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/agents";
+    ".claude/hooks".source         = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/hooks";
+    ".claude/rules".source         = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/rules";
+    ".claude/skills".source        = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/skills";
   };
 }
