@@ -153,7 +153,7 @@ nix/
 - **system 値**: darwin は `aarch64-darwin` 固定 (Apple Silicon)。Linux は `homeConfigurations.skanehira` (x86_64-linux) と `skanehira-aarch64` (aarch64-linux) の 2 出力。
 - **モジュール共有**: `home.nix` が cross-platform base、`home-darwin.nix` / `home-linux.nix` が OS 別 wrapper。共通 module は `modules/home/` 配下、mac 専用は `karabiner.nix` のみで `home-darwin.nix` からだけ import。`tmux.nix` / `zsh.nix` は内部で `lib.optionalString isDarwin/isLinux` 分岐済。
 - **overlays の共有**: `modules/overlays-list.nix` が overlay の素のリストを export し、nix-darwin (`modules/overlays.nix` 経由) と HM standalone (`flake.nix` の `import nixpkgs` 経由) の両方から参照される。
-- **Homebrew**: GUI app (cask) と cask の依存になるコア formula のみ管理 (mac only)。CLI ツールは全て Nix 管理に移行済。`brews` には `ca-certificates` / `openssl@3` / `sqlite` を保険として明示宣言 (cask 依存リンクが切れた時の巻き添え削除を防止)。`onActivation.cleanup = "uninstall"` で宣言外は drs 時に自動撤去。
+- **Homebrew**: GUI app (cask) と CLI のうち (a) cask の依存になるコア formula、(b) nixpkgs 未収録 (例: `aqua`) のみ管理 (mac only)。それ以外の CLI ツールは Nix 管理。`brews` には `ca-certificates` / `openssl@3` / `sqlite` を保険として明示宣言 (cask 依存リンクが切れた時の巻き添え削除を防止)。`onActivation.cleanup = "uninstall"` で宣言外は drs 時に自動撤去。
 - **Touch ID for sudo**: `security.pam.services.sudo_local.touchIdAuth + reattach` で tmux 内含めて指紋認証 (mac only)。
 
 ## sudo の扱い（重要）
