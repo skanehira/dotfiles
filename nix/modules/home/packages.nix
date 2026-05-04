@@ -20,7 +20,7 @@ let
   # Build / 開発ライブラリ
   buildTools = with pkgs; [
     cmake
-    libpq          # PostgreSQL client library
+    libpq
     luarocks
     pkg-config
     sqlc
@@ -37,7 +37,7 @@ let
     actionlint
     golangci-lint
     luaPackages.luacheck
-    nixfmt-rfc-style    # nixd の formatting コマンドが呼ぶ
+    nixfmt
     reviewdog
     shellcheck
     stylua
@@ -45,12 +45,12 @@ let
 
   # Git / GitHub Actions
   gitTools = with pkgs; [
-    act            # GitHub Actions ローカル実行
+    act
     difftastic
     gh
     ghq
     git-filter-repo
-    pinact         # GitHub Actions の SHA pin
+    pinact
   ];
 
   # クラウド / インフラ
@@ -78,8 +78,10 @@ let
     jq
     lsd
     tree
-    yazi
-    just           # コマンドランナー
+    just
+    tokei
+    jnv
+    nix-sweep
   ];
 
   # メディア / ファイル
