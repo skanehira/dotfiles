@@ -5,7 +5,7 @@ local parsers = {
   'lua', 'rust', 'typescript', 'tsx', 'go', 'gomod',
   'sql', 'toml', 'yaml', 'html', 'javascript',
   'graphql', 'markdown', 'markdown_inline',
-  'nix', 'bash', 'json', 'gitignore'
+  'nix', 'bash', 'json', 'gitignore', 'ssh_config'
 }
 
 local treesitter = {
