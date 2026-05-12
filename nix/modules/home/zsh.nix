@@ -40,6 +40,11 @@
     profileExtra = lib.optionalString pkgs.stdenv.isDarwin ''
       export SHELL=/bin/zsh
       eval "$(/opt/homebrew/bin/brew shellenv)"
+
+      # OpenShift Local (crc): oc を PATH に追加
+      if [ -x /usr/local/bin/crc ] && [ -x "$HOME/.crc/bin/oc/oc" ]; then
+        eval "$(/usr/local/bin/crc oc-env)"
+      fi
     '' + lib.optionalString pkgs.stdenv.isLinux ''
       export SHELL=/usr/bin/zsh
       brew=/home/linuxbrew/.linuxbrew/bin/brew
