@@ -413,11 +413,17 @@ local function open_input_buffer(tool_name, args, context)
         end
       end,
     })
-    -- 同じ context で再オープンする場合は書きかけ内容をそのまま保持する
-    -- 違う context（別範囲 or 即送信モード切替）の場合のみ内容を入れ替える
+    -- バッファ内容の判定（書きかけがあるか）
+    local current_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local is_buffer_empty = (#current_lines == 0)
+        or (#current_lines == 1 and current_lines[1] == "")
+
     local prev_context = vim.b[bufnr].ai_context
-    if same_context(prev_context, context) then
-      -- 何もしない（バッファ内容を保持）
+
+    -- 同じ context かつ書きかけが残っている場合のみ保持（q で閉じた直後の再オープン）
+    -- それ以外（context が変わった or バッファが空）は preload/clear で入れ替える
+    if same_context(prev_context, context) and not is_buffer_empty then
+      -- 何もしない（書きかけを保持）
     elseif context then
       vim.b[bufnr].ai_context = context
       local existing = comments.get(tool_name, context.file_path, context.start_line, context.end_line)
@@ -432,7 +438,6 @@ local function open_input_buffer(tool_name, args, context)
       end
     else
       vim.b[bufnr].ai_context = nil
-      -- 即送信モードに切り替わったときは前回の書きかけを残さない
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
     end
   end)
@@ -458,9 +463,31 @@ local function get_visual_context()
   }
 end
 
--- Claudeを開く（context 無し = ノーマルモード起動 = 即送信モード）
+-- カーソル行を含むスタック済みコメントがあれば、その範囲を context として返す
+local function find_thread_context_at_cursor(tool_name)
+  local file_path = vim.fn.expand("%:p")
+  if file_path == "" then
+    return nil
+  end
+  file_path = vim.fn.fnamemodify(file_path, ":p")
+  local line = vim.fn.line(".")
+  local t = comments.find_at_line(tool_name, file_path, line)
+  if not t then
+    return nil
+  end
+  return {
+    file_path = file_path,
+    start_line = t.start_line,
+    end_line = t.end_line,
+  }
+end
+
+-- Claudeを開く
 -- @param args string|nil コマンド引数
 -- @param context table|nil 範囲コンテキスト
+-- context が無い場合の挙動:
+--   - カーソル行にスタック済みコメントがあれば、それを編集モードで開く
+--   - 無ければ即送信モード
 function M.open_claude(args, context)
   local base_args = ''
   if args and args ~= "" then
@@ -468,14 +495,14 @@ function M.open_claude(args, context)
   else
     args = base_args
   end
-  open_input_buffer("claude", args, context)
+  open_input_buffer("claude", args, context or find_thread_context_at_cursor("claude"))
 end
 
--- Codexを開く（context 無し = ノーマルモード起動 = 即送信モード）
+-- Codexを開く（context 無し時は Claude 同様にカーソル位置のスレッドを検索）
 -- @param args string|nil コマンド引数
 -- @param context table|nil 範囲コンテキスト
 function M.open_codex(args, context)
-  open_input_buffer("codex", args, context)
+  open_input_buffer("codex", args, context or find_thread_context_at_cursor("codex"))
 end
 
 -- コメントスタックを一括送信

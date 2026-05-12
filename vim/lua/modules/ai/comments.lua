@@ -29,11 +29,14 @@ local TOOLS = { "claude", "codex" }
 -- コメント絵文字（U+1F4AC, speech balloon）。emoji は 2 セル幅で sign_text 制約を満たす
 local SIGN_ICON = "💬"
 
+-- gitsigns 風の範囲行マーカー（U+2503 BOX DRAWINGS HEAVY VERTICAL + 半角スペースで 2 セル幅）
+local BAR_ICON = "┃ "
+
 -- ハイライトグループ定義（colorscheme 変更後も再適用される）
 -- DiagnosticSignInfo にlinkすると一部テーマで透明になり見えないので明示色を指定
 local function define_highlights()
-  vim.api.nvim_set_hl(0, "AICommentSign", { default = true, fg = "#7AA2F7" })
-  vim.api.nvim_set_hl(0, "AICommentLine", { default = true, link = "Visual" })
+  vim.api.nvim_set_hl(0, "AICommentSign", { default = true, fg = "#FF9E64" })
+  vim.api.nvim_set_hl(0, "AICommentBar", { default = true, fg = "#FF9E64" })
 end
 
 -- ツール名のバリデーション
@@ -142,6 +145,38 @@ function M.delete(tool, file_path, start_line, end_line)
   end
   refresh_all_visible()
   return true
+end
+
+-- 指定行を含むスレッドの中で最も狭い範囲のものを返す
+-- 同じ行に複数スレッドがネストしている場合、内側（狭い範囲）を優先
+-- @return table|nil { start_line, end_line, message, id } 形のコピー
+function M.find_at_line(tool, file_path, line)
+  assert_tool(tool)
+  file_path = normalize_path(file_path)
+  local file = store[tool][file_path]
+  if not file then
+    return nil
+  end
+  local best
+  local best_size = math.huge
+  for _, t in ipairs(file.threads) do
+    if line >= t.start_line and line <= t.end_line then
+      local size = t.end_line - t.start_line
+      if size < best_size then
+        best = t
+        best_size = size
+      end
+    end
+  end
+  if not best then
+    return nil
+  end
+  return {
+    id = best.id,
+    start_line = best.start_line,
+    end_line = best.end_line,
+    message = best.message,
+  }
 end
 
 -- 指定行を含むスレッドをすべて削除
@@ -285,22 +320,20 @@ function M.refresh_buffer(bufnr)
           table.insert(by_start[t.start_line], t)
         end
 
-        for start_line, ts in pairs(by_start) do
-          -- 各スレッドの範囲をハイライト
-          for _, t in ipairs(ts) do
-            local s_row = math.max(0, t.start_line - 1)
-            local e_row = math.min(buf_lines - 1, t.end_line - 1)
-            local ok_hl, err_hl = pcall(vim.api.nvim_buf_set_extmark, bufnr, nsid, s_row, 0, {
-              end_row = e_row,
-              end_col = 0,
-              line_hl_group = "AICommentLine",
+        -- 1) すべての範囲行に縦棒 sign を貼る（gitsigns 風）
+        for _, t in ipairs(file.threads) do
+          for line = t.start_line, t.end_line do
+            local row = math.max(0, math.min(buf_lines - 1, line - 1))
+            pcall(vim.api.nvim_buf_set_extmark, bufnr, nsid, row, 0, {
+              sign_text = BAR_ICON,
+              sign_hl_group = "AICommentBar",
+              priority = 10,
             })
-            if not ok_hl then
-              vim.notify("AICommentLine extmark 失敗: " .. tostring(err_hl), vim.log.levels.WARN)
-            end
           end
+        end
 
-          -- 開始行に sign を 1 つだけ（複数スレッドはバッジ表示）
+        -- 2) 開始行は絵文字（複数スレッドはバッジ）で上書き。priority を高くして縦棒に勝たせる
+        for start_line, ts in pairs(by_start) do
           local count = #ts
           local sign_text
           if count == 1 then
@@ -311,14 +344,11 @@ function M.refresh_buffer(bufnr)
             sign_text = "+ "
           end
           local row = math.max(0, start_line - 1)
-          local ok_sign, err_sign = pcall(vim.api.nvim_buf_set_extmark, bufnr, nsid, row, 0, {
+          pcall(vim.api.nvim_buf_set_extmark, bufnr, nsid, row, 0, {
             sign_text = sign_text,
             sign_hl_group = "AICommentSign",
+            priority = 20,
           })
-          if not ok_sign then
-            vim.notify("AICommentSign extmark 失敗 (sign_text=" .. vim.inspect(sign_text) .. "): " .. tostring(err_sign),
-              vim.log.levels.WARN)
-          end
         end
       end
     end
