@@ -3,6 +3,7 @@
 
 local tmux = require("modules.ai.tmux")
 local buffer = require("modules.ai.buffer")
+local comments = require("modules.ai.comments")
 
 local M = {}
 
@@ -83,10 +84,32 @@ local function get_or_create_pane(tool_name, args)
   return pane_id
 end
 
+-- ツール名に応じて末尾改行を付与（Codex は改行が無いと送信されない）
+local function finalize_text(tool_name, text)
+  if tool_name == "codex" then
+    return text .. "\n"
+  end
+  return text
+end
+
+-- 2つの context が同一かを判定（書きかけ内容の保持判定に使う）
+local function same_context(a, b)
+  if a == nil and b == nil then
+    return true
+  end
+  if a == nil or b == nil then
+    return false
+  end
+  return a.file_path == b.file_path
+      and a.start_line == b.start_line
+      and a.end_line == b.end_line
+end
+
 -- 入力バッファを開く共通処理
 -- @param tool_name string ツール名（"claude" または "codex"）
 -- @param args string|nil コマンド引数
--- @param context string|nil ビジュアル選択コンテキスト（送信時にプロンプト先頭に付与）
+-- @param context table|nil コメントコンテキスト
+--   { file_path = string, scope = "range"|"file", start_line = number?, end_line = number? }
 local function open_input_buffer(tool_name, args, context)
   -- tmuxセッション内かチェック
   if not tmux.is_in_tmux() then
@@ -124,29 +147,81 @@ local function open_input_buffer(tool_name, args, context)
       name = buffer_name,
       filetype = "markdown",
       on_submit = function(content, submit_bufnr)
-        -- 最新のペインIDを取得
+        local ctx = vim.b[submit_bufnr] and vim.b[submit_bufnr].ai_context or nil
+        local message = vim.trim(content)
+
+        -- コンテキストが無い（ノーマルモード起動 = 即送信モード）
+        if not ctx then
+          if message == "" then
+            vim.notify("コメントが空です", vim.log.levels.WARN)
+            return
+          end
+          local current_pane = get_current_pane_id()
+          if not current_pane then
+            vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+            return
+          end
+          local ok, err = tmux.send_text(current_pane, finalize_text(tool_name, message))
+          if not ok then
+            vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"),
+              vim.log.levels.ERROR)
+          end
+          return
+        end
+
+        -- コンテキストあり（範囲選択） → コメントスタック操作
+        local existing = comments.get(tool_name, ctx.file_path, ctx.start_line, ctx.end_line)
+
+        local function close_float()
+          local win = vim.api.nvim_get_current_win()
+          if vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_win_close(win, true)
+          end
+        end
+
+        -- 内容空 + 既存あり → 削除
+        if message == "" then
+          if existing then
+            comments.delete(tool_name, ctx.file_path, ctx.start_line, ctx.end_line)
+            vim.notify(
+              string.format("[%s] コメントを削除しました（残 %d 件）", tool_name, comments.count(tool_name)),
+              vim.log.levels.INFO
+            )
+            close_float()
+          else
+            vim.notify("コメントが空です", vim.log.levels.WARN)
+          end
+          return
+        end
+
+        -- 通常: 保存（新規 or 上書き）
+        local _, was_new = comments.set(tool_name, ctx.file_path, ctx.start_line, ctx.end_line, message)
+        local action = was_new and "保存" or "更新"
+        vim.notify(
+          string.format("[%s] コメントを%sしました（合計 %d 件）", tool_name, action, comments.count(tool_name)),
+          vim.log.levels.INFO
+        )
+        close_float()
+      end,
+      on_submit_immediate = function(content, submit_bufnr)
+        local message = vim.trim(content)
+        if message == "" then
+          return
+        end
         local current_pane = get_current_pane_id()
         if not current_pane then
           vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
           return
         end
-
-        -- ビジュアル選択コンテキストがあればプロンプトの先頭に付与
-        local text = content
-        local ctx = vim.b[submit_bufnr] and vim.b[submit_bufnr].ai_visual_context or nil
+        local ctx = vim.b[submit_bufnr] and vim.b[submit_bufnr].ai_context or nil
+        local text = message
         if ctx then
-          text = ctx .. text
+          text = string.format("@%s#L%d-%d %s", ctx.file_path, ctx.start_line, ctx.end_line, message)
         end
-
-        -- Codexの場合はテキストの末尾に改行を追加（Codexは改行がないと送信されない）
-        if tool_name == "codex" then
-          text = text .. "\n"
-        end
-
-        -- テキストをペインに送信
-        local success, err = tmux.send_text(current_pane, text)
-        if not success then
-          vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"), vim.log.levels.ERROR)
+        local ok, err = tmux.send_text(current_pane, finalize_text(tool_name, text))
+        if not ok then
+          vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"),
+            vim.log.levels.ERROR)
         end
       end,
       on_scroll_down = function()
@@ -338,18 +413,54 @@ local function open_input_buffer(tool_name, args, context)
         end
       end,
     })
-    -- ビジュアル選択コンテキストをバッファ変数に保存（送信時に参照）
-    if context and context ~= "" then
-      vim.b[bufnr].ai_visual_context = context
+    -- 同じ context で再オープンする場合は書きかけ内容をそのまま保持する
+    -- 違う context（別範囲 or 即送信モード切替）の場合のみ内容を入れ替える
+    local prev_context = vim.b[bufnr].ai_context
+    if same_context(prev_context, context) then
+      -- 何もしない（バッファ内容を保持）
+    elseif context then
+      vim.b[bufnr].ai_context = context
+      local existing = comments.get(tool_name, context.file_path, context.start_line, context.end_line)
+      if existing then
+        local preload = vim.split(existing, "\n", { plain = true })
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, preload)
+        local last_row = #preload
+        local last_col = #preload[last_row]
+        pcall(vim.api.nvim_win_set_cursor, 0, { last_row, last_col })
+      else
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+      end
     else
-      vim.b[bufnr].ai_visual_context = nil
+      vim.b[bufnr].ai_context = nil
+      -- 即送信モードに切り替わったときは前回の書きかけを残さない
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
     end
   end)
 end
 
--- Claudeを開く
+-- ビジュアル選択から範囲コンテキストを構築
+local function get_visual_context()
+  local file_path = vim.fn.expand("%:p")
+  if file_path == "" then
+    return nil
+  end
+  -- :p で正規化（comments モジュール側のキーと揃える）
+  file_path = vim.fn.fnamemodify(file_path, ":p")
+  local start_line = vim.fn.line("v")
+  local end_line = vim.fn.line(".")
+  if start_line > end_line then
+    start_line, end_line = end_line, start_line
+  end
+  return {
+    file_path = file_path,
+    start_line = start_line,
+    end_line = end_line,
+  }
+end
+
+-- Claudeを開く（context 無し = ノーマルモード起動 = 即送信モード）
 -- @param args string|nil コマンド引数
--- @param context string|nil ビジュアル選択コンテキスト
+-- @param context table|nil 範囲コンテキスト
 function M.open_claude(args, context)
   local base_args = ''
   if args and args ~= "" then
@@ -360,23 +471,92 @@ function M.open_claude(args, context)
   open_input_buffer("claude", args, context)
 end
 
--- Codexを開く
+-- Codexを開く（context 無し = ノーマルモード起動 = 即送信モード）
 -- @param args string|nil コマンド引数
--- @param context string|nil ビジュアル選択コンテキスト
+-- @param context table|nil 範囲コンテキスト
 function M.open_codex(args, context)
   open_input_buffer("codex", args, context)
 end
 
--- ビジュアル選択からファイルコンテキストを取得
--- @return string "@/path/to/file#Lstart-end " 形式のコンテキスト
-local function get_visual_context()
-  local file_path = vim.fn.expand("%:p")
-  local start_line = vim.fn.line("v")
-  local end_line = vim.fn.line(".")
-  if start_line > end_line then
-    start_line, end_line = end_line, start_line
+-- コメントスタックを一括送信
+function M.submit(tool_name)
+  if not tmux.is_in_tmux() then
+    vim.notify("エラー: このコマンドはtmuxセッション内でのみ使用できます", vim.log.levels.ERROR)
+    return
   end
-  return string.format("@%s#L%d-%d ", file_path, start_line, end_line)
+
+  local text = comments.format_for_submit(tool_name)
+  if not text then
+    vim.notify(string.format("[%s] コメントスタックは空です", tool_name), vim.log.levels.INFO)
+    return
+  end
+
+  local pane_id = get_or_create_pane(tool_name, "")
+  if not pane_id then
+    return
+  end
+
+  local ok, err = tmux.send_text(pane_id, finalize_text(tool_name, text))
+  if not ok then
+    vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"),
+      vim.log.levels.ERROR)
+    return
+  end
+
+  local cleared = comments.count(tool_name)
+  comments.clear(tool_name)
+  vim.notify(string.format("[%s] %d 件のコメントを送信しました", tool_name, cleared), vim.log.levels.INFO)
+end
+
+-- コメントスタックを破棄
+function M.clear_comments(tool_name)
+  local n = comments.count(tool_name)
+  comments.clear(tool_name)
+  vim.notify(string.format("[%s] %d 件のコメントをクリアしました", tool_name, n), vim.log.levels.INFO)
+end
+
+-- カーソル行を含むコメントを削除
+function M.delete_comment_at_cursor(tool_name)
+  local file_path = vim.fn.expand("%:p")
+  if file_path == "" then
+    vim.notify("ファイルバッファではありません", vim.log.levels.WARN)
+    return
+  end
+  file_path = vim.fn.fnamemodify(file_path, ":p")
+  local line = vim.fn.line(".")
+  local removed = comments.delete_at_line(tool_name, file_path, line)
+  if removed == 0 then
+    vim.notify(string.format("[%s] カーソル行 (%d) にコメントはありません", tool_name, line), vim.log.levels.INFO)
+  else
+    vim.notify(
+      string.format("[%s] %d 件のコメントを削除しました（残 %d 件）", tool_name, removed, comments.count(tool_name)),
+      vim.log.levels.INFO
+    )
+  end
+end
+
+-- コメントスタックを quickfix に表示
+function M.list_comments(tool_name)
+  local threads = comments.list(tool_name)
+  if #threads == 0 then
+    vim.notify(string.format("[%s] コメントスタックは空です", tool_name), vim.log.levels.INFO)
+    return
+  end
+
+  local items = {}
+  for _, t in ipairs(threads) do
+    -- 改行をスペースに圧縮してプレビュー
+    local preview = (t.message or ""):gsub("\n", " / ")
+    table.insert(items, {
+      filename = t.file_path,
+      lnum = t.start_line,
+      end_lnum = t.end_line,
+      text = string.format("[#%d] %s", t.id, preview),
+    })
+  end
+
+  vim.fn.setqflist({}, " ", { title = string.format("%s comments", tool_name), items = items })
+  vim.cmd("copen")
 end
 
 -- ビジュアルモード用キーマップのヘルパー
@@ -393,6 +573,9 @@ end
 
 -- モジュールを初期化してコマンドとキーマップを登録
 function M.setup()
+  -- コメントスタックの初期化（namespace, autocmd, ハイライト）
+  comments.setup()
+
   -- :Claude コマンド（引数を受け取る）
   vim.api.nvim_create_user_command("Claude", function(opts)
     M.open_claude(opts.args)
@@ -408,6 +591,24 @@ function M.setup()
     nargs = "*",
     desc = "Open Codex in tmux pane with input buffer",
   })
+
+  -- コメントスタック操作系コマンド
+  vim.api.nvim_create_user_command("ClaudeSubmit", function() M.submit("claude") end,
+    { desc = "Submit stacked Claude comments" })
+  vim.api.nvim_create_user_command("CodexSubmit", function() M.submit("codex") end,
+    { desc = "Submit stacked Codex comments" })
+  vim.api.nvim_create_user_command("ClaudeClear", function() M.clear_comments("claude") end,
+    { desc = "Clear Claude comment stack" })
+  vim.api.nvim_create_user_command("CodexClear", function() M.clear_comments("codex") end,
+    { desc = "Clear Codex comment stack" })
+  vim.api.nvim_create_user_command("ClaudeList", function() M.list_comments("claude") end,
+    { desc = "List Claude comments in quickfix" })
+  vim.api.nvim_create_user_command("CodexList", function() M.list_comments("codex") end,
+    { desc = "List Codex comments in quickfix" })
+  vim.api.nvim_create_user_command("ClaudeDelete", function() M.delete_comment_at_cursor("claude") end,
+    { desc = "Delete Claude comment at cursor line" })
+  vim.api.nvim_create_user_command("CodexDelete", function() M.delete_comment_at_cursor("codex") end,
+    { desc = "Delete Codex comment at cursor line" })
 
   local map_opts = { noremap = true, silent = true }
 
@@ -456,6 +657,24 @@ function M.setup()
   vim.keymap.set("x", "<leader>xc", visual_keymap_handler(function(ctx)
     M.open_codex("resume --last", ctx)
   end), vim.tbl_extend("force", map_opts, { desc = "Open Codex resume --last with selection context" }))
+
+  -- キーマップ: コメントスタック操作
+  vim.keymap.set("n", "<leader>aS", "<Cmd>ClaudeSubmit<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Submit Claude comment stack" }))
+  vim.keymap.set("n", "<leader>aX", "<Cmd>ClaudeClear<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Clear Claude comment stack" }))
+  vim.keymap.set("n", "<leader>aL", "<Cmd>ClaudeList<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "List Claude comments" }))
+  vim.keymap.set("n", "<leader>xS", "<Cmd>CodexSubmit<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Submit Codex comment stack" }))
+  vim.keymap.set("n", "<leader>xX", "<Cmd>CodexClear<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Clear Codex comment stack" }))
+  vim.keymap.set("n", "<leader>xL", "<Cmd>CodexList<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "List Codex comments" }))
+  vim.keymap.set("n", "<leader>ad", "<Cmd>ClaudeDelete<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Delete Claude comment at cursor line" }))
+  vim.keymap.set("n", "<leader>xd", "<Cmd>CodexDelete<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Delete Codex comment at cursor line" }))
 end
 
 return M

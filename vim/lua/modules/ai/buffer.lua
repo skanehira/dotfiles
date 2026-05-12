@@ -27,12 +27,32 @@ local function setup_keymaps(bufnr, config)
   local opts = { buffer = bufnr, noremap = true, silent = true }
 
   -- <CR>: ノーマルモードでEnterキーを押してテキストを送信し、バッファをクリア
+  -- コメントスタック方式では「コメントを保存してフロートを閉じる」セマンティクスになる
   if config.on_submit then
     vim.keymap.set("n", "<CR>", function()
       local content = M.get_buffer_content(bufnr)
       config.on_submit(content, bufnr)
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+      end
     end, vim.tbl_extend("force", opts, { desc = "Submit and clear buffer" }))
+  end
+
+  -- <C-s>: スタックを経由せず即送信（バックドア）
+  if config.on_submit_immediate then
+    local immediate = function()
+      local content = M.get_buffer_content(bufnr)
+      config.on_submit_immediate(content, bufnr)
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+      end
+    end
+    vim.keymap.set("n", "<C-s>", immediate,
+      vim.tbl_extend("force", opts, { desc = "Submit immediately (bypass comment stack)" }))
+    vim.keymap.set("i", "<C-s>", function()
+      vim.cmd("stopinsert")
+      immediate()
+    end, vim.tbl_extend("force", opts, { desc = "Submit immediately (bypass comment stack)" }))
   end
 
   -- q: ウィンドウだけ閉じる（バッファは保持）
