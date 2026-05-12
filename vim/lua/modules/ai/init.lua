@@ -152,10 +152,6 @@ local function open_input_buffer(tool_name, args, context)
 
         -- コンテキストが無い（ノーマルモード起動 = 即送信モード）
         if not ctx then
-          if message == "" then
-            vim.notify("コメントが空です", vim.log.levels.WARN)
-            return
-          end
           local current_pane = get_current_pane_id()
           if not current_pane then
             vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
