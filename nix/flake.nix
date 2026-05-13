@@ -18,7 +18,13 @@
     };
   };
 
-  outputs = inputs@{ nixpkgs, home-manager, nix-darwin, ... }:
+  outputs =
+    inputs@{
+      nixpkgs,
+      home-manager,
+      nix-darwin,
+      ...
+    }:
     let
       # マシン共通の所有者名。複数 mac で同じ設定が走る前提で固定
       # (将来 user 変更時はここ 1 箇所のみ書き換え)
@@ -28,17 +34,19 @@
       # nix-darwin と違い HM standalone は module system 経由で nixpkgs.overlays /
       # nixpkgs.config を設定できないので、import nixpkgs に直接渡す。
       # overlays は modules/overlays-list.nix で nix-darwin と共有。
-      mkLinuxHome = system: home-manager.lib.homeManagerConfiguration {
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = import ./modules/overlays-list.nix { inherit inputs; };
-          config.allowUnfreePredicate = pkg:
-            builtins.elem (nixpkgs.lib.getName pkg) [ "terraform" ];
+      mkLinuxHome =
+        system:
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = import ./modules/overlays-list.nix { inherit inputs; };
+            config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [ "terraform" ];
+          };
+          extraSpecialArgs = { inherit username inputs; };
+          modules = [ ./home-linux.nix ];
         };
-        extraSpecialArgs = { inherit username inputs; };
-        modules = [ ./home-linux.nix ];
-      };
-    in {
+    in
+    {
       darwinConfigurations.${username} = nix-darwin.lib.darwinSystem {
         system = "aarch64-darwin";
         specialArgs = { inherit username inputs; };
@@ -63,18 +71,33 @@
       # Home Manager standalone (非 NixOS Linux 想定。Ubuntu/Arch 等)
       # 使い方: nix run home-manager/master -- switch --flake .#skanehira
       homeConfigurations = {
-        "${username}"          = mkLinuxHome "x86_64-linux";
-        "${username}-aarch64"  = mkLinuxHome "aarch64-linux";
+        "${username}" = mkLinuxHome "x86_64-linux";
+        "${username}-aarch64" = mkLinuxHome "aarch64-linux";
       };
 
       # 自前 derivation (nixpkgs 未収録 LSP)。`packages.nix` からも callPackage で
       # 参照されるが、ここに出すことで `nix build .#tsp-server` 等で個別 build できる
-      packages = nixpkgs.lib.genAttrs
-        [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ]
-        (system:
-          let pkgs = import nixpkgs { inherit system; }; in {
-            tsp-server                 = pkgs.callPackage ./pkgs/tsp-server.nix {};
-            gh-actions-language-server = pkgs.callPackage ./pkgs/gh-actions-language-server.nix {};
-          });
+      packages =
+        nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ]
+          (
+            system:
+            let
+              pkgs = import nixpkgs { inherit system; };
+            in
+            {
+              tsp-server = pkgs.callPackage ./pkgs/tsp-server.nix { };
+              gh-actions-language-server = pkgs.callPackage ./pkgs/gh-actions-language-server.nix { };
+            }
+          );
+
+      # `nix fmt` で呼ばれるフォーマッター。RFC 166 準拠の公式 nixfmt の
+      # treefmt ラッパー。引数なし `nix fmt` で repo 内 .nix を再帰的に整形する。
+      # (素の nixfmt は stdin 待ちになるため `nix fmt` 単体で使えない)
+      formatter = nixpkgs.lib.genAttrs [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ] (system: nixpkgs.legacyPackages.${system}.nixfmt-tree);
     };
 }
