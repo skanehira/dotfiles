@@ -5,7 +5,6 @@
 # プラットフォーム依存値は home-darwin.nix / home-linux.nix で設定する。
 {
   imports = [
-    ./modules/home/aliases.nix
     ./modules/home/claude.nix
     ./modules/home/deno.nix
     ./modules/home/direnv.nix
