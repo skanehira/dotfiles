@@ -4,8 +4,8 @@
 { inputs, ... }:
 
 {
-  nixpkgs.config.allowUnfreePredicate = pkg:
-    builtins.elem (inputs.nixpkgs.lib.getName pkg) [ "terraform" ];
+  nixpkgs.config.allowUnfreePredicate =
+    pkg: builtins.elem (inputs.nixpkgs.lib.getName pkg) [ "terraform" ];
 
   nixpkgs.overlays = import ./overlays-list.nix { inherit inputs; };
 }

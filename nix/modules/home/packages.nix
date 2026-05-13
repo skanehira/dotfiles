@@ -1,4 +1,9 @@
-{ inputs, lib, pkgs, ... }:
+{
+  inputs,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   # 言語ランタイム / コンパイラ (バージョンは明示ピン)
@@ -14,23 +19,26 @@ let
   packageManagers = with pkgs; [
     cargo-binstall
     pnpm_10
-    yarn  # classic 1.22.x（後継は yarn-berry）
+    yarn # classic 1.22.x（後継は yarn-berry）
   ];
 
   # Build / 開発ライブラリ
-  buildTools = with pkgs; [
-    cmake
-    libpq
-    luarocks
-    pkg-config
-    sqlc
-    tree-sitter    # CLI; nvim-treesitter main が parser compile に要求
-  ] ++ lib.optionals pkgs.stdenv.isDarwin [
-    # ryoppippi/nix-vite-plus overlay (vp コマンド)。aarch64-linux では installCheckPhase
-    # で SIGABRT になり build 失敗 (上流側の問題)。Linux 対応が必要になったら overlay 側
-    # の修正か doCheck=false の wrap を検討
-    vite-plus
-  ];
+  buildTools =
+    with pkgs;
+    [
+      cmake
+      libpq
+      luarocks
+      pkg-config
+      sqlc
+      tree-sitter # CLI; nvim-treesitter main が parser compile に要求
+    ]
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      # ryoppippi/nix-vite-plus overlay (vp コマンド)。aarch64-linux では installCheckPhase
+      # で SIGABRT になり build 失敗 (上流側の問題)。Linux 対応が必要になったら overlay 側
+      # の修正か doCheck=false の wrap を検討
+      vite-plus
+    ];
 
   # Lint / Format
   linters = with pkgs; [
@@ -82,61 +90,67 @@ let
     tokei
     jnv
     nix-sweep
-    nix-output-monitor  # nom: drs / nix build の進捗を見やすく可視化
+    nix-output-monitor # nom: drs / nix build の進捗を見やすく可視化
   ];
 
   # メディア / ファイル
   mediaTools = with pkgs; [
     ffmpeg
-    libsixel       # SIXEL 画像プロトコル
-    poppler        # PDF レンダリング
+    libsixel # SIXEL 画像プロトコル
+    poppler # PDF レンダリング
   ];
 
   # エディタ / TUI
   editors = with pkgs; [
-    neovim         # nixpkgs-unstable の stable release (cache.nixos.org でキャッシュ済)
-    slides         # markdown TUI presentation
-    tmux           # 設定は modules/home/tmux.nix で mkOutOfStoreSymlink により live edit
+    neovim # nixpkgs-unstable の stable release (cache.nixos.org でキャッシュ済)
+    slides # markdown TUI presentation
+    tmux # 設定は modules/home/tmux.nix で mkOutOfStoreSymlink により live edit
   ];
 
   # システムユーティリティ
-  systemUtils = with pkgs; [
-    gnupg
-    graphviz
-    rclone
-  ] ++ lib.optionals pkgs.stdenv.isDarwin [
-    terminal-notifier  # macOS notification API。Linux では notify.ts 側で no-op
-  ];
+  systemUtils =
+    with pkgs;
+    [
+      gnupg
+      graphviz
+      rclone
+    ]
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      terminal-notifier # macOS notification API。Linux では notify.ts 側で no-op
+    ];
 
   # LSP servers (Mason 廃止、全て Nix declarative 管理)。
   # vim/lua/plugins/lsp/lspconfig.lua の vim.lsp.enable(servers) で起動される。
   # mason の名前 → nixpkgs attr の対応は CLAUDE.md 参照。
-  lspServers = with pkgs; [
-    typescript-language-server          # ts_ls
-    vue-language-server                 # vue_ls
-    lua-language-server                 # lua_ls
-    vscode-langservers-extracted        # eslint + jsonls (1 パッケージで両方提供)
-    graphql-language-service-cli        # graphql (graphql-lsp バイナリ)
-    bash-language-server                # bashls
-    yaml-language-server                # yamlls
-    vim-language-server                 # vimls
-    marksman                            # marksman (markdown)
-    taplo                               # taplo (TOML)
-    clang-tools                         # clangd 同梱
-    terraform-ls                        # terraformls
-    biome                               # biome
-    oxlint                              # oxlint
-    zls                                 # zls (Zig)
-    regols                              # regols (OPA Rego)
-    gopls                               # gopls
-    buf                                 # buf_ls (`buf beta lsp`)
-    nixd                                # nixd (Nix)
-  ] ++ [
-    # nixpkgs 未収録の自前 derivation
-    (pkgs.callPackage ../../pkgs/tsp-server.nix {})                   # tsp_server
-    (pkgs.callPackage ../../pkgs/gh-actions-language-server.nix {})   # gh_actions_ls
-    inputs.version-lsp.packages.${pkgs.stdenv.hostPlatform.system}.default  # version_ls (flake input)
-  ];
+  lspServers =
+    with pkgs;
+    [
+      typescript-language-server # ts_ls
+      vue-language-server # vue_ls
+      lua-language-server # lua_ls
+      vscode-langservers-extracted # eslint + jsonls (1 パッケージで両方提供)
+      graphql-language-service-cli # graphql (graphql-lsp バイナリ)
+      bash-language-server # bashls
+      yaml-language-server # yamlls
+      vim-language-server # vimls
+      marksman # marksman (markdown)
+      taplo # taplo (TOML)
+      clang-tools # clangd 同梱
+      terraform-ls # terraformls
+      biome # biome
+      oxlint # oxlint
+      zls # zls (Zig)
+      regols # regols (OPA Rego)
+      gopls # gopls
+      buf # buf_ls (`buf beta lsp`)
+      nixd # nixd (Nix)
+    ]
+    ++ [
+      # nixpkgs 未収録の自前 derivation
+      (pkgs.callPackage ../../pkgs/tsp-server.nix { }) # tsp_server
+      (pkgs.callPackage ../../pkgs/gh-actions-language-server.nix { }) # gh_actions_ls
+      inputs.version-lsp.packages.${pkgs.stdenv.hostPlatform.system}.default # version_ls (flake input)
+    ];
 in
 {
   # HM module 経由で導入されているもの (ここには書かない):

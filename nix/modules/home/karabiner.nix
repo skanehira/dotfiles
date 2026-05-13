@@ -1,4 +1,10 @@
-{ config, lib, pkgs, dotfilesRoot, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  dotfilesRoot,
+  ...
+}:
 
 let
   # goku は既存の karabiner.json を update する設計のため、最低限 profile "Default" が必要
