@@ -13,8 +13,14 @@
 
   # Nix daemon (system) 設定
   nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
-    trusted-users = [ "@admin" username ];
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    trusted-users = [
+      "@admin"
+      username
+    ];
   };
 
   # sudo を Touch ID で通す

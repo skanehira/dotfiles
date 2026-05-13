@@ -2,7 +2,14 @@
 # nixpkgs 未収録。@typespec/compiler npm package が tsp-server バイナリを提供するが
 # 17 個の runtime 依存が tarball には含まれないため、FOD (fixed-output derivation) で
 # `npm install --omit=dev` を走らせて node_modules を vendoring する。
-{ stdenv, fetchurl, nodejs, cacert, makeWrapper, lib }:
+{
+  stdenv,
+  fetchurl,
+  nodejs,
+  cacert,
+  makeWrapper,
+  lib,
+}:
 
 let
   pname = "tsp-server";
@@ -19,7 +26,10 @@ let
   npmDeps = stdenv.mkDerivation {
     name = "${pname}-deps-${version}";
     inherit src;
-    nativeBuildInputs = [ nodejs cacert ];
+    nativeBuildInputs = [
+      nodejs
+      cacert
+    ];
 
     buildPhase = ''
       runHook preBuild

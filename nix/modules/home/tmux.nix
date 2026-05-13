@@ -1,4 +1,9 @@
-{ config, pkgs, dotfilesRoot, ... }:
+{
+  config,
+  pkgs,
+  dotfilesRoot,
+  ...
+}:
 
 let
   # jimeh/tmux-themepack は nixpkgs に無いので mkTmuxPlugin で取り込む

@@ -7,7 +7,7 @@
   # lazy.nvim はそのまま動作 (HM の plugins 機構は使わない)
   home.file = {
     ".config/nvim/init.lua".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/vim/init.lua";
-    ".config/nvim/lua".source      = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/vim/lua";
-    ".config/nvim/after".source    = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/vim/after";
+    ".config/nvim/lua".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/vim/lua";
+    ".config/nvim/after".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/vim/after";
   };
 }

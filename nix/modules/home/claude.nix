@@ -1,4 +1,10 @@
-{ config, lib, pkgs, dotfilesRoot, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  dotfilesRoot,
+  ...
+}:
 
 {
   # Bootstrap install: ~/.local/bin/claude が無い時のみ Anthropic 公式インストーラを実行
@@ -20,11 +26,12 @@
   # → skills/rules/hooks/CLAUDE.md の編集が drs 不要で即反映される (live edit)
   # 通常の home.file.X.source = ./path だと /nix/store にコピーされ drs 必須になる
   home.file = {
-    ".claude/CLAUDE.md".source     = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/CLAUDE.md";
-    ".claude/settings.json".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/settings.json";
-    ".claude/agents".source        = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/agents";
-    ".claude/hooks".source         = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/hooks";
-    ".claude/rules".source         = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/rules";
-    ".claude/skills".source        = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/skills";
+    ".claude/CLAUDE.md".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/CLAUDE.md";
+    ".claude/settings.json".source =
+      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/settings.json";
+    ".claude/agents".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/agents";
+    ".claude/hooks".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/hooks";
+    ".claude/rules".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/rules";
+    ".claude/skills".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/skills";
   };
 }

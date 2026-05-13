@@ -33,7 +33,7 @@
       "karabiner-elements"
       "keycastr"
       "orbstack"
-      "ppsspp-emulator"  # PSP emulator GUI (formula 版 ppsspp は nixpkgs 未対応のため cask 利用)
+      "ppsspp-emulator" # PSP emulator GUI (formula 版 ppsspp は nixpkgs 未対応のため cask 利用)
       "session-manager-plugin"
       "slack"
       "tableplus"

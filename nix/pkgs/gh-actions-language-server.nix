@@ -1,7 +1,13 @@
 # GitHub Actions Language Server (Mason の gh_actions_ls と同等品)。
 # nixpkgs 未収録のため自前 derivation。npm published tarball の dist/cli.bundle.cjs が
 # esbuild で全依存を bundle 済なので、tarball を展開して node で wrap するだけで済む。
-{ stdenv, fetchurl, nodejs, makeWrapper, lib }:
+{
+  stdenv,
+  fetchurl,
+  nodejs,
+  makeWrapper,
+  lib,
+}:
 
 stdenv.mkDerivation rec {
   pname = "gh-actions-language-server";

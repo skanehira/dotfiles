@@ -1,4 +1,10 @@
-{ lib, pkgs, username, dotfilesRoot, ... }:
+{
+  lib,
+  pkgs,
+  username,
+  dotfilesRoot,
+  ...
+}:
 
 {
   programs.zsh = {
@@ -37,21 +43,23 @@
 
     # ~/.zprofile に追記する内容 (login shell 起動時に評価される)
     # platform 分岐は Nix 評価時に解決され、対象 OS の文字列だけが残る
-    profileExtra = lib.optionalString pkgs.stdenv.isDarwin ''
-      export SHELL=/bin/zsh
-      eval "$(/opt/homebrew/bin/brew shellenv)"
+    profileExtra =
+      lib.optionalString pkgs.stdenv.isDarwin ''
+        export SHELL=/bin/zsh
+        eval "$(/opt/homebrew/bin/brew shellenv)"
 
-      # OpenShift Local (crc): oc を PATH に追加
-      if [ -x /usr/local/bin/crc ] && [ -x "$HOME/.crc/bin/oc/oc" ]; then
-        eval "$(/usr/local/bin/crc oc-env)"
-      fi
-    '' + lib.optionalString pkgs.stdenv.isLinux ''
-      export SHELL=/usr/bin/zsh
-      brew=/home/linuxbrew/.linuxbrew/bin/brew
-      if [ -f "$brew" ]; then
-        eval "$($brew shellenv)"
-      fi
-    '';
+        # OpenShift Local (crc): oc を PATH に追加
+        if [ -x /usr/local/bin/crc ] && [ -x "$HOME/.crc/bin/oc/oc" ]; then
+          eval "$(/usr/local/bin/crc oc-env)"
+        fi
+      ''
+      + lib.optionalString pkgs.stdenv.isLinux ''
+        export SHELL=/usr/bin/zsh
+        brew=/home/linuxbrew/.linuxbrew/bin/brew
+        if [ -f "$brew" ]; then
+          eval "$($brew shellenv)"
+        fi
+      '';
 
     localVariables = {
       # プロンプト: 赤username@緑hostname BOLD黄パス\n$
@@ -75,12 +83,14 @@
     t = "terraform";
     # rust
     c = "cargo";
-  } // lib.optionalAttrs pkgs.stdenv.isDarwin {
+  }
+  // lib.optionalAttrs pkgs.stdenv.isDarwin {
     # nix-darwin 切替 (mac)
     # noglob を前置して zsh の EXTENDED_GLOB が flake URL の `#` をグロブと
     # 解釈するのを防ぐ (`nix#user` が "nix の繰り返し + user" として展開されエラーになる)
     drs = "noglob sudo darwin-rebuild switch --flake ${dotfilesRoot}/nix#${username}";
-  } // lib.optionalAttrs pkgs.stdenv.isLinux {
+  }
+  // lib.optionalAttrs pkgs.stdenv.isLinux {
     # Home Manager standalone 切替 (Linux)
     hms = "noglob home-manager switch --flake ${dotfilesRoot}/nix#${username}";
   };
