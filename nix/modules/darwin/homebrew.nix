@@ -42,6 +42,9 @@
       "wezterm@nightly"
       "xquartz"
       "tailscale-app"
+      "zoom"
+      "claude"
+      "codex-app"
     ];
   };
 }
