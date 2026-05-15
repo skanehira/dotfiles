@@ -18,6 +18,7 @@ skills/
 ├── implementation-planning-tasks/
 ├── implementation-writing-tests/
 ├── workflow-commit/
+├── workflow-create-draft-pr/
 ├── workflow-debate/
 ├── workflow-review/
 ├── workflow-spec/
@@ -98,12 +99,13 @@ skills/
 
 `workflow-*` は対話的オーケストレーター / エントリポイントで、必要に応じて他スキルを内部で呼ぶ。
 
-| スキル                                | 説明                                                                                                                                   |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| [workflow-spec](./workflow-spec/)     | DESIGN.md + TODO.md を対話的に生成 (analyzing-requirements + interview + planning-tasks 統合)、完了後 implementation-developing を起動 |
-| [workflow-review](./workflow-review/) | git 差分を 5 観点でコードレビュー (TDD・品質・セキュリティ・アーキテクチャ・ルール)                                                    |
-| [workflow-commit](./workflow-commit/) | Conventional Commit 形式でコミット (push はユーザが手動)                                                                               |
-| [workflow-debate](./workflow-debate/) | 複数サブエージェントで議論を反復し、相違が収束するまで議題を検証                                                                       |
+| スキル                                                  | 説明                                                                                                                                   |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [workflow-spec](./workflow-spec/)                       | DESIGN.md + TODO.md を対話的に生成 (analyzing-requirements + interview + planning-tasks 統合)、完了後 implementation-developing を起動 |
+| [workflow-review](./workflow-review/)                   | git 差分を 5 観点でコードレビュー (TDD・品質・セキュリティ・アーキテクチャ・ルール)                                                    |
+| [workflow-commit](./workflow-commit/)                   | Conventional Commit 形式でコミット (push はユーザが手動)                                                                               |
+| [workflow-create-draft-pr](./workflow-create-draft-pr/) | ローカルのコミット履歴と差分から Draft PR を作成 (`.github/` のテンプレートを自動検出、無ければ本文を生成)                             |
+| [workflow-debate](./workflow-debate/)                   | 複数サブエージェントで議論を反復し、相違が収束するまで議題を検証                                                                       |
 
 ### プロダクト生成スキル
 
@@ -142,6 +144,7 @@ skills/
 /implementation-developing      # TDD 実装 (TODO.md があるとフェーズ管理)
 /workflow-review                # コードレビュー
 /workflow-commit                # コミット (push は手動)
+/workflow-create-draft-pr       # Draft PR を作成 (テンプレ自動検出)
 /workflow-debate                # 複数視点で議論して結論を得る
 /utility-codex                  # Codex CLI に単体で相談
 ```
