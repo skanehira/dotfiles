@@ -16,6 +16,12 @@
       url = "github:skanehira/version-lsp";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # nix-index の事前生成 DB を毎週取得する HM モジュール + comma を提供。
+    # これにより `,` で未インストールの CLI を一時実行できる。
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
