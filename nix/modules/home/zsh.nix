@@ -85,14 +85,17 @@
     c = "cargo";
   }
   // lib.optionalAttrs pkgs.stdenv.isDarwin {
-    # nix-darwin 切替 (mac)
-    # noglob を前置して zsh の EXTENDED_GLOB が flake URL の `#` をグロブと
-    # 解釈するのを防ぐ (`nix#user` が "nix の繰り返し + user" として展開されエラーになる)
-    drs = "noglob sudo darwin-rebuild switch --flake ${dotfilesRoot}/nix#${username}";
+    # nix-darwin 切替 (mac)。nh が内部で darwin-rebuild を sudo 実行し、
+    # 自動で nom 経由のビルド進捗 + 適用前後の diff を表示する。
+    # INSTALLABLE 形式 (<flake>#<configname>) で渡して、NH_FLAKE 未設定の
+    # 新規セッションや hostname がマシン依存な環境でも安定して引ける状態にする。
+    # noglob: zsh の EXTENDED_GLOB が `#` を繰り返しメタ文字として解釈し
+    # `nix#user` を "nix の繰り返し + user" に展開してエラーになるのを防ぐ
+    drs = "noglob nh darwin switch ${dotfilesRoot}/nix#${username}";
   }
   // lib.optionalAttrs pkgs.stdenv.isLinux {
     # Home Manager standalone 切替 (Linux)
-    hms = "noglob home-manager switch --flake ${dotfilesRoot}/nix#${username}";
+    hms = "noglob nh home switch ${dotfilesRoot}/nix#${username}";
   };
 
   # ~/.config/zsh/functions/ 配下にカスタム関数ファイルを配置

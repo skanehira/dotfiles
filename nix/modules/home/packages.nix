@@ -89,6 +89,7 @@ let
     just
     tokei
     jnv
+    nh # darwin-rebuild / home-manager の上位ラッパー (nom 出力 + diff 表示 + GC 統合)
     nix-sweep
     nix-output-monitor # nom: drs / nix build の進捗を見やすく可視化
   ];
