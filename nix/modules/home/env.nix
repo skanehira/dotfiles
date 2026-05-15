@@ -1,9 +1,11 @@
-{ ... }:
+{ config, ... }:
 
 {
   # ログインシェルで設定する環境変数 (HM が hm-session-vars.sh を生成)
   home.sessionVariables = {
     EDITOR = "nvim";
+    # nh が flake path 引数を省略しても解決できるようにする
+    NH_FLAKE = "${config.home.homeDirectory}/dev/github.com/skanehira/dotfiles/nix";
     LANG = "en_US.UTF-8";
     LC_CTYPE = "en_US.UTF-8";
     LC_ALL = "en_US.UTF-8";
