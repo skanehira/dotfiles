@@ -1,0 +1,35 @@
+name: nix check
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  check:
+    name: flake check + fmt
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # flake.nix は nix/ サブディレクトリ配下に置いてあるため、
+        # nix コマンド系のステップを全部このディレクトリで実行する
+        working-directory: nix
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+
+      # 全 system (x86_64-linux / aarch64-linux / x86_64-darwin / aarch64-darwin)
+      # の output を eval する。--no-build にして CI 時間を eval だけに抑える
+      # (実 build まで掛けたい場合は --no-build を外すと cache.nixos.org からの
+      # download + 自前 derivation の build まで走る)
+      - name: nix flake check
+        run: nix flake check --all-systems --no-build
+
+      # nixfmt 違反がある状態で master に push された場合 fail させる。
+      # --ci は --fail-on-change + --no-cache を含む treefmt の CI 用 alias
+      - name: nixfmt check
+        run: nix fmt -- --ci
