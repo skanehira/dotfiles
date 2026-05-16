@@ -26,6 +26,7 @@ let
   buildTools =
     with pkgs;
     [
+      binutils # readelf / objdump / nm / strings 等。Linux ELF 解析にも使う
       cmake
       libpq
       luarocks
