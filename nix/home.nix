@@ -14,6 +14,7 @@
     ./modules/home/direnv.nix
     ./modules/home/env.nix
     ./modules/home/fzf.nix
+    ./modules/home/gh.nix
     ./modules/home/git.nix
     ./modules/home/neovim.nix
     ./modules/home/packages.nix
