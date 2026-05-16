@@ -42,9 +42,9 @@
     NSGlobalDomain = {
       # キーリピート速度 (System Settings の最速より速くできる)
       # InitialKeyRepeat: リピート開始までの遅延 (単位 15ms。15 → ~225ms)
+      InitialKeyRepeat = 10;
       # KeyRepeat: 1 文字あたりの間隔 (単位 15ms。2 → ~30ms)
-      InitialKeyRepeat = 15;
-      KeyRepeat = 2;
+      KeyRepeat = 1;
       # 長押しでアクセント記号メニューを出すデフォルト挙動を無効化し、
       # vim 等のキーリピートを優先する
       ApplePressAndHoldEnabled = false;
