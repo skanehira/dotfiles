@@ -52,10 +52,10 @@ let
   ];
 
   # Git / GitHub Actions
+  # gh は programs.gh.enable が pkgs.gh を home.packages に追加するためここでは宣言しない
   gitTools = with pkgs; [
     act
     difftastic
-    gh
     ghq
     git-filter-repo
     pinact
