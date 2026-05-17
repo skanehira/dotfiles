@@ -5,13 +5,13 @@ local parsers = {
   'lua', 'rust', 'typescript', 'tsx', 'go', 'gomod',
   'sql', 'toml', 'yaml', 'html', 'javascript',
   'graphql', 'markdown', 'markdown_inline',
-  'nix', 'bash', 'json', 'gitignore', 'ssh_config'
+  'nix', 'bash', 'json', 'gitignore', 'ssh_config', 'just'
 }
 
 local treesitter = {
   'nvim-treesitter/nvim-treesitter',
   branch = 'main',
-  lazy = false,         -- main は lazy-load 非対応 (README 警告)
+  lazy = false, -- main は lazy-load 非対応 (README 警告)
   build = ':TSUpdate',
   config = function()
     -- 常用 parser は起動時に事前 install (idempotent、async)。tree-sitter CLI が
