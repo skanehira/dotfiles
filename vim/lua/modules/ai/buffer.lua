@@ -63,74 +63,41 @@ local function setup_keymaps(bufnr, config)
     end
   end, vim.tbl_extend("force", opts, { desc = "Close float window" }))
 
-  -- <C-x>: ペインで動いているプロセスを終了
-  if config.on_interrupt then
-    vim.keymap.set("n", "<C-x><C-x>", function()
-      config.on_interrupt()
-    end, vim.tbl_extend("force", opts, { desc = "Interrupt process in tmux pane" }))
+  -- tmuxペインへの単純パススルー keymap 群
+  -- { mode = キーマップモード, key = キー, cb = config のコールバック名, desc = キーマップ説明 }
+  local passthrough_keymaps = {
+    { mode = "n", key = "<C-x><C-x>", cb = "on_interrupt",          desc = "Interrupt process in tmux pane" },
+    { mode = "n", key = "<C-d>",      cb = "on_scroll_down",        desc = "Send PageDown to tmux pane" },
+    { mode = "n", key = "<C-u>",      cb = "on_scroll_up",          desc = "Send PageUp to tmux pane" },
+    { mode = "n", key = "<C-e>",      cb = "on_send_ctrl_e",        desc = "Send Ctrl+E to tmux pane" },
+    { mode = "n", key = "<C-a>",      cb = "on_send_ctrl_a",        desc = "Send Ctrl+A to tmux pane" },
+    { mode = "n", key = "<C-f>",      cb = "on_send_ctrl_f",        desc = "Send Ctrl+F to tmux pane" },
+    { mode = "n", key = "<C-b>",      cb = "on_send_ctrl_b",        desc = "Send Ctrl+B to tmux pane" },
+    { mode = "n", key = "<C-h>",      cb = "on_send_ctrl_h",        desc = "Send Ctrl+H to tmux pane" },
+    { mode = "n", key = "<C-g><C-b>", cb = "on_scroll_to_bottom",   desc = "Send Ctrl+End to tmux pane (jump to bottom)" },
+    { mode = "n", key = "<Tab>",      cb = "on_send_tab",           desc = "Send Tab to tmux pane" },
+    { mode = "n", key = "<S-Tab>",    cb = "on_send_shift_tab",     desc = "Send Shift+Tab to tmux pane" },
+    { mode = "n", key = "<Space>",    cb = "on_send_space",         desc = "Send Space to tmux pane" },
+    { mode = "n", key = "<C-c>",      cb = "on_send_ctrl_c",        desc = "Send C-c to tmux pane" },
+    { mode = "n", key = "<Esc>",      cb = "on_send_escape",        desc = "Send Escape to tmux pane" },
+    { mode = "n", key = "R",          cb = "on_send_double_escape", desc = "Send Escape x2 to tmux pane (rewind)" },
+    { mode = "n", key = "<Up>",       cb = "on_send_up",            desc = "Send Up to tmux pane" },
+    { mode = "n", key = "<C-p>",      cb = "on_send_up",            desc = "Send Up to tmux pane" },
+    { mode = "n", key = "<Down>",     cb = "on_send_down",          desc = "Send Down to tmux pane" },
+    { mode = "n", key = "<C-n>",      cb = "on_send_down",          desc = "Send Down to tmux pane" },
+    { mode = "n", key = "<Left>",     cb = "on_send_left",          desc = "Send Left to tmux pane" },
+    { mode = "n", key = "<Right>",    cb = "on_send_right",         desc = "Send Right to tmux pane" },
+    { mode = "i", key = "<C-v>",      cb = "on_send_ctrl_v",        desc = "Send Ctrl+V to tmux pane" },
+  }
+  -- ループ変数の closure キャプチャを避けるため factory で生成
+  local function make_passthrough(cb_name)
+    return function() config[cb_name]() end
   end
-
-  -- <C-d>: PageDownをtmuxペインに送信
-  if config.on_scroll_down then
-    vim.keymap.set("n", "<C-d>", function()
-      config.on_scroll_down()
-    end, vim.tbl_extend("force", opts, { desc = "Send PageDown to tmux pane" }))
-  end
-
-  -- <C-u>: PageUpをtmuxペインに送信
-  if config.on_scroll_up then
-    vim.keymap.set("n", "<C-u>", function()
-      config.on_scroll_up()
-    end, vim.tbl_extend("force", opts, { desc = "Send PageUp to tmux pane" }))
-  end
-
-  -- <C-g><C-b>: Ctrl+Endをtmuxペインに送信（ジャンプ・トゥ・ボトム）
-  if config.on_scroll_to_bottom then
-    vim.keymap.set("n", "<C-g><C-b>", function()
-      config.on_scroll_to_bottom()
-    end, vim.tbl_extend("force", opts, { desc = "Send Ctrl+End to tmux pane (jump to bottom)" }))
-  end
-
-  -- <Tab>: Tabをtmux側に送信
-  if config.on_send_tab then
-    vim.keymap.set("n", "<Tab>", function()
-      config.on_send_tab()
-    end, vim.tbl_extend("force", opts, { desc = "Send Tab to tmux pane" }))
-  end
-
-  -- <S-Tab>: Shift+Tabをtmux側に送信
-  if config.on_send_shift_tab then
-    vim.keymap.set("n", "<S-Tab>", function()
-      config.on_send_shift_tab()
-    end, vim.tbl_extend("force", opts, { desc = "Send Shift+Tab to tmux pane" }))
-  end
-
-  -- <Space>: スペースをtmux側に送信
-  if config.on_send_space then
-    vim.keymap.set("n", "<Space>", function()
-      config.on_send_space()
-    end, vim.tbl_extend("force", opts, { desc = "Send Space to tmux pane" }))
-  end
-
-  -- <C-c>: C-cをtmux側に送信
-  if config.on_send_ctrl_c then
-    vim.keymap.set("n", "<C-c>", function()
-      config.on_send_ctrl_c()
-    end, vim.tbl_extend("force", opts, { desc = "Send C-c to tmux pane" }))
-  end
-
-  -- <Esc>: Escapeをtmux側に送信
-  if config.on_send_escape then
-    vim.keymap.set("n", "<Esc>", function()
-      config.on_send_escape()
-    end, vim.tbl_extend("force", opts, { desc = "Send Escape to tmux pane" }))
-  end
-
-  -- <R>: Escape x2をtmux側に送信（Claudeのrewind用）
-  if config.on_send_double_escape then
-    vim.keymap.set("n", "R", function()
-      config.on_send_double_escape()
-    end, vim.tbl_extend("force", opts, { desc = "Send Escape x2 to tmux pane (rewind)" }))
+  for _, m in ipairs(passthrough_keymaps) do
+    if config[m.cb] then
+      vim.keymap.set(m.mode, m.key, make_passthrough(m.cb),
+        vim.tbl_extend("force", opts, { desc = m.desc }))
+    end
   end
 
   -- <C-r>: ファイル検索（telescope）
@@ -143,47 +110,6 @@ local function setup_keymaps(bufnr, config)
   vim.keymap.set("i", "<C-l>", function()
     complete.pick_command()
   end, vim.tbl_extend("force", opts, { desc = "Search and insert command/skill" }))
-
-  -- <C-v>: Ctrl+Vをtmux側に送信
-  if config.on_send_ctrl_v then
-    vim.keymap.set("i", "<C-v>", function()
-      config.on_send_ctrl_v()
-    end, vim.tbl_extend("force", opts, { desc = "Send Ctrl+V to tmux pane" }))
-  end
-
-  -- <Up> / <C-p>: 上矢印をtmux側に送信
-  if config.on_send_up then
-    vim.keymap.set("n", "<Up>", function()
-      config.on_send_up()
-    end, vim.tbl_extend("force", opts, { desc = "Send Up to tmux pane" }))
-    vim.keymap.set("n", "<C-p>", function()
-      config.on_send_up()
-    end, vim.tbl_extend("force", opts, { desc = "Send Up to tmux pane" }))
-  end
-
-  -- <Down> / <C-n>: 下矢印をtmux側に送信
-  if config.on_send_down then
-    vim.keymap.set("n", "<Down>", function()
-      config.on_send_down()
-    end, vim.tbl_extend("force", opts, { desc = "Send Down to tmux pane" }))
-    vim.keymap.set("n", "<C-n>", function()
-      config.on_send_down()
-    end, vim.tbl_extend("force", opts, { desc = "Send Down to tmux pane" }))
-  end
-
-  -- <Left>: 左矢印をtmux側に送信
-  if config.on_send_left then
-    vim.keymap.set("n", "<Left>", function()
-      config.on_send_left()
-    end, vim.tbl_extend("force", opts, { desc = "Send Left to tmux pane" }))
-  end
-
-  -- <Right>: 右矢印をtmux側に送信
-  if config.on_send_right then
-    vim.keymap.set("n", "<Right>", function()
-      config.on_send_right()
-    end, vim.tbl_extend("force", opts, { desc = "Send Right to tmux pane" }))
-  end
 end
 
 -- バッファ名でバッファを検索

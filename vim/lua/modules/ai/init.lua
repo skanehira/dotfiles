@@ -143,7 +143,7 @@ local function open_input_buffer(tool_name, args, context)
   -- tmuxペイン作成後、Neovimのリサイズが反映されてからfloatを作成
   local buffer_name = string.format("[%s Input]", tool_name:gsub("^%l", string.upper))
   vim.schedule(function()
-    local bufnr = buffer.create_input_buffer({
+    local buf_config = {
       name = buffer_name,
       filetype = "markdown",
       on_submit = function(content, submit_bufnr)
@@ -220,42 +220,6 @@ local function open_input_buffer(tool_name, args, context)
             vim.log.levels.ERROR)
         end
       end,
-      on_scroll_down = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "PageDown")
-        if not success then
-          vim.notify("PageDownの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_scroll_up = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "PageUp")
-        if not success then
-          vim.notify("PageUpの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_scroll_to_bottom = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "C-End")
-        if not success then
-          vim.notify("Ctrl+Endの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
       on_interrupt = function()
         local current_pane = get_current_pane_id()
         if not current_pane then
@@ -275,140 +239,49 @@ local function open_input_buffer(tool_name, args, context)
           vim.notify(string.format("%sペインの終了に失敗しました:\n%s", tool_name, err or "不明なエラー"), vim.log.levels.ERROR)
         end
       end,
-      on_send_tab = function()
+    }
+    -- tmuxペインへ単純にキーを送る callback を一括生成
+    -- { cb = bufferモジュール側のコールバック名, key = tmux send-keys に渡すキー名, label = エラー表示用ラベル }
+    local passthrough_keys = {
+      { cb = "on_scroll_down",        key = "PageDown",      label = "PageDown" },
+      { cb = "on_scroll_up",          key = "PageUp",        label = "PageUp" },
+      { cb = "on_send_ctrl_e",        key = "C-e",           label = "Ctrl+E" },
+      { cb = "on_send_ctrl_a",        key = "C-a",           label = "Ctrl+A" },
+      { cb = "on_send_ctrl_f",        key = "C-f",           label = "Ctrl+F" },
+      { cb = "on_send_ctrl_b",        key = "C-b",           label = "Ctrl+B" },
+      { cb = "on_send_ctrl_h",        key = "C-h",           label = "Ctrl+H" },
+      { cb = "on_scroll_to_bottom",   key = "C-End",         label = "Ctrl+End" },
+      { cb = "on_send_tab",           key = "Tab",           label = "Tab" },
+      { cb = "on_send_shift_tab",     key = "BTab",          label = "Shift+Tab" },
+      { cb = "on_send_space",         key = "Space",         label = "Space" },
+      { cb = "on_send_ctrl_c",        key = "C-c",           label = "C-c" },
+      { cb = "on_send_escape",        key = "Escape",        label = "Escape" },
+      -- 1コマンドで2連送信することで、Claudeのrewind検出タイムウィンドウ内に確実に届ける
+      { cb = "on_send_double_escape", key = "Escape Escape", label = "Escape x2" },
+      { cb = "on_send_ctrl_v",        key = "C-v",           label = "Ctrl+V" },
+      { cb = "on_send_up",            key = "Up",            label = "Up" },
+      { cb = "on_send_down",          key = "Down",          label = "Down" },
+      { cb = "on_send_left",          key = "Left",          label = "Left" },
+      { cb = "on_send_right",         key = "Right",         label = "Right" },
+    }
+    -- ループ変数の closure キャプチャを避けるため factory で生成
+    local function make_send_keys_callback(key_name, label)
+      return function()
         local current_pane = get_current_pane_id()
         if not current_pane then
           vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
           return
         end
-
-        local success, err = tmux.send_keys(current_pane, "Tab")
+        local success, err = tmux.send_keys(current_pane, key_name)
         if not success then
-          vim.notify("Tabの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
+          vim.notify(string.format("%sの送信に失敗しました:\n%s", label, err or "不明なエラー"), vim.log.levels.WARN)
         end
-      end,
-      on_send_shift_tab = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "BTab")
-        if not success then
-          vim.notify("Shift+Tabの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_send_space = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "Space")
-        if not success then
-          vim.notify("Spaceの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_send_ctrl_c = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "C-c")
-        if not success then
-          vim.notify("C-cの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_send_escape = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "Escape")
-        if not success then
-          vim.notify("Escapeの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_send_double_escape = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        -- 1コマンドで2連送信することで、Claudeのrewind検出タイムウィンドウ内に確実に届ける
-        local success, err = tmux.send_keys(current_pane, "Escape Escape")
-        if not success then
-          vim.notify("Escape x2の送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_send_ctrl_v = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "C-v")
-        if not success then
-          vim.notify("Ctrl+Vの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_send_up = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "Up")
-        if not success then
-          vim.notify("Upの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_send_down = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "Down")
-        if not success then
-          vim.notify("Downの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_send_left = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "Left")
-        if not success then
-          vim.notify("Leftの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-      on_send_right = function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-
-        local success, err = tmux.send_keys(current_pane, "Right")
-        if not success then
-          vim.notify("Rightの送信に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end,
-    })
+      end
+    end
+    for _, p in ipairs(passthrough_keys) do
+      buf_config[p.cb] = make_send_keys_callback(p.key, p.label)
+    end
+    local bufnr = buffer.create_input_buffer(buf_config)
     -- バッファ内容の判定（書きかけがあるか）
     local current_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
     local is_buffer_empty = (#current_lines == 0)
