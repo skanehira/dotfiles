@@ -1,5 +1,6 @@
 ---
-paths: **/*.go
+paths:
+  - "**/*_test.go"
 ---
 
 # Go テストルール
