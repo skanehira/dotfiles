@@ -374,11 +374,11 @@ AskUserQuestion({
 
 ### 実装開始
 
-TODO.md承認後、自動的に /impl コマンドを実行して実装を開始します。
+TODO.md承認後、自動的に implementation-developing スキルを実行して実装を開始します。
 
 ```javascript
 Skill({
-  skill: "workflow-impl"
+  skill: "implementation-developing"
 })
 ```
 
