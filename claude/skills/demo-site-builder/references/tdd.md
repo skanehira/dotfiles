@@ -216,7 +216,7 @@ it("calls onSubmit with trimmed email and password when valid", async () => {
 });
 ```
 
-**`vi.mock` は原則使わない**（`react-testing` スキル方針）。依存は props 注入で済ます。
+**`vi.mock` は原則使わない**（`implementation-writing-tests` の `references/react-typescript.md` 参照）。依存は props 注入で済ます。
 
 ## Layer 6: ルーティング + BottomNav
 

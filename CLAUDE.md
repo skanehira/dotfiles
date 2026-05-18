@@ -209,11 +209,11 @@ sudo darwin-rebuild switch ...
 
 ### Workflow Skills
 - `/workflow-spec` — 設計書 (DESIGN.md) とタスクリスト (TODO.md) を対話的に生成
-- `/workflow-impl` — TDD で実装
+- `/implementation-developing` — TDD で実装
 - `/workflow-review` — コードレビュー
 - `/workflow-ask` — インタビュー→確認→実行
 - `/requirements-interview` — DESIGN.md 深掘り
-- `/workflow-commit-push` — Conventional Commit 形式で commit + push
+- `/workflow-commit` — Conventional Commit 形式で commit (push は手動)
 
 ### Hooks (settings.json)
 - **Stop/Notification** — 完了時に macOS 通知（`terminal-notifier` 使用、Nix 管理）
