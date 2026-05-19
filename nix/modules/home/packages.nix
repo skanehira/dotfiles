@@ -33,6 +33,7 @@ let
       pkg-config
       sqlc
       tree-sitter # CLI; nvim-treesitter main が parser compile に要求
+      cargo-zigbuild
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       # ryoppippi/nix-vite-plus overlay (vp コマンド)。aarch64-linux では installCheckPhase
@@ -50,6 +51,7 @@ let
     reviewdog
     shellcheck
     stylua
+    selene
   ];
 
   # Git / GitHub Actions
