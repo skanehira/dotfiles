@@ -180,4 +180,4 @@ ok "$TARGET_REPO に CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID を登録"
 echo
 echo "完了。次のステップ："
 echo "  1. git push（GitHub Actions が自動でデプロイ）"
-echo "  2. または 手元で 'pnpm run deploy' を実行"
+echo "  2. または 手元で 'vp run deploy' を実行"

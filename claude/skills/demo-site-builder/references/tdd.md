@@ -53,7 +53,7 @@ describe('LoginForm', () => {
 
 ```ts
 // src/domain/validation.test.ts
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vite-plus/test";
 import { isValidEmail, isValidPassword } from "./validation";
 
 describe("isValidEmail", () => {
@@ -67,7 +67,7 @@ describe("isValidEmail", () => {
 });
 ```
 
-`pnpm test` → モジュール未存在で FAIL。
+`vp test` → モジュール未存在で FAIL。
 
 ### GREEN
 
@@ -100,7 +100,7 @@ export function isValidPassword(value: string): boolean {
 
 ```ts
 // src/repositories/kvStorage.test.ts
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vite-plus/test";
 import { InMemoryKVStorage, LocalStorageKV, type KVStorage } from "./kvStorage";
 
 describe.each<[string, () => KVStorage]>([
@@ -175,7 +175,7 @@ it("throws INVALID_CREDENTIALS when password is wrong", () => {
 
 ```tsx
 // src/components/ui/Button.test.tsx
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "vite-plus/test";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Button } from "./Button";
@@ -242,7 +242,7 @@ it("marks the dashboard link as current when on /dashboard", () => {
 
 ページは "Layout + 機能コンポーネント + navigate 副作用" の thin wrapper なので、単体テスト優先度は低い。**代わりに chrome-devtools MCP での e2e 確認でカバー**：
 
-1. `pnpm dev` 起動
+1. `vp dev` 起動
 2. `chrome-devtools:new_page` でアクセス
 3. `emulate` で iPhone viewport
 4. `take_snapshot` → `fill` / `click` で画面遷移
