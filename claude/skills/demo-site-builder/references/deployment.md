@@ -6,30 +6,23 @@
 - 将来 Worker コードを足したくなった時の拡張パスが明確
 - `wrangler.jsonc` 一本で設定完結
 
+`wrangler` / `wrangler.jsonc` / `.github/workflows/deploy.yml` は **テンプレ `skanehira/demo-site-template` に同梱済み**なので、ここでは追加で行う作業（deploy token 発行、push 後の動作確認）だけを扱う。
+
 ## 目次
 
-- Step 1: wrangler CLI 導入
-- Step 2: wrangler.jsonc を作成
-- Step 3: package.json に deploy scripts
-- Step 4: .gitignore に追加
-- Step 5: dry-run で設定検証（認証不要）
-- Step 6: GitHub Actions ワークフロー
-- Step 7: Deploy Token を gist スクリプトで発行
-- Step 8: 初回デプロイ
-- Step 9: 動作確認
+- 前提：テンプレ同梱済みのデプロイ構成
+- Step 1: dry-run で設定検証
+- Step 2: Deploy Token を gist スクリプトで発行
+- Step 3: 初回デプロイ
+- Step 4: 動作確認
 - カスタムドメイン
 - よくある落とし穴
 
-## Step 1: wrangler CLI 導入
+## 前提：テンプレ同梱済みのデプロイ構成
 
-```bash
-pnpm add -D wrangler
-```
+テンプレ clone + プレースホルダ置換後の状態で、すでに下記が揃っている：
 
-## Step 2: wrangler.jsonc を作成
-
-プロジェクトルートに：
-
+**`wrangler.jsonc`**（プレースホルダは sed で置換済み）：
 ```jsonc
 {
   "$schema": "node_modules/wrangler/config-schema.json",
@@ -43,81 +36,35 @@ pnpm add -D wrangler
 
 - **`main` は書かない** → assets-only モードで静的配信のみ
 - **`not_found_handling` は不要**：このスキルは `HashRouter` を使うので、URL は `/#/path` 形式になりサーバ側のフォールバック設定に依存しない。将来 BrowserRouter に切り替える場合のみ `"not_found_handling": "single-page-application"` を追加する
-- **`compatibility_date` は実行日**（`date +%Y-%m-%d` で取得可）。未来日付は Wrangler が reject する
-- assets の `directory` は Vite のビルド出力 `./dist/`
+- **`compatibility_date` は実行日**（`date +%Y-%m-%d`）。未来日付は Wrangler が reject する。テンプレ sed で実行日が埋まる
 
-assets/wrangler.jsonc にテンプレートあり → `<project-name>` を書き換えてコピー。
-
-## Step 3: package.json に deploy scripts
-
+**`package.json` の deploy scripts**：
 ```json
 {
   "scripts": {
-    "deploy": "pnpm build && wrangler deploy",
-    "deploy:dry-run": "pnpm build && wrangler deploy --dry-run",
-    "cf:preview": "pnpm build && wrangler dev"
+    "deploy": "vp build && wrangler deploy",
+    "deploy:dry-run": "vp build && wrangler deploy --dry-run",
+    "cf:preview": "vp build && wrangler dev"
   }
 }
 ```
 
-## Step 4: .gitignore に追加
+**`.github/workflows/deploy.yml`**（`voidzero-dev/setup-vp@v1` ベース）：
+- `vp install --frozen-lockfile` → `vp test` → `vp check --no-lint --no-fmt` → `vp build` → `cloudflare/wrangler-action@v3`
 
-```
-.wrangler
-.dev.vars
-```
+**`.gitignore`** に `.wrangler` / `.dev.vars` 追加済み。
 
-## Step 5: dry-run で設定検証（認証不要）
+## Step 1: dry-run で設定検証
+
+認証不要。テンプレ初期化直後でも走らせられる：
 
 ```bash
-pnpm run deploy:dry-run
+vp run deploy:dry-run
 ```
 
 `✨ Read N files from the assets directory` と `--dry-run: exiting now.` で正常。
 
-## Step 6: GitHub Actions ワークフロー
-
-`.github/workflows/deploy.yml` に以下を配置（`assets/deploy-workflow.yml` を参照）：
-
-```yaml
-name: Deploy to Cloudflare Workers
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Run tests
-        run: pnpm test
-      - name: Type check
-        run: pnpm typecheck
-      - name: Build
-        run: pnpm build
-      - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-```
-
-## Step 7: Deploy Token を gist スクリプトで発行
+## Step 2: Deploy Token を gist スクリプトで発行
 
 **前提（セットアップ済み）**:
 - 1Password に `Cloudflare Token` アイテムがあり、`credential` に Master Token（`User API Tokens: Edit` + `User Details: Read` 権限付与済み）、`account_id` に Account ID を保持
@@ -163,17 +110,17 @@ bash ~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh <project
 2. Cloudflare API `POST /user/tokens` で `<project-name>-deploy` という名前の子 token を発行（権限: `Workers Scripts Write` のみ、account スコープ限定）
 3. `gh secret set` で対象 repo に `CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` を登録
 
-## Step 8: 初回デプロイ
+## Step 3: 初回デプロイ
 
 ```bash
-git add wrangler.jsonc .github/workflows/deploy.yml
-git commit -m "🔧 chore: [STRUCTURAL] add Cloudflare Workers deployment config"
+git add wrangler.jsonc package.json index.html
+git commit -m "🔧 chore: [STRUCTURAL] customize template for <project-name>"
 git push origin main
 ```
 
-GitHub Actions が起動し、test → typecheck → build → deploy が順次実行。
+`wrangler.jsonc` / `.github/workflows/deploy.yml` はテンプレに同梱されているため commit 不要（プレースホルダ置換した `wrangler.jsonc` のみ commit）。GitHub Actions が起動し、test → check → build → deploy が順次実行される。
 
-## Step 9: 動作確認
+## Step 4: 動作確認
 
 ### workflow の完了を待つ
 ```bash
@@ -221,4 +168,7 @@ vault 名が非 ASCII なら使えない。item ID で指定するか、item/vau
 **しない**。初回 `wrangler deploy` で `wrangler.jsonc` の `name` に基づき自動作成される。Dashboard で事前作成は不要。
 
 ### `compatibility_date` を未来日付にしてしまった
-Wrangler がエラーで落ちる。実行日以前の日付に修正。
+Wrangler がエラーで落ちる。実行日以前の日付に修正。テンプレ sed で `$(date +%Y-%m-%d)` を埋め込んでいるので、通常はずれない。
+
+### `vp check` が「No checks enabled」で終わる
+テンプレ `vite.config.ts` の `lint.options.typeCheck: true` で型チェックは有効化済みだが、lint/fmt がテンプレで未調整。CI も `vp check --no-lint --no-fmt` で型のみに絞っているので、lint/fmt 設定が要る場合は別途整備する。

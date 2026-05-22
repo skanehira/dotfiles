@@ -1,200 +1,80 @@
-# Scaffold: セットアップ手順
+# Scaffold: テンプレートからのプロジェクト立ち上げ
 
-Vite + React 19 + TypeScript + Tailwind CSS v4 + Vitest + RTL + React Router v7 の新規プロジェクト立ち上げ手順。
+`skanehira/demo-site-template` を起点に、React 19 + Vite+ + TypeScript + Tailwind CSS v4 + Vitest 互換テスト + React Router v7 + Cloudflare Workers デプロイ設定が揃った新規プロジェクトを 1 分以内に立ち上げる。
 
 ## 目次
 
-- Step 1: Vite scaffolding
-- Step 2: ボイラープレート削除
-- Step 3: Tailwind CSS v4
-- Step 4: Vitest + React Testing Library + jsdom
-- Step 5: React Router v7
-- Step 6: 動作確認
+- Step 1: テンプレートを clone
+- Step 2: プレースホルダ置換
+- Step 3: 依存導入 + 動作確認
+- 同梱されているもの
 - よくある落とし穴
 
-## Step 1: Vite scaffolding
+## Step 1: テンプレートを clone
 
-### 空ディレクトリの場合
-```bash
-pnpm create vite@latest . --template react-ts --no-interactive
-```
-
-### 既存ファイルがあって対話 cancel される場合
-```bash
-# 一旦 tmp ディレクトリに生成
-pnpm create vite@latest _scaffold_tmp --template react-ts --no-interactive
-
-# 必要なファイルだけ移動（既存 README.md などは保持）
-mv _scaffold_tmp/.gitignore \
-   _scaffold_tmp/eslint.config.js \
-   _scaffold_tmp/index.html \
-   _scaffold_tmp/package.json \
-   _scaffold_tmp/public \
-   _scaffold_tmp/src \
-   _scaffold_tmp/tsconfig*.json \
-   _scaffold_tmp/vite.config.ts \
-   .
-
-rm -rf _scaffold_tmp
-```
-
-`package.json` の `name` を正しいプロジェクト名に書き換え、`pnpm install`。
-
-## Step 2: ボイラープレート削除
-
-scaffolding の default は Vite のランディングページ。これを撤去：
+GitHub Template Repository 機能 + `gh repo create --template` を使う。`.git` 履歴を引き継がず、新規リポとして clone される。
 
 ```bash
-rm -f src/App.css src/assets/*
-rmdir src/assets 2>/dev/null
-rm -f public/vite.svg
+gh repo create <project-name> \
+  --template skanehira/demo-site-template \
+  --private --clone
+cd <project-name>
 ```
 
-`src/App.tsx` と `src/index.css` を空に近い形に書き換え（後述の Tailwind 設定で上書き）。
+`--public` でもよいが、デモ用途では `--private` がデフォルト。
 
-## Step 3: Tailwind CSS v4
+## Step 2: プレースホルダ置換
+
+テンプレ内の `__PROJECT_NAME__` と `__COMPATIBILITY_DATE__` を sed で一括置換する：
 
 ```bash
-pnpm add -D tailwindcss @tailwindcss/vite
+PROJECT_NAME="<project-name>"
+COMPAT_DATE="$(date +%Y-%m-%d)"
+
+sed -i.bak "s/__PROJECT_NAME__/${PROJECT_NAME}/g" package.json wrangler.jsonc index.html
+sed -i.bak "s/__COMPATIBILITY_DATE__/${COMPAT_DATE}/g" wrangler.jsonc
+rm -f package.json.bak wrangler.jsonc.bak index.html.bak
 ```
 
-v4 は **`@tailwindcss/vite` プラグイン方式**（PostCSS 設定ファイルは不要）。
+置換対象：
+- `package.json` の `"name"`
+- `wrangler.jsonc` の `"name"` と `"compatibility_date"`
+- `index.html` の `<title>`
 
-### vite.config.ts（後述の Vitest 設定も同時に）
-```ts
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test/setup.ts'],
-  },
-})
-```
-
-**重要**: `defineConfig` は `vitest/config` から import する。`vite` 側の `defineConfig` に `test` フィールドの型定義が無く TypeScript エラーになる。
-
-### src/index.css（Tailwind v4 の @theme）
-```css
-@import "tailwindcss";
-
-@theme {
-  /* デザインコンセプトに合わせて CSS 変数として定義 */
-  --color-ink: #12151c;
-  --color-cream: #f7f1e3;
-  --font-display: "Shippori Mincho B1", serif;
-  --font-sans: "Zen Kaku Gothic New", sans-serif;
-  --radius-card: 1rem;
-}
-
-html, body, #root { height: 100%; }
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  color: var(--color-ink);
-  background: var(--color-cream);
-}
-```
-
-**ポイント**: v3 の `tailwind.config.js` は不要。すべて CSS の `@theme` ブロックで完結。
-
-### Google Fonts（任意）
-`index.html` の `<head>` に `<link>` タグを追加。`display=swap` を忘れずに。
-
-## Step 4: Vitest + React Testing Library + jsdom
+## Step 3: 依存導入 + 動作確認
 
 ```bash
-pnpm add -D vitest @testing-library/react @testing-library/user-event @testing-library/jest-dom jsdom
+vp install --frozen-lockfile  # テンプレ lockfile で再現性のあるインストール
+vp test                       # サンプルテスト 1 件が通る
+vp check --no-lint --no-fmt   # TypeScript 型チェックのみ
+vp build                      # dist/ にビルド成果物
+vp dev                        # localhost:5173 で起動 → /#/home に Hello が表示される
 ```
 
-### src/test/setup.ts
-```ts
-import "@testing-library/jest-dom/vitest";
-import { afterEach } from "vitest";
-import { cleanup } from "@testing-library/react";
+すべてグリーンになればセットアップ完了。`vp dev` のあと chrome-devtools MCP で 200 OK と表示を確認するとなおよい。
 
-afterEach(() => {
-  cleanup();
-  localStorage.clear(); // localStorage 利用時は必須
-});
-```
+## 同梱されているもの
 
-### package.json scripts
-```json
-{
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc -b --noEmit"
-  }
-}
-```
+テンプレ `skanehira/demo-site-template` には以下が既に組み込まれている。スキル側で個別に追加する作業は不要：
 
-## Step 5: React Router v7 (HashRouter)
-
-```bash
-pnpm add react-router
-```
-
-v7 は `react-router` 単体（旧 `react-router-dom` は不要）。
-
-**HashRouter を採用**する理由：
-- URL が `https://<project>.workers.dev/#/dashboard` 形式になり、静的ホスティングで直リンク / リロードが必ず動く
-- Cloudflare Workers の SPA モード設定（`not_found_handling`）にも依存しないため、将来 GitHub Pages 等に移しても動作保証
-- リンク共有時にも CDN キャッシュの罠にはまらない
-
-### src/routes.tsx（最小雛形）
-```tsx
-import { createHashRouter, Navigate } from "react-router";
-
-export const router = createHashRouter([
-  { path: "/", element: <Navigate to="/home" replace /> },
-  // { path: "/home", element: <HomePage /> },
-  // ...
-  { path: "*", element: <Navigate to="/" replace /> },
-]);
-```
-
-### src/main.tsx
-```tsx
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { RouterProvider } from "react-router";
-import "./index.css";
-import { router } from "./routes";
-
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <RouterProvider router={router} />
-  </StrictMode>,
-);
-```
-
-## Step 6: 動作確認
-
-```bash
-pnpm test       # smoke test が通るか
-pnpm typecheck  # tsc で型エラーなし
-pnpm build      # 本番ビルド通る
-pnpm dev        # localhost:5173 で起動
-```
-
-`pnpm build` が通れば、この後のデプロイ段階でも同じコマンドで動く。
+| 項目                                     | 用途                                                       |
+| ---------------------------------------- | ---------------------------------------------------------- |
+| React 19 + TypeScript                    | 基本構成                                                   |
+| Tailwind CSS v4 (`@tailwindcss/vite`)    | `src/index.css` の `@theme` は空。`frontend-design` で埋める |
+| React Router v7 (`HashRouter`)           | `src/main.tsx` / `src/routes.tsx`                          |
+| Vitest 互換テスト (`vite-plus/test`)     | `src/test/setup.ts` + `src/test/jest-dom.d.ts`             |
+| `@testing-library/{react,user-event,jest-dom}` + `jsdom` | コンポーネントテスト用                       |
+| HomePage サンプル + テスト               | `src/pages/HomePage.tsx` / `HomePage.test.tsx`             |
+| `wrangler` + `wrangler.jsonc`            | Cloudflare Workers Static Assets デプロイ                  |
+| `.github/workflows/deploy.yml`           | `voidzero-dev/setup-vp@v1` ベースの CI                     |
+| `pnpm-workspace.yaml` (`allowBuilds`)    | `esbuild` / `workerd` の build scripts 許可済み            |
+| `tsconfig.app.json`                      | `erasableSyntaxOnly: true` を維持                          |
 
 ## よくある落とし穴
 
-### `vite.config.ts` で `test` フィールドが認識されない
-`defineConfig` を `vite` からではなく **`vitest/config` から** import する。
+### `tsconfig.app.json` の `erasableSyntaxOnly` で parameter property が使えない
 
-### tsconfig.app.json の `erasableSyntaxOnly` で parameter property が使えない
-Vite scaffolding のデフォルトで `erasableSyntaxOnly: true` が有効になる。下記は **NG**：
+テンプレでも `erasableSyntaxOnly: true` を維持しているため、下記は **NG**：
 
 ```ts
 // ❌ erasableSyntaxOnly で拒否される
@@ -206,7 +86,7 @@ class Repo {
 }
 ```
 
-以下のように明示的にフィールド宣言する：
+明示的にフィールド宣言する：
 
 ```ts
 // ✅ OK
@@ -221,9 +101,18 @@ class Repo {
 ```
 
 ### React 19 で `FormEvent` が deprecated 警告
+
 ```ts
 import { type FormEvent } from "react";
-// 使うと ★ deprecated hint が出るが warn レベル。動作には影響なし
+// 使うと deprecated hint が出るが warn レベル。動作には影響なし
 ```
 
 気になるなら `onSubmit={(e) => {...}}` のインライン handler にすれば型推論で型注釈が不要になり警告が消える。
+
+### `vp check` が「No checks enabled」で終わる
+
+テンプレ `vite.config.ts` の `lint.options.typeCheck: true` で型チェックは有効化済み。ただし lint / fmt の oxlint/oxfmt 設定はテンプレで未調整のため、現状は `vp check --no-lint --no-fmt` で型のみ走らせるのが安全。lint/fmt も走らせたい場合は `lint.options` を別途設定する。
+
+### `pnpm install` を直接叩きたい
+
+可能だが推奨しない。`vp install` 経由なら `pnpm-workspace.yaml` の `allowBuilds` を Vite+ が解釈してくれるが、`pnpm install` 直叩きだと build scripts が再び ignore される可能性がある。CI（`voidzero-dev/setup-vp@v1` 経由）と同じ条件を保つために `vp install` 統一で運用する。
