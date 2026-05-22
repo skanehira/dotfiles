@@ -24,6 +24,7 @@
 
     # GUI アプリ・macOS 専用 CLI
     casks = [
+      "1password"
       "1password-cli"
       "codex"
       "discord"
