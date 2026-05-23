@@ -39,7 +39,21 @@
       fi
     '';
 
-    initContent = builtins.readFile ../../../zsh/zshrc;
+    initContent =
+      builtins.readFile ../../../zsh/zshrc
+      + lib.optionalString pkgs.stdenv.isDarwin ''
+
+        # OpenShift Local (crc): oc を遅延初期化
+        # `crc oc-env` 実行は ~560ms と重く、login shell 起動時に毎回払うのは割に合わない。
+        # 出力は実質 PATH 追加 1 行なので、shim 関数で初回 oc 呼び出し時にだけ eval する。
+        if [ -x /usr/local/bin/crc ] && [ -x "$HOME/.crc/bin/oc/oc" ]; then
+          oc() {
+            unfunction oc
+            eval "$(/usr/local/bin/crc oc-env)"
+            oc "$@"
+          }
+        fi
+      '';
 
     # ~/.zprofile に追記する内容 (login shell 起動時に評価される)
     # platform 分岐は Nix 評価時に解決され、対象 OS の文字列だけが残る
@@ -47,11 +61,6 @@
       lib.optionalString pkgs.stdenv.isDarwin ''
         export SHELL=/bin/zsh
         eval "$(/opt/homebrew/bin/brew shellenv)"
-
-        # OpenShift Local (crc): oc を PATH に追加
-        if [ -x /usr/local/bin/crc ] && [ -x "$HOME/.crc/bin/oc/oc" ]; then
-          eval "$(/usr/local/bin/crc oc-env)"
-        fi
       ''
       + lib.optionalString pkgs.stdenv.isLinux ''
         export SHELL=/usr/bin/zsh
