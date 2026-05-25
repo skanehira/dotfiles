@@ -50,7 +50,9 @@
 ```
 
 **`.github/workflows/deploy.yml`**（`voidzero-dev/setup-vp@v1` ベース）：
-- `vp install --frozen-lockfile` → `vp test` → `vp check --no-lint --no-fmt` → `vp build` → `cloudflare/wrangler-action@v3`
+- `vp install --frozen-lockfile` → `vp test` → `vp check --no-lint --no-fmt` → `vp build` → `vp exec wrangler deploy`
+- deploy は `cloudflare/wrangler-action@v3` を使わず `vp exec wrangler deploy` で直接実行する（wrangler-action は `setup-vp` が用意した `pnpm` を PATH 上で解決できず失敗するため）。`CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` は env で渡す
+- `paths-ignore: ["**.md", "LICENSE"]` 付き。ドキュメントのみの push ではデプロイが走らない
 
 **`.gitignore`** に `.wrangler` / `.dev.vars` 追加済み。
 
