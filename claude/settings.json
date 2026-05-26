@@ -49,7 +49,8 @@
     "swift-lsp@claude-plugins-official": true,
     "postgres-best-practices@supabase-agent-skills": true,
     "codex@openai-codex": true,
-    "claude-code-setup@claude-plugins-official": true
+    "claude-code-setup@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
