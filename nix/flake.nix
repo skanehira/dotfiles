@@ -32,16 +32,28 @@
       ...
     }:
     let
-      # マシン共通の所有者名。複数 mac で同じ設定が走る前提で固定
-      # (将来 user 変更時はここ 1 箇所のみ書き換え)
+      # 既定の所有者名。mac (nix-darwin の primaryUser / users.users /
+      # darwinConfigurations のキー) と Linux の名前付き homeConfigurations
+      # (skanehira / skanehira-aarch64) がこれを使う。複数 mac で同じ設定が走る前提で固定。
+      # 恒久的に所有者名を変える場合のみここを直す。skanehira 以外でも activate したい
+      # Linux マシン (CI / 検証箱など) は下の linuxUsers に足す。
       username = "skanehira";
+
+      # Linux (HM standalone) で homeConfigurations を生やすユーザー一覧。
+      # $USER を動的に読む impure 方式は nh / home-manager が pure 評価で flake output を
+      # 引く (--impure を渡さない) ため `hms` 等で output が見えず壊れる。よって pure に
+      # 列挙する。ログインユーザーが skanehira でないマシンはここにそのユーザー名を足す。
+      linuxUsers = [
+        username
+        "ubuntu"
+      ];
 
       # Linux 側 (Home Manager standalone) のエントリビルダ。
       # nix-darwin と違い HM standalone は module system 経由で nixpkgs.overlays /
       # nixpkgs.config を設定できないので、import nixpkgs に直接渡す。
       # overlays は modules/overlays-list.nix で nix-darwin と共有。
       mkLinuxHome =
-        system:
+        { system, username }:
         home-manager.lib.homeManagerConfiguration {
           pkgs = import nixpkgs {
             inherit system;
@@ -76,10 +88,25 @@
 
       # Home Manager standalone (非 NixOS Linux 想定。Ubuntu/Arch 等)
       # 使い方: nix run home-manager/master -- switch --flake .#skanehira
-      homeConfigurations = {
-        "${username}" = mkLinuxHome "x86_64-linux";
-        "${username}-aarch64" = mkLinuxHome "aarch64-linux";
-      };
+      # (別ユーザーは上の linuxUsers に足すと .#<user> / .#<user>-aarch64 が生える)
+      homeConfigurations = builtins.listToAttrs (
+        builtins.concatMap (u: [
+          {
+            name = u;
+            value = mkLinuxHome {
+              system = "x86_64-linux";
+              username = u;
+            };
+          }
+          {
+            name = "${u}-aarch64";
+            value = mkLinuxHome {
+              system = "aarch64-linux";
+              username = u;
+            };
+          }
+        ]) linuxUsers
+      );
 
       # 自前 derivation (nixpkgs 未収録 LSP)。`packages.nix` からも callPackage で
       # 参照されるが、ここに出すことで `nix build .#tsp-server` 等で個別 build できる
