@@ -46,17 +46,21 @@ nix run home-manager/master -- switch --flake ".#skanehira"
 
 aarch64 マシンは `.#skanehira` を `.#skanehira-aarch64` に置換 (flake output が `homeConfigurations` に 2 つ用意してある)。Linux 専用 bootstrap script は用意していない (上記コマンドを手で叩く)。
 
+ログインユーザーが `skanehira` でないマシン (CI / 検証箱など) では、`flake.nix` の `linuxUsers` にそのユーザー名を足してから `.#<ユーザー名>` を指定する (例: ubuntu なら `.#ubuntu`)。`$USER` を動的に読む impure 方式は `nh` / `home-manager` が pure 評価で output を引くため `hms` 等で壊れる。よって pure に列挙する。
+
 ### 設定変更を反映
 
 ```bash
 # macOS
-drs   # alias: noglob sudo darwin-rebuild switch --flake ~/dev/.../nix#skanehira
+drs   # alias: noglob nh darwin switch ~/dev/.../nix -H skanehira
 
 # Linux (Home Manager standalone)
-hms   # alias: noglob home-manager switch --flake ~/dev/.../nix#skanehira
+hms   # alias: noglob nh home switch ~/dev/.../nix -c <username>
 ```
 
-両 alias は `aliases.nix` で OS 別に `lib.optionalAttrs` 分岐済。手動でフルコマンドを叩くより楽。
+両 alias は `zsh.nix` の `programs.zsh.shellAliases` で OS 別に `lib.optionalAttrs` 分岐済 (darwin=drs / linux=hms)。手動でフルコマンドを叩くより楽。
+
+設定名は `nh` の `-H` (darwin) / `-c` (home) で**明示**する。`nh` 4.x は `<flake>#name` の `#name` を素の flake 属性として解決し (`darwinConfigurations` / `homeConfigurations` を前置しない) `#name` では引けないため。`hms` の `-c` には activate 中の username が入るので、`linuxUsers` に列挙したユーザーであればそのまま動く。
 
 ### Linux 動作確認 (Ubuntu container、ad-hoc)
 
@@ -137,7 +141,6 @@ nix/
     ├── overlays.nix       ← nix-darwin 用 module (overlays-list.nix を nixpkgs.overlays に流す)
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
     ├── home/
-    │   ├── aliases.nix   — programs.zsh.shellAliases (drs/hms を OS 別 lib.optionalAttrs)
     │   ├── claude.nix    — Claude Code (bootstrap install + mkOutOfStoreSymlink で設定 live edit)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── env.nix       — sessionVariables / sessionPath
@@ -149,7 +152,7 @@ nix/
     │   ├── rustup.nix    — bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
     │   ├── tmux.nix      — tmux/tmux.conf を mkOutOfStoreSymlink で live edit。plugins.conf のみ Nix 生成 (resurrect + themepack)
     │   ├── wezterm.nix   — programs.wezterm (extraConfig は wezterm.lua を readFile)
-    │   └── zsh.nix       — programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済)
+    │   └── zsh.nix       — programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済) + shellAliases (drs/hms を OS 別 lib.optionalAttrs)
     └── darwin/
         ├── homebrew.nix  — declarative brews / casks
         └── system.nix    — users, nix.settings, Touch ID, primaryUser
@@ -243,7 +246,7 @@ cd claude && ./install.sh
 
 1. `nix/modules/home/*.nix` または `nix/modules/darwin/*.nix` を編集
 2. `git add` で staging（flake は tracked file しか見ない）
-3. `drs` で適用（`sudo darwin-rebuild switch` を Touch ID 経由で）
+3. `drs` (mac) / `hms` (Linux) で適用（`nh` が darwin-rebuild / home-manager を起動。mac は Touch ID 経由の sudo）
 
 ### 新規ツール追加
 
