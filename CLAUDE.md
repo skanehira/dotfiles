@@ -30,13 +30,18 @@ bash ./bootstrap.sh
 # Nix インストール (multi-user; systemd 不在の container では --no-daemon に切り替える)
 sh <(curl -L https://nixos.org/nix/install) --daemon
 
+# experimental-features を nix.conf に永続化
+# (`nix run home-manager/master` はネストした nix 呼び出しが走るため、
+#  コマンドラインの --extra-experimental-features では伝播せず disabled エラーになる)
+mkdir -p ~/.config/nix
+echo 'experimental-features = nix-command flakes' > ~/.config/nix/nix.conf
+
 mkdir -p ~/dev/github.com/skanehira
 cd ~/dev/github.com/skanehira
 git clone https://github.com/skanehira/dotfiles.git
 
 cd dotfiles/nix
-nix --extra-experimental-features 'nix-command flakes' \
-  run home-manager/master -- switch --flake ".#skanehira"
+nix run home-manager/master -- switch --flake ".#skanehira"
 ```
 
 aarch64 マシンは `.#skanehira` を `.#skanehira-aarch64` に置換 (flake output が `homeConfigurations` に 2 つ用意してある)。Linux 専用 bootstrap script は用意していない (上記コマンドを手で叩く)。
