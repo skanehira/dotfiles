@@ -243,8 +243,6 @@ local function open_input_buffer(tool_name, args, context)
     -- tmuxペインへ単純にキーを送る callback を一括生成
     -- { cb = bufferモジュール側のコールバック名, key = tmux send-keys に渡すキー名, label = エラー表示用ラベル }
     local passthrough_keys = {
-      { cb = "on_scroll_down",        key = "PageDown",      label = "PageDown" },
-      { cb = "on_scroll_up",          key = "PageUp",        label = "PageUp" },
       { cb = "on_send_ctrl_e",        key = "C-e",           label = "Ctrl+E" },
       { cb = "on_send_ctrl_a",        key = "C-a",           label = "Ctrl+A" },
       { cb = "on_send_ctrl_f",        key = "C-f",           label = "Ctrl+F" },
@@ -280,6 +278,30 @@ local function open_input_buffer(tool_name, args, context)
     end
     for _, p in ipairs(passthrough_keys) do
       buf_config[p.cb] = make_send_keys_callback(p.key, p.label)
+    end
+    -- copy-mode によるページ送り callback（codex 用）
+    local function make_scroll_callback(direction)
+      return function()
+        local current_pane = get_current_pane_id()
+        if not current_pane then
+          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
+          return
+        end
+        local success, err = tmux.scroll(current_pane, direction)
+        if not success then
+          vim.notify(string.format("スクロールに失敗しました:\n%s", err or "不明なエラー"), vim.log.levels.WARN)
+        end
+      end
+    end
+    -- ページ送りはツールで挙動が異なる
+    -- - codex: copy-mode に入って halfpage スクロール（旧来の挙動）
+    -- - claude: fullscreen TUI が解釈するので PageUp/PageDown をキー送信
+    if tool_name == "codex" then
+      buf_config.on_scroll_down = make_scroll_callback("down")
+      buf_config.on_scroll_up = make_scroll_callback("up")
+    else
+      buf_config.on_scroll_down = make_send_keys_callback("PageDown", "PageDown")
+      buf_config.on_scroll_up = make_send_keys_callback("PageUp", "PageUp")
     end
     local bufnr = buffer.create_input_buffer(buf_config)
     -- バッファ内容の判定（書きかけがあるか）
