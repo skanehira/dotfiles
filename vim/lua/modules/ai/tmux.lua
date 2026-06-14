@@ -112,11 +112,21 @@ function M.send_keys(pane_id, keys)
   return true, nil
 end
 
+-- copy-mode（スクロールモード）を終了する
+-- copy-mode 中でないときに呼ぶと tmux 側はエラーを返すが、無害なので無視する
+-- @param pane_id string ペインID
+function M.exit_copy_mode(pane_id)
+  -- -X cancel: copy-mode を終了するアクション
+  exec_tmux(string.format("tmux send-keys -t %s -X cancel", pane_id))
+end
+
 -- ペインにテキストを送信（リテラルモード）
 -- @param pane_id string ペインID
 -- @param text string 送信するテキスト
 -- @return boolean, string|nil 成功時は (true, nil)、失敗時は (false, エラーメッセージ)
 function M.send_text(pane_id, text)
+  -- スクロールで copy-mode に入っているとキー入力がコピー操作に吸われるため、先に抜ける
+  M.exit_copy_mode(pane_id)
   -- -l: リテラルモード（特殊キーとして解釈しない）
   -- --: オプションの終わりを明示（-で始まるテキストをフラグとして解釈させない）
   -- テキストをシングルクォートでエスケープ
@@ -129,6 +139,21 @@ function M.send_text(pane_id, text)
 
   -- Enterキーを送信してコマンド実行
   return M.send_keys(pane_id, "Enter")
+end
+
+-- ペインを copy-mode でハーフページスクロール
+-- @param pane_id string ペインID
+-- @param direction "up"|"down"
+-- @return boolean, string|nil 成功時は (true, nil)、失敗時は (false, エラーメッセージ)
+function M.scroll(pane_id, direction)
+  local x = direction == "up" and "halfpage-up" or "halfpage-down"
+  local cmd = string.format(
+    "tmux copy-mode -t %s && tmux send-keys -t %s -X %s", pane_id, pane_id, x)
+  local _, err = exec_tmux(cmd)
+  if err then
+    return false, err
+  end
+  return true, nil
 end
 
 -- 現在のペインのIDを取得
