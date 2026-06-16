@@ -1,4 +1,4 @@
 return {
-  'skanehira/vime.vim',
+  'skanehira/vime.nvim',
   opts = {}
 }
