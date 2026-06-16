@@ -33,8 +33,7 @@ local config = function()
         }
       },
       { name = 'path' },
-      { name = "crates" },
-      { name = 'skkeleton' },
+      { name = "crates" }
     },
     view = {
       entries = 'native'
