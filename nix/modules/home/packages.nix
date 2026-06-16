@@ -107,6 +107,9 @@ let
   # エディタ / TUI
   editors = with pkgs; [
     neovim # nixpkgs-unstable の stable release (cache.nixos.org でキャッシュ済)
+    # vime.vim (neovim の日本語 IME プラグイン) が FFI で叩く libanthy。全 OS 共通で nix 管理。
+    # nixpkgs の anthy は 9100h だが anthy-unicode と ABI 互換なので vime から使える。
+    anthy
     slides # markdown TUI presentation
     tmux # 設定は modules/home/tmux.nix で mkOutOfStoreSymlink により live edit
   ];
