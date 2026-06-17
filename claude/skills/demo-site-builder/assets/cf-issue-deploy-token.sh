@@ -16,16 +16,19 @@
 #   <github-repo>    Secrets を登録する GitHub リポジトリ (owner/repo)。省略時は cwd の repo
 #
 # Env vars (overrideable):
-#   CF_TOKEN_1P_REF     1Password の master token 参照 (default: op://Private/Cloudflare/credential)
-#   CF_ACCOUNT_1P_REF   1Password の Account ID 参照   (default: op://Private/Cloudflare/account_id)
+#   CF_TOKEN_1P_REF     1Password の master token 参照 (default: op://Personal/Cloudflare Token/credential)
+#   CF_ACCOUNT_1P_REF   1Password の Account ID 参照   (default: op://Personal/Cloudflare Token/account_id)
+#
+# Note: フィールド参照はラベルではなくフィールドID を使う（例: ラベルが日本語
+#       「認証情報」でも ID は credential）。非ASCII ラベルは op read で解決できない。
 #
 # Requires: curl, jq, op (1Password CLI), gh (GitHub CLI)
 
 set -euo pipefail
 
 # ---------- 設定 ----------
-TOKEN_REF="${CF_TOKEN_1P_REF:-op://Private/Cloudflare/credential}"
-ACCOUNT_REF="${CF_ACCOUNT_1P_REF:-op://Private/Cloudflare/account_id}"
+TOKEN_REF="${CF_TOKEN_1P_REF:-op://Personal/Cloudflare Token/credential}"
+ACCOUNT_REF="${CF_ACCOUNT_1P_REF:-op://Personal/Cloudflare Token/account_id}"
 WORKERS_WRITE_PG="e086da7e2179491d91ee5f35b3ca210a"   # "Workers Scripts Write"
 
 DRY_RUN=0
