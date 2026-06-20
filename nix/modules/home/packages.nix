@@ -18,7 +18,7 @@ let
   # パッケージマネージャ
   packageManagers = with pkgs; [
     cargo-binstall
-    pnpm_10
+    pnpm
     yarn # classic 1.22.x（後継は yarn-berry）
   ];
 
