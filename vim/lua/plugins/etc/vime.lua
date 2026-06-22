@@ -1,4 +1,8 @@
 return {
   'skanehira/vime.nvim',
-  opts = {}
+  opts = {
+    integrations = {
+      nvim_cmp = true
+    }
+  }
 }
