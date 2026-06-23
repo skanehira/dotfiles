@@ -46,7 +46,6 @@
       # cask 依存の保険
       "ca-certificates"
       "openssl@3"
-      "sqlite"
       "aqua"
     ];
 
