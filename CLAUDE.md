@@ -185,6 +185,40 @@ sudo darwin-rebuild switch ...
 
 スクリプトや Claude Code の Bash ツールから `sudo` を呼ぶときも同様。`-n` を付けないことで PAM が GUI 認証ダイアログを発火させ、ユーザの指紋で認証できる。
 
+## Nix daemon のトラブルシュート (macOS)
+
+`drs` が下記で即落ちする場合、`nix-daemon` (launchd) が落ちている。
+
+```
+error: cannot connect to socket at '/nix/var/nix/daemon-socket/socket': Connection refused
+```
+
+### 状態確認
+
+```bash
+# nix-daemon が launchctl にロードされているか (PID が出ていれば起動中)
+sudo launchctl list | grep org.nixos.nix-daemon
+
+# daemon 経由で nix store に疎通するか
+nix store info
+```
+
+`sudo launchctl list` に `org.nixos.nix-daemon` の行が無い、または PID 列が `-` ならデーモンは未起動。
+
+### 復旧手順
+
+```bash
+sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
+```
+
+ロード後、再度 `sudo launchctl list | grep nix-daemon` で PID が振られていれば OK。`drs` をリトライできる。
+
+### 補足
+
+- plist 本体は Determinate Systems の Nix installer が `/Library/LaunchDaemons/org.nixos.nix-daemon.plist` に配置している。`darwin-rebuild` ではなく Nix installer の所有物。
+- 一度 `load` すれば再起動後も自動起動する想定。再発する場合は plist の `KeepAlive` が無効化されていないか、`nix-darwin` 側で `nix.enable = false` 相当の設定が混入していないか (`nix/modules/darwin/system.nix`) を確認する。
+- `/Library/LaunchDaemons/systems.determinate.nix-installer.nix-hook.plist` は別物 (Determinate の post-install hook)。混同しない。
+
 ## Neovim Configuration
 
 ### Structure
