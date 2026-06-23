@@ -84,6 +84,7 @@ let
   # モダン CLI
   modernCli = with pkgs; [
     bat
+    ripgrep
     dua
     duckdb
     htop
