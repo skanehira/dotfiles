@@ -32,6 +32,7 @@ let
       luarocks
       pkg-config
       sqlc
+      sqlite # sqlite3 CLI + libsqlite3
       tree-sitter # CLI; nvim-treesitter main が parser compile に要求
       cargo-zigbuild
     ]
