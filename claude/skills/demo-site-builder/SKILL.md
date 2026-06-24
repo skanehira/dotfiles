@@ -104,24 +104,13 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 
 ## Step 4: デザイン方針
 
-**`frontend-design` スキルを必ず起動する**。Skill tool で以下のように呼び出す：
+**`frontend-design:frontend-design` スキルを必ず Skill ツールで起動する**（短縮形 `frontend-design` が使える環境ならそちらでも可。両方登録されていれば短縮形が優先）。引数には以下を含むデザイン依頼文を渡す：
 
-```
-Skill({
-  skill: "frontend-design:frontend-design",
-  args: `
-<プロジェクト名> のデザインシステムを確立したい。
-- ターゲット: <年齢層・属性>
-- テイスト: <親しみやすさ / モダン / 信頼感 など>
-- React + Tailwind CSS v4 + TypeScript
-- 要素: カラーパレット / タイポ / コンポーネント (Button/Input/Card/Badge/BottomNav/Header/Checkbox)
-- <画面数> 画面をモバイルで提供
-まずはデザインの方向性（ムード、色、タイポ、インタラクション）を提案してほしい。
-`
-})
-```
-
-※ 短縮形 `frontend-design` が利用可能な環境ではそちらでも可。両方登録されていれば短縮形が優先。
+- プロジェクト名 / ターゲット（年齢層・属性）/ テイスト（親しみやすさ・モダン・信頼感 など）
+- スタック: React + Tailwind CSS v4 + TypeScript
+- 要素: カラーパレット / タイポ / コンポーネント（Button/Input/Card/Badge/BottomNav/Header/Checkbox）
+- 画面数とモバイル提供前提
+- まずはデザインの方向性（ムード・色・タイポ・インタラクション）を提案してもらう
 
 スキルから戻ってきたデザイン提案に基づき、`src/index.css` の Tailwind v4 `@theme` ブロックにカラー・フォント・radius 等を反映する。
 

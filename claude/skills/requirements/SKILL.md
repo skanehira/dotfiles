@@ -74,9 +74,7 @@ AskUserQuestion({
    └─ ○ requirements-analyzing-requirements
 ```
 
-```javascript
-Skill({ skill: "requirements-user-story" })
-```
+`requirements-user-story` スキルを Skill ツールで実行する。
 
 完了後、確認：
 
@@ -108,9 +106,7 @@ AskUserQuestion({
    └─ ○ requirements-analyzing-requirements
 ```
 
-```javascript
-Skill({ skill: "requirements-ui-sketch" })
-```
+`requirements-ui-sketch` スキルを Skill ツールで実行する。
 
 完了後、同様に確認。
 
@@ -128,9 +124,7 @@ Skill({ skill: "requirements-ui-sketch" })
    └─ ○ requirements-analyzing-requirements
 ```
 
-```javascript
-Skill({ skill: "requirements-usecase-description" })
-```
+`requirements-usecase-description` スキルを Skill ツールで実行する。
 
 完了後、同様に確認。
 
@@ -148,9 +142,7 @@ Skill({ skill: "requirements-usecase-description" })
    └─ ○ requirements-analyzing-requirements
 ```
 
-```javascript
-Skill({ skill: "requirements-feasibility-check" })
-```
+`requirements-feasibility-check` スキルを Skill ツールで実行する。
 
 完了後、同様に確認。
 
@@ -168,9 +160,7 @@ Skill({ skill: "requirements-feasibility-check" })
    └─ ○ requirements-analyzing-requirements
 ```
 
-```javascript
-Skill({ skill: "requirements-ddd-modeling" })
-```
+`requirements-ddd-modeling` スキルを Skill ツールで実行する。
 
 完了後、同様に確認。
 
@@ -188,9 +178,7 @@ Skill({ skill: "requirements-ddd-modeling" })
    └─ ▶ requirements-analyzing-requirements（実行中）
 ```
 
-```javascript
-Skill({ skill: "requirements-analyzing-requirements" })
-```
+`requirements-analyzing-requirements` スキルを Skill ツールで実行する。
 
 ### 完了
 
