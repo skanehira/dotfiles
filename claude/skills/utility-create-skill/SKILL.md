@@ -102,14 +102,7 @@ TodoWrite({
 
 ### skill-creatorの実行
 
-Skillツールを使用してskill-creatorスキルを実行します：
-
-```javascript
-Skill({
-  skill: "example-skills:skill-creator",
-  args: "[スキル名] [スキルの説明]"
-})
-```
+`example-skills:skill-creator` スキルを Skill ツールで実行する（引数に `[スキル名] [スキルの説明]` を渡す）。
 
 **重要**: skill-creatorが対話的に質問してくる場合は、ユーザーから取得した情報を元に回答してください。
 
@@ -149,13 +142,7 @@ TodoWrite({
 
 ### reviewing-skillsの実行
 
-Skillツールを使用してreviewing-skillsスキルを実行します：
-
-```javascript
-Skill({
-  skill: "utility-reviewing-skills"
-})
-```
+`utility-reviewing-skills` スキルを Skill ツールで実行する。
 
 ### レビュー結果の処理
 

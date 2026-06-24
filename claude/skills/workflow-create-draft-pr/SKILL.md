@@ -116,11 +116,7 @@ git switch -c <generated-branch-name>
 ### 2.2 コミット作成（未コミット変更がある場合）
 
 `workflow-commit-push` スキルに **無条件で委譲** する（ユーザー確認なし）。
-push は本スキルの [6/6] でまとめて行うため、`--no-push` を指定。
-
-```javascript
-Skill({ skill: "workflow-commit-push", args: "--no-push" })
-```
+push は本スキルの [6/6] でまとめて行うため、Skill ツールで実行する際に引数 `--no-push` を指定する。
 
 完了後、`git status --porcelain` で未コミット変更が残っていないことを確認する。
 残っている場合は `workflow-commit-push` が意図的にスキップした可能性があるため、ユーザーに状況を報告して `AskUserQuestion` で続行/中止を確認。
