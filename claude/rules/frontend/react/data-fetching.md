@@ -7,9 +7,7 @@ paths:
 
 # React データフェッチ
 
-<important>
-useEffect 内で fetch を呼ぶことは**禁止**。Server Components / SWR / TanStack Query のいずれかを必ず使う。race condition、重複リクエスト、Strict Mode での二重実行、cancel 漏れなどの問題を自前で正しく処理し続けるのは非現実的なため、例外なく禁止とする。
-</important>
+**重要**: useEffect 内で fetch を呼ぶことは**禁止**。Server Components / SWR / TanStack Query のいずれかを必ず使う。race condition、重複リクエスト、Strict Mode での二重実行、cancel 漏れなどの問題を自前で正しく処理し続けるのは非現実的なため、例外なく禁止とする。
 
 ## 優先順位
 

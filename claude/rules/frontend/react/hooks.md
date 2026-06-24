@@ -7,9 +7,7 @@ paths:
 
 # React Hooks ルール
 
-<important>
-useEffect は外部システムとの同期にだけ使う。それ以外のほぼ全ての場面で useEffect は不要であり、乱用は再レンダリング・stale state・race condition・テスト困難の温床となる。
-</important>
+**重要**: useEffect は外部システムとの同期にだけ使う。それ以外のほぼ全ての場面で useEffect は不要であり、乱用は再レンダリング・stale state・race condition・テスト困難の温床となる。
 
 ## Rules of Hooks
 

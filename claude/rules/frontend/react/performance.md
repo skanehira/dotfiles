@@ -7,9 +7,7 @@ paths:
 
 # React パフォーマンス最適化
 
-<important>
-React Compiler 有効プロジェクトでは memo / useMemo / useCallback を手で書かない。Compiler が依存追跡とメモ化を自動で行う。手動最適化は Compiler が効かない箇所や、計測で効果が確認できた箇所だけに留める。
-</important>
+**重要**: React Compiler 有効プロジェクトでは memo / useMemo / useCallback を手で書かない。Compiler が依存追跡とメモ化を自動で行う。手動最適化は Compiler が効かない箇所や、計測で効果が確認できた箇所だけに留める。
 
 ## React.memo は early-return を効かせる手段として使う
 
