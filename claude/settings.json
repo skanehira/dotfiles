@@ -9,7 +9,7 @@
     "deny": [],
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus[1m]",
+  "model": "claude-opus-4-7[1m]",
   "enableAllProjectMcpServers": true,
   "hooks": {
     "Stop": [
