@@ -203,21 +203,56 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [judge] <message>" >> "$PROGRESS_LOG"
 ### 起動時に行うこと
 
 `MEMORY.md` を参照し、以下を確認する:
-- 過去に採用されたクラスタの一覧 (description, target_file, 採用日)
+- 過去に採用されたクラスタの一覧 (description, target_file, 採用日, PR 番号, 状態マーク)
 - 過去に skipped にしたが N 回目で採用に切り替わったケース
 - 「採用したが効果がなかった」と判断されたケース (= 採用後も同じパターンの指摘が観測され続けている)
 
+**PR 状態の reconciliation (採用済みクラスタの再分類)**
+
+ユーザーは PR をマージするとは限らない。**判定は正しかった (= memory に採用済みとして残す) が、PR は却下された**ケースを区別するため、MEMORY.md ロード後に GitHub から自己改善 PR の現在の状態を取得して reconciliation する:
+
+```bash
+cd ~/dev/github.com/skanehira/dotfiles
+gh pr list --base master --state all --limit 30 \
+  --search "in:title self-improvement OR in:title rule-audit" \
+  --json number,title,state,mergedAt,closedAt,body
+```
+
+各 PR を以下の3状態に分類し、MEMORY.md の「採用済みクラスタ」エントリの末尾に状態マークを付与する:
+
+| 状態 | 判定条件 | マーク例 |
+|---|---|---|
+| `adopted` (採用) | `state: MERGED` (= `mergedAt != null`) | `[adopted: PR #N]` |
+| `rejected` (却下) | `state: CLOSED` かつ `mergedAt == null` | `[rejected: PR #N closed YYYY-MM-DD]` |
+| `pending` (レビュー中) | `state: OPEN` | `[pending: PR #N open]` |
+
+PR 番号と MEMORY.md エントリの対応付け:
+- PR の body 内の「採用クラスタ」セクション (1 件以上の name) と MEMORY.md エントリの description を意味レベルで照合
+- 文言の細かい違いは無視、同趣旨で一致
+
+GitHub にあるが MEMORY.md にエントリが無い場合 (rare): MEMORY.md に追加して状態マークを付与。
+
+reconciliation 結果は進捗ログにも書く: `[judge] reconciled (adopted=A, rejected=R, pending=P)`
+
 ### 採用判定への反映
 
-今回のクラスタ候補について `MEMORY.md` と突き合わせる:
-- **過去採用済みクラスタと同趣旨** → `clusters_skipped` に `reason: "already_adopted"` として送る (重複追記を防ぐ)
-- **過去 skipped (3 回未満) だったクラスタが今回 3 回到達** → 通常採用 (積み上げが効いたケース)
-- **過去採用後も同パターンが観測され続けている** → `clusters_adopted` ではなく `rule_audit.conflicts` に「採用済みルールが機能していない」として記録する
+今回のクラスタ候補について reconciliation 済みの `MEMORY.md` と突き合わせる:
+
+| 既存マーク | 新規候補の処理 | reason | 進捗ログ |
+|---|---|---|---|
+| `[adopted: PR #N]` | `clusters_skipped` | `already_adopted` | `[judge] skipped (already adopted in PR #N)` |
+| `[rejected: PR #N closed]` | `clusters_skipped` (**二度と PR にしない**) | `previously_rejected` | `[judge] skipped (rejected in PR #N)` |
+| `[pending: PR #N open]` | `clusters_skipped` (重複 PR 防止) | `pending_review` | `[judge] skipped (pending review in PR #N)` |
+| マークなし (過去 skipped で 3 回未満だった) → 今回 3 回到達 | 通常採用 (積み上げが効いたケース) | (採用) | — |
+| `[adopted]` だが採用後も同パターンが観測され続けている | `rule_audit.conflicts` に「採用済みルールが機能していない」として記録 | (audit) | — |
+
+照合は **意味レベル** (description の細かい違いは無視、同趣旨で一致)。これにより、ユーザーが PR を却下した後に同じ趣旨の候補が新規検出されても二度と PR 化されない。`previously_rejected` 判定時には judge が「ユーザーが過去に却下した趣旨と意味照合一致した」事実を MEMORY.md にも追記する (なぜ却下されたかの推測ではなく、事実だけ)。
 
 ### 判定後の MEMORY.md 更新
 
 判定が終わったら `MEMORY.md` を curate (200 行/25KB 制限内に収める):
-- 今回採用したクラスタを追記 (`- YYYY-MM-DD: <description> → <target_file>`)
+- 今回採用したクラスタを追記 (`- YYYY-MM-DD: <description> → <target_file> [pending: PR #N open]` 形式。PR 作成後に番号を埋める。main session が PR を作らずに完結した場合 (skip など) はマークを付けない)
+- 起動時 reconciliation で確定した状態マークを既存エントリに反映
 - 古い記録 (1 年以上前) は要約・削除可
 - フォーマット例:
 
@@ -226,8 +261,9 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [judge] <message>" >> "$PROGRESS_LOG"
 
 ## 採用済みクラスタ
 
-- 2026-06-28: 依頼スコープを超えた論点を勝手に出す → claude/CLAUDE.md
-- 2026-06-28: 説明・要約で具体例を併記しない → claude/CLAUDE.md
+- 2026-06-28: 依頼スコープを超えた論点を勝手に出す → claude/CLAUDE.md [adopted: PR #4]
+- 2026-06-28: 説明・要約で具体例を併記しない → claude/CLAUDE.md [adopted: PR #4]
+- 2026-06-29: 完了報告で残論点を付け加える → claude/CLAUDE.md [rejected: PR #6 closed 2026-06-29]
 - 2026-07-15: ...
 ```
 
