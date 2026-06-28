@@ -300,6 +300,7 @@ PR URL: https://github.com/skanehira/dotfiles/pull/XXX
 ## 参考
 
 - 判定ヒューリスティック: `references/heuristics.md`
-- 改善対象の振り分け基準: `references/classification.md`
+- 改善対象の振り分け基準 (どのファイルに書くか): `references/classification.md`
+- 施策選択ガイド (強制レベル・公式準拠の決定木): `references/treatment-guide.md`
 - subagent (extractor): `~/.claude/agents/self-improving-extractor.md`
 - subagent (judge): `~/.claude/agents/self-improving-judge.md`
