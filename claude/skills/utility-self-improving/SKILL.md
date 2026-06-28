@@ -135,11 +135,12 @@ extractor は Python スクリプトを scratchpad に書き出して `python3` 
 - `output_path`: scratchpad 配下の `clusters.json`
 
 judge が担当する処理:
+0. **起動時準備**: `MEMORY.md` ロード + `gh pr list` で過去自己改善 PR の状態 (`adopted` / `rejected` / `pending`) を確認し、MEMORY.md に状態マークを反映する
 1. `(session_id, content)` でデデュープ
 2. 引用ブロック内のレビューコメントを `heuristics.md` の判別基準で取り扱う (Claude 出力へのレビュー → 学習対象、顧客資料の貼り付け → 除外)
 3. 主題ごとのクラスタリング (Claude の言語理解で判断)
 4. 観測セッション数 3 件未満は skipped へ
-5. 上位 5 件採用、観測数の多い順にソート
+5. 上位 5 件採用、観測数の多い順にソート (ただし MEMORY.md の `[rejected]` `[pending]` と意味照合一致するクラスタは採用せず `previously_rejected` / `pending_review` で skip)
 6. `classification.md` のフローで各クラスタの更新対象を決定
 7. 機密情報を含まない `clusters.json` を出力 (プロジェクト名・セッションID・発言抜粋は持ち込まない)
 
