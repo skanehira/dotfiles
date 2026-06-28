@@ -3,6 +3,8 @@ name: nix check
 on:
   push:
     branches: [master]
+    paths:
+      - 'nix/**'
 
 jobs:
   check:
@@ -14,10 +16,10 @@ jobs:
         # nix コマンド系のステップを全部このディレクトリで実行する
         working-directory: nix
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
         with:
           extra-conf: |
             experimental-features = nix-command flakes
