@@ -210,6 +210,44 @@ PR コメント・コミットメッセージ・PR 本文はすべて GitHub に
 
 行番号の決定: 各コミットの diff から、追加行 (`+`) の最初の行に付ける。ファイル全体の追記なら追加ブロックの先頭行。
 
+### 8. ルール監査 PR (任意、`rule_audit` が空でなければ)
+
+judge の出力 `clusters.json` に `rule_audit.duplicates` または `rule_audit.conflicts` のエントリが含まれていれば、自己改善 PR とは**別の Draft PR** として「ルール監査 PR」を作成する。
+
+- ブランチ: `chore/rule-audit-YYYY-MM-DD` (master から派生)
+- ターゲット: `master`
+- Draft で作成 (人間レビュー必須)
+- 本文テンプレート:
+
+```markdown
+## ルール監査結果
+
+`/utility-self-improving` の判定段階 (judge subagent) で検出された、既存ルール (CLAUDE.md / rules/) の整理候補。
+
+### 重複候補
+
+| 内容 | 該当ファイル | 提案アクション |
+|---|---|---|
+| <description> | <files> | <suggested_action> |
+
+### 矛盾候補
+
+| 内容 | 該当ファイル | 補足 |
+|---|---|---|
+| <description> | <files> | <context> |
+
+## 注意
+
+このPRは**観察結果と提案のみ**です。ルール削除や統合は自動で行いません。各エントリを確認の上、手作業で整理してください (誤検出で重要ルールを消す事故を防ぐため)。
+```
+
+このステップは:
+- `rule_audit` の `duplicates` と `conflicts` がいずれも空なら**スキップ** (PR を作らない)
+- 自己改善 PR とは関心事が違うため**別 PR で出す** (自己改善 = 観測由来の追記、rule-audit = 既存ルールの整理)
+- diff はゼロでよい (ファイル変更なし、本文に観察結果を記載するだけ) — `git commit --allow-empty` で空コミットを 1 つ作って push
+
+ルール削除や統合は**自動で行わない**。判断と作業は必ず人間が行う。
+
 ## ガードレール (再掲)
 
 - **Draft PR 必須**: 自動マージは絶対にしない
