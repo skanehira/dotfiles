@@ -265,7 +265,7 @@ function M.format_for_submit(tool)
     return nil
   end
 
-  local lines = { "以下のレビューコメントについて対応をお願いします。", "" }
+  local lines = {}
   for _, t in ipairs(threads) do
     local header
     if t.start_line == t.end_line then
