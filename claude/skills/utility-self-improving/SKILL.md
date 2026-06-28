@@ -1,13 +1,13 @@
 ---
 name: utility-self-improving
-description: 過去のClaude Codeセッション履歴 (~/.claude/projects/*/) を解析し、ユーザーが繰り返し指摘したパターン (3回以上観測) を抽出して、dotfilesリポ (~/dev/github.com/skanehira/dotfiles) のClaude設定 (CLAUDE.md/rules/skills/agents/hooks) を改善するDraft PRを自動作成するスキル。「過去履歴から改善を抽出」「自己改善」「セッション履歴を分析してPRを作成」「/utility-self-improving」「最近の指摘をrulesに反映したい」「Claude設定を自動改善」「ハーネスを継続改善」などのリクエストで起動する。引数で解析期間 (日数) を指定可能、省略時は直近30日。Mac Studio 上の常駐 Claude Code セッションで定期実行することを想定している。ユーザーが繰り返し同じ指摘をしている気配がするとき、Claude のハーネスを育てたいとき、設定の磨き込みをしたいときには必ずこのスキルを使うこと。
+description: 過去のClaude Codeセッション履歴 (~/.claude/archive/) を解析し、ユーザーが繰り返し指摘したパターン (3回以上観測) を抽出して、dotfilesリポ (~/dev/github.com/skanehira/dotfiles) のClaude設定 (CLAUDE.md/rules/skills/agents/hooks) を改善するDraft PRを自動作成するスキル。「過去履歴から改善を抽出」「自己改善」「セッション履歴を分析してPRを作成」「/utility-self-improving」「最近の指摘をrulesに反映したい」「Claude設定を自動改善」「ハーネスを継続改善」などのリクエストで起動する。引数で解析期間 (日数) を指定可能、省略時は直近30日。Mac Studio 上の常駐 Claude Code セッションで定期実行することを想定している。ユーザーが繰り返し同じ指摘をしている気配がするとき、Claude のハーネスを育てたいとき、設定の磨き込みをしたいときには必ずこのスキルを使うこと。
 ---
 
 # utility-self-improving
 
 ## 目的
 
-Claude Code を日常的に使うなかで、ユーザーが**繰り返し**指摘する内容を過去セッション履歴 (`~/.claude/projects/*/*.jsonl`) から自動抽出し、dotfilesリポにある Claude 設定 (`CLAUDE.md` / `rules/` / `skills/` / `agents/` / `hooks/`) の改善 Draft PR を作成する。
+Claude Code を日常的に使うなかで、ユーザーが**繰り返し**指摘する内容を過去セッション履歴 (`~/.claude/archive/*.jsonl`) から自動抽出し、dotfilesリポにある Claude 設定 (`CLAUDE.md` / `rules/` / `skills/` / `agents/` / `hooks/`) の改善 Draft PR を作成する。
 
 **なぜ「繰り返し」だけを対象にするか**: 一回限りの指摘 (場面依存の好み・気分・誤読) を恒久ルール化すると、誤った"反省"が積み上がり Claude の挙動が硬直化する。**3回以上**の観測閾値は、偶発的な指摘とパターン化した不満を切り分けるための実効的なフィルタである。閾値を緩めるとノイズが増え、厳しくすると改善機会を逃す。3 は経験則として保守側に置いている。
 
@@ -38,8 +38,10 @@ fi
 
 - dotfilesリポは `~/dev/github.com/skanehira/dotfiles` に clone 済み
 - `gh` CLI が認証済み (`gh auth status` で確認)
-- `~/.claude/projects/` 配下に jsonl が存在する (このマシンが claude-history-sync の bisync 先である想定)
+- `~/.claude/archive/` 配下に jsonl が archive されている (`settings.json` の SessionEnd hook + `claude/hooks/archive-transcript.ts` が各セッション終了時に自動コピー、保持期間 90 日。同時に古いファイルは自動削除されるため掃除不要)
 - 作業前に dotfilesリポが clean な状態である (uncommitted な変更があれば中断して報告)
+
+**なぜ `~/.claude/projects/` を直接見ないのか**: 公式は jsonl 形式を「内部形式、将来変更あり」と明言しており、claude-history-sync の bisync 進行中だと中途半端な行を読む可能性もある。SessionEnd hook で確定済みのファイルを `~/.claude/archive/` に immutable コピーすることで、解析対象の安定性と整合性を確保する。
 
 ## 処理フロー
 
@@ -48,14 +50,14 @@ fi
 ### 1. ログ収集
 
 ```bash
-find ~/.claude/projects -name "*.jsonl" -type f -mtime -${DAYS}
+find ~/.claude/archive -name "*.jsonl" -type f -mtime -${DAYS}
 ```
 
-- 期間判定はファイル `mtime` で行う (jsonl 内部のタイムスタンプは個別ターン単位だが、ファイル単位フィルタが速い)
-- プロジェクト名はパスから推定し保持する (後で「特定プロジェクト固有の指摘」を判別するため)
-- セッションIDはファイル名から取得 (Claude Code は `<session-id>.jsonl` で保存)
+- 期間判定はファイル `mtime` で行う (jsonl 内部のタイムスタンプは個別ターン単位だが、ファイル単位フィルタが速い。archive コピー時刻 = セッション終了時刻なので mtime で 1セッション = 1ファイル単位の絞り込みが効く)
+- セッションIDはファイル名から取得 (`<session-id>.jsonl` 形式)
+- プロジェクト名は **jsonl 内の `cwd` フィールド** から取得する。archive はフラット構造 (元の `~/.claude/projects/<encoded-path>/<session-id>.jsonl` のディレクトリ階層は失われている) のため、ファイルパスからではなく jsonl レコードの `cwd` を見る
 
-セッション数が 0 件なら「対象期間に該当するセッションがありません」と報告して終了。
+セッション数が 0 件なら「対象期間に該当するセッションがありません」と報告して終了 (archive 機構を導入した直後はファイルが溜まっていない可能性も伝える)。
 
 ### 2. 指摘の抽出
 
