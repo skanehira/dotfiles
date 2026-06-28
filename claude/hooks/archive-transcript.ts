@@ -1,11 +1,16 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-write
 export {};
 
-// SessionEnd hook で起動される。
+// SessionEnd hook と PreCompact hook の両方で起動される。
 // stdin から JSON ({transcript_path, session_id, ...}) を読み、
 // 1. transcript_path の jsonl を ~/.claude/archive/ にコピー
 // 2. RETENTION_DAYS より古い archive ファイルを削除
 // utility-self-improving スキルが安定した解析対象として archive を参照する前提。
+//
+// PreCompact: context 圧縮の直前に snapshot を取り、圧縮で消えるはずの指摘
+// 発言を残す。同じ session_id を SessionEnd でも上書きするため、PreCompact
+// 後にセッションが続けばその分が SessionEnd で最終反映される。
+// 圧縮されたままセッションが落ちた場合は PreCompact 時点の snapshot が残る。
 
 const HOME = Deno.env.get("HOME") ?? "";
 const ARCHIVE_DIR = `${HOME}/.claude/archive`;

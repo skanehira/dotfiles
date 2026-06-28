@@ -44,6 +44,17 @@
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/archive-transcript.ts"
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {
