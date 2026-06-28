@@ -44,114 +44,105 @@ fi
 
 **なぜ `~/.claude/projects/` を直接見ないのか**: 公式は jsonl 形式を「内部形式、将来変更あり」と明言しており、claude-history-sync の bisync 進行中だと中途半端な行を読む可能性もある。SessionEnd hook で確定済みのファイルを `~/.claude/archive/` に immutable コピーすることで、解析対象の安定性と整合性を確保する。
 
+## アーキテクチャ
+
+main session が orchestrator、重い処理は subagent に分担:
+
+| 段階 | 担当 | model | 役割 |
+|---|---|---|---|
+| § 2 抽出 | `self-improving-extractor` subagent | haiku | jsonl の機械的処理。Python スクリプトで強いシグナル候補を絞り込み |
+| § 3 判定 | `self-improving-judge` subagent | sonnet | クラスタリング + 改善対象判定。言語理解と分類が要 |
+| § 1 § 4-7 | main session | (呼び出し元と同じ) | 前提チェック・git/gh 操作・PR 文面生成 |
+
+subagent はそれぞれ fresh context で起動するため、main セッションは大量の jsonl 内容や個別の発言を context に積まずに済む (機密情報の漏出リスクと token cost の両方を抑える)。
+
 ## 処理フロー
 
-全体は次の 8 段階。途中で失敗したらロールバックして報告する。半端な PR を残さない。
+全体は次の 7 段階。途中で失敗したらロールバックして報告する。半端な PR を残さない。
 
-### 1. ログ収集
+### 1. 前提チェック
 
 ```bash
-find ~/.claude/archive -name "*.jsonl" -type f -mtime -${DAYS}
+# archive ディレクトリ
+test -d ~/.claude/archive && find ~/.claude/archive -name "*.jsonl" -type f -mtime -${DAYS} | head -1
+
+# dotfiles リポの状態
+(cd ~/dev/github.com/skanehira/dotfiles && git status --porcelain)
 ```
 
-- 期間判定はファイル `mtime` で行う (jsonl 内部のタイムスタンプは個別ターン単位だが、ファイル単位フィルタが速い。archive コピー時刻 = セッション終了時刻なので mtime で 1セッション = 1ファイル単位の絞り込みが効く)
-- セッションIDはファイル名から取得 (`<session-id>.jsonl` 形式)
-- プロジェクト名は **jsonl 内の `cwd` フィールド** から取得する。archive はフラット構造 (元の `~/.claude/projects/<encoded-path>/<session-id>.jsonl` のディレクトリ階層は失われている) のため、ファイルパスからではなく jsonl レコードの `cwd` を見る
+- archive が存在しない or 空: 「SessionEnd hook (`claude/hooks/archive-transcript.ts`) が動作してから再実行してください」と報告して終了。エラー扱いではない
+- dotfiles リポが dirty: 中断して人間に対応を依頼
 
-セッション数が 0 件なら「対象期間に該当するセッションがありません」と報告して終了 (archive 機構を導入した直後はファイルが溜まっていない可能性も伝える)。
+### 2. 指摘の抽出 (subagent 委譲)
 
-### 2. 指摘の抽出
+`Agent` ツールで **`self-improving-extractor`** (model: haiku) を起動する。
 
-各セッションのユーザー発言から「修正 / 否定 / 再指示」のシグナルを抽出する。判定パターンは `references/heuristics.md` を参照。
+入力:
+- `days`: 解析期間 (引数)
+- `output_path`: scratchpad 配下の `strong-signals.jsonl`
 
-抽出時には**前後数ターンの文脈**もセットで保持する:
-- 直前のアシスタント発言 (指摘の対象)
-- 直前のツール呼び出し (何の作業中だったか)
-- ユーザーが代わりに何を期待していたか (発言内に含まれる場合)
+extractor が担当する処理:
+1. `~/.claude/archive/` の jsonl 走査
+2. `promptSource: "typed"` な純粋ユーザー発言の抽出
+3. `<command-message>` や `<local-command-stdout>` で始まる発言の除外
+4. `heuristics.md` のシグナルパターンに合致する候補のフィルタ
+5. 強いシグナル (direct_neg / stop / correction / retry / expectation_gap / dissatisfaction / negative_question) を含むものだけ残す
 
-**引用ブロック内のレビューコメントも対象に含める**: 「以下のレビューコメントについて対応をお願いします」のような形で他者のレビュー指摘が転送された発言では、引用ブロック (` ``` ` や `>` で始まる行) の中身も解析対象とする。ただし、引用内容が **Claude が直前のターンまでに出力したもの** (コード・設計・ドキュメント) への指摘である場合に限る。顧客資料・議事録の貼り付けは除外する (判別基準は `heuristics.md` の「レビューコメント転送の取り扱い」を参照)。
+extractor は Python スクリプトを scratchpad に書き出して `python3` で実行する。500MB 級のログでも数秒で完走するメカニカル処理。main session は extractor が返す**統計値だけ**を受け取る (件数・期間)。生データは scratchpad の jsonl に残し、context には載せない。
 
-抽出単位を「指摘」と呼び、次の形で保持:
+詳細は `~/.claude/agents/self-improving-extractor.md` を参照。
 
-```json
-{
-  "session_id": "uuid",
-  "project": "github.com/skanehira/dotfiles",
-  "timestamp": "2026-06-25T10:30:00Z",
-  "user_message": "違う。型は any じゃなくて unknown にして",
-  "preceding_assistant_excerpt": "...const data: any = ...",
-  "preceding_tool": "Edit (foo.ts)",
-  "category_hint": "型安全性"
-}
-```
+### 3. クラスタリングと改善対象判定 (subagent 委譲)
 
-`category_hint` は Claude が文脈から推定するゆるいラベル。後段のクラスタリングのヒントに使う。
+`Agent` ツールで **`self-improving-judge`** (model: sonnet) を起動する。
 
-### 3. クラスタリング
+入力:
+- `input_path`: extractor が書き出した `strong-signals.jsonl`
+- `output_path`: scratchpad 配下の `clusters.json`
 
-主題ごとにグループ化する。厳密な機械的クラスタリングは不要 (Claude の言語理解で十分)。
+judge が担当する処理:
+1. `(session_id, content)` でデデュープ
+2. 引用ブロック内のレビューコメントを `heuristics.md` の判別基準で取り扱う (Claude 出力へのレビュー → 学習対象、顧客資料の貼り付け → 除外)
+3. 主題ごとのクラスタリング (Claude の言語理解で判断)
+4. 観測セッション数 3 件未満は skipped へ
+5. 上位 5 件採用、観測数の多い順にソート
+6. `classification.md` のフローで各クラスタの更新対象を決定
+7. 機密情報を含まない `clusters.json` を出力 (プロジェクト名・セッションID・発言抜粋は持ち込まない)
 
-**事前処理: 同セッション内の重複発言を1観測に集約する**
+main session は judge の `clusters.json` を Read で読み込み、§ 4 以降に進む。
 
-ユーザーが同じ発言を短時間で複数回 typing するケース (送信ミス、ネットワーク再送、分割送信のリトライ等) が観測されている。これらを別々に数えると「3 回観測」の閾値判定で観測数を不当に水増しする。
+詳細は `~/.claude/agents/self-improving-judge.md` を参照。
 
-ルール: `(session_id, content)` のタプルでデデュープし、同一セッション内で同じ内容の発言が複数あっても **1 観測** として扱う。観測回数はあくまで「異なるセッションでの観測数」を指す。
+### 4. 変更の適用
 
-手順:
-1. 上記のデデュープを適用する
-2. すべての指摘を眺めて「同じ趣旨」のものをまとめる
-3. クラスタごとに**観測セッション数**を数える (同一セッション内の重複は既に1扱い)
-4. **3 セッション未満のクラスタは破棄** (ログには残すが PR には含めない)
-5. 残ったクラスタを**観測セッション数の多い順**にソート
-6. 上位 **5 件まで**を改善候補とする (それ以上は次回 PR に回す)
-
-クラスタの命名は「型に `any` を使うのを避ける」のように、**具体的な行動**として記述する。「型安全性を意識する」のような曖昧な命名は禁止 (どう行動すれば守れるか分からない指示は実行不能)。
-
-破棄したクラスタは `scratchpad/self-improvement-skipped-YYYY-MM-DD.jsonl` に追記する。次回以降の解析で観測回数が積み上がる可能性があるため捨てない。
-
-### 4. 改善対象の判定
-
-各クラスタについて、**どのファイルを更新するか**を決める。判定基準は `references/classification.md` を参照。
-
-大まかな振り分け:
-
-| パターンの性質 | 更新対象 |
-|---|---|
-| 全タスク共通の姿勢・回答スタイル | `claude/CLAUDE.md` |
-| TDD・設計・テスト・コミットの普遍ルール | `claude/rules/core/` |
-| 言語固有のコーディング規約 | `claude/rules/backend/` or `frontend/` |
-| 特定ワークフロー (PR作成・レビュー・コミット等) の手順改善 | 既存 `claude/skills/workflow-*/` |
-| まだスキル化されていない反復作業 | 新規スキル (`claude/skills/`) |
-| 自動化できるチェック (実装後のリント・型検証等) | `claude/hooks/` の追加 |
-
-判定に迷う場合は **`CLAUDE.md` 追記をデフォルト**とする (一番影響が広く、リスクが低く、後で別ファイルに分離もしやすい)。新規スキル作成は最終手段 (既存設定で吸収できないか先に検討)。
-
-### 5. 変更の適用
+`clusters.json` の `clusters_adopted` を順に処理する:
 
 - 作業ディレクトリ: `~/dev/github.com/skanehira/dotfiles`
-- 事前チェック: `git status --porcelain` が空でなければ中断
 - `git checkout master && git pull --ff-only origin master` で最新化
 - ブランチ作成: `chore/self-improvement-YYYY-MM-DD`
   - 同名ブランチが既に存在する場合は `-2`, `-3` のサフィックスを付ける
-- 各クラスタの内容を該当ファイルに反映
-- 既存テキストとの整合性に注意: 重複・矛盾が出ないようにマージ
-  - 例: `CLAUDE.md` に既に「TDD で実装する」とあるなら、それを差し替えるのではなく具体化する差分を入れる
+- 各クラスタについて:
+  1. `target_file` を Read で読む
+  2. `anchor` (既存テキスト) を Edit ツールの old_string の手がかりにする
+  3. `anchor` を含む行の直後に `proposed_addition` を挿入
 
-### 6. コミット
+既存テキストとの整合性に注意: 重複・矛盾が出ないようにマージする (judge が一定の整合を見ているが、main 側で再確認)。
 
-`/workflow-commit` を呼び出して Conventional Commit 形式でコミットする。
+### 5. コミット
 
-- **複数クラスタは複数コミットに分割** (1クラスタ = 1コミット)。これは後段のインラインコメントを hunk 単位で付けやすくするためでもある
+`/workflow-commit` を呼び出すか、直接 Conventional Commit 形式で commit する。
+
+- **複数クラスタは複数コミットに分割** (1クラスタ = 1コミット)。後段のインラインコメントを hunk 単位で付けやすくするため
 - メッセージ例: `📝 docs(claude): avoid 'any' type in TypeScript edits`
-- body には観測回数 (匿名化済み) と観測パターンの類型を含める。**プロジェクト名・セッションID・ユーザーの生の発言抜粋・コード引用は含めない** (§ 8「機密情報の取り扱い」と同じ原則。コミットメッセージも `git log` で永続化されるため同等の扱い)
+- body には観測回数 (匿名化済み) と観測パターンの類型を含める。**プロジェクト名・セッションID・ユーザーの生の発言抜粋・コード引用は含めない** (§ 7「機密情報の取り扱い」と同じ原則。コミットメッセージも `git log` で永続化されるため同等)
 
-### 7. Draft PR 作成
+### 6. Draft PR 作成
 
 `/workflow-create-draft-pr` を呼び出して PR を作成する。
 
 - ターゲットブランチ: `master`
 - **必ず Draft で作成** (`gh pr create --draft`)。直接マージは禁止
-- PR 本文は次のテンプレート:
+- PR 本文テンプレート:
 
 ```markdown
 ## 解析サマリ
@@ -175,7 +166,7 @@ find ~/.claude/archive -name "*.jsonl" -type f -mtime -${DAYS}
 各 hunk のインラインコメントに観測根拠を記載しています。誤った"反省"を採用していないか確認してから ready for review に切り替えてください。
 ```
 
-### 8. インラインコメントの追加
+### 7. インラインコメントの追加
 
 PR 作成後、各 hunk に `gh api` 経由でインラインコメントを追加する。
 
@@ -201,7 +192,7 @@ gh api -X POST \
 <なぜユーザーが繰り返し指摘したのか、観察された行動の要約>
 ```
 
-これは「自動学習が誤っていないか」を人間がレビューするための判断材料である。観測根拠が無いと、ユーザーが PR を見ても採否を判断できない。
+これは「自動学習が誤っていないか」を人間がレビューするための判断材料である。観測根拠が無いと、ユーザーが PR を見ても採否を判断できない。`observation_pattern` と `estimated_root_cause` は judge が生成した `clusters.json` の同名フィールドをそのまま使う。
 
 **機密情報の取り扱い (絶対遵守)**:
 
@@ -213,7 +204,7 @@ PR コメント・コミットメッセージ・PR 本文はすべて GitHub に
 - **コードや設計書の引用** — 機密情報を含むことがあるため一切引用しない
 - **ファイルパス・URL・ドメイン名・人名** — 解析対象セッションに出てきたものは記載しない (dotfiles リポ自身のパスは除く)
 
-抽象化の原則: 「観測パターン」セクションでは指摘の **行動カテゴリ** だけ記述する。「ユーザーが具体例の追加を繰り返し指示するパターン」「ユーザーが依頼スコープ外の論点を出した点を繰り返し指摘するパターン」のように、原文や事例固有の文脈は捨てる。
+抽象化の原則: 「観測パターン」セクションでは指摘の **行動カテゴリ** だけ記述する。「ユーザーが具体例の追加を繰り返し指示するパターン」「ユーザーが依頼スコープ外の論点を出した点を繰り返し指摘するパターン」のように、原文や事例固有の文脈は捨てる。judge が生成する `clusters.json` はこの原則に沿って書かれているはずだが、main 側で最終チェックする。
 
 **この制約を守れない場合は、コメントを付けない**。インラインコメントは判断材料の補助であって必須ではない。守れない方が悪い。Draft PR で人間レビュアーがマージ判断する仕組みは残るので、コメント無しでも運用は破綻しない。
 
@@ -222,10 +213,11 @@ PR コメント・コミットメッセージ・PR 本文はすべて GitHub に
 ## ガードレール (再掲)
 
 - **Draft PR 必須**: 自動マージは絶対にしない
-- **観測閾値 3 回**: それ未満は skipped ログに残すのみ
+- **観測閾値 3 セッション**: それ未満は skipped ログに残すのみ
 - **1 PR あたり最大 5 件**: 認知負荷とレビュー品質のバランス
-- **失敗時は停止**: 途中で `gh` がエラー、ブランチ作成失敗、commit 失敗のいずれかが起きたらロールバックして報告
+- **failure-stops-pipeline**: 途中で `gh` がエラー、ブランチ作成失敗、commit 失敗、subagent 失敗のいずれかが起きたらロールバックして報告
 - **既存変更の保護**: dotfilesリポに uncommitted な変更があれば最初に中断
+- **subagent の責務範囲を守る**: extractor は jsonl 抽出のみ、judge は判定のみ、Edit/commit/PR は main の担当。subagent から git 操作はしない
 - **PR が大きすぎる場合の自己抑制**: 1 クラスタの diff が 200 行を超えるなら、それは「ルール追記」ではなく「リファクタ」になっている可能性が高い。スコープを切って分割する
 
 ## 出力サマリ
@@ -236,7 +228,7 @@ PR コメント・コミットメッセージ・PR 本文はすべて GitHub に
 解析期間: YYYY-MM-DD ~ YYYY-MM-DD
 対象セッション数: N
 抽出された指摘の総数: M
-クラスタ数 (3回以上): K
+クラスタ数 (3 セッション以上): K
 PR採用件数: J / K
 スキップ記録: <scratchpad/self-improvement-skipped-YYYY-MM-DD.jsonl>
 PR URL: https://github.com/skanehira/dotfiles/pull/XXX
@@ -246,9 +238,10 @@ PR URL: https://github.com/skanehira/dotfiles/pull/XXX
 
 | 失敗ケース | 振る舞い |
 |---|---|
-| jsonl が見つからない (期間に該当なし) | 報告して終了。エラー扱いではない |
-| 3回以上のクラスタが 0 件 | 「学習対象の繰り返しパターンが見つかりませんでした」と報告。skipped ログのパスを案内 |
+| archive が空 (SessionEnd hook 未実行) | 報告して終了。エラー扱いではない |
+| 3 セッション以上のクラスタが 0 件 | 「学習対象の繰り返しパターンが見つかりませんでした」と報告。skipped ログのパスを案内 |
 | dotfilesに uncommitted な変更がある | 中断して人間に対応を依頼 |
+| extractor / judge subagent が失敗 | エラー内容を報告して中断。retry はせず、人間の判断を仰ぐ (誤った "成功扱い" を防ぐため) |
 | git push 失敗・gh API 失敗 | ローカルブランチは残したまま中断、エラー内容を報告 |
 | インラインコメント API がレート制限 | コメント済みのものは残し、未完了分を sleep + retry。3 回失敗で諦めて報告 |
 
@@ -260,9 +253,9 @@ PR URL: https://github.com/skanehira/dotfiles/pull/XXX
 /utility-self-improving 7 --dry-run
 ```
 
-- ログ収集・抽出・クラスタリング・判定までは実行
-- ブランチ作成・コミット・PR作成・インラインコメントはスキップ
-- 結果サマリと「適用予定の差分」を標準出力に表示するのみ
+- § 1〜§ 3 (前提チェック・抽出・判定) までは実行
+- § 4 以降 (ブランチ作成・コミット・PR 作成・インラインコメント) はスキップ
+- 結果サマリと `clusters.json` の内容を標準出力に表示するのみ
 
 これは最初の数回 (スキルの挙動を確かめる段階) で使う。本番運用に乗ったら省略してよい。
 
@@ -270,3 +263,5 @@ PR URL: https://github.com/skanehira/dotfiles/pull/XXX
 
 - 判定ヒューリスティック: `references/heuristics.md`
 - 改善対象の振り分け基準: `references/classification.md`
+- subagent (extractor): `~/.claude/agents/self-improving-extractor.md`
+- subagent (judge): `~/.claude/agents/self-improving-judge.md`
