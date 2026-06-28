@@ -83,7 +83,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [<role>] <message>" >> "$PROGRESS_LOG"
 | main | § 5 コミット完了ごと | `§ 5 commit (SHA short)` |
 | main | § 6 PR 作成 | `§ 6 PR #N created (draft)` |
 | main | § 7 インラインコメント完了 | `§ 7 inline comment posted (line N)` |
-| main | § 8 rule-audit PR 作成 or skip | `§ 8 rule-audit PR skipped (all previously_reported)` |
+| main | § 8 rule-audit 集計 | `§ 8 rule-audit recorded (duplicates=N, conflicts=M, new=K)` |
 | main | 全工程完了 | `全工程完了 (PR=#N or なし)` |
 
 ### 失敗時の書き込み
@@ -245,50 +245,29 @@ PR コメント・コミットメッセージ・PR 本文はすべて GitHub に
 
 行番号の決定: 各コミットの diff から、追加行 (`+`) の最初の行に付ける。ファイル全体の追記なら追加ブロックの先頭行。
 
-### 8. ルール監査 PR (任意、新規 audit があれば)
+### 8. ルール監査結果のローカル蓄積 (PR は作らない)
 
-judge の出力 `clusters.json` の `rule_audit` に **新規** (前回未報告) のエントリが含まれていれば、自己改善 PR とは**別の Draft PR** として「ルール監査 PR」を作成する。
+judge の出力 `clusters.json` の `rule_audit` (duplicates / conflicts) は **PR にしない**。差分ゼロの PR は GitHub の慣行に反するし、観察結果は既に judge subagent の `MEMORY.md` (`~/.claude/agent-memory/self-improving-judge/MEMORY.md`) の「ルール監査で検出した整理候補」セクションに蓄積されている (judge が § 6 で curate する)。
 
-**重複報告の回避**: judge は各 `rule_audit` エントリに `previously_reported: true|false` フィールドを付与する (MEMORY.md と照合し、過去の audit PR で同一内容を報告済みなら `true`)。main session は以下の条件で skip する:
-
-- `rule_audit.duplicates` と `rule_audit.conflicts` の **全エントリ** で `previously_reported: true` → ルール監査 PR を作らない (進捗ログに「§ 8 skipped: all previously_reported」を書く)
-- 1 件でも `previously_reported: false` (= 新規検出) があれば PR 作成 → ただし PR 本文には新規分のみ載せる (継続案件は人間が PR #5 のような既存 PR で管理する想定)
-
-これにより週次自動運用で同じ rule_audit PR が毎回立つことを防ぐ。
-
-- ブランチ: `chore/rule-audit-YYYY-MM-DD` (master から派生)
-- ターゲット: `master`
-- Draft で作成 (人間レビュー必須)
-- 本文テンプレート:
+main session は **最終応答の markdown サマリ** に rule_audit を含めるだけにする:
 
 ```markdown
-## ルール監査結果
+### ルール監査結果
 
-`/utility-self-improving` の判定段階 (judge subagent) で検出された、既存ルール (CLAUDE.md / rules/) の整理候補。
+判定段階で検出された既存ルール (CLAUDE.md / rules/) の整理候補。詳細は `~/.claude/agent-memory/self-improving-judge/MEMORY.md` の「ルール監査で検出した整理候補」セクションを参照。
 
-### 重複候補
-
-| 内容 | 該当ファイル | 提案アクション |
-|---|---|---|
-| <description> | <files> | <suggested_action> |
-
-### 矛盾候補
-
-| 内容 | 該当ファイル | 補足 |
-|---|---|---|
-| <description> | <files> | <context> |
-
-## 注意
-
-このPRは**観察結果と提案のみ**です。ルール削除や統合は自動で行いません。各エントリを確認の上、手作業で整理してください (誤検出で重要ルールを消す事故を防ぐため)。
+| 種別 | 件数 | うち新規 | うち継続 (previously_reported) |
+|---|---|---|---|
+| duplicates | D | D_new | D_prev |
+| conflicts | C | C_new | C_prev |
 ```
 
-このステップは:
-- `rule_audit` の `duplicates` と `conflicts` がいずれも空なら**スキップ** (PR を作らない)
-- 自己改善 PR とは関心事が違うため**別 PR で出す** (自己改善 = 観測由来の追記、rule-audit = 既存ルールの整理)
-- diff はゼロでよい (ファイル変更なし、本文に観察結果を記載するだけ) — `git commit --allow-empty` で空コミットを 1 つ作って push
+これにより:
+- 観察結果は MEMORY.md と最終サマリ (`~/.claude/logs/self-improving.log`) の 2 箇所で確認できる
+- 差分ゼロの PR が積み上がらない
+- 整理 (削除・統合) の判断と作業は人間が必要なときに MEMORY.md を見て手作業で行う
 
-ルール削除や統合は**自動で行わない**。判断と作業は必ず人間が行う。
+人間が rule_audit を整理したい場合は、自分で個別のコミットを切って master に直接 push するか、専用 PR を出す。utility-self-improving はそこには介入しない。
 
 ## ガードレール (再掲)
 
