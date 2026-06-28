@@ -9,7 +9,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>cd /Users/skanehira/dev/github.com/skanehira/dotfiles &amp;&amp; claude -p "/utility-self-improving" --permission-mode acceptEdits --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Agent" --output-format json</string>
+        <string>set -o pipefail; cd /Users/skanehira/dev/github.com/skanehira/dotfiles &amp;&amp; claude -p "/utility-self-improving" --permission-mode acceptEdits --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Agent" --output-format json | tee /Users/skanehira/.claude/logs/self-improving.json | jq -r '.[] | select(.type=="result") | .result'</string>
     </array>
 
     <key>StartCalendarInterval</key>
@@ -34,6 +34,8 @@
         <string>/Users/skanehira/.local/bin:/Users/skanehira/.deno/bin:/Users/skanehira/.nix-profile/bin:/etc/profiles/per-user/skanehira/bin:/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
         <key>HOME</key>
         <string>/Users/skanehira</string>
+        <key>GHQ_ROOT</key>
+        <string>/Users/skanehira/dev</string>
     </dict>
 
     <key>RunAtLoad</key>
