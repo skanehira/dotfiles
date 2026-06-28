@@ -1,6 +1,7 @@
 ---
 name: utility-self-improving
 description: 過去のClaude Codeセッション履歴 (~/.claude/archive/) を解析し、ユーザーが繰り返し指摘したパターン (3回以上観測) を抽出して、dotfilesリポ (~/dev/github.com/skanehira/dotfiles) のClaude設定 (CLAUDE.md/rules/skills/agents/hooks) を改善するDraft PRを自動作成するスキル。「過去履歴から改善を抽出」「自己改善」「セッション履歴を分析してPRを作成」「/utility-self-improving」「最近の指摘をrulesに反映したい」「Claude設定を自動改善」「ハーネスを継続改善」などのリクエストで起動する。引数で解析期間 (日数) を指定可能、省略時は直近30日。Mac Studio 上の常駐 Claude Code セッションで定期実行することを想定している。ユーザーが繰り返し同じ指摘をしている気配がするとき、Claude のハーネスを育てたいとき、設定の磨き込みをしたいときには必ずこのスキルを使うこと。
+allowed-tools: Read, Edit, Write, Glob, Bash, Agent
 ---
 
 # utility-self-improving
