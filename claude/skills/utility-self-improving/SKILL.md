@@ -56,9 +56,43 @@ main session が orchestrator、重い処理は subagent に分担:
 
 subagent はそれぞれ fresh context で起動するため、main セッションは大量の jsonl 内容や個別の発言を context に積まずに済む (機密情報の漏出リスクと token cost の両方を抑える)。
 
+## 進捗ログの記録 (実行中の状況可視化)
+
+launchd や `claude -p` 経由で実行される場合、`stdout` は完了時に 1 度だけ書かれるため、実行中の状況がほぼ見えない。これを補うため、**`~/.claude/logs/self-improving-progress.log`** に主要マイルストーンを追記する。
+
+### 書き込みルール
+
+main session も subagent も、以下のタイミングで Bash で 1 行追記する:
+
+```bash
+PROGRESS_LOG="$HOME/.claude/logs/self-improving-progress.log"
+mkdir -p "$(dirname "$PROGRESS_LOG")"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [<role>] <message>" >> "$PROGRESS_LOG"
+```
+
+`<role>` は `main` / `extractor` / `judge`。`<message>` は段階名と要点を 1 行で。
+
+### マイルストーン
+
+| Role | タイミング | メッセージ例 |
+|---|---|---|
+| main | § 1 開始/完了 | `§ 1 前提チェック完了 (archive: N files, dotfiles: clean)` |
+| main | § 2 extractor 起動前/復帰後 | `§ 2 extractor 復帰 (typed=761, strong=46)` |
+| main | § 3 judge 起動前/復帰後 | `§ 3 judge 復帰 (clusters_adopted=N, rule_audit=M)` |
+| main | § 4 ブランチ作成・各クラスタ反映 | `§ 4 cluster 1/3 applied (CLAUDE.md L11)` |
+| main | § 5 コミット完了ごと | `§ 5 commit (SHA short)` |
+| main | § 6 PR 作成 | `§ 6 PR #N created (draft)` |
+| main | § 7 インラインコメント完了 | `§ 7 inline comment posted (line N)` |
+| main | § 8 rule-audit PR 作成 or skip | `§ 8 rule-audit PR skipped (all previously_reported)` |
+| main | 全工程完了 | `全工程完了 (PR=#N or なし)` |
+
+### 失敗時の書き込み
+
+例外発生・中断時にも `[<role>] FAILED: <理由>` を書く。これがあれば「どこで止まったか」が `tail -f` で即わかる。
+
 ## 処理フロー
 
-全体は次の 7 段階。途中で失敗したらロールバックして報告する。半端な PR を残さない。
+全体は次の 7 段階。途中で失敗したらロールバックして報告する。半端な PR を残さない。**各段階の境界で進捗ログを書く** (詳細は前章)。
 
 ### 1. 前提チェック
 
@@ -210,9 +244,16 @@ PR コメント・コミットメッセージ・PR 本文はすべて GitHub に
 
 行番号の決定: 各コミットの diff から、追加行 (`+`) の最初の行に付ける。ファイル全体の追記なら追加ブロックの先頭行。
 
-### 8. ルール監査 PR (任意、`rule_audit` が空でなければ)
+### 8. ルール監査 PR (任意、新規 audit があれば)
 
-judge の出力 `clusters.json` に `rule_audit.duplicates` または `rule_audit.conflicts` のエントリが含まれていれば、自己改善 PR とは**別の Draft PR** として「ルール監査 PR」を作成する。
+judge の出力 `clusters.json` の `rule_audit` に **新規** (前回未報告) のエントリが含まれていれば、自己改善 PR とは**別の Draft PR** として「ルール監査 PR」を作成する。
+
+**重複報告の回避**: judge は各 `rule_audit` エントリに `previously_reported: true|false` フィールドを付与する (MEMORY.md と照合し、過去の audit PR で同一内容を報告済みなら `true`)。main session は以下の条件で skip する:
+
+- `rule_audit.duplicates` と `rule_audit.conflicts` の **全エントリ** で `previously_reported: true` → ルール監査 PR を作らない (進捗ログに「§ 8 skipped: all previously_reported」を書く)
+- 1 件でも `previously_reported: false` (= 新規検出) があれば PR 作成 → ただし PR 本文には新規分のみ載せる (継続案件は人間が PR #5 のような既存 PR で管理する想定)
+
+これにより週次自動運用で同じ rule_audit PR が毎回立つことを防ぐ。
 
 - ブランチ: `chore/rule-audit-YYYY-MM-DD` (master から派生)
 - ターゲット: `master`

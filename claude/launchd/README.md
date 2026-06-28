@@ -29,8 +29,17 @@ launchctl kickstart gui/$(id -u)/com.skanehira.utility-self-improving
 実行中の様子はログで確認:
 
 ```bash
+# 進捗ログ (実行中もリアルタイムで主要マイルストーンが書かれる、見やすい)
+tail -f ~/.claude/logs/self-improving-progress.log
+
+# stdout (claude の最終応答テキストを markdown のまま記録。`.result` を抽出している)
 tail -f ~/.claude/logs/self-improving.log
+
+# stderr (エラー時のみ)
 tail -f ~/.claude/logs/self-improving.err
+
+# 全 JSON (デバッグ用、messages 配列も含む raw。普段は読まなくて良い)
+less ~/.claude/logs/self-improving.json
 ```
 
 `/utility-self-improving` が正常に走れば Draft PR が GitHub に立つはず (`gh pr list -R skanehira/dotfiles`)。
