@@ -12,6 +12,17 @@
   "model": "claude-opus-4-7[1m]",
   "enableAllProjectMcpServers": true,
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/remind-rules.ts"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
@@ -19,6 +30,10 @@
           {
             "type": "command",
             "command": "deno run --allow-env --allow-run --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/notify.ts --type stop"
+          },
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/self-review.ts"
           }
         ]
       }
