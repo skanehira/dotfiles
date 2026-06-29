@@ -1,13 +1,13 @@
 ---
 name: requirements
-description: 要件・設計フェーズを実行。requirements-user-story → requirements-ui-sketch → requirements-usecase-description → requirements-feasibility-check → requirements-ddd-modeling → requirements-analyzing-requirements を順次実行し、DESIGN.md を生成。「設計フェーズを開始」「要件を整理したい」「/requirements」などで起動。
+description: 要件・設計フェーズを実行。requirements-user-story → requirements-ui-sketch → requirements-usecase-description → requirements-feasibility-check → requirements-ddd-modeling → requirements-analyzing-requirements を順次実行し、DESIGN.md (概要) と DESIGN_DETAIL.md (詳細) を生成。「設計フェーズを開始」「要件を整理したい」「/requirements」などで起動。
 ---
 
 # 要件・設計フェーズ
 
 ## 概要
 
-6つのスキルを順次実行し、プロダクトの要件と設計をまとめる。
+6つのスキルを順次実行し、プロダクトの要件と設計をまとめる。最終的に DESIGN.md (概要) と DESIGN_DETAIL.md (詳細) の 2 ファイルを生成する。
 
 ## 実行スキル
 
@@ -16,7 +16,7 @@ description: 要件・設計フェーズを実行。requirements-user-story → 
 3. **requirements-usecase-description** → docs/USECASES.md
 4. **requirements-feasibility-check** → docs/FEASIBILITY.md
 5. **requirements-ddd-modeling** → docs/GLOSSARY.md, docs/MODEL.md
-6. **requirements-analyzing-requirements** → docs/DESIGN.md
+6. **requirements-analyzing-requirements** → docs/DESIGN.md, docs/DESIGN_DETAIL.md
 
 ## 前提条件
 
@@ -192,16 +192,17 @@ AskUserQuestion({
 - docs/FEASIBILITY.md
 - docs/GLOSSARY.md
 - docs/MODEL.md
-- docs/DESIGN.md
+- docs/DESIGN.md          (概要設計)
+- docs/DESIGN_DETAIL.md   (詳細設計)
 
 次のステップ：
-- /implementation で実装フェーズへ
+- /workflow-spec で深掘り + TODO.md 生成 → 実装フェーズへ
 ```
 
 ## 完了条件
 
 - [ ] 6つのスキルがすべて実行された（またはスキップ）
-- [ ] DESIGN.mdが生成された
+- [ ] DESIGN.md (概要) と DESIGN_DETAIL.md (詳細) が生成された
 
 ## 関連スキル
 

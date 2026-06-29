@@ -1,6 +1,6 @@
 ---
 name: implementation-planning-tasks
-description: 承認済みの設計書（DESIGN.md）からTDD準拠のTODO.mdを作成します。analyzing-requirementsスキルで設計が完了・承認された後に使用します。developingスキルで実装できる形式のタスクリストを生成します。
+description: 承認済みの詳細設計書（DESIGN_DETAIL.md）から TDD 準拠の TODO.md を作成します。analyzing-requirements スキルで設計が完了・承認された後に使用します。DESIGN_DETAIL.md が無く DESIGN.md のみある場合は対話的に詳細抽出フォールバックを実行します。developing スキルで実装できる形式のタスクリストを生成します。
 ---
 
 # タスク計画
@@ -15,19 +15,51 @@ description: 承認済みの設計書（DESIGN.md）からTDD準拠のTODO.mdを
 
 ## 概要
 
-承認済みの設計書（DESIGN.md）を読み込み、TDD（テスト駆動開発）に準拠したTODO.mdを作成する。生成されるTODO.mdはdevelopingスキルで直接使用できる形式となる。
+承認済みの詳細設計書（`docs/DESIGN_DETAIL.md`）を読み込み、TDD（テスト駆動開発）に準拠した TODO.md を作成する。生成される TODO.md は developing スキルで直接使用できる形式となる。
 
-**前提条件**: analyzing-requirementsスキルで作成されたDESIGN.mdが存在し、ユーザーに承認されていること。
+**前提条件**: analyzing-requirements スキルで作成された DESIGN.md と DESIGN_DETAIL.md が存在し、ユーザーに承認されていること。
+
+DESIGN_DETAIL.md が無く DESIGN.md だけある既存プロジェクトの場合は、ステップ 1 のフォールバックで対話的に詳細抽出を行う。
 
 ## コアワークフロー
 
 ### ステップ1: 設計書の確認
 
-DESIGN.mdを読み込み、全体を確認する：
+DESIGN_DETAIL.md と DESIGN.md (概要との整合確認用) を読み込む：
 
 ```javascript
+Read(file_path="docs/DESIGN_DETAIL.md")
 Read(file_path="docs/DESIGN.md")
 ```
+
+#### フォールバック: DESIGN_DETAIL.md が存在しない場合
+
+既存プロジェクトで DESIGN.md だけある場合、AskUserQuestion で確認:
+
+```javascript
+AskUserQuestion({
+  questions: [{
+    question: "docs/DESIGN_DETAIL.md が見つかりません。docs/DESIGN.md から詳細部分 (API・スキーマ・エラーパス・実装ガイド等) を抽出して DESIGN_DETAIL.md を生成しますか？",
+    header: "詳細設計の抽出",
+    options: [
+      { label: "抽出して進める", description: "DESIGN.md から詳細を切り出して DESIGN_DETAIL.md を生成し、両ファイルを更新後にタスク分解へ進む" },
+      { label: "中止", description: "ユーザーが手動で DESIGN_DETAIL.md を整えてから再実行" }
+    ],
+    multiSelect: false
+  }]
+})
+```
+
+「抽出して進める」を選択された場合:
+
+1. DESIGN.md から「API 設計」「データスキーマ詳細」「データフロー詳細」「エラー戦略 (具体)」「テスト戦略 (具体)」「実装ガイド」「検証手順 (具体)」に該当する内容を抽出
+2. 抽出した内容を `docs/DESIGN_DETAIL.md` に書き出す
+3. DESIGN.md からは詳細部分を削除し、概要 (主要コンポーネント・前提・非機能要件方針・主要エンティティ一覧) のみ残す
+4. DESIGN.md の該当箇所には `詳細は [DESIGN_DETAIL.md](./DESIGN_DETAIL.md#section) を参照` のリンクを追加
+5. ユーザーに分割後の両ファイルを確認してもらい承認を取得
+6. 承認後、ステップ2 へ進む
+
+「中止」の場合: 「`docs/DESIGN_DETAIL.md` を作成してから再実行してください」と表示して終了。
 
 設計書の全セクションを把握し、タスク分解に必要な情報を抽出する。
 
@@ -56,7 +88,7 @@ Read(file_path="docs/DESIGN.md")
 
 作成日: [日付]
 生成元: planning-tasks
-設計書: docs/DESIGN.md
+設計書: docs/DESIGN_DETAIL.md (概要は docs/DESIGN.md)
 
 ## 概要
 
@@ -105,7 +137,8 @@ Read(file_path="docs/DESIGN.md")
   - [STRUCTURAL]: 動作を変更しないコミット（リファクタリング、フォーマット、コメント追加）
 
 ### 参照ドキュメント
-- 設計書: docs/DESIGN.md
+- 概要設計: docs/DESIGN.md
+- 詳細設計: docs/DESIGN_DETAIL.md
 - MUSTルール: 参照 shared/references/must-rules.md
 ```
 
@@ -126,50 +159,56 @@ Write(
 
 #### レビュー観点
 
-1. **完全性**: DESIGN.mdのすべての要件がタスク化されているか
+1. **完全性**: DESIGN_DETAIL.md のすべての項目がタスク化されているか
 2. **TDD準拠**: 各タスクにRED/GREEN/REFACTOR/CHECKフェーズが明示されているか
 3. **依存関係**: タスクの順序が依存関係を正しく反映しているか
 4. **粒度**: 各タスクが適切なサイズ（1-4時間）か
 5. **明確性**: タスク内容が具体的で実装者が迷わないか
+6. **概要整合**: DESIGN.md (概要) の主要コンポーネント・前提と矛盾していないか
 
 #### レビュープロセス（必須）
 
 **CRITICAL**: このプロセスは問題がゼロになるまで繰り返すこと。途中で打ち切らない。
 
 ```
-1. DESIGN.mdを再度読み込む（最新の内容を確認）
-2. TODO.mdを読み返す
-3. DESIGN.mdの各セクションを1つずつ確認し、対応するタスクがあるか照合
-4. 以下のチェックリストで問題を洗い出す
-5. 問題があれば修正してファイルを更新
-6. 問題がゼロになるまで1-5を繰り返す
+1. DESIGN_DETAIL.md を再度読み込む（最新の内容を確認）
+2. DESIGN.md (概要) も併せて読み込む
+3. TODO.md を読み返す
+4. DESIGN_DETAIL.md の各セクションを1つずつ確認し、対応するタスクがあるか照合
+5. 以下のチェックリストで問題を洗い出す
+6. 問題があれば修正してファイルを更新
+7. 問題がゼロになるまで1-6を繰り返す
 ```
 
 #### ぬけもれ確認の具体的手順
 
-1. **DESIGN.mdのセクション別照合**
-   - DESIGN.mdの各見出し（##, ###）をリストアップ
-   - 各見出しに対応するTODO.mdのタスクを特定
+1. **DESIGN_DETAIL.md のセクション別照合**
+   - DESIGN_DETAIL.md の各見出し（##, ###）をリストアップ
+   - 各見出しに対応する TODO.md のタスクを特定
    - 対応がないセクションを「ぬけもれ」として記録
 
 2. **機能要件の照合**
-   - DESIGN.mdに記載された各機能を抽出
-   - TODO.mdに該当タスクがあるか確認
+   - DESIGN_DETAIL.md に記載された API・データ操作を抽出
+   - TODO.md に該当タスクがあるか確認
    - ない場合はタスクを追加
 
 3. **非機能要件の照合**
-   - テスト戦略、エラー戦略、パフォーマンス要件を確認
+   - DESIGN_DETAIL.md のテスト戦略 (具体)、エラー戦略 (具体)、検証手順を確認
    - 対応するタスクがあるか確認
    - ない場合はタスクを追加
+
+4. **DESIGN.md (概要) との整合**
+   - DESIGN.md の主要コンポーネント一覧 / 非機能目標と TODO.md の方針が矛盾していないか
 
 #### セルフレビューチェックリスト
 
 **設計との整合性（ぬけもれチェック重点項目）**
-- [ ] DESIGN.mdの**すべてのセクション**がタスク化されている
-- [ ] DESIGN.mdの**すべての機能**がタスク化されている
-- [ ] 非機能要件（テスト戦略、エラー戦略）が反映されている
+- [ ] DESIGN_DETAIL.md の**すべてのセクション**がタスク化されている
+- [ ] DESIGN_DETAIL.md の**すべての API・データ操作**がタスク化されている
+- [ ] 非機能要件（テスト戦略、エラー戦略、検証手順）が反映されている
 - [ ] 依存関係の順序が正しい
-- [ ] DESIGN.mdを再読み込みして、見落としがないか最終確認した
+- [ ] DESIGN.md (概要) と整合している
+- [ ] 両ファイルを再読み込みして、見落としがないか最終確認した
 
 **TDD準拠**
 - [ ] すべてのタスクにRED/GREEN/REFACTOR/REVIEW/CHECKが明示されている
@@ -193,7 +232,8 @@ Write(
 #### レビュー完了条件
 
 以下のすべてを満たすまでレビューを終了しない：
-- [ ] DESIGN.mdの全セクションとTODO.mdの照合が完了
+- [ ] DESIGN_DETAIL.md の全セクションと TODO.md の照合が完了
+- [ ] DESIGN.md (概要) との整合が確認できた
 - [ ] ぬけもれゼロを確認
 - [ ] 上記チェックリストの全項目がチェック済み
 
