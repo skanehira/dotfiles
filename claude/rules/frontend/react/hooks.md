@@ -9,6 +9,35 @@ paths:
 
 **重要**: useEffect は外部システムとの同期にだけ使う。それ以外のほぼ全ての場面で useEffect は不要であり、乱用は再レンダリング・stale state・race condition・テスト困難の温床となる。
 
+## API を選ぶ前に公式ドキュメントの意図と照合する
+
+`useEffect` / `useLayoutEffect` / `useInsertionEffect` / `useSyncExternalStore` / `useTransition` などの選択は、**公式ドキュメントが書く「想定用途」と一致しているか** をまず確認する。
+
+```
+// Bad: 用途外の API を採用
+// useInsertionEffect: 公式は「CSS-in-JS ライブラリの作者向け」と明記
+// それ以外の用途で使うのは原則 NG
+useInsertionEffect(() => {
+  setApiFetcher(fetcher)  // ← DI のための差し替えは useLayoutEffect で十分
+}, [fetcher])
+
+// Good: 用途に合った API
+useLayoutEffect(() => {
+  setApiFetcher(fetcher)
+  return () => resetApiFetcher()
+}, [fetcher])
+```
+
+判定手順:
+1. 採用したい API の公式ドキュメントを Read or WebFetch で開く
+2. 「Usage」「When to use」セクションで想定用途を確認
+3. 自分のケースが一致しなければ、より一般的な代替を選ぶ
+4. それでも特殊 API が必要なら、選択理由をコメントで明示
+
+## 実装前 / レビュー時の useEffect 棚卸し
+
+新規 `useEffect` を書く前 / 既存コードをレビューするときは、下記 12 パターンに当てはまらないか必ずチェック。当てはまれば書き換える。
+
 ## Rules of Hooks
 
 - フックはトップレベルでのみ呼ぶ。条件分岐・ループ・ネストした関数の中で呼ばない

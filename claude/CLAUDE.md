@@ -20,16 +20,19 @@
 ## 実装時
 
 - TDD で実装する → @rules/core/tdd.md
-- 設計原則（SOLID / YAGNI / 凝集度・結合度・コロケーション）→ @rules/core/design.md
-- テスト方針 → @rules/core/testing.md
+- 設計原則（SOLID / YAGNI / 凝集度・結合度・コロケーション / 外界 DI）→ @rules/core/design.md
+- テスト方針 (戦略 / ピラミッド / シナリオ網羅) → @rules/core/testing.md
 - コミット規約 → @rules/core/commit.md
+- 協業スタイル (質問の出し方 / 委任の受け方 / 提案の姿勢) → @rules/core/collaboration.md
 - API は Clean Architecture + DDD で設計する
 - 動作検証
-  - Web アプリ: `chrome-devtools` MCP
+  - Web アプリ: `chrome-devtools` MCP で実物確認 (DOM スナップショット + console error/warning)
   - API: `curl`
+  - 修正後は**必ず**前回より悪化していないか自分でチェックしてから完了報告する
 - 最小実装を徹底する。頼まれていない機能・抽象化・柔軟性・不可能シナリオの error handling は追加しない
 - 仕様に明示されていない実装の細部（デフォルト値・パス形式・ログフォーマット・機能の適用範囲）を選択した場合は、その選択と根拠を出力内に明示する。ユーザーが意図との乖離に気づける状態にする
 - 変更は外科的に行う。依頼にトレースできない改変・隣接コードの改善・依頼にトレースできない既存 dead code の削除はしない（dead code は報告に留める）。自分の変更で未使用になった import / 変数 / 関数のみ片付ける
+- 既存資産 (他プロジェクトの設定ファイル等) を引用された場合は、それをベースに採用する。ゼロから組み立てない
 - 多段タスクは「ステップ → 検証方法」のプランを宣言してから実行する
 
 ## 調査時
