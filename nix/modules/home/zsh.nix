@@ -41,6 +41,11 @@
 
     initContent =
       builtins.readFile ../../../zsh/zshrc
+      + ''
+
+        # tirith: シェル実行前に homograph URL / pipe-to-shell 等の脅威を検査
+        eval "$(tirith init --shell zsh)"
+      ''
       + lib.optionalString pkgs.stdenv.isDarwin ''
 
         # OpenShift Local (crc): oc を遅延初期化

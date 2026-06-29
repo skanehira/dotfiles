@@ -123,6 +123,7 @@ let
       gnupg
       graphviz
       rclone
+      tirith # shell security guard (homograph URL / pipe-to-shell 等を実行前にブロック)
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       terminal-notifier # macOS notification API。Linux では notify.ts 側で no-op
