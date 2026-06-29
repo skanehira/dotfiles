@@ -46,31 +46,31 @@ skills/
 ## 開発フロー
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                      要件・設計フェーズ                              │
-├──────────────────────────────────────────────────────────────────────┤
-│  1. user-story            ユーザーストーリーと優先順位付け           │
-│           ↓                                                          │
-│  2. ui-sketch             画面構成とワイヤーフレーム                 │
-│           ↓                                                          │
-│  3. usecase-description   詳細なユースケース記述（フロー・異常系）   │
-│           ↓                                                          │
-│  4. feasibility-check     技術リスクの検証とPoC計画                  │
-│           ↓                                                          │
-│  5. ddd-modeling          ドメインモデリング（用語集・モデル図）     │
-│           ↓                                                          │
-│  6. analyzing-requirements 技術設計書（DESIGN.md）の作成             │
-│           ↓                                                          │
-│  7. interview             深掘りインタビューで仕様をブラッシュアップ │
-├──────────────────────────────────────────────────────────────────────┤
-│                      実装フェーズ                                    │
-├──────────────────────────────────────────────────────────────────────┤
-│  8. planning-tasks        TODO.md の作成                             │
-│           ↓                                                          │
-│  9. developing            TDD で実装                                 │
-│           ↓                                                          │
-│ 10. commit                Conventional Commit でコミット             │
-└──────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      要件・設計フェーズ                                  │
+├──────────────────────────────────────────────────────────────────────────┤
+│  1. user-story            ユーザーストーリーと優先順位付け               │
+│           ↓                                                              │
+│  2. ui-sketch             画面構成とワイヤーフレーム                     │
+│           ↓                                                              │
+│  3. usecase-description   詳細なユースケース記述（フロー・異常系）       │
+│           ↓                                                              │
+│  4. feasibility-check     技術リスクの検証とPoC計画                      │
+│           ↓                                                              │
+│  5. ddd-modeling          ドメインモデリング（用語集・モデル図）         │
+│           ↓                                                              │
+│  6. analyzing-requirements DESIGN.md (概要) + DESIGN_DETAIL.md (詳細)    │
+│           ↓                                                              │
+│  7. interview             深掘りインタビュー (両ファイル更新)            │
+├──────────────────────────────────────────────────────────────────────────┤
+│                      実装フェーズ                                        │
+├──────────────────────────────────────────────────────────────────────────┤
+│  8. planning-tasks        TODO.md の作成 (DESIGN_DETAIL.md から)         │
+│           ↓                                                              │
+│  9. developing            TDD で実装                                     │
+│           ↓                                                              │
+│ 10. commit                Conventional Commit でコミット                 │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## スキル一覧
@@ -84,16 +84,16 @@ skills/
 | [requirements-usecase-description](./requirements-usecase-description/)       | 正常系・異常系・代替フロー、ビジネスルールを詳細化         | USER_STORIES.md                                    | USECASES.md           |
 | [requirements-feasibility-check](./requirements-feasibility-check/)           | 技術リスクを評価し、PoC 計画を作成                         | USECASES.md                                        | FEASIBILITY.md        |
 | [requirements-ddd-modeling](./requirements-ddd-modeling/)                     | ドメインエキスパートと対話し、用語集とドメインモデルを作成 | USECASES.md, FEASIBILITY.md, USER_STORIES.md       | GLOSSARY.md, MODEL.md |
-| [requirements-analyzing-requirements](./requirements-analyzing-requirements/) | 技術設計書を作成                                           | USECASES.md, FEASIBILITY.md, GLOSSARY.md, MODEL.md | DESIGN.md             |
-| [requirements-interview](./requirements-interview/)                           | DESIGN.md を深掘りインタビューして仕様追記                 | DESIGN.md                                          | DESIGN.md (更新)      |
+| [requirements-analyzing-requirements](./requirements-analyzing-requirements/) | 技術設計書を作成 (概要 + 詳細の 2 ファイル)                | USECASES.md, FEASIBILITY.md, GLOSSARY.md, MODEL.md | DESIGN.md, DESIGN_DETAIL.md |
+| [requirements-interview](./requirements-interview/)                           | DESIGN.md / DESIGN_DETAIL.md を深掘りして射程に応じ追記    | DESIGN.md, DESIGN_DETAIL.md                        | DESIGN.md, DESIGN_DETAIL.md (更新) |
 
 ### 実装フェーズ
 
-| スキル                                                            | 説明                                                                             | 出力           |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------- |
-| [implementation-planning-tasks](./implementation-planning-tasks/) | 設計書から TDD 準拠のタスクリストを作成                                          | TODO.md        |
-| [implementation-developing](./implementation-developing/)         | TDD (RED→GREEN→REFACTOR) でフェーズ単位の実装。docs/TODO.md があるとフェーズ管理 | コード         |
-| [implementation-writing-tests](./implementation-writing-tests/)   | テストコードを作成 (Go/Rust/React+TS の references あり)                         | テストファイル |
+| スキル                                                            | 説明                                                                             | 入力                              | 出力           |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------- | -------------- |
+| [implementation-planning-tasks](./implementation-planning-tasks/) | 詳細設計書から TDD 準拠のタスクリストを作成 (DESIGN_DETAIL.md 不在時は対話的に DESIGN.md から抽出フォールバック) | DESIGN_DETAIL.md (+ DESIGN.md)    | TODO.md        |
+| [implementation-developing](./implementation-developing/)         | TDD (RED→GREEN→REFACTOR) でフェーズ単位の実装。docs/TODO.md があるとフェーズ管理 | TODO.md                           | コード         |
+| [implementation-writing-tests](./implementation-writing-tests/)   | テストコードを作成 (Go/Rust/React+TS の references あり)                         | -                                 | テストファイル |
 
 ### ワークフロースキル
 
@@ -101,7 +101,7 @@ skills/
 
 | スキル                                                  | 説明                                                                                                                                   |
 | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| [workflow-spec](./workflow-spec/)                       | DESIGN.md + TODO.md を対話的に生成 (analyzing-requirements + interview + planning-tasks 統合)、完了後 implementation-developing を起動 |
+| [workflow-spec](./workflow-spec/)                       | DESIGN.md (概要) + DESIGN_DETAIL.md (詳細) + TODO.md を対話的に生成 (analyzing-requirements + interview + planning-tasks 統合)、完了後 implementation-developing を起動 |
 | [workflow-review](./workflow-review/)                   | git 差分を 5 観点でコードレビュー (TDD・品質・セキュリティ・アーキテクチャ・ルール)                                                    |
 | [workflow-commit](./workflow-commit/)                   | Conventional Commit 形式でコミット (push はユーザが手動)                                                                               |
 | [workflow-create-draft-pr](./workflow-create-draft-pr/) | ローカルのコミット履歴と差分から Draft PR を作成 (`.github/` のテンプレートを自動検出、無ければ本文を生成)                             |
@@ -153,10 +153,10 @@ skills/
 
 開発フローのフェーズ全体を実行するオーケストレータースキル：
 
-| スキル           | フェーズ           | 実行スキル                                                                                                                                                                             |
-| ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/requirements`  | 要件・設計         | requirements-user-story → requirements-ui-sketch → requirements-usecase-description → requirements-feasibility-check → requirements-ddd-modeling → requirements-analyzing-requirements |
-| `/workflow-spec` | 設計 + 計画 + 実装 | requirements-analyzing-requirements → requirements-interview → implementation-planning-tasks → implementation-developing                                                               |
+| スキル           | フェーズ           | 実行スキル                                                                                                                                                                             | 主要出力                          |
+| ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `/requirements`  | 要件・設計         | requirements-user-story → requirements-ui-sketch → requirements-usecase-description → requirements-feasibility-check → requirements-ddd-modeling → requirements-analyzing-requirements | DESIGN.md + DESIGN_DETAIL.md      |
+| `/workflow-spec` | 設計 + 計画 + 実装 | requirements-analyzing-requirements → requirements-interview → implementation-planning-tasks → implementation-developing                                                               | DESIGN.md + DESIGN_DETAIL.md + TODO.md |
 
 各スキル完了後に確認が入り、途中で終了することも可能。
 既存ドキュメントがある場合は、スキップして途中から開始できる。
