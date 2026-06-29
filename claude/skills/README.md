@@ -17,6 +17,7 @@ skills/
 ├── implementation-developing/
 ├── implementation-planning-tasks/
 ├── implementation-writing-tests/
+├── workflow-autopilot/                 # 自律実装オーケストレーター
 ├── workflow-commit/
 ├── workflow-create-draft-pr/
 ├── workflow-debate/
@@ -67,7 +68,9 @@ skills/
 ├──────────────────────────────────────────────────────────────────────────┤
 │  8. planning-tasks        TODO.md の作成 (DESIGN_DETAIL.md から)         │
 │           ↓                                                              │
-│  9. developing            TDD で実装                                     │
+│  9a. autopilot            TODO 全フェーズ自律消化 (機械型)               │
+│           or                                                             │
+│  9b. developing           TDD でフェーズ単位の対話実装                   │
 │           ↓                                                              │
 │ 10. commit                Conventional Commit でコミット                 │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -101,7 +104,8 @@ skills/
 
 | スキル                                                  | 説明                                                                                                                                   |
 | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| [workflow-spec](./workflow-spec/)                       | DESIGN.md (概要) + DESIGN_DETAIL.md (詳細) + TODO.md を対話的に生成 (analyzing-requirements + interview + planning-tasks 統合)、完了後 implementation-developing を起動 |
+| [workflow-spec](./workflow-spec/)                       | DESIGN.md (概要) + DESIGN_DETAIL.md (詳細) + TODO.md を対話的に生成 (analyzing-requirements + interview + planning-tasks 統合)、完了後 autopilot / developing / 終了を選択 |
+| [workflow-autopilot](./workflow-autopilot/)             | TODO.md 全フェーズを自律実装。各フェーズで developing → architecture-guard (3回まで自動修正) → fix-lsp-warnings (Lua/Neovim 専用) → review (3回まで self-fix) → commit。設計乖離は P1/P2 で動的修正、P3 で停止 |
 | [workflow-review](./workflow-review/)                   | git 差分を 5 観点でコードレビュー (TDD・品質・セキュリティ・アーキテクチャ・ルール)                                                    |
 | [workflow-commit](./workflow-commit/)                   | Conventional Commit 形式でコミット (push はユーザが手動)                                                                               |
 | [workflow-create-draft-pr](./workflow-create-draft-pr/) | ローカルのコミット履歴と差分から Draft PR を作成 (`.github/` のテンプレートを自動検出、無ければ本文を生成)                             |
@@ -140,7 +144,8 @@ skills/
 
 ```
 /requirements-user-story        # ユーザーストーリー作成
-/workflow-spec                  # 設計書 + タスクリスト生成 → 実装まで自動連携
+/workflow-spec                  # 設計書 + タスクリスト生成 → 実装方式選択 (autopilot/developing/手動)
+/workflow-autopilot             # TODO.md 全フェーズを自律実装 (設計+TODO 済前提)
 /implementation-developing      # TDD 実装 (TODO.md があるとフェーズ管理)
 /workflow-review                # コードレビュー
 /workflow-commit                # コミット (push は手動)
@@ -156,7 +161,8 @@ skills/
 | スキル           | フェーズ           | 実行スキル                                                                                                                                                                             | 主要出力                          |
 | ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | `/requirements`  | 要件・設計         | requirements-user-story → requirements-ui-sketch → requirements-usecase-description → requirements-feasibility-check → requirements-ddd-modeling → requirements-analyzing-requirements | DESIGN.md + DESIGN_DETAIL.md      |
-| `/workflow-spec` | 設計 + 計画 + 実装 | requirements-analyzing-requirements → requirements-interview → implementation-planning-tasks → implementation-developing                                                               | DESIGN.md + DESIGN_DETAIL.md + TODO.md |
+| `/workflow-spec` | 設計 + 計画 + 実装 | requirements-analyzing-requirements → requirements-interview → implementation-planning-tasks → (autopilot or developing 選択)                                                          | DESIGN.md + DESIGN_DETAIL.md + TODO.md |
+| `/workflow-autopilot` | TODO 全フェーズ自律実装 | implementation-developing → architecture-guard → utility-fix-lsp-warnings (Lua/Neovim) → workflow-review → workflow-commit (フェーズ毎ループ)                              | 各フェーズのコミット              |
 
 各スキル完了後に確認が入り、途中で終了することも可能。
 既存ドキュメントがある場合は、スキップして途中から開始できる。

@@ -196,7 +196,8 @@ AskUserQuestion({
 - docs/DESIGN_DETAIL.md   (詳細設計)
 
 次のステップ：
-- /workflow-spec で深掘り + TODO.md 生成 → 実装フェーズへ
+- /workflow-spec で深掘り + TODO.md 生成 → 実装方式選択 (autopilot 自律 / developing 対話 / 手動)
+- 既に TODO.md がある場合は /workflow-autopilot で自律実装、または /implementation-developing で対話実装
 ```
 
 ## 完了条件
