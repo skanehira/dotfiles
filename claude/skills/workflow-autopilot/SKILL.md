@@ -445,15 +445,57 @@ fi
 
 手動 pending ゴールは Step 6 サマリで「人間確認必要」として明示する (autopilot は判定せず保留)。
 
+### Step 5.5: POST_MVP.md の更新と status 判定
+
+Step 5 のゴール判定後、`docs/POST_MVP.md` に **「UI/UX gap」セクション**を必須で書き出す (Web / モバイル Web プロダクトのみ。CLI / API のみは省略)。
+
+#### UI/UX gap セクションの内容 (必須項目)
+
+```markdown
+## UI/UX gap (autopilot ${run_id} 時点)
+
+### 未実装画面
+- <DESIGN にあるが実装されていない画面>
+
+### 未実装ナビ経路
+- <DESIGN_DETAIL.md UX 設計のナビ仕様に対して、実機で到達できない画面>
+  (review-product-readiness の `nav_unreachable` finding を反映)
+
+### frontend-design 未適用フラグ
+- 適用済 / 未適用 (未適用なら理由を記載)
+
+### a11y 未対応項目
+- <review-product-readiness や手動チェックで残った a11y 違反>
+
+### 視覚的回帰参照
+- スナップショット: /tmp/review-product-readiness-snapshots/<phase>/
+```
+
+各項目は **autopilot が自動でログ / review 結果から収集して埋める** (decisions.jsonl / review-product-readiness の findings / G_E2E 判定結果から)。
+
+#### status 判定
+
+UI/UX gap セクションが**空でなければ** autopilot の終了 status を `partial` にする:
+
+| 状況 | status |
+|---|---|
+| 全ゴール達成 + UI/UX gap 全項目空 | `done` |
+| 全ゴール達成 + UI/UX gap に項目あり | `partial` (機能は揃ったが UX が未仕上げ) |
+| 自動ゴール未達ありで未達対応ループ実行中 | (Step 5 内ループ継続) |
+| 未達ゴールで goal_loop > 2 | `escalated` (Step 5 で P3 停止) |
+
+`partial` でも commit と HTML レポート生成は実行 (中途半端でも記録は残す)。
+
 ### Step 6: 全フェーズ完了サマリ
 
 ```
-✅ workflow-autopilot 完了
+✅ workflow-autopilot 完了 (status: <done|partial|escalated>)
 
 実装フェーズ: N / N (全完了)
 新規コミット: <git rev-list --count $START_SHA..HEAD>
 動的修正: P1 <X> 回 / P2 <Y> 回 / P3 0 回 (停止無し)
 ゴール達成: <achieved>/<total> (うち手動確認待ち <manual_pending>)
+UI/UX gap: <未実装画面数> 画面 / <未実装ナビ経路数> 経路 / frontend-design: <適用|未適用>
 
 範囲:
 - 開始 SHA: <START_SHA>
@@ -462,6 +504,7 @@ fi
 
 次のステップ:
 - HTML レポート: docs/autopilot-reports/<run_id>.html を開いて意思決定と検証結果を確認
+- UI/UX gap (status: partial の場合): docs/POST_MVP.md の「UI/UX gap」セクションで残課題を確認
 - 手動確認待ちゴール (あれば): <ゴール ID リスト> を実機で検証
 - 手動レビュー: git log <START_SHA>..HEAD で差分確認
 - push はユーザ手動で実行
