@@ -217,6 +217,30 @@ AskUserQuestion({
 - 使用ライブラリと用途 (バージョン制約があれば明記)
 - ディレクトリ構造案
 
+**UX 設計 (Web / モバイル Web 必須)**
+
+技術設計に偏らないよう、UX 設計を必須セクションとして書く。Voilog セッション F12 で「subagent が自分の UC の画面だけ実装、横断 UX (ナビ / ErrorBoundary / loading) が後回し」になった上流原因の対策。
+
+- **画面遷移マップ**: Mermaid flowchart で全画面 + 遷移を可視化。`/ui-sketch` のフロー図と整合させる
+- **ナビゲーション仕様**:
+  - ヘッダー items (認証時 / 未認証時で何を出すか)
+  - フッター items (規約 / プライバシー / お問い合わせ等)
+  - サイドナビ or ボトムナビ (該当する場合)
+  - アクティブ表示の方針
+- **共通 UI 仕様**:
+  - loading パターン: Skeleton / Spinner / Suspense 境界配置
+  - error パターン: inline / toast / modal の使い分け基準
+  - empty パターン: list/grid view が `items.length === 0` の時に何を出すか (CTA 込み)
+  - toast パターン: 表示位置 / 自動消滅秒数 / 同時表示上限
+- **フォーム入力 UX 標準**:
+  - validation timing: blur / change / submit のどれで発火するか
+  - error display: フィールド直下 / フォーム上部 / toast のどこに出すか
+  - submit button の disable 条件と loading 表示
+- **ErrorBoundary 配置**: ルート単位 / レイアウト単位 / 個別画面単位 (ホワイトアウト回避方針)
+- **a11y 方針**: aria-label / role / focus トラップ / キーボード操作 / 色コントラスト最低基準
+
+CLI / API のみのプロダクトでは省略可。
+
 #### 未確定要素は POC_NEEDED マーカーで残す (DESIGN_DETAIL.md 側)
 
 「実装方針が技術検証の結果次第で変わる」項目は、文章で「未確定」と書くのではなく**機械可読なマーカー**で残す。autopilot Step 1.5 がこのマーカーを検出して `tech-investigation` subagent で自動 PoC する。
