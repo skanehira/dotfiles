@@ -70,6 +70,17 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/self-review-subagent.ts"
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {
