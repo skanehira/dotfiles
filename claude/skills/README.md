@@ -44,6 +44,45 @@ skills/
 > - `workflow-*` — 対話的オーケストレーター / エントリポイント
 > - `utility-*` — 単発のユーティリティ
 
+## skill と agent の責務分担
+
+dotfiles の Claude 設定では「**skill = ユーザー向けエントリ + 表示整形 / agent = 実体ロジック (subagent 化前提)**」のパターンを推奨する。新規実装はこの形に揃える。
+
+|  | skill (`claude/skills/<name>/SKILL.md`) | agent (`claude/agents/<name>.md`) |
+|---|---|---|
+| 用途 | ユーザー向けエントリポイント (`/<name>` で起動) | 内部 subagent (Agent ツールから起動) |
+| 役割 | 薄い orchestrator + 表示整形 + 確認ダイアログ | 実体ロジック、構造化 JSON 返却 |
+| コンテキスト | メインセッションと共有 | 別セッション (分離、トークン効率) |
+| 並列化 | 単発 | Promise.all で並列起動可 |
+| hook 適用 | parent の Stop/PostToolUse/UserPromptSubmit | parent の hooks は継承されない (subagent frontmatter or SubagentStop hook で別途定義) |
+
+### パターン: skill = agent の wrapper
+
+メンテナンス重複を避けるため、本体ロジックは agent 側に置き、skill は agent を起動して結果を整形表示する薄い層にする。
+
+既存例:
+
+| skill (wrapper) | agent (本体) |
+|---|---|
+| `/utility-fix-lsp-warnings` | `fix-lsp-warnings` |
+| `/utility-self-improving` | `self-improving-extractor` + `self-improving-judge` |
+| `/implementation-developing` | `implementation-developing-agent` |
+| `/workflow-review` | `review-tdd` + `review-quality` + `review-security` + `review-architecture` + `review-rules` (5 並列) |
+
+agent only (skill 無し、上位 orchestrator 専用):
+
+| agent | 呼び出し元 |
+|---|---|
+| `architecture-guard` | `workflow-autopilot` Step 4.3 |
+| `tech-investigation` | `workflow-autopilot` Step 1.5 |
+
+### autopilot から呼ぶ場合の経路
+
+`workflow-autopilot` は autopilot 自身が orchestration するため、wrapper skill を経由するか直接 agent を呼ぶかをケース別に選ぶ:
+
+- **直接 agent** (最短経路、コンテキスト分離最大): `implementation-developing-agent` / `architecture-guard` / `tech-investigation` を直接 Agent ツールで起動
+- **skill 経由** (ロジック一元化を優先): `workflow-review` skill → 内部で 5 review subagent 並列。autopilot は集約結果を受け取って fatal 判定のみ
+
 ## 開発フロー
 
 ```
