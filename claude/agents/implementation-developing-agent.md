@@ -1,7 +1,7 @@
 ---
 name: implementation-developing-agent
 description: workflow-autopilot から呼ばれる「フェーズ単位の TDD 実装」専用 subagent。PHASE_CONTEXT (autopilot が組み立てた構造化情報) を受け取り、RED → GREEN → REFACTOR サイクルでフェーズを完了する。autopilot のコンテキスト汚染を避け、長時間実行時のメモリ効率を保つために subagent 化されている。終了時は構造化 JSON で結果 + 設計乖離シグナル (P1/P2/P3) を返す。
-tools: Read, Edit, Write, Bash, Glob, Grep, Skill, mcp__context7__resolve-library-id, mcp__context7__query-docs
+tools: Read, Edit, Write, Bash, Glob, Grep, Skill, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__chrome-devtools__navigate_page, mcp__chrome-devtools__take_snapshot, mcp__chrome-devtools__list_console_messages, mcp__chrome-devtools__list_pages, mcp__chrome-devtools__new_page
 model: sonnet
 ---
 
@@ -104,6 +104,48 @@ PHASE_CONTEXT:
 | `design_overview_break` | 主要コンポーネント再設計 / 非機能要件抵触 / ユースケース不成立 | P3 |
 
 シグナル本体には「何が、なぜ、影響範囲、修正案」を含める。
+
+### Step 3.5: 基盤フェーズ完了時の実機 UI 確認 (Web プロダクトのみ)
+
+`phase_name` に「フェーズ 0」「Phase 0」「基盤」「Foundation」「scaffold」「init」のいずれかが含まれる場合 (= プロジェクト立ち上げ初期フェーズ)、フェーズ実装直後に**実機ブラウザでの初動 UI 確認**を行う。
+
+Voilog セッション F14 の対策。基盤 scaffold 後に「実機を一度も開かない」まま機能実装に進むと、HomePage が動作不能でも気付かないまま MVP まで突き進む構造的欠陥が生まれる。
+
+#### 手順 (Web プロダクト判定)
+
+`apps/web/`, `apps/`, `web/`, `frontend/` 等のディレクトリ + `package.json` の `dev` / `start` script の有無で Web プロダクトか判定。CLI / API のみなら本 Step は skip。
+
+#### 実機確認
+
+```bash
+# 1. dev サーバ起動 (プロジェクト依存)
+pnpm dev &     # or npm run dev / yarn dev / cargo run 等。PHASE_CONTEXT に start_command があればそれを使う
+# 2. listen するまで待機 (sleep / curl で確認)
+```
+
+```javascript
+// 3. chrome-devtools MCP で動作確認
+await mcp__chrome-devtools__new_page({ url: "http://localhost:5173/" })   // デフォルト port、プロジェクトに応じて
+const snapshot = await mcp__chrome-devtools__take_snapshot()
+const consoleMessages = await mcp__chrome-devtools__list_console_messages()
+```
+
+#### 動作不能の判定
+
+以下のいずれかに該当する場合は **deviation signal `design_detail_gap` (P2)** を返す:
+
+| 症状 | 判定 |
+|---|---|
+| `take_snapshot` が空 (DOM が `<html></html>` 相当のみ) | ホワイトアウト |
+| 404 ページが表示されている | ルート route 未設定 |
+| console error (severity: error) が 1 件以上 | 初期化失敗 |
+| `<title>` が空 / undefined | head 未設定 |
+
+template placeholder (例 `__PROJECT_NAME__`) の検出は本 Step では行わない (プロジェクト固有 cleanup の責務)。「実際に動かない」状態のみを検出する。
+
+#### 成功時
+
+正常に画面が表示されたら、自己レビューに進む (Step 4)。`take_snapshot` の結果を deviation_signal には含めず、`tdd_compliance.notes` に「初動 UI 確認済 (Phase 0)」と残す。
 
 ### Step 4: フェーズ末尾の自己レビュー
 
