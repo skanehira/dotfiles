@@ -1,17 +1,17 @@
 ---
 name: workflow-review
-description: ローカルの git 差分を 5 観点 (TDD / コード品質 / セキュリティ / アーキテクチャ / プロジェクトルール) で並列レビュー。本体ロジックは review-tdd / review-quality / review-security / review-architecture / review-rules subagent に委譲し、本 skill はメインセッション向けの薄い orchestrator として「差分検出 → PHASE_CONTEXT 組み立て → 5 subagent 並列起動 → 結果集約・整形表示 → 修正アクション選択」を担当する。fatal 判定 (autopilot の self-fix loop 用) は本 skill では行わず、呼び出し側に任せる。
+description: ローカルの git 差分を 6 観点 (TDD / コード品質 / セキュリティ / アーキテクチャ / プロジェクトルール / プロダクト readiness) で並列レビュー。本体ロジックは review-tdd / review-quality / review-security / review-architecture / review-rules / review-product-readiness subagent に委譲し、本 skill はメインセッション向けの薄い orchestrator として「差分検出 → PHASE_CONTEXT 組み立て → 6 subagent 並列起動 → 結果集約・整形表示 → 修正アクション選択」を担当する。fatal 判定 (autopilot の self-fix loop 用) は本 skill では行わず、呼び出し側に任せる。
 argument-hint: "[--staged | --all]"
 allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion
 ---
 
-# /workflow-review - 5 観点並列コードレビュー (subagent wrapper)
+# /workflow-review - 6 観点並列コードレビュー (subagent wrapper)
 
-5 つの review subagent を**並列起動**してコードレビューを行う薄い orchestrator。
+6 つの review subagent を**並列起動**してコードレビューを行う薄い orchestrator。
 
 ## 設計方針
 
-- **本体ロジック**: `claude/agents/review-{tdd,quality,security,architecture,rules}.md` (subagent × 5)
+- **本体ロジック**: `claude/agents/review-{tdd,quality,security,architecture,rules,product-readiness}.md` (subagent × 6)
 - **本 skill**: ユーザー向けエントリポイント。差分検出と PHASE_CONTEXT 組み立て、subagent 並列起動、結果集約・整形表示
 - **autopilot からの呼び出し**: 本 skill 経由 (`Skill({ skill: "workflow-review" })`)、fatal 判定は autopilot 側で
 - **観点拡張**: 観点を増やしたい場合は `claude/agents/review-<観点>.md` を追加して本 skill の起動リストに加える
@@ -68,17 +68,18 @@ output_path_prefix: /tmp/review-<観点>-working-tree.json
 
 autopilot から呼ばれる場合は、autopilot が `Skill({ skill: "workflow-review", args: { phase_start_sha, phase_name, ... } })` で渡せる (skill 側で受け取って差し替え)。
 
-### Step 3: 5 subagent 並列起動
+### Step 3: 6 subagent 並列起動
 
 Agent ツールを同一メッセージ内に複数 tool_use として並べて並列起動:
 
 ```javascript
 const reviews = await Promise.all([
-  Agent({ subagent_type: "review-tdd",          prompt: reviewPromptFor("tdd",          ctx) }),
-  Agent({ subagent_type: "review-quality",      prompt: reviewPromptFor("quality",      ctx) }),
-  Agent({ subagent_type: "review-security",     prompt: reviewPromptFor("security",     ctx) }),
-  Agent({ subagent_type: "review-architecture", prompt: reviewPromptFor("architecture", ctx) }),
-  Agent({ subagent_type: "review-rules",        prompt: reviewPromptFor("rules",        ctx) }),
+  Agent({ subagent_type: "review-tdd",                prompt: reviewPromptFor("tdd",                ctx) }),
+  Agent({ subagent_type: "review-quality",            prompt: reviewPromptFor("quality",            ctx) }),
+  Agent({ subagent_type: "review-security",           prompt: reviewPromptFor("security",           ctx) }),
+  Agent({ subagent_type: "review-architecture",       prompt: reviewPromptFor("architecture",       ctx) }),
+  Agent({ subagent_type: "review-rules",              prompt: reviewPromptFor("rules",              ctx) }),
+  Agent({ subagent_type: "review-product-readiness",  prompt: reviewPromptFor("product_readiness",  ctx) }),
 ])
 ```
 
@@ -93,10 +94,11 @@ const reviews = await Promise.all([
 - security: (なし、subagent が自前で観点持つ)
 - architecture: `rules/core/design.md`
 - rules: 全 related_rules_paths + 拡張子別 (`rules/frontend/react/*.md` 等)
+- product_readiness: design_overview の「ゴール」(G_E2E 含む) と design_detail の「UX 設計」を必ず含める + `dev_server` (start_command と URL) を渡す。CLI / API のみなら本 dimension は no-op で素通り
 
 ### Step 4: 集約
 
-5 つの JSON を Read してパース、findings をまとめる:
+6 つの JSON を Read してパース、findings をまとめる:
 
 ```javascript
 const all = []
@@ -119,11 +121,12 @@ autopilot が呼ぶ場合は autopilot 側で severity 基準で fatal 抽出 + 
 ## Summary
 | 観点 | high | medium | low |
 |---|---|---|---|
-| tdd          | X | X | X |
-| quality      | X | X | X |
-| security     | X | X | X |
-| architecture | X | X | X |
-| rules        | X | X | X |
+| tdd                | X | X | X |
+| quality            | X | X | X |
+| security           | X | X | X |
+| architecture       | X | X | X |
+| rules              | X | X | X |
+| product_readiness  | X | X | X |
 | **合計** | **X** | **X** | **X** |
 
 ## findings (severity 順)
@@ -168,6 +171,6 @@ AskUserQuestion({
 
 ## 関連
 
-- subagent: `review-tdd` / `review-quality` / `review-security` / `review-architecture` / `review-rules` (本体ロジック)
+- subagent: `review-tdd` / `review-quality` / `review-security` / `review-architecture` / `review-rules` / `review-product-readiness` (本体ロジック)
 - 連携 skill: `implementation-developing` (修正実行) / `workflow-commit`
 - 上位: `workflow-autopilot` Step 4.5 (本 skill を呼んで集約結果を受け取り、autopilot 側で fatal 判定 + self-fix loop)

@@ -544,7 +544,7 @@ git commit -m "📝 docs: autopilot ${run_id} 実行レポート"
 - **tech-investigation**: POC_NEEDED マーカーの自動 PoC (Step 1.5)
 - **implementation-developing-agent**: フェーズ単位の TDD 実装 (Step 4.2)
 - **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.3)
-- **review-tdd / review-quality / review-security / review-architecture / review-rules**: 5 観点並列レビュー (Step 4.5 で workflow-review skill 内部から起動)
+- **review-tdd / review-quality / review-security / review-architecture / review-rules / review-product-readiness**: 6 観点並列レビュー (Step 4.5 で workflow-review skill 内部から起動)。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査
 
 ### 内部呼び出し (skill)
 
