@@ -217,6 +217,32 @@ AskUserQuestion({
 - 使用ライブラリと用途 (バージョン制約があれば明記)
 - ディレクトリ構造案
 
+#### 未確定要素は POC_NEEDED マーカーで残す (DESIGN_DETAIL.md 側)
+
+「実装方針が技術検証の結果次第で変わる」項目は、文章で「未確定」と書くのではなく**機械可読なマーカー**で残す。autopilot Step 1.5 がこのマーカーを検出して `tech-investigation` subagent で自動 PoC する。
+
+```markdown
+<!-- POC_NEEDED: id=<unique-id>, scope=<検証対象を1行で>, risk=high|medium|low, blocker=true|false -->
+```
+
+入力元:
+- FEASIBILITY.md が存在する場合: 「PoC 計画」セクションの id / scope / risk / blocker をそのまま転記
+- FEASIBILITY.md が無い場合: 設計中に「実装ガイド」「API 設計」「データスキーマ」で不確定要素を発見したらマーカーを追加
+
+`blocker=true` のマーカーは autopilot 起動時に必ず解決される。`blocker=false` は継続可 (実装中に必要になったら個別判断)。
+
+例:
+
+```markdown
+## 実装ガイド
+
+### Server Component の async data loading
+
+<!-- POC_NEEDED: id=rsc-async-suspense, scope=React Server Component で async fn + Suspense 境界が期待通り動くか検証, risk=high, blocker=true -->
+
+採用パターン: `app/<route>/page.tsx` で async server component → 子の client component で `use(promise)`。Suspense 境界は親 layout に配置。
+```
+
 ### ステップ4.5: ゴールと検証手順の定義
 
 最終的なゴールと検証手順を定義する。**ゴール定義は DESIGN.md、検証手順の具体的な操作は DESIGN_DETAIL.md**。
@@ -232,20 +258,41 @@ AskUserQuestion({
 
 #### ゴール定義の基準 (→ DESIGN.md)
 
-- ユーザー視点で観測可能（内部実装の詳細ではなく、外から見える振る舞い）
-- 検証可能（Yes/Noで判定できる）
-- 具体的（「高速に動作する」ではなく「レスポンス200ms以内」）
+各ゴールは autopilot Step 5 で**機械的に達成判定**されることを前提に、以下の規約を厳守:
+
+- **1 件 1 行**: 「G1: ...」「G2: ...」のように番号付きで列挙
+- **ユーザー視点で観測可能**: 内部実装の詳細ではなく、外から見える振る舞い
+- **検証可能 (Yes/No 判定)**: 「うまく動く」のような主観表現を避ける
+- **具体的 (数値があれば必ず数値で)**: 「高速」ではなく「レスポンス 200ms 以内」
+
+例:
+```markdown
+## ゴール
+
+- G1: ログイン画面でメール+パスワード入力後、3 秒以内にダッシュボードへ遷移する
+- G2: 無効なメール形式で送信したらフォーム上にエラーメッセージが表示され、サーバーには送信されない
+- G3: ユーザー登録後 5 分以内に確認メールが届く (手動確認)
+```
 
 #### 検証手順 (→ DESIGN_DETAIL.md)
 
-- 自動テスト実行コマンド (例: `npm test`, `go test ./...`)
-- 手動検証の具体的な操作手順 (どの画面で何を操作するか)
-- 完了判定の基準や閾値の具体値
-- デプロイ先や動作確認環境の URL / 接続情報
+各ゴールに対して**必ず 1 対 1 で対応する検証手順**を DESIGN_DETAIL.md の「検証手順」セクションに書く。autopilot Step 5 はこの対応を読んでゴール判定する。
+
+- **自動系**: `G<n> 検証: <bash コマンド>` 形式 (例: `G1 検証: npm test -- e2e/login.spec.ts`)
+- **手動系**: `G<n> 検証 (手動): <操作手順>` 形式 (autopilot は自動判定不可、手動確認待ちとして残す)
+
+例:
+```markdown
+## 検証手順
+
+- G1 検証: `npm run test:e2e -- login-redirect.spec.ts`
+- G2 検証: `npm run test:e2e -- login-validation.spec.ts`
+- G3 検証 (手動): ユーザー新規登録 → 5 分待機 → 受信箱で件名「ようこそ」のメール到着確認
+```
 
 #### 不明点の確認
 
-不明な点は AskUserQuestion で確認する。
+不明な点は AskUserQuestion で確認する。ゴールに紐づく検証コマンドが存在しない場合、`G<n> 検証 (手動)` で残してプロジェクト進行を止めない (autopilot が pending 扱いにする)。
 
 ### ステップ5: ドキュメント生成
 
