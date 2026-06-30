@@ -293,74 +293,55 @@ fi
 
 (理由: utility-fix-lsp-warnings は Lua/Neovim 専用設計。他言語の LSP 警告は各言語の LSP plugin (`typescript-lsp@claude-plugins-official` 等) が拾う前提)
 
-#### Step 4.5: 5 観点 review subagent を並列起動 (最大 3 ループ self-fix)
+#### Step 4.5: workflow-review (最大 3 ループ self-fix)
 
-`workflow-review` skill を呼ぶのではなく、autopilot が直接 5 つの review subagent を **並列起動**する (Agent ツールを同一メッセージ内に複数 tool_use として並べる):
+`workflow-review` skill を Skill ツールで呼ぶ。skill が内部で 5 review subagent (review-tdd/quality/security/architecture/rules) を並列起動 + 集約してくれるので、autopilot は集約結果を受け取って fatal 判定するだけで済む。
 
-```javascript
-const reviews = await Promise.all([
-  Agent({ subagent_type: "review-tdd",          prompt: reviewPromptFor("tdd",          PHASE_CONTEXT) }),
-  Agent({ subagent_type: "review-quality",      prompt: reviewPromptFor("quality",      PHASE_CONTEXT) }),
-  Agent({ subagent_type: "review-security",     prompt: reviewPromptFor("security",     PHASE_CONTEXT) }),
-  Agent({ subagent_type: "review-architecture", prompt: reviewPromptFor("architecture", PHASE_CONTEXT) }),
-  Agent({ subagent_type: "review-rules",        prompt: reviewPromptFor("rules",        PHASE_CONTEXT) }),
-])
-```
-
-各 subagent は output_path に JSON を書き出し、stdout には絶対パスのみを出す。autopilot は 5 つの JSON を Read してパースし集約:
+5 並列起動 + 集約ロジックの中身は `claude/skills/workflow-review/SKILL.md` を参照。
 
 ```javascript
-const findings = []
-for (const r of reviews) {
-  const json = JSON.parse(await Read(r.trim()))
-  findings.push(...json.findings)
-}
-const fatal = findings.filter(f => f.severity === "high"
-  || (json.dimension === "security" && f.severity === "medium"))
+const reviewResult = await Skill({
+  skill: "workflow-review",
+  args: {
+    phase_name: PHASE_CONTEXT.phase_name,
+    phase_start_sha: PHASE_CONTEXT.phase_start_sha,
+    diff_range: `${PHASE_CONTEXT.phase_start_sha}..HEAD`,
+    related_source_files: PHASE_CONTEXT.related_source_files,
+    related_rules_paths: PHASE_CONTEXT.related_rules_paths,
+    design_overview: PHASE_CONTEXT.design_overview,
+    design_detail: PHASE_CONTEXT.design_detail,
+  }
+})
+// reviewResult.findings は [{dimension, file, line, severity, rule, message, fix_proposal}, ...]
 ```
 
-致命違反 (`fatal.length > 0`) の判定基準:
-- `severity: high` (どの観点でも)
-- `severity: medium` で `dimension: security` (セキュリティの中程度違反は機能を壊さなくても重い扱い)
+##### fatal 判定 (autopilot 側責務)
 
-致命違反があれば:
+workflow-review skill は fatal 判定しない。autopilot 側で以下基準で fatal を抽出:
+
+```javascript
+const fatal = reviewResult.findings.filter(f =>
+  f.severity === "high" ||
+  (f.dimension === "security" && f.severity === "medium")
+)
+```
+
+判定基準:
+- `severity: high` (どの観点でも) → 必須修正
+- `severity: medium` で `dimension: security` (セキュリティ中程度違反は機能を壊さなくても重い扱い) → 必須修正
+
+##### fatal あり → self-fix loop
 
 `review_loop += 1`。`review_loop > 3` ならエスカレ停止。
 
 それ以外:
 1. fatal findings の `fix_proposal` を集約して PHASE_CONTEXT に inject
 2. `implementation-developing-agent` で self-fix (review 指摘を TDD で直す)
-3. 5 観点 review を再並列起動 (このステップの先頭に戻る)
+3. `Skill({ skill: "workflow-review" })` を再起動 (このステップの先頭に戻る)
 
-致命違反なし (= 軽微な改善提案のみ or 通過) → Step 4.6 へ。低・中レベルの findings (security 以外) は **JSONL に記録するだけで実装は通過させる** (autopilot は完璧主義にならない)。
+##### fatal なし
 
-#### `reviewPromptFor(dimension, ctx)` 関数 (autopilot 内ヘルパ)
-
-各 review subagent に渡す prompt を組み立てる:
-
-```
-PHASE_CONTEXT:
-  phase_name: ${ctx.phase_name}
-  phase_start_sha: ${ctx.phase_start_sha}
-  diff_range: ${ctx.phase_start_sha}..HEAD
-  related_source_files:
-    ${ctx.related_source_files.map(f => `- ${f}`).join('\n  ')}
-  related_rules_paths:
-    # dimension に応じて関連 rules を絞る
-    ${pickRulesFor(dimension, ctx.related_rules_paths)}
-  design_overview: |
-    ${ctx.design_overview}
-  design_detail: |
-    ${ctx.design_detail}
-  output_path: /tmp/review-${dimension}-${ctx.phase_name}.json
-```
-
-`pickRulesFor`:
-- tdd: `rules/core/tdd.md`, `rules/core/testing.md`
-- quality: `rules/core/design.md`
-- security: (なし、subagent が自前で観点持つ)
-- architecture: `rules/core/design.md`
-- rules: 全 related_rules_paths + path 別 (`rules/frontend/react/*.md` 等)
+軽微な改善提案 (low / medium) のみ or 通過 → Step 4.6 へ。これらは JSONL に `event_type: review_low` で記録するだけで autopilot は通過させる (完璧主義にならない)。
 
 #### Step 4.6: 設計乖離の判定 (P1 / P2 / P3)
 
@@ -563,10 +544,11 @@ git commit -m "📝 docs: autopilot ${run_id} 実行レポート"
 - **tech-investigation**: POC_NEEDED マーカーの自動 PoC (Step 1.5)
 - **implementation-developing-agent**: フェーズ単位の TDD 実装 (Step 4.2)
 - **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.3)
-- **review-tdd / review-quality / review-security / review-architecture / review-rules**: 5 観点並列レビュー (Step 4.5)
+- **review-tdd / review-quality / review-security / review-architecture / review-rules**: 5 観点並列レビュー (Step 4.5 で workflow-review skill 内部から起動)
 
 ### 内部呼び出し (skill)
 
+- **workflow-review**: 5 review subagent 並列の wrapper (Step 4.5)。fatal 判定は autopilot 側
 - **utility-fix-lsp-warnings**: Lua/Neovim LSP 警告修正 (Step 4.4、Neovim プラグイン専用判定後のみ)
 - **workflow-commit**: Conventional Commit でコミット (Step 4.7)
 - **implementation-planning-tasks**: P2 動的修正時の TODO 再生成
@@ -578,8 +560,7 @@ git commit -m "📝 docs: autopilot ${run_id} 実行レポート"
 ### 前段 / 後段
 
 - **workflow-spec**: 前段。DESIGN + TODO 生成
-- **implementation-developing** (skill): メインセッションでの単独利用版。autopilot からは subagent 版 (`implementation-developing-agent`) を呼ぶ
-- **workflow-review** (skill): メインセッションでの単独利用版。autopilot からは 5 つの review-* subagent を直接並列起動
+- **implementation-developing** (skill): メインセッションでの wrapper。autopilot からは subagent 版 (`implementation-developing-agent`) を直接呼ぶ (最短経路)
 
 ## 範例: typical な実行ログ
 
