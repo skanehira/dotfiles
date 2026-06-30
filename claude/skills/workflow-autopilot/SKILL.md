@@ -1,6 +1,6 @@
 ---
 name: workflow-autopilot
-description: 承認済みの DESIGN.md (概要) + DESIGN_DETAIL.md (詳細) + TODO.md を入力に、TODO.md の全フェーズを自律実装する。起動時に POC_NEEDED マーカー (技術選定の未確定要素) を tech-investigation で自動 PoC 解決し、各フェーズで implementation-developing (TDD) → architecture-guard (最大3回まで自動修正ループ) → Neovim 判定で utility-fix-lsp-warnings (Lua/Neovim 専用) → workflow-review (致命違反は最大3回 self-fix) → workflow-commit を回す。全フェーズ消化後は DESIGN.md ゴール + DESIGN_DETAIL.md 検証手順で達成判定を実行、未達ゴールがあれば追加フェーズで最大2周回ループ。実装中の設計乖離は P1 (TODO 軽微) / P2 (詳細設計の不足) / P3 (概要設計の破綻) に分類して動的修正かエスカレ停止する。意思決定経緯は構造化 JSONL + HTML レポート (docs/autopilot-reports/<run_id>.html) として残す。「設計済み TODO で実装を自律実行」「autopilot で TODO を消化」「残りタスクを自動で実装」などで起動。
+description: 承認済みの DESIGN.md (概要) + DESIGN_DETAIL.md (詳細) + TODO.md を入力に、TODO.md の全フェーズを自律実装する。起動時に POC_NEEDED マーカー (技術選定の未確定要素) を tech-investigation subagent で自動 PoC 解決し、各フェーズで PHASE_CONTEXT を組み立てて implementation-developing-agent subagent (TDD) → architecture-guard subagent (最大3回まで自動修正ループ) → Neovim 判定で utility-fix-lsp-warnings (Lua/Neovim 専用) → 5 観点 review subagent 並列 (review-tdd/quality/security/architecture/rules、致命違反は最大3回 self-fix) → workflow-commit を回す。subagent の TDD 違反は SubagentStop hook (self-review-subagent.ts) で機械チェック。全フェーズ消化後は DESIGN.md ゴール + DESIGN_DETAIL.md 検証手順で達成判定、未達ゴールは追加フェーズで最大2周回ループ。実装中の設計乖離は P1 (TODO 軽微) / P2 (詳細設計の不足) / P3 (概要設計の破綻) に分類して動的修正かエスカレ停止する。意思決定経緯は構造化 JSONL + HTML レポート (docs/autopilot-reports/<run_id>.html) として残す。「設計済み TODO で実装を自律実行」「autopilot で TODO を消化」「残りタスクを自動で実装」などで起動。
 argument-hint: "[docs ディレクトリパス、省略時は docs/]"
 allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 ---
@@ -177,17 +177,73 @@ rg -n '^### フェーズ' docs/TODO.md
 PHASE_START_SHA=$(git rev-parse HEAD)
 ```
 
-architecture-guard / workflow-review が「このフェーズの差分」を判定する基準点。
+architecture-guard / review-* が「このフェーズの差分」を判定する基準点。
 
-#### Step 4.2: implementation-developing でフェーズ実装
+#### Step 4.1.5: PHASE_CONTEXT の組み立て
 
-Skill ツールで `implementation-developing` を呼び、引数として現フェーズ名を渡す。
+subagent (implementation-developing-agent / review-*) は parent のコンテキストを継承しないため、autopilot が「フェーズ実装・レビューに必要な情報パッケージ」を構造化して prompt に渡す。
 
+組み立てる PHASE_CONTEXT:
+
+```yaml
+phase_name: <フェーズN: 名前>           # TODO.md の見出しから
+phase_start_sha: <SHA>                   # Step 4.1 で記録
+phase_tasks: |                            # TODO.md の該当フェーズセクション全文
+  <TODO.md 該当部分を rg / awk で抽出>
+design_overview: |                        # DESIGN.md 関連節抜粋
+  <主要コンポーネント / 非機能目標 / ゴール のうち、現フェーズに関連する節>
+design_detail: |                          # DESIGN_DETAIL.md 関連節抜粋
+  <API / スキーマ / シーケンス / 実装ガイドのうち、現フェーズに関連する節>
+related_source_files:                     # subagent が Read すべき既存ファイル一覧
+  - <Glob で抽出した関連ファイル path>
+related_rules_paths:                      # rules/core + 言語別 rules
+  - rules/core/tdd.md
+  - rules/core/design.md
+  - rules/core/testing.md
+  - rules/core/commit.md
+  - <言語別 rules があれば追加>
+prev_phase_summary: |                     # 直前フェーズの 1-3 行要約
+  <decisions.jsonl から拾う or skip>
+poc_results:                              # Step 1.5 の tech-investigation 結果
+  - id: <POC_NEEDED id>
+    recommended_approach: <結論>
 ```
-Skill({ skill: "implementation-developing", args: "フェーズN: <フェーズ名>" })
+
+抜粋ロジック:
+
+- `phase_tasks`: TODO.md を Read して `### フェーズN:` から次フェーズ見出しまでを切り出し
+- `design_overview` / `design_detail`: フェーズ名から推測した key term (例: 「認証」「ユーザー登録」) で DESIGN/DETAIL を grep、ヒット節とその前後をまとめて抜粋。確信度低なら**全文を入れる方が安全** (subagent prompt の最大長を考慮)
+- `related_source_files`: フェーズ名 / phase_tasks から推測したキーワードで Glob (`src/**/*<key>*`) + git diff で過去フェーズで触ったファイル
+- `prev_phase_summary`: decisions.jsonl の直前 phase の `event_type: done` エントリ summary を引く
+
+組み立てた PHASE_CONTEXT は Step 4.2 と Step 4.5 で再利用する。
+
+#### Step 4.2: implementation-developing-agent でフェーズ実装
+
+Agent ツールで `implementation-developing-agent` subagent を呼び、PHASE_CONTEXT を prompt として渡す:
+
+```javascript
+const devResult = await Agent({
+  description: "フェーズ実装 TDD",
+  subagent_type: "implementation-developing-agent",
+  prompt: `PHASE_CONTEXT:\n${yamlStringify(PHASE_CONTEXT)}`
+})
 ```
 
-developing skill は TDD (RED → GREEN → REFACTOR → REVIEW → CHECK) サイクルを当該フェーズについて回す。
+返り値 (subagent stdout 末尾の JSON) を parse:
+
+```javascript
+const dev = JSON.parse(devResult.match(/\{[\s\S]*\}$/)[0])
+// dev.status: "done" | "escalate"
+// dev.deviation_signals: [{ type, what, why, scope, fix_proposal }]
+// dev.modified_files: [...]
+// dev.tdd_compliance: { red_first, tests_green, notes }
+```
+
+- `dev.status === "escalate"` → 即 P3 として停止
+- `dev.deviation_signals` を Step 4.6 で処理する (一旦保持)
+- subagent 内の TDD 違反は SubagentStop hook (`self-review-subagent.ts`) が並走チェック済 (subagent 側で再ターンが回るので autopilot は意識しない)
+- developing-agent は **コミットしない** ので、working tree に変更が残った状態で Step 4.3 へ
 
 #### Step 4.3: architecture-guard (最大 3 ループ)
 
@@ -217,9 +273,9 @@ output_path: /tmp/guard-<phase-name>.json`
 
 それ以外:
 
-1. violations の `fix_proposal` を集約して修正タスクを作る
-2. `implementation-developing` を「architecture-guard 違反の修正タスク」として呼ぶ (TDD: 既存テストを保ったまま境界遵守に書き換え。必要に応じて新規テスト追加)
-3. developing 完了後、`architecture-guard` を再実行 (このステップの先頭に戻る)
+1. violations の `fix_proposal` を集約して PHASE_CONTEXT を更新 (追加コンテキストとして「architecture-guard 違反一覧 + 修正方針」を inject)
+2. `implementation-developing-agent` subagent を「architecture-guard 違反の修正タスク」として再呼び出し (TDD: 既存テストを保ったまま境界遵守に書き換え。必要に応じて新規テスト追加)
+3. developing-agent 完了後、`architecture-guard` を再実行 (このステップの先頭に戻る)
 
 #### Step 4.4: utility-fix-lsp-warnings (Lua/Neovim 専用)
 
@@ -237,29 +293,90 @@ fi
 
 (理由: utility-fix-lsp-warnings は Lua/Neovim 専用設計。他言語の LSP 警告は各言語の LSP plugin (`typescript-lsp@claude-plugins-official` 等) が拾う前提)
 
-#### Step 4.5: workflow-review (最大 3 ループ self-fix)
+#### Step 4.5: 5 観点 review subagent を並列起動 (最大 3 ループ self-fix)
 
-Skill ツールで `workflow-review` を呼ぶ。5 観点 (TDD / 品質 / セキュリティ / アーキテクチャ / ルール) のレビュー結果を受け取る。
+`workflow-review` skill を呼ぶのではなく、autopilot が直接 5 つの review subagent を **並列起動**する (Agent ツールを同一メッセージ内に複数 tool_use として並べる):
 
-致命違反 (security 系 / 機能を壊す不具合 / rules 直接違反) があれば:
+```javascript
+const reviews = await Promise.all([
+  Agent({ subagent_type: "review-tdd",          prompt: reviewPromptFor("tdd",          PHASE_CONTEXT) }),
+  Agent({ subagent_type: "review-quality",      prompt: reviewPromptFor("quality",      PHASE_CONTEXT) }),
+  Agent({ subagent_type: "review-security",     prompt: reviewPromptFor("security",     PHASE_CONTEXT) }),
+  Agent({ subagent_type: "review-architecture", prompt: reviewPromptFor("architecture", PHASE_CONTEXT) }),
+  Agent({ subagent_type: "review-rules",        prompt: reviewPromptFor("rules",        PHASE_CONTEXT) }),
+])
+```
+
+各 subagent は output_path に JSON を書き出し、stdout には絶対パスのみを出す。autopilot は 5 つの JSON を Read してパースし集約:
+
+```javascript
+const findings = []
+for (const r of reviews) {
+  const json = JSON.parse(await Read(r.trim()))
+  findings.push(...json.findings)
+}
+const fatal = findings.filter(f => f.severity === "high"
+  || (json.dimension === "security" && f.severity === "medium"))
+```
+
+致命違反 (`fatal.length > 0`) の判定基準:
+- `severity: high` (どの観点でも)
+- `severity: medium` で `dimension: security` (セキュリティの中程度違反は機能を壊さなくても重い扱い)
+
+致命違反があれば:
 
 `review_loop += 1`。`review_loop > 3` ならエスカレ停止。
 
 それ以外:
-1. `implementation-developing` で self-fix (review 指摘を TDD で直す)
-2. `workflow-review` を再実行 (このステップの先頭に戻る)
+1. fatal findings の `fix_proposal` を集約して PHASE_CONTEXT に inject
+2. `implementation-developing-agent` で self-fix (review 指摘を TDD で直す)
+3. 5 観点 review を再並列起動 (このステップの先頭に戻る)
 
-致命違反なし (= 軽微な改善提案のみ or 通過) → Step 4.6 へ。
+致命違反なし (= 軽微な改善提案のみ or 通過) → Step 4.6 へ。低・中レベルの findings (security 以外) は **JSONL に記録するだけで実装は通過させる** (autopilot は完璧主義にならない)。
+
+#### `reviewPromptFor(dimension, ctx)` 関数 (autopilot 内ヘルパ)
+
+各 review subagent に渡す prompt を組み立てる:
+
+```
+PHASE_CONTEXT:
+  phase_name: ${ctx.phase_name}
+  phase_start_sha: ${ctx.phase_start_sha}
+  diff_range: ${ctx.phase_start_sha}..HEAD
+  related_source_files:
+    ${ctx.related_source_files.map(f => `- ${f}`).join('\n  ')}
+  related_rules_paths:
+    # dimension に応じて関連 rules を絞る
+    ${pickRulesFor(dimension, ctx.related_rules_paths)}
+  design_overview: |
+    ${ctx.design_overview}
+  design_detail: |
+    ${ctx.design_detail}
+  output_path: /tmp/review-${dimension}-${ctx.phase_name}.json
+```
+
+`pickRulesFor`:
+- tdd: `rules/core/tdd.md`, `rules/core/testing.md`
+- quality: `rules/core/design.md`
+- security: (なし、subagent が自前で観点持つ)
+- architecture: `rules/core/design.md`
+- rules: 全 related_rules_paths + path 別 (`rules/frontend/react/*.md` 等)
 
 #### Step 4.6: 設計乖離の判定 (P1 / P2 / P3)
 
-Step 4.2 〜 4.5 の過程で「設計 / TODO と実装の食い違い」を検出したかを総合判断する。検出例と分類:
+Step 4.2 〜 4.5 で subagent から返された `deviation_signals` を総合して P 値に分類する。
 
-| シグナル | 分類 | 対処 |
-|---|---|---|
-| developing 中に「TODO のタスク順序が誤り」「タスク追加漏れ」と判明 | P1 (TODO 軽微) | autopilot が `docs/TODO.md` を編集して継続。`p1_fixes_in_phase += 1`、上限 (2 回) 超過なら P2 扱いに昇格 |
-| developing / guard 中に「DESIGN_DETAIL.md に明記されていない API・スキーマ・エラー型・実装パターンが必要」と判明 | P2 (詳細設計の不足) | autopilot が `docs/DESIGN_DETAIL.md` を更新 → `implementation-planning-tasks` で `docs/TODO.md` を再生成 → 当該フェーズの実装に必要な追加情報をユーザに簡潔に通知 (ブロックはしない) → 継続。`p2_fixes_total += 1`、上限 (3 回) 超過なら P3 扱いに昇格 |
-| developing / guard / review 中に「主要コンポーネントの再設計が必要」「非機能要件抵触」「ユースケース成立しない」と判明 (= DESIGN.md 概要に影響) | P3 (概要設計の破綻) | エスカレ停止 |
+**シグナル元と分類対応**:
+
+| シグナル元 | type (developing-agent から) | 分類 | 対処 |
+|---|---|---|---|
+| developing-agent | `todo_minor` | P1 (TODO 軽微) | autopilot が `docs/TODO.md` を編集して継続。`p1_fixes_in_phase += 1`、上限 (2 回) 超過なら P2 扱いに昇格 |
+| developing-agent / architecture-guard / review-architecture (severity: medium 以上) | `design_detail_gap` | P2 (詳細設計の不足) | autopilot が `docs/DESIGN_DETAIL.md` を更新 → `implementation-planning-tasks` で `docs/TODO.md` を再生成 → 当該フェーズの実装に必要な追加情報をユーザに簡潔に通知 (ブロックはしない) → 継続。`p2_fixes_total += 1`、上限 (3 回) 超過なら P3 扱いに昇格 |
+| developing-agent / review-architecture (severity: high で design 整合違反) | `design_overview_break` | P3 (概要設計の破綻) | エスカレ停止 |
+
+**シグナル無しの場合**: Step 4.7 へ素通り。
+
+**集約のしかた**: 同一 phase 内で複数 subagent から同種シグナルが来た場合、`scope` + `what` で重複排除してから処理 (1 件のシグナルとして扱う)。
 
 ##### P1 動的修正
 
@@ -441,14 +558,28 @@ git commit -m "📝 docs: autopilot ${run_id} 実行レポート"
 
 ## 関連スキル / agent
 
-- **workflow-spec**: autopilot の前段。設計 + TODO 生成
-- **implementation-developing**: 各フェーズの TDD 実装本体
-- **tech-investigation**: POC_NEEDED マーカーの自動 PoC (subagent、Step 1.5 から)
-- **architecture-guard**: Clean Arch / DDD 境界違反検出 (subagent、Step 4.3)
-- **utility-fix-lsp-warnings**: Lua/Neovim LSP 警告修正 (Neovim プラグイン専用、Step 4.4)
-- **workflow-review**: 5 観点コードレビュー (Step 4.5)
+### 内部呼び出し (subagent)
+
+- **tech-investigation**: POC_NEEDED マーカーの自動 PoC (Step 1.5)
+- **implementation-developing-agent**: フェーズ単位の TDD 実装 (Step 4.2)
+- **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.3)
+- **review-tdd / review-quality / review-security / review-architecture / review-rules**: 5 観点並列レビュー (Step 4.5)
+
+### 内部呼び出し (skill)
+
+- **utility-fix-lsp-warnings**: Lua/Neovim LSP 警告修正 (Step 4.4、Neovim プラグイン専用判定後のみ)
 - **workflow-commit**: Conventional Commit でコミット (Step 4.7)
 - **implementation-planning-tasks**: P2 動的修正時の TODO 再生成
+
+### 連携 hook
+
+- **SubagentStop hook (`self-review-subagent.ts`)**: subagent 内の TDD 違反を機械チェック。autopilot は意識せず、subagent 側で再ターンが自動で回る
+
+### 前段 / 後段
+
+- **workflow-spec**: 前段。DESIGN + TODO 生成
+- **implementation-developing** (skill): メインセッションでの単独利用版。autopilot からは subagent 版 (`implementation-developing-agent`) を呼ぶ
+- **workflow-review** (skill): メインセッションでの単独利用版。autopilot からは 5 つの review-* subagent を直接並列起動
 
 ## 範例: typical な実行ログ
 
