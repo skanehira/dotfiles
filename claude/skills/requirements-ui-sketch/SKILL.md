@@ -254,7 +254,35 @@ AskUserQuestion({
 })
 ```
 
-「進める」選択後、5.3 で frontend-design を実際に起動する (具体的な呼び出しコマンドは 5.3 を参照)。
+「進める」選択後、以下のように frontend-design スキルを Skill ツールで起動する:
+
+```javascript
+Skill({
+  skill: "frontend-design",
+  args: `docs/UI_SKETCH.html をベースに、ブランド方向性に沿ったビジュアルへ作り込んでください。
+
+方向性 (5.1 でユーザーと合意):
+- トーン: <例: 外資系ラグジュアリー / 国内カジュアル / 開発者向け>
+- 雰囲気: <例: ミニマル / エディトリアル / ポップ>、ライト / ダーク
+- 主要フォント候補: <例: Inter + Noto Sans JP / Geist / system-ui>
+- 主要配色: <例: ニュートラル + 1 アクセントカラー (具体的な hex か Tailwind 名)>
+- スペーシング: <例: 8px ベース / 詰め気味 / 余白広め>
+
+要求:
+- UI_SKETCH.html の AppShell (ヘッダー / ナビ / フッター / 404 / トースト / ErrorBoundary フォールバック画面、フェーズ 4.5 で設計済) すべてに方向性を反映
+- 各個別画面のプロトタイプにも方向性を反映
+- 既存の画面構造・フロー・要素は壊さない (構造維持 + ビジュアル適用)
+- 単一 HTML ファイル (docs/UI_SKETCH.html) を直接上書き
+- 完了後、chrome-devtools MCP で動作確認
+
+ベース入力: docs/UI_SKETCH.html
+出力先: docs/UI_SKETCH.html (上書き)`
+})
+```
+
+frontend-design スキルの戻り (作り込まれた UI_SKETCH.html) を受け取った後、フェーズ 5.4 (動作確認) で chrome-devtools MCP を起動して visual + console error 確認する。
+
+ユーザーから「修正したい」フィードバックが来たら、frontend-design を再起動して差分指示を渡す (反復可能)。
 
 #### 5.3 プロトタイプの構成
 
