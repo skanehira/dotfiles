@@ -85,9 +85,9 @@ skills/
 | [requirements-user-story](./requirements-user-story/)                         | ユーザーストーリーを作成し、MoSCoW/ICE で優先順位付け      | -                                                  | USER_STORIES.md       |
 | [requirements-ui-sketch](./requirements-ui-sketch/)                           | 画面構成、ユーザーフロー、ASCII ワイヤーフレームを作成     | USER_STORIES.md                                    | UI_SKETCH.md          |
 | [requirements-usecase-description](./requirements-usecase-description/)       | 正常系・異常系・代替フロー、ビジネスルールを詳細化         | USER_STORIES.md                                    | USECASES.md           |
-| [requirements-feasibility-check](./requirements-feasibility-check/)           | 技術リスクを評価し、PoC 計画を作成                         | USECASES.md                                        | FEASIBILITY.md        |
+| [requirements-feasibility-check](./requirements-feasibility-check/)           | 技術リスクを評価し、PoC 計画を作成 (POC_NEEDED マーカー形式、autopilot 自動 PoC 連携) | USECASES.md                                        | FEASIBILITY.md        |
 | [requirements-ddd-modeling](./requirements-ddd-modeling/)                     | ドメインエキスパートと対話し、用語集とドメインモデルを作成 | USECASES.md, FEASIBILITY.md, USER_STORIES.md       | GLOSSARY.md, MODEL.md |
-| [requirements-analyzing-requirements](./requirements-analyzing-requirements/) | 技術設計書を作成 (概要 + 詳細の 2 ファイル)                | USECASES.md, FEASIBILITY.md, GLOSSARY.md, MODEL.md | DESIGN.md, DESIGN_DETAIL.md |
+| [requirements-analyzing-requirements](./requirements-analyzing-requirements/) | 技術設計書を作成 (概要 + 詳細の 2 ファイル、ゴールは G1/G2... 標準形式、POC_NEEDED マーカーを DESIGN_DETAIL.md に転記) | USECASES.md, FEASIBILITY.md, GLOSSARY.md, MODEL.md | DESIGN.md, DESIGN_DETAIL.md |
 | [requirements-interview](./requirements-interview/)                           | DESIGN.md / DESIGN_DETAIL.md を深掘りして射程に応じ追記    | DESIGN.md, DESIGN_DETAIL.md                        | DESIGN.md, DESIGN_DETAIL.md (更新) |
 
 ### 実装フェーズ
@@ -105,7 +105,7 @@ skills/
 | スキル                                                  | 説明                                                                                                                                   |
 | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | [workflow-spec](./workflow-spec/)                       | DESIGN.md (概要) + DESIGN_DETAIL.md (詳細) + TODO.md を対話的に生成 (analyzing-requirements + interview + planning-tasks 統合)、完了後 autopilot / developing / 終了を選択 |
-| [workflow-autopilot](./workflow-autopilot/)             | TODO.md 全フェーズを自律実装。各フェーズで developing → architecture-guard (3回まで自動修正) → fix-lsp-warnings (Lua/Neovim 専用) → review (3回まで self-fix) → commit。設計乖離は P1/P2 で動的修正、P3 で停止 |
+| [workflow-autopilot](./workflow-autopilot/)             | TODO.md 全フェーズを自律実装。起動時に POC_NEEDED マーカーを tech-investigation で自動 PoC 解決 (Step 1.5)、各フェーズで developing → architecture-guard (3回まで自動修正) → fix-lsp-warnings (Lua/Neovim 専用) → review (3回まで self-fix) → commit、最後に DESIGN.md ゴール達成判定 (Step 5、未達は最大2周回ループ)。設計乖離は P1/P2 で動的修正、P3 で停止。意思決定経緯は構造化 JSONL + HTML レポート (`docs/autopilot-reports/<run_id>.html`) |
 | [workflow-review](./workflow-review/)                   | git 差分を 5 観点でコードレビュー (TDD・品質・セキュリティ・アーキテクチャ・ルール)                                                    |
 | [workflow-commit](./workflow-commit/)                   | Conventional Commit 形式でコミット (push はユーザが手動)                                                                               |
 | [workflow-create-draft-pr](./workflow-create-draft-pr/) | ローカルのコミット履歴と差分から Draft PR を作成 (`.github/` のテンプレートを自動検出、無ければ本文を生成)                             |
@@ -162,7 +162,7 @@ skills/
 | ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | `/requirements`  | 要件・設計         | requirements-user-story → requirements-ui-sketch → requirements-usecase-description → requirements-feasibility-check → requirements-ddd-modeling → requirements-analyzing-requirements | DESIGN.md + DESIGN_DETAIL.md      |
 | `/workflow-spec` | 設計 + 計画 + 実装 | requirements-analyzing-requirements → requirements-interview → implementation-planning-tasks → (autopilot or developing 選択)                                                          | DESIGN.md + DESIGN_DETAIL.md + TODO.md |
-| `/workflow-autopilot` | TODO 全フェーズ自律実装 | implementation-developing → architecture-guard → utility-fix-lsp-warnings (Lua/Neovim) → workflow-review → workflow-commit (フェーズ毎ループ)                              | 各フェーズのコミット              |
+| `/workflow-autopilot` | TODO 全フェーズ自律実装 + ゴール達成判定 | (Step 1.5) tech-investigation で POC_NEEDED 自動 PoC → (Step 4 ループ) implementation-developing → architecture-guard → utility-fix-lsp-warnings (Lua/Neovim) → workflow-review → workflow-commit → (Step 5) ゴール達成判定 + 未達対応ループ → (Step 7) HTML レポート | 各フェーズのコミット + `docs/autopilot-reports/<run_id>.html` |
 
 各スキル完了後に確認が入り、途中で終了することも可能。
 既存ドキュメントがある場合は、スキップして途中から開始できる。
