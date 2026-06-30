@@ -118,12 +118,28 @@ AskUserQuestion({
 - [ ] [REVIEW] フェーズ実装の簡易セルフレビューと修正
 - [ ] [CHECK] lint/format/build の実行と確認
 
-### フェーズN: 品質保証
+### フェーズN-a: 品質保証 (テスト・CI・運用)
 
 - [ ] [STRUCTURAL] コード整理（動作変更なし）
-- [ ] 全テスト実行と確認
+- [ ] 全テスト実行と確認 (unit / integration / e2e)
+- [ ] CI 設定 (lint / format / typecheck / build / test 自動化)
+- [ ] 監査ログ / observability (該当する場合)
+- [ ] Rate limit / セキュリティ最終確認 (該当する場合)
 - [ ] [REVIEW] フェーズ実装の簡易セルフレビューと修正
 - [ ] [CHECK] lint/format/build の実行と確認
+
+### フェーズN-b: UI/UX 仕上げ (Web / モバイル Web プロダクトのみ)
+
+CLI / API のみのプロダクトでは省略可。本フェーズの目的は「ブラウザで開いたら実際に使える状態」をゴールに、Voilog セッション F1-F8 のような UX 仕上げ不足を防ぐこと。
+
+- [ ] frontend-design スキルの適用結果を全画面に反映済か確認 (UI_SKETCH.html ベースと整合)
+- [ ] アプリシェル仕上げ (ヘッダー / ナビ / フッター / 404 / 認証ガード / ErrorBoundary / グローバルトースト の最終チェック、`/ui-sketch` フェーズ 4.5 で設計したもの)
+- [ ] a11y 対応 (aria-label / role / focus トラップ / キーボード操作 / 色コントラスト最低基準)
+- [ ] レスポンシブ動作確認 (主要 breakpoint で `chrome-devtools` MCP の `resize_page` + take_snapshot)
+- [ ] 空状態 / loading / error の文言とビジュアル仕上げ (DESIGN_DETAIL.md UX 設計と整合)
+- [ ] SEO meta 最終確認 (title 動的反映 / lang / favicon / OG image 任意)
+- [ ] [REVIEW] review-product-readiness を含む 6 観点レビュー通過
+- [ ] [CHECK] 全自動テスト + ビルド緑、`chrome-devtools` MCP で G_E2E シナリオ通し検証 (URL 直叩きせず UI 操作のみで全 UC 巡回)
 
 ## 実装ノート
 
