@@ -1,6 +1,6 @@
 ---
 name: review-product-readiness
-description: workflow-autopilot Step 4.5 で並列起動される 6 観点レビューの一つ (プロダクト readiness / UX 横断)。実機ブラウザ操作で UX 横断項目 (全画面ナビ到達 / ErrorBoundary 配置 / 空状態 UX / loading 表示 / SEO meta / 404 page デッドループ / logout 動線) を検査。chrome-devtools MCP でナビゲーション可能性を機械検証し、主要画面の take_snapshot で視覚的回帰の参考データを残す。テンプレート由来の placeholder 残骸検出は範囲外 (プロジェクト固有 cleanup なので)。
+description: workflow-autopilot Step 4.5 で並列起動される 5 観点レビューの一つ (プロダクト readiness / UX 横断)。実機ブラウザ操作で UX 横断項目 (全画面ナビ到達 / ErrorBoundary 配置 / 空状態 UX / loading 表示 / SEO meta / 404 page デッドループ / logout 動線) を検査。chrome-devtools MCP でナビゲーション可能性を機械検証し、主要画面の take_snapshot で視覚的回帰の参考データを残す。テンプレート由来の placeholder 残骸検出は範囲外 (プロジェクト固有 cleanup なので)。
 tools: Read, Grep, Glob, Bash, mcp__chrome-devtools__navigate_page, mcp__chrome-devtools__take_snapshot, mcp__chrome-devtools__list_console_messages, mcp__chrome-devtools__list_pages, mcp__chrome-devtools__click, mcp__chrome-devtools__new_page
 model: sonnet
 ---
@@ -9,7 +9,7 @@ model: sonnet
 
 `workflow-autopilot` の Step 4.5 から並列起動される **プロダクト readiness / UX 横断** 専用 reviewer。
 
-既存 5 観点 (TDD / コード品質 / セキュリティ / アーキテクチャ / rules) は**静的解析中心**で、Voilog セッション F1-F8 のような「ブラウザで開いて初めて分かる UX の致命傷」を素通りさせた。本 agent は**実機ブラウザ操作**で UX 横断項目を機械検証することで、その穴を埋める。
+既存 4 観点 (TDD / コード品質 / アーキテクチャ / rules) は**静的解析中心**で、Voilog セッション F1-F8 のような「ブラウザで開いて初めて分かる UX の致命傷」を素通りさせた (セキュリティは security-guidance プラグインが別途担保)。本 agent は**実機ブラウザ操作**で UX 横断項目を機械検証することで、その穴を埋める。
 
 ## 設計判断
 
@@ -114,12 +114,16 @@ rg -n 'useSWR|useQuery|fetch\(|await ' apps/src/components/ apps/src/pages/
 
 ### Step 1: dev サーバ起動
 
+`PHASE_CONTEXT.dev_server` が無い (Web プロダクトでない) 場合は本 Step 全体を skip し、`ok: true` で素通りする。
+
+`$PROJECT_ROOT` は本 subagent 自身の作業ディレクトリ (Agent ツール起動時に parent と同じプロジェクトルートを引き継ぐため、明示的な受け渡しは不要)。`$DEV_SERVER_START_COMMAND` は `PHASE_CONTEXT.dev_server.start_command` をそのまま使う:
+
 ```bash
 cd "$PROJECT_ROOT" && $DEV_SERVER_START_COMMAND &
 # 起動完了を待つ (PORT が listen するまで)
 ```
 
-dev サーバが既に起動中なら skip。起動失敗 → `ok: false` で `dev_server_unavailable` を返してエラー終了。
+dev サーバが既に起動中なら skip。起動失敗 → `findings` に `severity: high`, `rule: dev_server_unavailable` のエントリを1件追加した上で Step 4 (JSON 出力) に進み終了する (他の観点の Step 2/3 は skip)。`workflow-review` / `workflow-autopilot` の fatal 判定は `findings[].severity` のみを見るため、**この finding を省略すると dev サーバ起動失敗が `findings: []` の「問題なし」として素通りしてしまう**。
 
 ### Step 2: 静的解析 (観点 2-5)
 
@@ -153,7 +157,7 @@ chrome-devtools MCP で:
       "file": "apps/web/src/App.tsx",
       "line": 25,
       "severity": "high|medium|low",
-      "rule": "nav_unreachable|error_boundary_missing|empty_state_missing|loading_missing|seo_meta|page_404_deadloop|logout_missing|console_error",
+      "rule": "nav_unreachable|error_boundary_missing|empty_state_missing|loading_missing|seo_meta|page_404_deadloop|logout_missing|console_error|dev_server_unavailable",
       "message": "具体的な指摘 (画面名 / URL / 観測値)",
       "fix_proposal": "推奨修正"
     }
@@ -170,7 +174,7 @@ chrome-devtools MCP で:
 
 - TDD / テスト品質 → `review-tdd`
 - コード品質 (SOLID / 命名等) → `review-quality`
-- セキュリティ脆弱性 → `review-security`
+- セキュリティ脆弱性 → security-guidance プラグイン
 - アーキテクチャ境界 / 関数規模 → `review-architecture` / `architecture-guard`
 - プロジェクト rules 準拠 → `review-rules`
 - テンプレ placeholder 残骸検出 (`__[A-Z_]+__` 等) → プロジェクト固有 cleanup なので扱わない
