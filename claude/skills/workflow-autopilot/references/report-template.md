@@ -58,6 +58,7 @@ autopilot の Step 7 で生成する `docs/autopilot-reports/${run_id}.html` の
   <!-- Section 2: Summary -->
   <!-- Section 3: Phase Timeline -->
   <!-- Section 4: Decisions (P1/P2/P3) -->
+  <!-- Section 4.5: Review Low/Medium Findings -->
   <!-- Section 5: PoC Results -->
   <!-- Section 6: Goal Verification -->
   <!-- Section 7: Footer -->
@@ -160,6 +161,31 @@ JSONL から `event_type` が `p1_fix | p2_fix | p3_escalate` のエントリだ
 
 severity (p1 / p2 / p3) で背景色と前景色を出し分け。
 
+## セクション 4.5: レビュー残課題 (low/medium)
+
+JSONL から `event_type: review_low` のエントリを抽出し、フェーズごとに `context.findings_by_dimension` (dimension をキーにした findings map) をまとめて表示する。fatal (severity: high) はセクション4のP1/P2/P3側で扱い済みなので、ここは「通過はしたが残っている軽微な指摘」の一覧:
+
+```html
+<section class="space-y-2">
+  <h2 class="text-lg font-semibold">レビュー残課題 (low/medium)</h2>
+  ${reviewLowEvents.map(e => {
+    const total = Object.values(e.context.findings_by_dimension).flat().length;
+    if (total === 0) return '';
+    return `
+    <details class="rounded border p-3" style="border-color: var(--border);">
+      <summary class="cursor-pointer text-sm font-mono">${e.phase} — ${total} 件</summary>
+      <div class="mt-2 text-xs space-y-1">
+        ${Object.entries(e.context.findings_by_dimension).flatMap(([dim, findings]) =>
+          findings.map(f => `<div><span class="font-mono uppercase">[${dim}]</span> ${escape(f.file)}:${f.line} - ${escape(f.message)}</div>`)
+        ).join('')}
+      </div>
+    </details>`;
+  }).join('')}
+</section>
+```
+
+`findings_by_dimension` の全 dimension が空配列のフェーズは表示をスキップする (残課題ゼロの正常系をノイズにしないため)。
+
 ## セクション 5: 技術調査結果 (POC_NEEDED)
 
 JSONL から `event_type: poc_resolved` のエントリだけ抽出:
@@ -258,7 +284,7 @@ function escape(s) {
 ## 生成プロセス (autopilot 視点)
 
 1. JSONL を Read して entries 配列に
-2. entries を event_type で分類 (phases / decisions / pocs / goals)
+2. entries を event_type で分類 (phases / decisions / review_low / pocs / goals)
 3. 上記テンプレ各セクションを順に組み立て (template literal で文字列構築)
 4. 1 つの HTML 文字列にして Write
 5. `git add` + `git commit -m "📝 docs: autopilot ${run_id} 実行レポート"`
