@@ -10,7 +10,7 @@
     "deny": [],
     "defaultMode": "bypassPermissions"
   },
-  "model": "claude-opus-4-7[1m]",
+  "model": "opus[1m]",
   "enableAllProjectMcpServers": true,
   "hooks": {
     "UserPromptSubmit": [
@@ -99,7 +99,8 @@
     "postgres-best-practices@supabase-agent-skills": true,
     "codex@openai-codex": true,
     "claude-code-setup@claude-plugins-official": true,
-    "security-guidance@claude-plugins-official": true
+    "security-guidance@claude-plugins-official": true,
+    "slide-plugin@slide-plugin": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
@@ -137,6 +138,12 @@
         "source": "github",
         "repo": "openai/codex-plugin-cc"
       }
+    },
+    "slide-plugin": {
+      "source": {
+        "source": "github",
+        "repo": "skanehira/slide-plugin"
+      }
     }
   },
   "language": "Japanese",
@@ -147,7 +154,8 @@
   "verbose": true,
   "preferredNotifChannel": "terminal_bell",
   "remoteControlAtStartup": false,
+  "inputNeededNotifEnabled": false,
+  "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
-  "agentPushNotifEnabled": true
+  "voiceEnabled": true
 }
