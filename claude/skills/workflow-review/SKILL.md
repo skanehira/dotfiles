@@ -1,502 +1,207 @@
 ---
 name: workflow-review
-description: "ローカルのgit差分を自動検出し、TDD/テスト品質、コード品質、セキュリティ、アーキテクチャ、プロジェクトルール準拠の5観点でコードレビューを実施。改善点があれば具体的な修正コードを提案。"
+description: ローカルの git 差分を 5 観点 (TDD / コード品質 / アーキテクチャ / プロジェクトルール / プロダクト readiness) で並列レビュー。本体ロジックは review-tdd / review-quality / review-architecture / review-rules / review-product-readiness subagent に委譲し、本 skill はメインセッション向けの薄い orchestrator として「差分検出 → PHASE_CONTEXT 組み立て → subagent 並列起動 → 結果集約・整形表示 → 修正アクション選択」を担当する。セキュリティレビューは security-guidance プラグイン (Stop hook の LLM diff review + Edit 時の pattern 検知) に委譲しており本 skill の対象外。fatal 判定 (autopilot の self-fix loop 用) は本 skill では行わず、呼び出し側に任せる。
 argument-hint: "[--staged | --all]"
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git rev-parse:*), Read, Glob, Grep, AskUserQuestion
+allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion
 ---
 
-# /review - コードレビューコマンド
+# /workflow-review - 5 観点並列コードレビュー (subagent wrapper)
 
-ローカルのgit変更を自動検出し、5つの観点からコードレビューを実施します。
+5 つの review subagent を**並列起動**してコードレビューを行う薄い orchestrator。
+
+## 設計方針
+
+- **本体ロジック**: `claude/agents/review-{tdd,quality,architecture,rules,product-readiness}.md` (subagent × 5)
+- **本 skill**: ユーザー向けエントリポイント。差分検出と PHASE_CONTEXT 組み立て、subagent 並列起動、結果集約・整形表示
+- **autopilot からの呼び出し**: 本 skill 経由 (`Skill({ skill: "workflow-review" })`)、fatal 判定は autopilot 側で
+- **観点拡張**: 観点を増やしたい場合は `claude/agents/review-<観点>.md` を追加して本 skill の起動リストに加える
+
+skill / agent 責務分担の詳細は `skills/README.md` 参照。
+
+### パフォーマンス観点 (perf) はどこに?
+
+旧 workflow-review にあった「パフォーマンス」観点は、現在 `review-quality` subagent の中の「アルゴリズム効率 / アンチパターン (重複・過剰抽象)」に統合済。専用 perf agent を作るかは future improvement (実プロジェクトで perf 指摘が薄いと感じたら別 agent 化を検討)。
+
+### セキュリティ観点はどこに?
+
+セキュリティレビューは自作 subagent 化せず、Anthropic 公式プラグイン `security-guidance@claude-plugins-official` に委譲している。Edit/Write 時の pattern 検知と `Stop` hook での LLM diff review が自動で走るため、本 skill の並列レビューには含めない (`git commit` 毎のエージェント型レビュー層は `ENABLE_COMMIT_REVIEW=0` で無効化済、粒度が過剰なため)。
 
 ## 使い方
 
 ```
-/review          # すべての変更をレビュー
-/review --staged # ステージ済み変更のみ
+/workflow-review              # working tree 全変更 (unstaged + staged)
+/workflow-review --staged     # ステージ済みのみ
 ```
 
----
+## 実行手順
 
-## [1/5] 変更検出
+### Step 1: 差分検出
 
-### 引数の解析
-
-```
-引数: $ARGUMENTS
-- --staged: ステージ済み変更のみ
-- --all または 空: すべての変更
-```
-
-### gitリポジトリ確認
-
-Bashツールで以下を実行してgitリポジトリか確認:
 ```bash
-git rev-parse --git-dir 2>/dev/null
+git rev-parse --git-dir          # gitリポジトリ確認
+git status --porcelain           # 変更ファイル一覧
+git diff [--staged]              # 差分本体
+git rev-parse HEAD               # 基準 SHA (= phase_start_sha 相当)
 ```
 
-gitリポジトリでない場合:
-「このディレクトリはgitリポジトリではありません。`/review`はgitリポジトリ内で実行してください。」と表示して終了。
+git リポジトリでない場合: 「gitリポジトリではありません」表示して終了。
+変更 0 件の場合: 「レビュー対象がありません」表示して終了。
 
-### 変更ファイル取得
+### Step 2: PHASE_CONTEXT 組み立て (簡素版)
 
-Bashツールで以下を実行:
-```bash
-git status --porcelain
+メインセッション利用なので「フェーズ」概念は無い。差分範囲を `working_tree` として扱い、PHASE_CONTEXT を最小限で組み立てる:
+
+```yaml
+phase_name: "working-tree-review"
+phase_start_sha: <HEAD>                           # Step 1 の `git rev-parse HEAD` の結果をそのまま使う (working tree の未コミット差分だけを見るため)
+diff_range: working_tree                          # subagent 側で git diff (no range) する
+related_source_files:
+  - <変更ファイル一覧>
+related_rules_paths:
+  - rules/core/tdd.md
+  - rules/core/design.md
+  - rules/core/testing.md
+  - rules/core/commit.md
+  - <変更ファイル拡張子に応じて path 別 rules を追加>
+design_overview: |
+  <docs/DESIGN.md があれば全文 or 抜粋>
+design_detail: |
+  <docs/DESIGN_DETAIL.md があれば全文 or 抜粋>
+dev_server:                                        # review-product-readiness 用。Web プロダクトでなければ省略 (null)
+  url: <検出できた URL>
+  start_command: <package.json の dev/start script>
+output_path_prefix: /tmp/review-<観点>-working-tree.json
 ```
 
-### 差分取得
-
-`$ARGUMENTS`が`--staged`の場合:
-```bash
-git diff --staged
-```
-
-それ以外の場合:
-```bash
-git diff
-git diff --staged
-```
-
-### 変更がない場合
-
-変更が0件の場合:
-「レビュー対象の変更がありません。」と表示して終了。
-
-### 変更サマリー表示
-
-```
-検出された変更:
-- [ファイルパス] ([変更種別: 修正/新規/削除])
-- ...
-
-合計: N ファイル
-```
-
----
-
-## [2/5] コンテキスト収集
-
-### 変更ファイルの読み込み
-
-各変更ファイルについてReadツールで内容を読み込む。
-
-### テストファイルの検索
-
-Globツールで言語に応じたパターンを検索し、変更ファイルに対応するテストを特定:
-
-#### 言語別テストファイルパターン
-
-| 言語             | パターン                                     | 配置                                            |
-| ---------------- | -------------------------------------------- | ----------------------------------------------- |
-| Go               | `*_test.go`                                  | 同一ディレクトリ                                |
-| Rust             | `tests/**/*.rs`, モジュール内 `#[cfg(test)]` | 統合テストは `tests/`、単体テストはモジュール内 |
-| TypeScript/React | `*.test.ts`, `*.test.tsx`, `__tests__/**`    | 同一ディレクトリまたは `__tests__/`             |
-| Lua              | `*_test.lua`, `*_spec.lua`, `test_*.lua`     | 同一ディレクトリ                                |
-
-#### 検索パターン
-- `**/*_test.go` (Go)
-- `**/tests/**/*.rs` (Rust統合テスト)
-- `**/*.test.*` (TypeScript/React)
-- `**/*_test.*` (Lua, 汎用)
-- `**/*_spec.*` (Lua, 汎用)
-- `**/__tests__/**` (React)
-
-#### 対応関係の例
-
-| 言語       | 実装ファイル    | テストファイル                                                           |
-| ---------- | --------------- | ------------------------------------------------------------------------ |
-| Go         | `handler.go`    | `handler_test.go`（同一ディレクトリ）                                    |
-| Rust       | `src/user.rs`   | `src/user.rs` 内の `#[cfg(test)] mod tests`、または `tests/user_test.rs` |
-| TypeScript | `LoginForm.tsx` | `LoginForm.test.tsx`（同一ディレクトリ）                                 |
-| Lua        | `foo.lua`       | `foo_test.lua`, `foo_spec.lua`, `test_foo.lua`                           |
-
-### 関連ファイルの特定
-
-変更ファイルに関連するすべての処理を把握するため、以下の手順で依存関係を追跡:
-
-1. **インポート/依存関係の解析**:
-   言語に応じたインポート文をGrepで抽出:
-| 言語       | パターン                             |
-| ---------- | ------------------------------------ |
-| Go         | `import "..."`, `import (...)`       |
-| Rust       | `use ...`, `mod ...`, `extern crate` |
-| TypeScript | `import ... from`, `require(...)`    |
-   - インポート元のファイルをReadで読み込み
-   - 変更が影響を与える可能性のあるファイルを特定
-
-2. **逆依存関係の追跡**:
-   - 変更ファイルをインポートしている他のファイルをGrepで検索
-   - 変更による影響範囲を把握
-
-3. **呼び出し関係の追跡**:
-   - 変更された関数/クラス名をGrepで検索
-   - 呼び出し元のファイルを特定し、影響範囲を確認
-
-4. **同一モジュール内のファイル**:
-   ```
-   [変更ファイルのディレクトリ]/**/*
-   ```
-
-### プロジェクトパターンの確認
-
-Grepツールで以下を検索:
-- 類似の関数定義パターン
-- インポート/require文
-- 既存のテストパターン
-- 変更されたAPIを使用している箇所
-
-### プロジェクトルールファイルの読み込み
-
-以下のファイルが存在する場合、Readツールで読み込んでおく：
-
-1. **CLAUDE.md**（プロジェクトルート）
-   - コーディング規約
-   - 禁止パターン
-   - 推奨アプローチ
-
-2. **docs/DESIGN.md**
-   - 設計方針
-   - アーキテクチャ原則
-
-3. **.claude/rules/**（ディレクトリ内のすべてのファイル）
-   - プロジェクト固有のルール
-
----
-
-## [3/5] レビュー実施
-
-### 必須レビュー観点
-
-以下の6観点は**必須**で常にレビューを実施する：
-
-1. **TDD/テスト品質** - テストの有無、カバレッジ、テストファースト準拠
-2. **コード品質** - 可読性、命名、複雑度、重複、凝集度、結合度
-3. **セキュリティ** - 脆弱性、認証/認可、入力検証
-4. **アーキテクチャ** - 設計パターン、依存関係、責務分離
-5. **プロジェクトルール** - CLAUDE.md, DESIGN.md, .claude/rules準拠
-6. **パフォーマンス** - 実行速度、メモリ使用量、アルゴリズム効率
-
-### 追加レビュー観点の確認
-
-AskUserQuestionツールで追加のレビュー観点を確認する：
+autopilot から呼ばれる場合は、autopilot が `Skill({ skill: "workflow-review", args: { phase_start_sha, phase_name, dimensions, dev_server, ... } })` で渡せる。本 skill は受け取った `args` をそのまま `ctx` として使う (`args` 未指定のフィールドは上記 yaml サンプルの手動収集ロジックで埋める):
 
 ```javascript
-AskUserQuestion({
-  questions: [
-    {
-      question: "必須観点（TDD/テスト品質、コード品質、セキュリティ、アーキテクチャ、プロジェクトルール、パフォーマンス）に加えて、追加でレビューしたい観点はありますか？",
-      header: "追加観点",
-      options: [
-        { label: "追加なし", description: "必須観点のみでレビュー（推奨）" }
-      ],
-      multiSelect: false
-    }
-  ]
-})
+const ctx = {
+  phase_name: args.phase_name ?? "working-tree-review",
+  phase_start_sha: args.phase_start_sha ?? execSync("git rev-parse HEAD").trim(),
+  related_source_files: args.related_source_files ?? gitStatusPorcelainFiles(),
+  related_rules_paths: args.related_rules_paths ?? defaultRulesPaths(),
+  design_overview: args.design_overview ?? readIfExists("docs/DESIGN.md"),
+  design_detail: args.design_detail ?? readIfExists("docs/DESIGN_DETAIL.md"),
+  dev_server: args.dev_server, // 無ければ undefined のまま (review-product-readiness が no-op で扱う)
+}
 ```
 
-**「Other」選択時の処理**:
-- ユーザーが入力したカスタム観点でレビューを実施
-- 例: 「国際化対応」「ドキュメント」など
-- カスタム観点の場合、その観点に関連するチェック項目を動的に生成
+`dev_server` が無い場合は省略してよい (`review-product-readiness` が URL 不在で no-op になる)。
 
-### レビュー実施
+`args.dimensions` (optional array, 例: `["tdd", "architecture"]` のような観点名の配列) が指定されていれば、その観点の subagent だけを起動する (autopilot の self-fix loop で fatal だった観点のみ再実行するための絞り込み用)。未指定時 (手動 `/workflow-review` 実行時など) は 5 観点フル起動。
 
-必須観点 + 選択された追加観点について以下のチェックを実施する。
+### Step 3: subagent 並列起動
 
-### 3.1 TDD/テスト品質
+Agent ツールを同一メッセージ内に複数 tool_use として並べて並列起動:
 
-**チェック項目**:
+```javascript
+const DIMENSIONS = ["tdd", "quality", "architecture", "rules", "product_readiness"]
+const targetDimensions = args.dimensions?.length ? args.dimensions : DIMENSIONS
 
-| 項目             | 重要度   | 確認内容                                                                 |
-| ---------------- | -------- | ------------------------------------------------------------------------ |
-| テストの存在     | Critical | 新規コードに対応するテストファイルが存在するか                           |
-| テストカバレッジ | Warning  | 主要関数がテストされているか、エッジケース・エラーケースのテストがあるか |
-| テスト品質       | Critical | テスト名が動作を説明しているか、AAAパターンに従っているか                |
+const AGENT_TYPE = {
+  tdd: "review-tdd",
+  quality: "review-quality",
+  architecture: "review-architecture",
+  rules: "review-rules",
+  product_readiness: "review-product-readiness",
+}
 
-**言語別テスト品質基準**（詳細は `writing-tests` スキルを参照）:
+const reviews = await Promise.all(
+  targetDimensions.map(d => Agent({ subagent_type: AGENT_TYPE[d], prompt: reviewPromptFor(d, ctx) }))
+)
+```
 
-| 言語       | 命名規則                       | 構造                 |
-| ---------- | ------------------------------ | -------------------- |
-| Go         | `Test関数_should結果_when条件` | Table-Driven Tests   |
-| Rust       | `関数_returns結果_when条件`    | `#[test]`, rstest    |
-| TypeScript | `describe` + `it`              | AAA, Testing Library |
+各 subagent は output_path に JSON を Write、stdout には絶対パス 1 行のみを返す。
 
-**判定基準**:
-- テストファイルが存在しない新規コード → **Critical**
-- テストはあるがカバレッジ不足 → **Warning**
-- テスト名が不明確、AAAパターン未準拠 → **Critical**
+#### reviewPromptFor(dimension, ctx)
 
-### 3.2 コード品質
+各 subagent には dimension に応じて rules path を絞った prompt を渡す:
 
-**チェック項目**:
+- tdd: `rules/core/tdd.md`, `rules/core/testing.md`
+- quality: `rules/core/design.md`
+- architecture: `rules/core/design.md`
+- rules: 全 related_rules_paths + 拡張子別 (`rules/frontend/react/*.md` 等)
+- product_readiness: design_overview の「ゴール」(G_E2E 含む) と design_detail の「UX 設計」を必ず含める + `dev_server` (start_command と URL) を渡す。CLI / API のみなら本 dimension は no-op で素通り
 
-| 項目         | 重要度  | 確認内容                                                                                             |
-| ------------ | ------- | ---------------------------------------------------------------------------------------------------- |
-| 可読性       | Warning | 関数/変数名が意図を表現しているか、関数の長さ（目安: 50行以内）、ネストの深さ（目安: 3レベル以内）   |
-| 命名規則     | Info    | プロジェクトの既存命名規則に従っているか                                                             |
-| 重複         | Warning | 同一/類似コードが複数箇所にないか                                                                    |
-| コメント     | Info    | 複雑なロジックに「なぜ」を説明するコメントがあるか                                                   |
-| 不要コメント | Warning | 処理を翻訳しただけの無意味なコメントがないか（例: `i++; // iをインクリメント`）                      |
-| 型安全性     | Warning | 適切な型定義、型ガードがあるか                                                                       |
-| 凝集度       | Warning | モジュール/クラス/関数が単一の目的に集中しているか（機能的凝集が理想）                               |
-| 結合度       | Warning | モジュール間の依存が最小限か、データ結合やメッセージ結合になっているか（内容結合・共通結合は避ける） |
+### Step 4: 集約
 
-**判定基準**:
-- 関数が50行以上 → **Warning**（分割推奨）
-- 同一コードが3箇所以上重複 → **Warning**
-- マジックナンバー使用 → **Info**
-- 処理を翻訳しただけのコメント → **Warning**（削除推奨）
-- 低凝集（1つの関数/クラスに複数の無関係な責務） → **Warning**
-- 高結合（グローバル変数への依存、内部実装への直接アクセス） → **Warning**
+起動した subagent (`targetDimensions`) それぞれの JSON を Read してパース、findings を 1 つのフラット配列にまとめる:
 
-### 3.3 セキュリティ
+```javascript
+const findings = []
+for (const r of reviews) {
+  const json = JSON.parse(await Read(r.trim()))
+  for (const f of json.findings) findings.push({ ...f, dimension: json.dimension })
+}
+// 呼び出し側 (autopilot) が「今回どの観点を実際にレビューしたか」を区別できるよう、
+// findings とあわせて targetDimensions もそのまま返す
+return { findings, dimensions_reviewed: targetDimensions }
+```
 
-**チェック項目**:
+**本 skill は fatal 判定を行わない**。集約結果を「全 findings」としてそのまま返す / 表示する。
+autopilot が呼ぶ場合は autopilot 側で severity 基準で fatal 抽出 + self-fix loop 判定する。`dimensions_reviewed` は autopilot が `phaseFindings` を観点単位で洗い替えする際に使う (再実行しなかった観点の古い findings を誤って消さないため)。
 
-| 項目             | 重要度   | 確認内容                                                |
-| ---------------- | -------- | ------------------------------------------------------- |
-| シークレット管理 | Critical | ハードコードされたパスワード、APIキー、トークンがないか |
-| 入力検証         | Critical | ユーザー入力のバリデーションがあるか                    |
-| 認証/認可        | Warning  | 適切なアクセス制御があるか                              |
-| インジェクション | Warning  | SQL、コマンド、XSSの脆弱性がないか                      |
+### Step 5: 結果整形表示 (メインセッション利用時)
 
-**検索パターン**:
-
-| カテゴリ               | パターン                                                     |
-| ---------------------- | ------------------------------------------------------------ |
-| 秘密情報               | `password`, `secret`, `api_key`, `token`                     |
-| トークンプレフィックス | `ghp_`, `sk-`, `aws_`, `AKIA`                                |
-| 危険な関数（共通）     | `eval(`, `exec(`, `system(`                                  |
-| 危険な関数（Go）       | `os.Exec`, `exec.Command`, `sql.Query`（プレースホルダなし） |
-| 危険な関数（Rust）     | `std::process::Command`, `unsafe {`                          |
-
-**判定基準**:
-- ハードコードされた秘密情報 → **Critical**
-- 未検証のユーザー入力 → **Critical**
-- eval/exec使用 → **Warning**
-
-### 3.4 アーキテクチャ
-
-**チェック項目**:
-
-| 項目                   | 重要度  | 確認内容                                                              |
-| ---------------------- | ------- | --------------------------------------------------------------------- |
-| 責務分離               | Warning | 単一責任原則に従っているか、1ファイル/1関数が単一の責務を持っているか |
-| 既存パターンとの一貫性 | Warning | プロジェクトの既存パターンと一貫しているか                            |
-| 依存関係               | Info    | 依存の方向が適切か（具象→抽象）                                       |
-| Tidy First             | Warning | 構造変更と機能変更が混在していないか                                  |
-
-**判定基準**:
-- 循環依存 → **Warning**
-- 既存パターンからの逸脱 → **Info**
-- 構造変更と機能変更の混在 → **Warning**
-
-### 3.5 プロジェクトルール準拠
-
-**チェック項目**:
-
-| 項目              | 重要度   | 確認内容                                                     |
-| ----------------- | -------- | ------------------------------------------------------------ |
-| CLAUDE.md準拠     | Critical | コーディング規約、禁止パターン、推奨アプローチに従っているか |
-| DESIGN.md準拠     | Warning  | 設計方針、アーキテクチャ原則に沿った実装か                   |
-| .claude/rules準拠 | Warning  | プロジェクト固有のルールに違反していないか                   |
-
-**確認手順**:
-1. コンテキスト収集で読み込んだルールファイルを参照
-2. 変更コードがルールに違反していないかチェック
-3. 違反がある場合は具体的なルールと違反箇所を報告
-
-**判定基準**:
-- CLAUDE.mdの必須ルール違反 → **Critical**
-- DESIGN.mdの設計方針からの逸脱 → **Warning**
-- .claude/rulesのルール違反 → **Warning**
-- ルールファイルが存在しない場合 → スキップ
-
-### 3.6 パフォーマンス
-
-**チェック項目**:
-
-| 項目             | 重要度   | 確認内容                                        |
-| ---------------- | -------- | ----------------------------------------------- |
-| アルゴリズム効率 | Critical | O(n²)以上の計算量、不要なループのネスト         |
-| メモリ使用量     | Warning  | 大量データの保持、メモリリーク、不要なコピー    |
-| I/O効率          | Warning  | N+1問題、不要なAPI/DBアクセス、バッチ処理の欠如 |
-| キャッシュ活用   | Info     | 繰り返し計算の結果キャッシュ、メモ化の活用      |
-| 非同期処理       | Warning  | ブロッキング処理、並列化可能な処理の直列実行    |
-
-**確認手順**:
-1. ループや再帰処理の計算量を分析
-2. データ構造の選択が適切かチェック
-3. I/O操作のパターンを確認（N+1、バッチ処理）
-4. 非同期処理やキャッシュの活用状況を確認
-
-**判定基準**:
-- O(n²)以上の計算量が大規模データに適用される → **Critical**
-- N+1問題やメモリリークの可能性 → **Critical**
-- キャッシュ活用の余地がある → **Warning**
-- パフォーマンス影響が軽微な場合 → スキップ
-
----
-
-## [4/5] レビュー結果表示
-
-### サマリーテーブル
+サマリーテーブル → 観点別 findings の順で表示:
 
 ```markdown
 # Code Review Report
 
 ## Summary
-| 観点                 | Critical | Warning | Info  |
-|----------------------|----------|---------|-------|
-| TDD/テスト品質       | X        | X       | X     |
-| コード品質           | X        | X       | X     |
-| セキュリティ         | X        | X       | X     |
-| アーキテクチャ       | X        | X       | X     |
-| プロジェクトルール   | X        | X       | X     |
-| **合計**             | **X**    | **X**   | **X** |
+| 観点 | high | medium | low |
+|---|---|---|---|
+| tdd                | X | X | X |
+| quality            | X | X | X |
+| architecture       | X | X | X |
+| rules              | X | X | X |
+| product_readiness  | X | X | X |
+| **合計** | **X** | **X** | **X** |
+
+## findings (severity 順)
+
+### [high][architecture] レイヤ境界違反 (domain → infra import)
+**ファイル**: `src/domain/user.ts:12`
+**内容**: <message>
+**推奨**: <fix_proposal>
+
+### [high][tdd] テストファイルが存在しない
+...
 ```
 
-### Critical Issues (存在する場合)
+### Step 6: 修正アクション選択
 
-各Critical Issueについて以下の形式で表示:
-```markdown
-### [観点] 問題タイトル
-**ファイル**: `パス:行番号`
-**問題**: 問題の説明
-**推奨対応**: 対応方法
-```
-
-### Warnings (存在する場合)
-
-各Warningについて以下の形式で表示:
-```markdown
-### [観点] 問題タイトル
-**ファイル**: `パス:行番号`
-**問題**: 問題の説明
-**推奨対応**: 対応方法
-```
-
-### Info (存在する場合)
-
-各Infoについて以下の形式で表示:
-```markdown
-### [観点] 提案タイトル
-**ファイル**: `パス:行番号`
-**提案**: 改善提案
-```
-
----
-
-## [5/5] 改善提案と対話
-
-### ユーザー選択
-
-レビュー結果を表示した後、AskUserQuestionツールを使用してユーザーに次のアクションを確認:
+AskUserQuestion で次のアクションを確認:
 
 ```javascript
 AskUserQuestion({
-  questions: [
-    {
-      question: "レビューでX件のCritical Issue、Y件のWarningが検出されました。\n\nどのように進めますか？",
-      header: "レビュー結果",
-      options: [
-        {
-          label: "Critical Issueをすべて修正",
-          description: "最優先で対応すべき問題の修正コードを表示"
-        },
-        {
-          label: "すべての問題を修正",
-          description: "Critical + Warning の修正コードをまとめて表示"
-        },
-        {
-          label: "特定の問題のみ修正",
-          description: "修正したい問題を個別に選択"
-        },
-        {
-          label: "レビュー完了",
-          description: "修正せずにレビューを終了"
-        }
-      ],
-      multiSelect: false
-    }
-  ]
+  questions: [{
+    question: "レビューで X 件の high / Y 件の medium が検出されました。どう進めますか？",
+    header: "次のアクション",
+    options: [
+      { label: "high をすべて修正", description: "implementation-developing で TDD 修正" },
+      { label: "high + medium を修正", description: "同上、対象拡張" },
+      { label: "個別に選択", description: "修正対象を選んで TDD 修正" },
+      { label: "終了", description: "修正せず完了" }
+    ],
+    multiSelect: false
+  }]
 })
 ```
 
-### 修正コード提示
+「修正」選択時は `Skill({ skill: "implementation-developing", args: "<修正タスク説明>" })` で TDD 修正サイクルを起動。
 
-**「Critical Issueをすべて修正」「すべての問題を修正」「特定の問題のみ修正」選択時**:
+## 範囲外 (やらないこと)
 
-各問題について以下の形式で修正案を提示:
+- 観点別の検査ロジック → 各 `review-*` subagent
+- fatal 判定 (severity 基準で「修正必須」を決める) → 呼び出し側 (autopilot や本 skill 内の AskUserQuestion)
+- 修正実行 → `implementation-developing` skill (TDD で)
+- コミット → `workflow-commit`
 
-````markdown
-## 修正コード提案
+## 関連
 
-### [観点] 問題タイトル
-
-**現在のコード** (`ファイルパス:行番号`):
-```言語
-現在のコード
-```
-
-**修正案**:
-```言語
-修正後のコード
-```
-
-**変更理由**: 変更の根拠を説明
-```
-
-### 修正対象の選択
-
-**「特定の問題のみ修正」選択時**:
-
-検出された各指摘を選択肢として表示し、修正したい問題を直接選択させる（複数選択可）:
-
-```javascript
-AskUserQuestion({
-  questions: [
-    {
-      question: "修正したい問題を選択してください（複数選択可）",
-      header: "修正対象",
-      options: [
-        { label: "すべて修正", description: "検出されたすべての問題を修正" },
-        { label: "[Critical] ハードコードされたAPIキー", description: "セキュリティ: config.lua:45" },
-        { label: "[Critical] テストファイルが存在しない", description: "TDD: github-pr-reviewer.lua" },
-        { label: "[Warning] 関数が長すぎる", description: "コード品質: utils.lua:120-180 (60行)" }
-      ],
-      multiSelect: true
-    }
-  ]
-})
-```
-
-**注意**:
-- AskUserQuestionのoptionsは最大4件のため、「すべて修正」+ 重要度順に上位3件を表示
-- 残りの指摘を修正したい場合は「Other」で追加指定可能
-
-````
-
-選択された問題の修正コードを提示し、承認を得てから修正を適用。
-
----
-
-## 重要な注意事項
-
-### MUST Rules準拠
-- **TDD準拠チェック**: テストファーストアプローチの確認
-- **Tidy Firstチェック**: 構造変更と機能変更の分離確認
-- **不確実性への対応**: 仮定を立てず、不明点は明確に報告
-
-### レビュー対象外
-- バイナリファイル
-- 自動生成ファイル（`node_modules/`, `.git/`等）
-- ロックファイル（`package-lock.json`, `Cargo.lock`等）
-- 設定ファイル（`.gitignore`, `.editorconfig`等）
-
-### エラーハンドリング
-- gitリポジトリでない場合は明確なエラーメッセージを表示して終了
-- ファイル読み込みエラーは該当ファイルをスキップして続行
-- 100ファイル以上の変更がある場合は「`--staged`オプションで対象を絞ることを推奨」と警告を表示
+- subagent: `review-tdd` / `review-quality` / `review-architecture` / `review-rules` / `review-product-readiness` (本体ロジック)
+- セキュリティレビュー: `security-guidance@claude-plugins-official` プラグイン (本 skill の外、Edit/Write pattern 検知 + Stop hook LLM diff review)
+- 連携 skill: `implementation-developing` (修正実行) / `workflow-commit`
+- 上位: `workflow-autopilot` Step 4.5 (本 skill を呼んで集約結果を受け取り、autopilot 側で fatal 判定 + self-fix loop)

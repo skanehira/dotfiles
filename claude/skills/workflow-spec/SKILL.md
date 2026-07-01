@@ -378,9 +378,39 @@ AskUserQuestion({
 -->
 ```
 
-### 実装開始
+### 実装方式の選択
 
-TODO.md承認後、自動的に `implementation-developing` スキルを Skill ツールで実行して実装を開始する。
+TODO.md 承認後、残りフェーズの実装方式を AskUserQuestion で確認:
+
+```javascript
+AskUserQuestion({
+  questions: [{
+    question: "残りフェーズの実装方式を選んでください",
+    header: "実装方式",
+    options: [
+      {
+        label: "autopilot (自律)",
+        description: "workflow-autopilot で全フェーズを最後まで自律実装。架構違反は3回まで自動修正、設計乖離はP1/P2を自動更新、P3で停止"
+      },
+      {
+        label: "developing (対話)",
+        description: "implementation-developing で 1 フェーズずつ。各フェーズ完了で人間が確認"
+      },
+      {
+        label: "ここで終了",
+        description: "実装は後で /workflow-autopilot または /implementation-developing を手動起動"
+      }
+    ],
+    multiSelect: false
+  }]
+})
+```
+
+選択別の処理:
+
+- **autopilot (自律)** → `workflow-autopilot` スキルを Skill ツールで実行 (docs ディレクトリパスを引数で渡す)
+- **developing (対話)** → `implementation-developing` スキルを Skill ツールで実行
+- **ここで終了** → 「計画は完成しました。実装を開始する場合は `/workflow-autopilot` または `/implementation-developing` を起動してください」と表示して終了
 
 ---
 

@@ -213,7 +213,10 @@ AskUserQuestion({
 ```
 ## PoC: [名前]
 
+**id**: <unique-id> (例: react-19-suspense-async)
 **目的**: 何を検証するか
+**risk**: high | medium | low (実装方針への影響度)
+**blocker**: true | false (実装前に必須解決か)
 
 **スコープ**:
 - 含むもの
@@ -236,7 +239,16 @@ AskUserQuestion({
 **判断**:
 - 成功 → 本実装へ
 - 失敗 → 代替案を検討
+
+**POC_NEEDED マーカー (analyzing-requirements で DESIGN_DETAIL.md に転記する形式)**:
 ```
+<!-- POC_NEEDED: id=<id>, scope=<目的を1行で>, risk=<high|medium|low>, blocker=<true|false> -->
+```
+```
+
+このマーカー書式が後段の `workflow-autopilot` Step 1.5 と直接連動する。autopilot 起動時に `blocker=true` のマーカーは `tech-investigation` subagent で自動 PoC される。
+
+id は安定一意 (autopilot の判定ログでも参照されるため)、scope は 1 行で何を検証するかを簡潔に。
 
 **遷移条件**: PoC計画が完成したらフェーズ6へ
 
@@ -329,8 +341,25 @@ Task({
 - [ ] FEASIBILITY.mdが生成されている
 - [ ] セルフレビューが完了し、問題が解消されている
 
+## autopilot 連携
+
+このスキルが残した PoC 計画は、後段で次のように扱われる:
+
+1. `requirements-analyzing-requirements` が DESIGN_DETAIL.md を生成する際、FEASIBILITY.md の **PoC 計画ごとに POC_NEEDED マーカー** を該当セクションに埋め込む (id / scope / risk / blocker を継承)
+2. `workflow-autopilot` Step 1.5 が DESIGN_DETAIL.md の `POC_NEEDED` マーカーを rg で検出
+3. `blocker=true` のマーカーは `tech-investigation` subagent で自動 PoC される (ドキュメント取得 + 最小コード実行)
+4. 解決後、自動で DESIGN_DETAIL.md に「## 技術調査結果 (autopilot 自動)」セクション追記 + マーカー削除
+
+`blocker=false` の PoC は autopilot 自動化対象外 (実装中に必要になったら個別呼び出し or 人間が判断)。
+
+このため、PoC 計画を書くときは:
+
+- **実装方針が PoC 結果で大きく変わる** → `blocker=true` を付ける (autopilot が起動前に解決する)
+- **無くても代替案で進める** → `blocker=false` (継続可、後追いで検証)
+
 ## 関連スキル
 
 - **usecase-description**: 技術検証の前にユースケースを整理する場合
 - **ddd-modeling**: 技術検証後、ドメインモデリングに進む場合
-- **analyzing-requirements**: 技術設計に進む場合
+- **analyzing-requirements**: 技術設計に進む場合 (POC_NEEDED マーカーを DESIGN_DETAIL.md に転記)
+- **workflow-autopilot**: 後段で POC_NEEDED マーカーを自動 PoC 解決
