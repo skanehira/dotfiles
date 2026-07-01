@@ -217,6 +217,56 @@ AskUserQuestion({
 - 使用ライブラリと用途 (バージョン制約があれば明記)
 - ディレクトリ構造案
 
+**UX 設計 (Web / モバイル Web 必須)**
+
+技術設計に偏らないよう、UX 設計を必須セクションとして書く。Voilog セッション F12 で「subagent が自分の UC の画面だけ実装、横断 UX (ナビ / ErrorBoundary / loading) が後回し」になった上流原因の対策。
+
+- **画面遷移マップ**: Mermaid flowchart で全画面 + 遷移を可視化。`/ui-sketch` のフロー図と整合させる
+- **ナビゲーション仕様**:
+  - ヘッダー items (認証時 / 未認証時で何を出すか)
+  - フッター items (規約 / プライバシー / お問い合わせ等)
+  - サイドナビ or ボトムナビ (該当する場合)
+  - アクティブ表示の方針
+- **共通 UI 仕様**:
+  - loading パターン: Skeleton / Spinner / Suspense 境界配置
+  - error パターン: inline / toast / modal の使い分け基準
+  - empty パターン: list/grid view が `items.length === 0` の時に何を出すか (CTA 込み)
+  - toast パターン: 表示位置 / 自動消滅秒数 / 同時表示上限
+- **フォーム入力 UX 標準**:
+  - validation timing: blur / change / submit のどれで発火するか
+  - error display: フィールド直下 / フォーム上部 / toast のどこに出すか
+  - submit button の disable 条件と loading 表示
+- **ErrorBoundary 配置**: ルート単位 / レイアウト単位 / 個別画面単位 (ホワイトアウト回避方針)
+- **a11y 方針**: aria-label / role / focus トラップ / キーボード操作 / 色コントラスト最低基準
+
+CLI / API のみのプロダクトでは省略可。
+
+#### 未確定要素は POC_NEEDED マーカーで残す (DESIGN_DETAIL.md 側)
+
+「実装方針が技術検証の結果次第で変わる」項目は、文章で「未確定」と書くのではなく**機械可読なマーカー**で残す。autopilot Step 1.5 がこのマーカーを検出して `tech-investigation` subagent で自動 PoC する。
+
+```markdown
+<!-- POC_NEEDED: id=<unique-id>, scope=<検証対象を1行で>, risk=high|medium|low, blocker=true|false -->
+```
+
+入力元:
+- FEASIBILITY.md が存在する場合: 「PoC 計画」セクションの id / scope / risk / blocker をそのまま転記
+- FEASIBILITY.md が無い場合: 設計中に「実装ガイド」「API 設計」「データスキーマ」で不確定要素を発見したらマーカーを追加
+
+`blocker=true` のマーカーは autopilot 起動時に必ず解決される。`blocker=false` は継続可 (実装中に必要になったら個別判断)。
+
+例:
+
+```markdown
+## 実装ガイド
+
+### Server Component の async data loading
+
+<!-- POC_NEEDED: id=rsc-async-suspense, scope=React Server Component で async fn + Suspense 境界が期待通り動くか検証, risk=high, blocker=true -->
+
+採用パターン: `app/<route>/page.tsx` で async server component → 子の client component で `use(promise)`。Suspense 境界は親 layout に配置。
+```
+
 ### ステップ4.5: ゴールと検証手順の定義
 
 最終的なゴールと検証手順を定義する。**ゴール定義は DESIGN.md、検証手順の具体的な操作は DESIGN_DETAIL.md**。
@@ -232,20 +282,67 @@ AskUserQuestion({
 
 #### ゴール定義の基準 (→ DESIGN.md)
 
-- ユーザー視点で観測可能（内部実装の詳細ではなく、外から見える振る舞い）
-- 検証可能（Yes/Noで判定できる）
-- 具体的（「高速に動作する」ではなく「レスポンス200ms以内」）
+各ゴールは autopilot Step 5 で**機械的に達成判定**されることを前提に、以下の規約を厳守:
+
+- **1 件 1 行**: 「G1: ...」「G2: ...」のように番号付きで列挙
+- **ユーザー視点で観測可能**: 内部実装の詳細ではなく、外から見える振る舞い
+- **検証可能 (Yes/No 判定)**: 「うまく動く」のような主観表現を避ける
+- **具体的 (数値があれば必ず数値で)**: 「高速」ではなく「レスポンス 200ms 以内」
+
+例:
+```markdown
+## ゴール
+
+- G1: ログイン画面でメール+パスワード入力後、3 秒以内にダッシュボードへ遷移する
+- G2: 無効なメール形式で送信したらフォーム上にエラーメッセージが表示され、サーバーには送信されない
+- G3: ユーザー登録後 5 分以内に確認メールが届く (手動確認)
+- G_E2E: MVP の全 UC が chrome (実機ブラウザ) で**URL 直叩きせず**、ヘッダー・ナビ・リンククリック・ボタンクリック・フォーム入力のみで通しで再現できる
+```
+
+#### 必須ゴール: G_E2E (実機ブラウザでの全機能動作確認)
+
+Web アプリ・モバイル Web の場合、上記 G1, G2, ... に加えて **G_E2E を必ず追加**する (autopilot Step 5 はこのゴールを chrome-devtools MCP で機械検証する)。
+
+理由: Voilog セッション F9 / F13 で「全テスト緑・ビルド成功で完成宣言したが、実機ブラウザではトップナビ無し / 404 デッドループ / URL 直叩きでしか到達できない画面が存在」が発生した。各機能の単体検証 (G1〜Gn) は満たしていても、UI 動線が繋がっていない MVP は実質「使えない」。
+
+G_E2E の効果:
+- ナビ/ヘッダー/フッターが揃って動線が成立しているか
+- 各 UC が他 UC からの導線で到達可能か (`/url` 直叩きを許さない)
+- 404 や認証ガードが実機でデッドループしないか
+
+CLI / API のみのプロダクトでは G_E2E は省略可。その場合は「全 UC を CLI / curl で通しシナリオで再現できる」をゴールにする。
 
 #### 検証手順 (→ DESIGN_DETAIL.md)
 
-- 自動テスト実行コマンド (例: `npm test`, `go test ./...`)
-- 手動検証の具体的な操作手順 (どの画面で何を操作するか)
-- 完了判定の基準や閾値の具体値
-- デプロイ先や動作確認環境の URL / 接続情報
+各ゴールに対して**必ず 1 対 1 で対応する検証手順**を DESIGN_DETAIL.md の「検証手順」セクションに書く。autopilot Step 5 はこの対応を読んでゴール判定する。
+
+- **自動系**: `G<n> 検証: <bash コマンド>` 形式 (例: `G1 検証: npm test -- e2e/login.spec.ts`)
+- **手動系**: `G<n> 検証 (手動): <操作手順>` 形式 (autopilot は自動判定不可、手動確認待ちとして残す)
+- **G_E2E 検証**: `chrome-devtools` MCP で実機ブラウザ操作。手順を「ナビゲーションパス + 操作」で書く
+
+G_E2E 検証手順の書式例:
+```markdown
+## 検証手順
+
+- G1 検証: `npm run test:e2e -- login-redirect.spec.ts`
+- G2 検証: `npm run test:e2e -- login-validation.spec.ts`
+- G3 検証 (手動): ユーザー新規登録 → 5 分待機 → 受信箱で件名「ようこそ」のメール到着確認
+- G_E2E 検証 (chrome-devtools MCP):
+  - 起動: `pnpm dev` (or プロジェクト指定の dev サーバ)
+  - シナリオ:
+    1. `http://localhost:5173/` を navigate (ルート URL のみ。`/login` 直叩き禁止)
+    2. take_snapshot で初期画面 (ランディング or ログイン誘導) を確認
+    3. 「ログイン」リンクをクリック → ログインフォーム表示
+    4. メール / パスワード入力 → 「ログイン」ボタンクリック → ダッシュボードへ遷移
+    5. ヘッダーのナビから UC1〜UCn を順に開く (URL 直接入力は不可)
+    6. 各 UC の主要操作を 1 つずつ実行
+    7. ログアウトボタンで離脱 → 未認証画面に戻ること
+  - 期待: 全ステップでコンソールエラー無し、ホワイトアウト無し、404 デッドループ無し
+```
 
 #### 不明点の確認
 
-不明な点は AskUserQuestion で確認する。
+不明な点は AskUserQuestion で確認する。ゴールに紐づく検証コマンドが存在しない場合、`G<n> 検証 (手動)` で残してプロジェクト進行を止めない (autopilot が pending 扱いにする)。G_E2E は **必須**で省略不可 (Web アプリ・モバイル Web の場合)。
 
 ### ステップ5: ドキュメント生成
 

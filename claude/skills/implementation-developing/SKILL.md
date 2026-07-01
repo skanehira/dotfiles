@@ -1,344 +1,165 @@
 ---
 name: implementation-developing
-description: TDD（RED→GREEN→REFACTOR）でフェーズ単位の新機能実装やバグ修正を行う。docs/TODO.md があるとフェーズ管理し、なければ単独タスクとしてサイクルを回す。テストファーストを厳格に遵守。「実装したい」「TDDで実装」「機能を追加」「バグを修正」などで起動。
+description: TDD (RED→GREEN→REFACTOR) でフェーズ単位の新機能実装やバグ修正を行うエントリスキル。本体ロジックは `implementation-developing-agent` subagent に委譲し、本 skill はメインセッション向けの薄い orchestrator として「タスク説明取得 → PHASE_CONTEXT 組み立て → subagent 起動 → 結果整形表示 → コミット確認」を担当する。docs/TODO.md があるとフェーズ単位、なければ単独タスクとして 1 サイクル。「実装したい」「TDD で実装」「機能を追加」「バグを修正」などで起動。
 argument-hint: "[タスク説明]"
+allowed-tools: Read, Glob, Grep, Bash, Agent, Skill, AskUserQuestion
 ---
 
-# /implementation-developing - TDD実装コマンド
+# /implementation-developing - TDD 実装スキル (subagent wrapper)
 
-Kent Beck の TDD 方法論と高凝集度・低結合度・コロケーションの原則に従って実装する。
-RED→GREEN→REFACTOR サイクルをテストファーストアプローチで厳格に遵守する。
+`implementation-developing-agent` subagent を起動して TDD 実装を実行する薄い orchestrator。
+
+## 設計方針
+
+- **本体ロジック**: `claude/agents/implementation-developing-agent.md` (subagent)
+- **本 skill**: ユーザーがメインセッションで `/implementation-developing` を打って実装したい時のエントリポイント。subagent への入力 (PHASE_CONTEXT) を組み立てて起動、結果を整形表示する
+- **autopilot からの呼び出し**: 直接 `implementation-developing-agent` を呼ぶ (本 skill は経由しない、最短経路でコンテキスト分離を保つ)
+
+skill と agent の責務分担詳細は `skills/README.md` の規約セクションを参照。
 
 ## 参照ルール
 
-- TDDルール: @rules/core/tdd.md
+- TDD ルール: @rules/core/tdd.md (agent 側でも参照される)
 - 設計原則: @rules/core/design.md
-- テストルール: @rules/core/testing.md
-- コミットルール: @rules/core/commit.md
-- アーキテクチャパターン: `references/architecture-patterns.md` (高凝集度・低結合度・コロケーションの詳細)
+- アーキテクチャパターン詳細: `references/architecture-patterns.md`
 
 ## 使い方
 
-### 引数付き起動
-
 ```
-/implementation-developing ログインフォームにバリデーションを追加
-```
-
-### 引数なし起動（対話的）
-
-```
-/implementation-developing
+/implementation-developing                                # 対話で入力
+/implementation-developing ログインフォームにバリデーションを追加  # 引数で指定
 ```
 
-### コンテキストからの推論
+事前会話でタスクが明確なら、コンテキストから推論。
 
-事前の会話でタスクが明確な場合、コンテキストから理解する。
+## 実行手順
 
----
+### Step 1: タスク説明取得
 
-## [1/4] タスク準備
+- `$ARGUMENTS` があればそのまま使用
+- 無ければ AskUserQuestion で「どのタスクを実装するか」を確認
 
-### タスク説明の取得
+### Step 2: 既存ドキュメントの確認
 
-引数からタスク説明を取得する：
-- `$ARGUMENTS` が存在する場合: そのまま使用
-- `$ARGUMENTS` が空の場合: ユーザーに質問
+Read で以下を確認:
 
-```
-タスク説明: $ARGUMENTS
-```
+- `docs/DESIGN.md` (概要設計)
+- `docs/DESIGN_DETAIL.md` (詳細設計)
+- `docs/TODO.md` (フェーズ管理)
 
-$ARGUMENTS が空の場合、以下の質問をする:
+存在パターン別の挙動:
 
-「どのようなタスクを実装しますか？具体的なタスク説明を入力してください。
+| 状態 | 挙動 |
+|---|---|
+| TODO.md あり、フェーズ指定 (引数) | 該当フェーズの phase_tasks を抽出 |
+| TODO.md あり、フェーズ指定なし | AskUserQuestion で「どのフェーズを実装するか」確認 |
+| TODO.md なし、タスク説明あり | 単独タスクとして 1 サイクル (擬似フェーズ名 "ad-hoc") |
+| DESIGN.md / DESIGN_DETAIL.md なし | 警告表示後にタスク説明だけで進める (subagent 側で「設計書不在」を意識して動く) |
 
-例：
-- ユーザー認証にバリデーション機能を追加
-- APIレスポンスのエラーハンドリングを修正
-- 商品一覧のページネーションを実装
-」
+### Step 3: PHASE_CONTEXT の組み立て
 
-### Design Thinking（設計思考）
+subagent に渡す構造化情報を組み立てる:
 
-実装前に以下の観点で設計を検討する:
-
-**1. 責務の明確化**
-- この機能の単一責務は何か？
-- この変更は既存の責務を侵害しないか？
-- テストしやすい単位に分割できるか？
-
-**2. 依存関係の分析**
-- このモジュールが依存するものは何か？
-- 依存を注入可能にできるか？（テストダブルで置換可能か）
-- 循環依存が発生しないか？
-
-**3. 配置の決定**
-- この機能はどこに配置すべきか？（コロケーション原則に従う）
-- 関連するテスト・型・ヘルパーは同じ場所に配置できるか？
-- 変更時に影響範囲が最小化されるか？
-
-### 既存ドキュメントの確認
-
-Read ツールで `docs/DESIGN.md` と `docs/TODO.md` の存在を確認する。
-
-**docs/TODO.md が存在する場合**：
-- 内容を読み取り、フェーズ構成を把握
-- 各フェーズ内の RED/GREEN/REFACTOR タスクを確認
-
-TODO.md の構造例：
-```markdown
-### フェーズ1: バージョン計算関数の実装 (semver.rs)
-
-- [ ] [RED] calculate_latest_patch のテスト作成
-- [ ] [GREEN] calculate_latest_patch の実装
-- [ ] [REFACTOR] calculate_latest_patch のリファクタリング
-
-### フェーズ2: API統合 (api.rs)
-
-- [ ] [RED] fetch_versions のテスト作成
-- [ ] [GREEN] fetch_versions の実装
-- [ ] [REFACTOR] fetch_versions のリファクタリング
+```yaml
+phase_name: <フェーズ名 または "ad-hoc: <タスク説明>">
+phase_start_sha: <git rev-parse HEAD>
+phase_tasks: |
+  <TODO.md 該当部分。無ければユーザーのタスク説明>
+design_overview: |
+  <DESIGN.md 関連節抜粋。無ければ空>
+design_detail: |
+  <DESIGN_DETAIL.md 関連節抜粋。無ければ空>
+related_source_files:
+  - <Glob で抽出した関連ファイル>
+related_rules_paths:
+  - rules/core/tdd.md
+  - rules/core/design.md
+  - rules/core/testing.md
+  - rules/core/commit.md
+  - <言語別 rules があれば追加: rules/frontend/react/*.md など>
+prev_phase_summary: ""
+poc_results: []
 ```
 
-**docs/DESIGN.md が存在する場合**：
-- 内容を読み取り、設計方針を把握
-- 実装時の参考として使用
+メインセッション利用では `prev_phase_summary` / `poc_results` は空 (autopilot のみが提供)。
 
-**TODO.md / DESIGN.md がない場合**：
-- 引数のタスク説明から RED→GREEN→REFACTOR を 1 サイクルとして単独実行する
+### Step 4: subagent 起動
 
----
-
-## [2/4] フェーズ実行
-
-### TodoWrite でタスク管理
-
-現在のフェーズのタスクを TodoWrite で管理する:
+Agent ツールで `implementation-developing-agent` を呼ぶ:
 
 ```javascript
-TodoWrite({
-  todos: [
-    { content: "[RED] calculate_latest_patch のテスト作成", activeForm: "テストを作成している", status: "pending" },
-    { content: "[GREEN] calculate_latest_patch の実装", activeForm: "実装している", status: "pending" },
-    { content: "[REFACTOR] calculate_latest_patch のリファクタリング", activeForm: "リファクタリングしている", status: "pending" },
-    // ...
-  ]
+const result = await Agent({
+  description: "TDD 実装",
+  subagent_type: "implementation-developing-agent",
+  prompt: `PHASE_CONTEXT:\n${yamlStringify(PHASE_CONTEXT)}`
 })
 ```
 
-### RED-GREEN-REFACTOR サイクルの実行
+subagent 内の TDD 違反は SubagentStop hook (`self-review-subagent.ts`) が並走チェックする (skill 側は意識しない)。
 
-フェーズ内の各タスクを順番に実行する。
+### Step 5: 結果整形表示
 
-#### RED タスク（テスト作成）
-
-1. TodoWrite で該当タスクを `in_progress` に更新
-2. **implementation-writing-tests** スキルを使用してテストを作成
-3. **サブエージェントでテスト実行** (後述) して**失敗を確認**
-4. `docs/TODO.md` の該当行を `[x]` に更新
-5. TodoWrite で該当タスクを `completed` に更新
-
-#### GREEN タスク（実装）
-
-1. TodoWrite で該当タスクを `in_progress` に更新
-2. テストを通過する**最小限の実装**を行う
-3. **サブエージェントでテスト実行**して**成功を確認**
-4. `docs/TODO.md` の該当行を `[x]` に更新
-5. TodoWrite で該当タスクを `completed` に更新
-
-#### REFACTOR タスク（リファクタリング）
-
-1. TodoWrite で該当タスクを `in_progress` に更新
-2. **設計原則チェックリスト**に従ってコード品質を改善
-3. **サブエージェントでテスト実行**して**成功を確認**
-4. `docs/TODO.md` の該当行を `[x]` に更新
-5. TodoWrite で該当タスクを `completed` に更新
-
-**設計原則チェックリスト**:
-
-| カテゴリ           | チェック項目                   | 確認内容                                                      |
-| ------------------ | ------------------------------ | ------------------------------------------------------------- |
-| **SOLID**          | 単一責任原則 (SRP)             | 1つの関数/モジュールが1つの責務のみを持っているか             |
-|                    | 依存性逆転原則 (DIP)           | 具象ではなく抽象（インターフェース/トレイト）に依存しているか |
-|                    | インターフェース分離原則 (ISP) | 使わないメソッドへの依存を強制していないか                    |
-| **テスタビリティ** | 依存性注入                     | 依存関係が外部から注入可能か（モックしやすいか）              |
-|                    | 純粋関数                       | 副作用を分離し、可能な限り純粋関数にしているか                |
-|                    | グローバル状態                 | グローバル変数や静的状態に依存していないか                    |
-| **構造**           | 高凝集度                       | 関連する機能が同じモジュールにまとまっているか                |
-|                    | 低結合度                       | モジュール間の依存が最小限か                                  |
-|                    | 重複排除 (DRY)                 | 同じロジックが複数箇所に存在していないか                      |
-| **シンプルさ**     | YAGNI                          | 現時点で不要な抽象化や機能を追加していないか                  |
-|                    | KISS                           | 必要以上に複雑な実装になっていないか                          |
-| **境界**           | 公開API最小化                  | 公開する関数/型は必要最小限か                                 |
-|                    | モジュール境界                 | 責務ごとに適切にモジュール分割されているか                    |
-
-**リファクタリングの優先順位**:
-1. テスタビリティの確保（DI、純粋関数化）
-2. 単一責任の徹底
-3. 重複の排除
-4. 命名の改善
-
-### テスト実行（サブエージェント）
-
-トークン消費を抑えるため、テスト実行は Agent ツールでサブエージェントに委譲する。
+返り値 (stdout 末尾の JSON) をパースしてユーザーに整形表示:
 
 ```javascript
-Agent({
-  description: "テスト実行",
-  prompt: `プロジェクトのテストを実行し、結果を報告してください。
-
-テストコマンド: [プロジェクトに応じたコマンド]
-
-報告形式:
-- 全テスト成功の場合: "SUCCESS: X tests passed"
-- 失敗がある場合: "FAILED: 以下のテストが失敗" + 失敗したテスト名とエラーメッセージのみ
-
-注意: 成功したテストの詳細は報告不要。失敗したテストの情報のみ返すこと。`,
-  subagent_type: "general-purpose",
-  model: "haiku"
-})
+const dev = JSON.parse(result.match(/\{[\s\S]*\}$/)[0])
 ```
 
-**サブエージェントの報告例**:
-```
-# 成功時
-SUCCESS: 15 tests passed
-
-# 失敗時
-FAILED: 以下のテストが失敗
-- test_calculate_latest_patch: expected "1.2.5" but got "1.2.3"
-- test_calculate_latest_minor: assertion failed at line 42
-```
-
-**実装のルール**:
-- 現在のテストを通過するために**必要最小限**のコードのみ書く
-- 将来の要件を先取りしない
-- 過度な抽象化を避ける
-
----
-
-## [3/4] フェーズレビューと自動修正
-
-フェーズ内のすべてのタスク（RED/GREEN/REFACTOR）が完了したら、以下を実行する。
-
-### ステップ1: 品質チェック（自動）
-
-```bash
-# プロジェクトに応じたコマンドを実行
-npm run lint     # または cargo clippy, go vet など
-npm run format   # または cargo fmt, gofmt など
-npm run build    # または cargo build, go build など
-npm test         # または cargo test, go test など
-```
-
-**品質チェック失敗時**:
-1. 問題を自動修正
-2. 再度品質チェックを実行
-3. 通過するまで繰り返す（最大3回）
-
-### ステップ2: 簡易セルフレビュー（1回のみ）
-
-フェーズの差分を確認し、以下のチェックリストでレビューする:
-
-```bash
-git diff HEAD~N  # フェーズ開始からの差分（N はフェーズ内のコミット数）
-```
-
-**セルフレビューチェックリスト**:
-
-| 観点       | 確認項目                                                                     |
-| ---------- | ---------------------------------------------------------------------------- |
-| テスト     | テストが意図した振る舞いを検証しているか。重要なエッジケースが漏れていないか |
-| 命名       | 変数・関数・型の名前が意図を正確に表しているか                               |
-| 設計       | 単一責任原則に違反していないか。不要な依存関係を作っていないか               |
-| 重複       | 同じロジックが複数箇所に存在していないか                                     |
-| エラー処理 | エラーが適切に処理され、握りつぶされていないか                               |
-
-**問題を発見した場合**:
-1. その場で修正
-2. テストを再実行して成功を確認
-
-**問題がない場合**:
-- 次のステップに進む
-
-### ステップ3: 次フェーズへ進行
-
-自動的に次のフェーズに進む:
-1. 次のフェーズがあれば [2/4] フェーズ実行に戻る
-2. すべてのフェーズが完了していれば [4/4] 完了処理へ
-
----
-
-## [4/4] 完了処理
-
-### 完了サマリー
+表示内容:
 
 ```
-✓ 開発が完了しました
+✓ TDD 実装完了
 
-実装内容:
-- [実装した機能/修正のリスト]
+実装フェーズ: <phase_name>
+変更ファイル: <modified_files の一覧>
+TDD 順守: RED first=<...>, tests green=<...>, notes=<...>
 
-作成/変更したファイル:
-- [ファイルパスのリスト]
+検出されたシグナル:
+- [todo_minor] <what> / <fix_proposal>
+- [design_detail_gap] <what> / <fix_proposal>
 
-テスト結果:
-- [テスト数] tests passed
-
-完了したフェーズ:
-- [x] フェーズ1: バージョン計算関数の実装
-- [x] フェーズ2: API統合
+セルフレビュー: <self_review_notes>
 ```
 
-### 次のアクション確認
+`status: escalate` の場合は、エスカレ理由を強調表示してユーザー判断を仰ぐ。
+
+### Step 6: 次アクション確認
+
+AskUserQuestion で次のアクションを選択:
 
 ```javascript
 AskUserQuestion({
-  questions: [
-    {
-      question: "すべてのフェーズが完了しました。次のアクションを選択してください。",
-      header: "次のアクション",
-      options: [
-        { label: "コミット", description: "変更をコミットする" },
-        { label: "完了", description: "開発を終了" }
-      ],
-      multiSelect: false
-    }
-  ]
+  questions: [{
+    question: "TDD 実装が完了しました。次のアクションを選択してください。",
+    header: "次のアクション",
+    options: [
+      { label: "コミット", description: "workflow-commit でコミット (push は手動)" },
+      { label: "レビュー", description: "workflow-review で 5 観点レビュー" },
+      { label: "次フェーズ", description: "TODO.md がある場合、次フェーズの実装に進む" },
+      { label: "完了", description: "ここで終了" }
+    ],
+    multiSelect: false
+  }]
 })
 ```
 
-**「コミット」を選択された場合**:
-- `workflow-commit` スキルを使用してコミットを作成 (push はユーザが手動)
+選択別の処理:
+- コミット: `Skill({ skill: "workflow-commit" })`
+- レビュー: `Skill({ skill: "workflow-review" })`
+- 次フェーズ: Step 2 に戻る (phase_tasks の次フェーズを指定)
+- 完了: 終了
 
----
+## 範囲外 (やらないこと)
 
-## バグ修正プロセス
+- 本体の TDD ロジック → `implementation-developing-agent` (subagent)
+- 設計判断 / DESIGN.md 編集 → `requirements-*` 系 skill
+- TODO.md の生成 → `implementation-planning-tasks`
+- 複数フェーズの自動連続実行 → `workflow-autopilot`
+- git push → ユーザー手動
 
-1. テストでバグを再現（テストは失敗するべき）
-2. 最小限の変更で修正
-3. エッジケーステストを追加
-4. 必要に応じてリファクタリング
+## 関連
 
-## フェーズ管理のルール
-
-1. **フェーズ内タスクは順番に実行** — 飛ばさない
-2. **各タスク完了時に TODO.md を更新** — 進捗を可視化
-3. **フェーズ完了時に簡易セルフレビューを実施** — 問題があればその場で修正後に自動進行
-4. **ユーザー確認不要の指摘はその場で修正** — 命名改善、フォーマット、明らかなコード品質改善など
-5. **ユーザー確認が必要な指摘は TODO.md に記録** — 設計変更、振る舞いの変更、トレードオフの判断など。AskUserQuestion で確認してから修正
-
-## アンチパターン（避けるべきこと）
-
-- 複数のフェーズを同時に実装
-- レビューなしで次のフェーズに進む
-- ユーザー確認が必要な指摘を確認せずに修正する
-- TODO.md の更新を忘れる
-- 失敗するテストなしにプロダクションコードを書く
-- テストを通過させるために必要以上のコードを書く
-- 同じコミットで構造的変更と動作的変更を混ぜる
-
----
-
-**覚えておくこと: すべての実装はテスト駆動でなければならない。例外なし。**
+- subagent: `implementation-developing-agent` (本体ロジック)
+- hook: `SubagentStop` → `self-review-subagent.ts` (subagent TDD 機械チェック)
+- 連携 skill: `workflow-commit` / `workflow-review` / `implementation-planning-tasks`
+- 上位: `workflow-autopilot` (本 skill を経由せず agent を直接呼ぶ)
