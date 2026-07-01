@@ -33,6 +33,7 @@ JSON スキーマ:
 {
   "ok": false,
   "checked_files": 12,
+  "skip_reason": null,
   "violations": [
     {
       "file": "src/domain/user/User.ts",
@@ -56,6 +57,7 @@ JSON スキーマ:
 
 - `ok: true` は違反ゼロ。`ok: false` は 1 件以上の違反あり
 - `severity`: `high` (即修正必須) / `medium` (修正推奨) / `low` (情報レベル)。autopilot は high と medium を修正対象として渡す
+- `skip_reason`: `checked_files: 0` の理由を区別するためのフィールド。`null` (差分が実際に空、正常) / `"no_layer_convention"` (DESIGN 文書にも慣例にも一致するレイヤ構造が無く Clean Arch チェック自体を skip、ステップ1参照) / `"diff_command_failed"` (ステップ2の git diff コマンドが失敗、下記参照)。`skip_reason` が `null` 以外なら `ok` の値に関わらず「正常に検査できていない」ことを表す
 
 ## 進捗ログ
 
@@ -75,7 +77,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] <message>" >> "$LOG"
 2. 「主要コンポーネント」「レイヤーアーキテクチャ」「ディレクトリ構造」セクションから、以下を抽出:
    - **inner layer pattern** (依存される側): `domain/`, `entities/`, `application/`, `usecases/`, `usecase/` 等のディレクトリ pattern
    - **outer layer pattern** (依存する側): `infrastructure/`, `infra/`, `adapter/`, `adapters/`, `framework/`, `frameworks/`, `presentation/`, `ui/`, `interface/`, `web/`, `cli/`, `http/`, `persistence/`, `repository/` (実装のみ — interface は inner にあるべき) 等
-3. DESIGN 系ドキュメントに明示が無い場合は上記の**慣例 pattern** を採用 (それすら無い (= src/ がフラット) なら、Clean Arch チェックは skip して `checked_files: 0` を返す)
+3. DESIGN 系ドキュメントに明示が無い場合は上記の**慣例 pattern** を採用 (それすら無い (= src/ がフラット) なら、Clean Arch チェックは skip して `checked_files: 0, skip_reason: "no_layer_convention", ok: true` を返す)
 
 ### ステップ 2: 検査対象ファイルの列挙
 
@@ -87,15 +89,18 @@ case "$TARGET" in
     git diff --name-only HEAD~1..HEAD
     ;;
   working_tree)
-    git diff --name-only && git diff --staged --name-only
+    { git diff --name-only; git diff --staged --name-only; git ls-files --others --exclude-standard; } | sort -u
     ;;
   phase:*)
-    # TODO.md からフェーズ範囲のコミットを取得 (autopilot から呼ぶ時、autopilot が
-    # フェーズ開始時の SHA を引数 / env で渡すので、それと HEAD の diff を取る)
-    git diff --name-only "$PHASE_START_SHA..HEAD"
+    # developing-agent はフェーズ内でコミットしない (コミットは Step 4.7 でまとめて行う) ため、
+    # "$PHASE_START_SHA..HEAD" のようなコミット間 diff は常に空になる (HEAD が動いていないため)。
+    # working tree (staged + unstaged) を PHASE_START_SHA と比較し、新規 untracked ファイルも加える。
+    { git diff --name-only "$PHASE_START_SHA"; git ls-files --others --exclude-standard; } | sort -u
     ;;
 esac
 ```
+
+`phase:*` ケースで `git diff --name-only "$PHASE_START_SHA"` が非0 exit code を返した場合 (`$PHASE_START_SHA` が未設定 / 存在しない SHA 等)、これは「差分が空」と区別する: `checked_files: 0` ではなく `ok: false, skip_reason: "diff_command_failed", violations: []`、`message` にコマンドの stderr を含めて返す。これにより「本当に変更なし」を装った偽陽性の `ok: true` を防ぐ (autopilot 側は guard_loop の通常の再試行に委ねるが、developing-agent の修正では解決しない性質のエラーなので、3 回失敗すれば通常通り P3 エスカレとしてユーザに気付かせる)。
 
 各ファイルが「inner layer」「outer layer」「unknown」のどれに属するか、ステップ 1 の pattern で分類する。
 

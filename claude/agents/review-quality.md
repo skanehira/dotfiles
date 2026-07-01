@@ -15,7 +15,6 @@ model: sonnet
 PHASE_CONTEXT:
   phase_name: <フェーズN: 名前>
   phase_start_sha: <SHA>
-  diff_range: phase_start_sha..HEAD
   related_source_files: [...]
   related_rules_paths:
     - rules/core/design.md
@@ -67,8 +66,11 @@ PHASE_CONTEXT:
 
 ### Step 1: 差分取得
 
+developing-agent はフェーズ内でコミットしない (コミットは Step 4.7 でまとめて行う) ため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff は常に空になる。working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
+
 ```bash
-git diff "${PHASE_START_SHA}..HEAD"
+git diff "${PHASE_START_SHA}"
+git ls-files --others --exclude-standard
 ```
 
 ### Step 2: rules Read
@@ -113,5 +115,6 @@ git diff "${PHASE_START_SHA}..HEAD"
 
 - TDD / テスト品質 → `review-tdd`
 - アーキテクチャ境界違反 → `review-architecture` / `architecture-guard`
-- セキュリティ → `review-security`
+- セキュリティ → security-guidance プラグイン
 - プロジェクト rules → `review-rules`
+- プロダクト readiness / UX 横断 → `review-product-readiness`
