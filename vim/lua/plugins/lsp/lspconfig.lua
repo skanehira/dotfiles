@@ -74,7 +74,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
 -- (nix/modules/home/packages.nix の lspServers セクション)。Mason は廃止。
 local servers = {
   -- nixpkgs 由来
-  'ts_ls', 'vue_ls', 'lua_ls', 'eslint', 'jsonls', 'graphql',
+  'ts_ls', 'lua_ls', 'eslint', 'jsonls', 'graphql',
   'bashls', 'yamlls', 'vimls', 'marksman', 'taplo', 'clangd',
   'terraformls', 'biome', 'oxlint', 'zls', 'regols', 'gopls',
   'buf_ls', 'rust_analyzer', 'denols', 'nixd',
