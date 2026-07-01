@@ -17,7 +17,6 @@ dotfiles の `CLAUDE.md` と `rules/` 配下に書かれた規約 (TDD / 設計 
 PHASE_CONTEXT:
   phase_name: <フェーズN: 名前>
   phase_start_sha: <SHA>
-  diff_range: phase_start_sha..HEAD
   related_source_files: [...]
   related_rules_paths:
     - rules/core/tdd.md
@@ -57,13 +56,13 @@ PHASE_CONTEXT:
 
 ### コミット規約 (`rules/core/commit.md`)
 
-git log でフェーズ範囲のコミットを確認:
+developing-agent は Step 4.5 (本 agent の呼び出し) の時点ではまだコミットしていない (コミットは Step 4.7 でまとめて行う)。よって `git log "${PHASE_START_SHA}..HEAD"` は本 Step では常に空で、対象コミットが存在しない。**本節は Step 4.5 実行時点では no-op** とし、対象コミットが 0 件の場合はこの観点の findings を一切生成しない (コミットが存在しないのに「規約違反ゼロ」と誤って主張しないため)。
 
 ```bash
 git log "${PHASE_START_SHA}..HEAD" --format='%H%n%s%n%b%n--END--'
 ```
 
-各コミットで:
+コミットが存在する場合 (フェーズ完了後の事後レビュー等、`/workflow-review` を直接呼ぶケース) のみ、各コミットで以下をチェック:
 
 - [ ] Conventional Commit 形式 + emoji (`✨ feat`, `🐛 fix`, `📝 docs` 等)
 - [ ] 単一関心事 (複数関心事混在は分割推奨)
@@ -100,12 +99,14 @@ ls rules/backend/go/*.md       # *.go ファイルがある場合
 
 ### Step 3: 差分との照合
 
+developing-agent はフェーズ内でコミットしない (コミットは Step 4.7 でまとめて行う) ため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff/log は常に空になる。コード差分は working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
+
 ```bash
-git diff "${PHASE_START_SHA}..HEAD"
-git log "${PHASE_START_SHA}..HEAD"
+git diff "${PHASE_START_SHA}"
+git ls-files --others --exclude-standard
 ```
 
-差分・コミット履歴を観点ごとに照合。
+コミット履歴 (`git log`) は Step 4.5 の時点ではまだ空 (このフェーズはまだコミットされていない)。コミット規約チェック (下記「コミット規約」節) は本 Step では対象コミットが存在しないため no-op とする。差分・変更ファイルは観点ごとに照合。
 
 ### Step 4: JSON 出力
 
@@ -145,6 +146,7 @@ git log "${PHASE_START_SHA}..HEAD"
 ## 範囲外
 
 - TDD のサイクル順序 / テスト品質 → `review-tdd` (本 agent は「rules への明示違反」止まり)
-- セキュリティ脆弱性 → `review-security`
+- セキュリティ脆弱性 → security-guidance プラグイン
 - 一般コード品質 (SOLID 詳細など) → `review-quality`
 - アーキテクチャ境界違反 → `review-architecture` / `architecture-guard`
+- プロダクト readiness / UX 横断 → `review-product-readiness`

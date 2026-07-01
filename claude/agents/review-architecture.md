@@ -23,7 +23,6 @@ model: sonnet
 PHASE_CONTEXT:
   phase_name: <フェーズN: 名前>
   phase_start_sha: <SHA>
-  diff_range: phase_start_sha..HEAD
   related_source_files: [...]
   design_overview: |
     <DESIGN.md 関連節抜粋: 主要コンポーネント / レイヤ方針>
@@ -72,8 +71,11 @@ architecture-guard が見落とした heuristic 違反:
 
 ### Step 1: 差分取得 + 規模測定
 
+developing-agent はフェーズ内でコミットしない (コミットは Step 4.7 でまとめて行う) ため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff は常に空になる。working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
+
 ```bash
-git diff "${PHASE_START_SHA}..HEAD" --stat
+git diff "${PHASE_START_SHA}" --stat
+git ls-files --others --exclude-standard
 # 各ファイルの行数 / 関数数を集計
 ```
 
@@ -117,6 +119,6 @@ git diff "${PHASE_START_SHA}..HEAD" --stat
 
 - import レベルの境界違反 → `architecture-guard` (Step 4.3 で既に検査済)
 - TDD / テスト → `review-tdd`
-- セキュリティ → `review-security`
+- セキュリティ → security-guidance プラグイン
 - 一般コード品質 → `review-quality`
 - rules 準拠 → `review-rules`
