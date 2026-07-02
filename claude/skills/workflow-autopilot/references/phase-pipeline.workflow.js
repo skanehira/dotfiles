@@ -5,7 +5,8 @@
 //
 // args (メインセッションの skill が組み立てる):
 // {
-//   contextPath:      "docs/.autopilot/<run_id>/phase-<n>-context.md" (PHASE_CONTEXT ファイル)
+//   projectRoot:      対象プロジェクトの絶対パス (agent は全操作をこの配下で行う)
+//   contextPath:      "<projectRoot>/docs/.autopilot/<run_id>/phase-<n>-context.md" (PHASE_CONTEXT ファイル)
 //   phaseName:        "フェーズN: ...",
 //   phaseStartSha:    "<git SHA>",
 //   designPath:       "docs/DESIGN.md",
@@ -111,7 +112,8 @@ const COMMIT_SCHEMA = {
 }
 
 const readContextInstruction =
-  `まず PHASE_CONTEXT ファイル ${args.contextPath} を Read せよ。フェーズのタスク一覧・設計抜粋・関連ファイル・rules パスが全て書いてある。`
+  `作業対象プロジェクトは ${args.projectRoot} である。ファイル操作・git・テスト実行など全てのコマンドはこのディレクトリ配下で実行せよ (bash は cd ${args.projectRoot} してから実行)。
+まず PHASE_CONTEXT ファイル ${args.contextPath} を Read せよ。フェーズのタスク一覧・設計抜粋・関連ファイル・rules パスが全て書いてある。`
 
 function escalate(reason, deviationSignals, findings) {
   return {
@@ -147,7 +149,8 @@ phase('Guard')
 let guardPassed = false
 for (let i = 1; i <= 4; i++) {
   const g = await agent(
-    `architecture-guard として、フェーズ「${args.phaseName}」の差分 (git diff ${args.phaseStartSha}..HEAD) を検査せよ。
+    `作業対象プロジェクトは ${args.projectRoot} (cd してから作業)。
+architecture-guard として、フェーズ「${args.phaseName}」の差分 (working tree vs ${args.phaseStartSha}) を検査せよ。target_diff: phase 相当。PHASE_START_SHA: ${args.phaseStartSha}
 design_path: ${args.designPath}
 design_detail_path: ${args.designDetailPath}
 ファイルへの出力は不要。結果は StructuredOutput で直接返せ。
@@ -180,7 +183,7 @@ if (!guardPassed) return escalate('guard_loop_exceeded', deviationSignals)
 // ---- LSP 警告修正 (Lua/Neovim プラグインのみ) ----
 if (args.isNeovimPlugin) {
   const lsp = await agent(
-    `Lua/Neovim プロジェクトの LSP 警告 (型エラー / 未定義変数 / 重複定義) を検出して修正せよ。対象はフェーズ差分 (git diff ${args.phaseStartSha}..HEAD) のファイルのみ。`,
+    `作業対象プロジェクトは ${args.projectRoot}。Lua/Neovim プロジェクトの LSP 警告 (型エラー / 未定義変数 / 重複定義) を検出して修正せよ。対象はフェーズ差分 (working tree vs ${args.phaseStartSha}) のファイルのみ。`,
     { agentType: 'fix-lsp-warnings', label: 'fix-lsp', phase: 'Guard' },
   )
   if (lsp === null) log('fix-lsp-warnings が失敗 (継続)')
@@ -198,7 +201,8 @@ if (!args.devServer) dims = dims.filter((d) => d !== 'product-readiness')
 log(`review 観点: ${dims.join(', ')} (gating: final=${args.isFinalPhase}, ui=${args.uiPhase})`)
 
 function reviewPrompt(d) {
-  const base = `review-${d} として、フェーズ「${args.phaseName}」の差分 (git diff ${args.phaseStartSha}..HEAD) をレビューせよ。
+  const base = `作業対象プロジェクトは ${args.projectRoot} (cd してから作業)。
+review-${d} として、フェーズ「${args.phaseName}」の差分 (working tree vs ${args.phaseStartSha}) をレビューせよ。
 phase_start_sha: ${args.phaseStartSha}
 PHASE_CONTEXT: ${args.contextPath} を Read して設計抜粋と rules パスを参照せよ。
 ファイルへの出力は不要。結果は StructuredOutput で直接返せ (dimension: "${d}")。`
@@ -249,8 +253,9 @@ ${JSON.stringify(fatal, null, 2)}`,
 // ---- Commit ----
 phase('Commit')
 const commit = await agent(
-  `フェーズ「${args.phaseName}」の実装差分をコミットせよ。手順:
-1. git status と git diff ${args.phaseStartSha}..HEAD で変更を確認
+  `作業対象プロジェクトは ${args.projectRoot} (cd してから作業)。
+フェーズ「${args.phaseName}」の実装差分をコミットせよ。手順:
+1. git status と git diff ${args.phaseStartSha} で変更を確認
 2. 関心事ごとに分割 (構造的変更 [STRUCTURAL] と動作的変更 [BEHAVIORAL] は別コミット、両方あるなら STRUCTURAL 先)
 3. 各コミットは Conventional Commit 形式: "<emoji> <type>: <subject>" (feat=✨ fix=🐛 docs=📝 refactor=♻️ test=✅ chore=🔧)
 4. コミットメッセージは HEREDOC で、末尾に以下を含める:
