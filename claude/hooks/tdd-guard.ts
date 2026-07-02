@@ -84,6 +84,7 @@ const EXEMPT_BASENAME_PATTERNS = [
   /^Makefile$/,
   /^Dockerfile(\..+)?$/,
   /\.config\.[cm]?[jt]sx?$/, // vite.config.ts, next.config.mjs など
+  /\.workflow\.js$/, // Workflow スクリプト (Workflow ランタイム外で単体テスト不能)
   /^\.gitignore$/,
 ];
 
