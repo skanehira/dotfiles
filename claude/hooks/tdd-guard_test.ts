@@ -63,6 +63,7 @@ Deno.test("classifyFile returns exempt for docs and declarative config", () => {
     ".env.example",
     "Makefile",
     "Dockerfile",
+    "references/phase-pipeline.workflow.js",
   ];
   for (const path of cases) {
     assertEquals(classifyFile(path), "exempt", path);
