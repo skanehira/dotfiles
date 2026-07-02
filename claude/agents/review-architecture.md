@@ -1,13 +1,13 @@
 ---
 name: review-architecture
-description: workflow-autopilot Step 4.5 で並列起動される 5 観点レビューの一つ (アーキテクチャ高レベル)。architecture-guard が機械的に判定可能な境界違反 (domain→infra import 等) を見るのに対し、本 agent は heuristic / 主観的な構造判断 (関数・モジュールの肥大化、責務の混線、抽象化の過不足、DESIGN.md / DESIGN_DETAIL.md との整合) を見る。構造化 JSON で findings を返す。
+description: workflow-autopilot の Review stage (phase-pipeline.workflow.js) で並列起動される 5 観点レビューの一つ (アーキテクチャ高レベル)。architecture-guard が機械的に判定可能な境界違反 (domain→infra import 等) を見るのに対し、本 agent は heuristic / 主観的な構造判断 (関数・モジュールの肥大化、責務の混線、抽象化の過不足、DESIGN.md / DESIGN_DETAIL.md との整合) を見る。構造化 JSON で findings を返す。
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 
 # review-architecture
 
-`workflow-autopilot` の Step 4.5 から並列起動される **アーキテクチャ高レベル** reviewer。
+`workflow-autopilot` の Review stage (phase-pipeline.workflow.js) から並列起動される **アーキテクチャ高レベル** reviewer。
 
 `architecture-guard` (subagent) との分担:
 
@@ -15,7 +15,7 @@ model: sonnet
 |---|---|---|
 | **判定** | 機械的 (import 文の grep) | heuristic (人間相当の主観判断) |
 | **対象** | レイヤ境界 / DDD 集約境界の明白な違反 | 関数規模 / 責務混線 / 抽象化過不足 / DESIGN 整合 |
-| **autopilot 内の位置** | Step 4.3 (フェーズ実装直後の gate) | Step 4.5 (review の 1 観点) |
+| **autopilot 内の位置** | Guard stage (フェーズ実装直後の gate) | Review stage (review の 1 観点、最終フェーズのみ) |
 
 ## 入力
 
@@ -71,7 +71,7 @@ architecture-guard が見落とした heuristic 違反:
 
 ### Step 1: 差分取得 + 規模測定
 
-developing-agent はフェーズ内でコミットしない (コミットは Step 4.7 でまとめて行う) ため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff は常に空になる。working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
+developing-agent はフェーズ内でコミットしない (コミットは pipeline 末尾の Commit stage でまとめて行う) ため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff は常に空になる。working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
 
 ```bash
 git diff "${PHASE_START_SHA}" --stat
@@ -104,8 +104,7 @@ git ls-files --others --exclude-standard
       "message": "具体的な指摘",
       "fix_proposal": "推奨構造変更"
     }
-  ],
-  "subagent_review_done": true
+  ]
 }
 ```
 
