@@ -95,7 +95,7 @@ const result = await Agent({
 })
 ```
 
-subagent 内の TDD 違反は SubagentStop hook (`self-review-subagent.ts`) が並走チェックする (skill 側は意識しない)。
+subagent 内の TDD 違反は tdd-guard hook (`tdd-guard.ts`) が並走チェックする (実装ファイルへの Edit を PreToolUse で事前ゲート + SubagentStop で停止時チェック。skill 側は意識しない)。
 
 ### Step 5: 結果整形表示
 
@@ -160,6 +160,6 @@ AskUserQuestion({
 ## 関連
 
 - subagent: `implementation-developing-agent` (本体ロジック)
-- hook: `SubagentStop` → `self-review-subagent.ts` (subagent TDD 機械チェック)
+- hook: `tdd-guard.ts` (PreToolUse で実装編集を事前ゲート / SubagentStop で停止時チェック)
 - 連携 skill: `workflow-commit` / `workflow-review` / `implementation-planning-tasks`
 - 上位: `workflow-autopilot` (本 skill を経由せず agent を直接呼ぶ)
