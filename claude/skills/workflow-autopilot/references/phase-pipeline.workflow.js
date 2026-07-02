@@ -32,6 +32,9 @@ export const meta = {
   ],
 }
 
+// args は呼び出し側の渡し方により JSON 文字列で届くことがあるため防御的に parse する
+const ctx = (typeof args === 'string') ? JSON.parse(args) : (args ?? {})
+
 const DEVIATION_SIGNAL = {
   type: 'object',
   required: ['type', 'what'],
@@ -112,8 +115,8 @@ const COMMIT_SCHEMA = {
 }
 
 const readContextInstruction =
-  `作業対象プロジェクトは ${args.projectRoot} である。ファイル操作・git・テスト実行など全てのコマンドはこのディレクトリ配下で実行せよ (bash は cd ${args.projectRoot} してから実行)。
-まず PHASE_CONTEXT ファイル ${args.contextPath} を Read せよ。フェーズのタスク一覧・設計抜粋・関連ファイル・rules パスが全て書いてある。`
+  `作業対象プロジェクトは ${ctx.projectRoot} である。ファイル操作・git・テスト実行など全てのコマンドはこのディレクトリ配下で実行せよ (bash は cd ${ctx.projectRoot} してから実行)。
+まず PHASE_CONTEXT ファイル ${ctx.contextPath} を Read せよ。フェーズのタスク一覧・設計抜粋・関連ファイル・rules パスが全て書いてある。`
 
 function escalate(reason, deviationSignals, findings) {
   return {
@@ -128,11 +131,11 @@ function escalate(reason, deviationSignals, findings) {
 
 // ---- Dev ----
 phase('Dev')
-log(`${args.phaseName}: TDD 実装を開始`)
+log(`${ctx.phaseName}: TDD 実装を開始`)
 
 const dev = await agent(
   `${readContextInstruction}
-その後、PHASE_CONTEXT に従いフェーズ「${args.phaseName}」を TDD (RED→GREEN→REFACTOR) で実装せよ。
+その後、PHASE_CONTEXT に従いフェーズ「${ctx.phaseName}」を TDD (RED→GREEN→REFACTOR) で実装せよ。
 コミットはするな (後続 stage が行う)。実装中に設計乖離に気付いたら deviation_signals として報告せよ。`,
   { agentType: 'implementation-developing-agent', schema: DEV_SCHEMA, label: 'dev' },
 )
@@ -149,10 +152,10 @@ phase('Guard')
 let guardPassed = false
 for (let i = 1; i <= 4; i++) {
   const g = await agent(
-    `作業対象プロジェクトは ${args.projectRoot} (cd してから作業)。
-architecture-guard として、フェーズ「${args.phaseName}」の差分 (working tree vs ${args.phaseStartSha}) を検査せよ。target_diff: phase 相当。PHASE_START_SHA: ${args.phaseStartSha}
-design_path: ${args.designPath}
-design_detail_path: ${args.designDetailPath}
+    `作業対象プロジェクトは ${ctx.projectRoot} (cd してから作業)。
+architecture-guard として、フェーズ「${ctx.phaseName}」の差分 (working tree vs ${ctx.phaseStartSha}) を検査せよ。target_diff: phase 相当。PHASE_START_SHA: ${ctx.phaseStartSha}
+design_path: ${ctx.designPath}
+design_detail_path: ${ctx.designDetailPath}
 ファイルへの出力は不要。結果は StructuredOutput で直接返せ。
 git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。`,
     { agentType: 'architecture-guard', schema: GUARD_SCHEMA, label: `guard#${i}`, phase: 'Guard' },
@@ -181,9 +184,9 @@ ${JSON.stringify(g.violations, null, 2)}`,
 if (!guardPassed) return escalate('guard_loop_exceeded', deviationSignals)
 
 // ---- LSP 警告修正 (Lua/Neovim プラグインのみ) ----
-if (args.isNeovimPlugin) {
+if (ctx.isNeovimPlugin) {
   const lsp = await agent(
-    `作業対象プロジェクトは ${args.projectRoot}。Lua/Neovim プロジェクトの LSP 警告 (型エラー / 未定義変数 / 重複定義) を検出して修正せよ。対象はフェーズ差分 (working tree vs ${args.phaseStartSha}) のファイルのみ。`,
+    `作業対象プロジェクトは ${ctx.projectRoot}。Lua/Neovim プロジェクトの LSP 警告 (型エラー / 未定義変数 / 重複定義) を検出して修正せよ。対象はフェーズ差分 (working tree vs ${ctx.phaseStartSha}) のファイルのみ。`,
     { agentType: 'fix-lsp-warnings', label: 'fix-lsp', phase: 'Guard' },
   )
   if (lsp === null) log('fix-lsp-warnings が失敗 (継続)')
@@ -195,20 +198,20 @@ phase('Review')
 // gating: 毎フェーズ tdd。UI を触ったら product-readiness。最終フェーズは 5 観点フル。
 // (architecture の機械検査は Guard stage 済み。heuristic 版 review-architecture は最終のみ)
 const ALL_DIMS = ['tdd', 'quality', 'architecture', 'rules', 'product-readiness']
-let dims = args.isFinalPhase ? [...ALL_DIMS] : ['tdd']
-if (!args.isFinalPhase && args.uiPhase) dims.push('product-readiness')
-if (!args.devServer) dims = dims.filter((d) => d !== 'product-readiness')
-log(`review 観点: ${dims.join(', ')} (gating: final=${args.isFinalPhase}, ui=${args.uiPhase})`)
+let dims = ctx.isFinalPhase ? [...ALL_DIMS] : ['tdd']
+if (!ctx.isFinalPhase && ctx.uiPhase) dims.push('product-readiness')
+if (!ctx.devServer) dims = dims.filter((d) => d !== 'product-readiness')
+log(`review 観点: ${dims.join(', ')} (gating: final=${ctx.isFinalPhase}, ui=${ctx.uiPhase})`)
 
 function reviewPrompt(d) {
-  const base = `作業対象プロジェクトは ${args.projectRoot} (cd してから作業)。
-review-${d} として、フェーズ「${args.phaseName}」の差分 (working tree vs ${args.phaseStartSha}) をレビューせよ。
-phase_start_sha: ${args.phaseStartSha}
-PHASE_CONTEXT: ${args.contextPath} を Read して設計抜粋と rules パスを参照せよ。
+  const base = `作業対象プロジェクトは ${ctx.projectRoot} (cd してから作業)。
+review-${d} として、フェーズ「${ctx.phaseName}」の差分 (working tree vs ${ctx.phaseStartSha}) をレビューせよ。
+phase_start_sha: ${ctx.phaseStartSha}
+PHASE_CONTEXT: ${ctx.contextPath} を Read して設計抜粋と rules パスを参照せよ。
 ファイルへの出力は不要。結果は StructuredOutput で直接返せ (dimension: "${d}")。`
-  if (d === 'product-readiness' && args.devServer) {
+  if (d === 'product-readiness' && ctx.devServer) {
     return `${base}
-dev_server: ${JSON.stringify(args.devServer)}`
+dev_server: ${JSON.stringify(ctx.devServer)}`
   }
   return base
 }
@@ -253,9 +256,9 @@ ${JSON.stringify(fatal, null, 2)}`,
 // ---- Commit ----
 phase('Commit')
 const commit = await agent(
-  `作業対象プロジェクトは ${args.projectRoot} (cd してから作業)。
-フェーズ「${args.phaseName}」の実装差分をコミットせよ。手順:
-1. git status と git diff ${args.phaseStartSha} で変更を確認
+  `作業対象プロジェクトは ${ctx.projectRoot} (cd してから作業)。
+フェーズ「${ctx.phaseName}」の実装差分をコミットせよ。手順:
+1. git status と git diff ${ctx.phaseStartSha} で変更を確認
 2. 関心事ごとに分割 (構造的変更 [STRUCTURAL] と動作的変更 [BEHAVIORAL] は別コミット、両方あるなら STRUCTURAL 先)
 3. 各コミットは Conventional Commit 形式: "<emoji> <type>: <subject>" (feat=✨ fix=🐛 docs=📝 refactor=♻️ test=✅ chore=🔧)
 4. コミットメッセージは HEREDOC で、末尾に以下を含める:
