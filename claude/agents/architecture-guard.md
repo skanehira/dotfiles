@@ -92,7 +92,7 @@ case "$TARGET" in
     { git diff --name-only; git diff --staged --name-only; git ls-files --others --exclude-standard; } | sort -u
     ;;
   phase:*)
-    # developing-agent はフェーズ内でコミットしない (コミットは Step 4.7 でまとめて行う) ため、
+    # developing-agent はフェーズ内でコミットしない (コミットは pipeline 末尾の Commit stage でまとめて行う) ため、
     # "$PHASE_START_SHA..HEAD" のようなコミット間 diff は常に空になる (HEAD が動いていないため)。
     # working tree (staged + unstaged) を PHASE_START_SHA と比較し、新規 untracked ファイルも加える。
     { git diff --name-only "$PHASE_START_SHA"; git ls-files --others --exclude-standard; } | sort -u

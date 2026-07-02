@@ -1,13 +1,13 @@
 ---
 name: review-rules
-description: workflow-autopilot Step 4.5 で並列起動される 5 観点レビューの一つ (プロジェクト rules 準拠)。フェーズ実装差分を CLAUDE.md / rules/ 配下の項目に照らして検査する。検査対象は外科的変更 (依頼にトレースできない隣接改善・dead code 削除無し)・最小実装 (頼まれていない error handling 抑制)・コミット規約 (関心事分割 / Tidy First / Conventional Commit Emoji)・rules/frontend など path 別 rules 違反。構造化 JSON で findings を返す。
+description: workflow-autopilot の Review stage (phase-pipeline.workflow.js) で並列起動される 5 観点レビューの一つ (プロジェクト rules 準拠)。フェーズ実装差分を CLAUDE.md / rules/ 配下の項目に照らして検査する。検査対象は外科的変更 (依頼にトレースできない隣接改善・dead code 削除無し)・最小実装 (頼まれていない error handling 抑制)・コミット規約 (関心事分割 / Tidy First / Conventional Commit Emoji)・rules/frontend など path 別 rules 違反。構造化 JSON で findings を返す。
 tools: Read, Grep, Glob, Bash
 model: haiku
 ---
 
 # review-rules
 
-`workflow-autopilot` の Step 4.5 から並列起動される **プロジェクト rules 準拠** reviewer。
+`workflow-autopilot` の Review stage (phase-pipeline.workflow.js) から並列起動される **プロジェクト rules 準拠** reviewer。
 
 dotfiles の `CLAUDE.md` と `rules/` 配下に書かれた規約 (TDD / 設計 / テスト戦略 / コミット / 協業 / 言語別 / フレームワーク別) に対する違反を検出する。
 
@@ -56,7 +56,7 @@ PHASE_CONTEXT:
 
 ### コミット規約 (`rules/core/commit.md`)
 
-developing-agent は Step 4.5 (本 agent の呼び出し) の時点ではまだコミットしていない (コミットは Step 4.7 でまとめて行う)。よって `git log "${PHASE_START_SHA}..HEAD"` は本 Step では常に空で、対象コミットが存在しない。**本節は Step 4.5 実行時点では no-op** とし、対象コミットが 0 件の場合はこの観点の findings を一切生成しない (コミットが存在しないのに「規約違反ゼロ」と誤って主張しないため)。
+developing-agent は Review stage (本 agent の呼び出し) の時点ではまだコミットしていない (コミットは pipeline 末尾の Commit stage でまとめて行う)。よって `git log "${PHASE_START_SHA}..HEAD"` は本 Step では常に空で、対象コミットが存在しない。**本節は Review stage 実行時点では no-op** とし、対象コミットが 0 件の場合はこの観点の findings を一切生成しない (コミットが存在しないのに「規約違反ゼロ」と誤って主張しないため)。
 
 ```bash
 git log "${PHASE_START_SHA}..HEAD" --format='%H%n%s%n%b%n--END--'
@@ -99,14 +99,14 @@ ls rules/backend/go/*.md       # *.go ファイルがある場合
 
 ### Step 3: 差分との照合
 
-developing-agent はフェーズ内でコミットしない (コミットは Step 4.7 でまとめて行う) ため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff/log は常に空になる。コード差分は working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
+developing-agent はフェーズ内でコミットしない (コミットは pipeline 末尾の Commit stage でまとめて行う) ため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff/log は常に空になる。コード差分は working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
 
 ```bash
 git diff "${PHASE_START_SHA}"
 git ls-files --others --exclude-standard
 ```
 
-コミット履歴 (`git log`) は Step 4.5 の時点ではまだ空 (このフェーズはまだコミットされていない)。コミット規約チェック (下記「コミット規約」節) は本 Step では対象コミットが存在しないため no-op とする。差分・変更ファイルは観点ごとに照合。
+コミット履歴 (`git log`) は Review stage の時点ではまだ空 (このフェーズはまだコミットされていない)。コミット規約チェック (下記「コミット規約」節) は本 Step では対象コミットが存在しないため no-op とする。差分・変更ファイルは観点ごとに照合。
 
 ### Step 4: JSON 出力
 
@@ -132,8 +132,7 @@ git ls-files --others --exclude-standard
       "message": "違反内容",
       "fix_proposal": "推奨修正"
     }
-  ],
-  "subagent_review_done": true
+  ]
 }
 ```
 

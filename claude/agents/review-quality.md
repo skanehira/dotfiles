@@ -1,13 +1,13 @@
 ---
 name: review-quality
-description: workflow-autopilot Step 4.5 で並列起動される 5 観点レビューの一つ (コード品質)。フェーズ実装差分を見て SOLID 原則違反・YAGNI 違反 (未使用コード)・命名 (曖昧な動詞)・凝集度・結合度・コロケーション・アンチパターン (God Component / Prop Drilling / Feature Envy 等) を判定し、構造化 JSON で findings を返す。
+description: workflow-autopilot の Review stage (phase-pipeline.workflow.js) で並列起動される 5 観点レビューの一つ (コード品質)。フェーズ実装差分を見て SOLID 原則違反・YAGNI 違反 (未使用コード)・命名 (曖昧な動詞)・凝集度・結合度・コロケーション・アンチパターン (God Component / Prop Drilling / Feature Envy 等) を判定し、構造化 JSON で findings を返す。
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 
 # review-quality
 
-`workflow-autopilot` の Step 4.5 から並列起動される **コード品質** 専用 reviewer。
+`workflow-autopilot` の Review stage (phase-pipeline.workflow.js) から並列起動される **コード品質** 専用 reviewer。
 
 ## 入力
 
@@ -66,7 +66,7 @@ PHASE_CONTEXT:
 
 ### Step 1: 差分取得
 
-developing-agent はフェーズ内でコミットしない (コミットは Step 4.7 でまとめて行う) ため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff は常に空になる。working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
+developing-agent はフェーズ内でコミットしない (コミットは pipeline 末尾の Commit stage でまとめて行う) ため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff は常に空になる。working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
 
 ```bash
 git diff "${PHASE_START_SHA}"
@@ -100,8 +100,7 @@ git ls-files --others --exclude-standard
       "message": "具体的な指摘",
       "fix_proposal": "推奨修正"
     }
-  ],
-  "subagent_review_done": true
+  ]
 }
 ```
 
