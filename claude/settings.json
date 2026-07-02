@@ -10,7 +10,7 @@
     "deny": [],
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus[1m]",
+  "model": "claude-fable-5[1m]",
   "enableAllProjectMcpServers": true,
   "hooks": {
     "UserPromptSubmit": [
@@ -20,6 +20,28 @@
           {
             "type": "command",
             "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/remind-rules.ts"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event pre-edit"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event post-bash"
           }
         ]
       }
@@ -34,7 +56,7 @@
           },
           {
             "type": "command",
-            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/self-review.ts"
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event stop"
           }
         ]
       }
@@ -78,7 +100,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/self-review-subagent.ts"
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event stop"
           }
         ]
       }

@@ -1,6 +1,6 @@
 ---
 name: workflow-autopilot
-description: 承認済みの DESIGN.md (概要) + DESIGN_DETAIL.md (詳細) + TODO.md を入力に、TODO.md の全フェーズを自律実装する。起動時に POC_NEEDED マーカー (技術選定の未確定要素) を tech-investigation subagent で自動 PoC 解決し、各フェーズで PHASE_CONTEXT を組み立てて implementation-developing-agent subagent (TDD) → architecture-guard subagent (最大3回まで自動修正ループ) → Neovim 判定で utility-fix-lsp-warnings (Lua/Neovim 専用) → 5 観点 review subagent 並列 (review-tdd/quality/architecture/rules/product-readiness、致命違反は最大3回 self-fix、fatal だった観点のみ再実行) → workflow-commit を回す。セキュリティレビューは security-guidance プラグインに委譲。subagent の TDD 違反は SubagentStop hook (self-review-subagent.ts) で機械チェック。全フェーズ消化後は DESIGN.md ゴール + DESIGN_DETAIL.md 検証手順で達成判定、未達ゴールは追加フェーズで最大2周回ループ。実装中の設計乖離は P1 (TODO 軽微) / P2 (詳細設計の不足) / P3 (概要設計の破綻) に分類して動的修正かエスカレ停止する。意思決定経緯は構造化 JSONL + HTML レポート (docs/autopilot-reports/<run_id>.html) として残す。「設計済み TODO で実装を自律実行」「autopilot で TODO を消化」「残りタスクを自動で実装」などで起動。
+description: 承認済みの DESIGN.md (概要) + DESIGN_DETAIL.md (詳細) + TODO.md を入力に、TODO.md の全フェーズを自律実装する。起動時に POC_NEEDED マーカー (技術選定の未確定要素) を tech-investigation subagent で自動 PoC 解決し、各フェーズで PHASE_CONTEXT を組み立てて implementation-developing-agent subagent (TDD) → architecture-guard subagent (最大3回まで自動修正ループ) → Neovim 判定で utility-fix-lsp-warnings (Lua/Neovim 専用) → 5 観点 review subagent 並列 (review-tdd/quality/architecture/rules/product-readiness、致命違反は最大3回 self-fix、fatal だった観点のみ再実行) → workflow-commit を回す。セキュリティレビューは security-guidance プラグインに委譲。subagent の TDD 違反は tdd-guard hook (PreToolUse で実装編集を事前ゲート) で機械的に強制。全フェーズ消化後は DESIGN.md ゴール + DESIGN_DETAIL.md 検証手順で達成判定、未達ゴールは追加フェーズで最大2周回ループ。実装中の設計乖離は P1 (TODO 軽微) / P2 (詳細設計の不足) / P3 (概要設計の破綻) に分類して動的修正かエスカレ停止する。意思決定経緯は構造化 JSONL + HTML レポート (docs/autopilot-reports/<run_id>.html) として残す。「設計済み TODO で実装を自律実行」「autopilot で TODO を消化」「残りタスクを自動で実装」などで起動。
 argument-hint: "[docs ディレクトリパス、省略時は docs/]"
 allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 ---
@@ -272,7 +272,7 @@ const dev = JSON.parse(devResult.match(/\{[\s\S]*\}$/)[0])
 
 - `dev.status === "escalate"` → 即 P3 として停止
 - `dev.deviation_signals` をフェーズ単位の累積配列 `deviationSignals` に追加する (`deviationSignals = [...dev.deviation_signals]` で初期化)。Step 4.3 / Step 4.5 の修正フローで developing-agent を再呼び出しした際も、返り値を同じ形で parse して `deviationSignals.push(...fixResult.deviation_signals)` で追加する (Step 4.6 は最終的にこの累積配列を総合して判定する)
-- subagent 内の TDD 違反は SubagentStop hook (`self-review-subagent.ts`) が並走チェック済 (subagent 側で再ターンが回るので autopilot は意識しない)
+- subagent 内の TDD 違反は tdd-guard hook (`tdd-guard.ts`) が並走ガード済 (実装編集を PreToolUse で事前 deny、停止時テスト未実行を SubagentStop でチェック。autopilot は意識しない)
 - developing-agent は **コミットしない** ので、working tree に変更が残った状態で Step 4.3 へ
 
 #### Step 4.3: architecture-guard (最大 3 ループ)
@@ -641,7 +641,7 @@ git commit -m "📝 docs: autopilot ${run_id} 実行レポート"
 
 ### 連携 hook
 
-- **SubagentStop hook (`self-review-subagent.ts`)**: subagent 内の TDD 違反を機械チェック。autopilot は意識せず、subagent 側で再ターンが自動で回る
+- **tdd-guard hook (`tdd-guard.ts`)**: subagent 内の TDD 違反を機械的に強制 (PreToolUse で実装編集を事前ゲート + SubagentStop で停止時チェック)。autopilot は意識しない
 
 ### 前段 / 後段
 

@@ -113,12 +113,11 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
       "message": "具体的な指摘内容",
       "fix_proposal": "推奨修正"
     }
-  ],
-  "subagent_review_done": true
+  ]
 }
 ```
 
-`ok: true` は high/medium findings ゼロ。`subagent_review_done: true` を入れる場合、応答テキストに `[subagent-review-done]` も含める (SubagentStop hook 救済)。
+`ok: true` は high/medium findings ゼロ。
 
 ## 進捗ログ
 
