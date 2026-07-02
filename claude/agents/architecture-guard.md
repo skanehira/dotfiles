@@ -2,7 +2,7 @@
 name: architecture-guard
 description: Clean Architecture のレイヤ境界違反 (domain → infra import 等) と DDD の集約境界違反を検出する専用 reviewer。違反を構造化 JSON で返すだけで、修正は呼び出し側が implementation-developing 等で TDD 実施する。workflow-autopilot から各フェーズ末尾の gate として内部呼び出しされる想定。違反の判定基準は機械的・宣言的なので「ユーザーに判断を仰ぐ」ではなく「呼び出し側で機械修正」を前提とする。
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: haiku
 ---
 
 # architecture-guard

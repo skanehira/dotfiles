@@ -2,7 +2,7 @@
 name: review-rules
 description: workflow-autopilot Step 4.5 で並列起動される 5 観点レビューの一つ (プロジェクト rules 準拠)。フェーズ実装差分を CLAUDE.md / rules/ 配下の項目に照らして検査する。検査対象は外科的変更 (依頼にトレースできない隣接改善・dead code 削除無し)・最小実装 (頼まれていない error handling 抑制)・コミット規約 (関心事分割 / Tidy First / Conventional Commit Emoji)・rules/frontend など path 別 rules 違反。構造化 JSON で findings を返す。
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: haiku
 ---
 
 # review-rules
