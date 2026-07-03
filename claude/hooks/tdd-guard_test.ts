@@ -58,12 +58,27 @@ Deno.test("classifyFile returns exempt for docs and declarative config", () => {
     "vite.config.ts",
     "next.config.mjs",
     ".eslintrc",
+    ".eslintrc.js",
     "styles/main.css",
     "index.html",
     ".env.example",
     "Makefile",
     "Dockerfile",
     "references/phase-pipeline.workflow.js",
+  ];
+  for (const path of cases) {
+    assertEquals(classifyFile(path), "exempt", path);
+  }
+});
+
+Deno.test("classifyFile returns exempt for extensions outside the gated allowlist", () => {
+  const cases = [
+    "scripts/install.sh",
+    "db/schema.sql",
+    "assets/logo.png",
+    "fonts/inter.woff2",
+    "proto/api.proto",
+    "terraform/main.tf",
   ];
   for (const path of cases) {
     assertEquals(classifyFile(path), "exempt", path);
