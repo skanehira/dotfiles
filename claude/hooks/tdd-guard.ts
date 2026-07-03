@@ -16,7 +16,8 @@
  *       それ以外                              → deny (先に失敗テストを書いて RED 確認)
  *   - Stop/SubagentStop 時に「編集後テスト未実行」フラグが残っていれば 1 回だけ block
  *
- * 除外: md / json / yaml / nix / *.config.* 等の宣言的ファイルはゲート対象外。
+ * ゲート対象: GATED_EXTENSIONS に列挙した実装言語の拡張子のみ。
+ * それ以外 (md / json / yaml / nix / sh 等) と *.config.* 等の宣言的ファイルは対象外。
  * 緊急脱出: 環境変数 TDD_GUARD=off で全イベント素通り。
  *
  * イベントは --event <pre-edit|post-bash|stop> で指定する (settings.json 配線)。
@@ -56,43 +57,35 @@ export const STOP_RUN_NEW_TEST =
 const TEST_FILE_PATTERN =
   /(^|\/)(test|tests|spec|specs|__tests__)\/|(_test|_spec|\.test|\.spec)\.[a-z]+$/i;
 
-const EXEMPT_EXTENSIONS = new Set([
-  "md",
-  "markdown",
-  "json",
-  "jsonc",
-  "yaml",
-  "yml",
-  "toml",
-  "nix",
-  "lock",
-  "txt",
-  "css",
-  "scss",
-  "sass",
-  "less",
-  "html",
-  "svg",
-  "csv",
-  "xml",
-  "edn",
+// テスト対象 (ゲート対象) の実装言語だけを列挙する。ここに無い拡張子は exempt
+const GATED_EXTENSIONS = new Set([
+  "ts",
+  "tsx",
+  "mts",
+  "cts",
+  "js",
+  "jsx",
+  "mjs",
+  "cjs",
+  "rs",
+  "go",
+  "py",
+  "rb",
+  "lua",
 ]);
 
+// ゲート対象拡張子でもテスト不要な宣言的ファイル
 const EXEMPT_BASENAME_PATTERNS = [
-  /^\..*rc(\.\w+)?$/, // .eslintrc, .prettierrc.json など
-  /^\.env(\..+)?$/,
-  /^Makefile$/,
-  /^Dockerfile(\..+)?$/,
+  /^\..*rc(\.\w+)?$/, // .eslintrc.js など
   /\.config\.[cm]?[jt]sx?$/, // vite.config.ts, next.config.mjs など
   /\.workflow\.js$/, // Workflow スクリプト (Workflow ランタイム外で単体テスト不能)
-  /^\.gitignore$/,
 ];
 
 export function classifyFile(path: string): FileClass {
   const basename = path.split("/").pop() ?? path;
   const ext = basename.includes(".") ? basename.split(".").pop()!.toLowerCase() : "";
 
-  if (EXEMPT_EXTENSIONS.has(ext)) return "exempt";
+  if (!GATED_EXTENSIONS.has(ext)) return "exempt";
   if (EXEMPT_BASENAME_PATTERNS.some((re) => re.test(basename))) return "exempt";
   if (TEST_FILE_PATTERN.test(path)) return "test";
   return "impl";
