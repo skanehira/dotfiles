@@ -94,6 +94,10 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
 - 実行順序依存 (test A の後に B でないと通らない) を示すコメント / shared state を grep
 - グローバル state を mutate しているテストを検出
 
+### 報告方針 (coverage 優先)
+
+見つけた問題は、確信が持てないものや severity: low のものも含めて**すべて findings に載せる**。重要度・確信度による自己フィルタはこの段階では行わない。フィルタリングは下流 (severity gating) の責務であり、この段階のゴールは網羅性 — 実際の問題を黙って落とすより、後で除外される finding を出す方が良い。確信度は各 finding の `confidence` に記載し、下流がランク付けできるようにする。
+
 ### Step 4: JSON 出力
 
 `output_path` に Write、stdout に絶対パスのみ:
@@ -109,6 +113,7 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
       "file": "src/auth/auth-service.test.ts",
       "line": 42,
       "severity": "high|medium|low",
+      "confidence": "high|medium|low",
       "rule": "tdd_red_first|behavior_assertion|naming|aaa|exact_match|mock_overuse|test_isolation",
       "message": "具体的な指摘内容",
       "fix_proposal": "推奨修正"

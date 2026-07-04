@@ -49,21 +49,12 @@ function isImplementationPrompt(prompt: string): boolean {
 }
 
 const REMINDER = `<system-reminder>
-[hook: remind-rules] 実装/修正系の指示を検知しました。
-着手前に以下を必ず実行してください:
+[hook: remind-rules] 実装/修正系の指示を検知しました。着手前チェックリスト:
 
-1. **CLAUDE.md と rules を再確認**
-   - @rules/core/tdd.md は交渉の余地なし (RED → GREEN → REFACTOR の順)
-   - @rules/core/design.md / testing.md / commit.md にも目を通す
-2. **TaskCreate で TDD ステップを宣言**
-   - 「失敗テストを書く」「最小実装」「リファクタ + 緑確認」を独立タスクとして並べる
-3. **「テストを先に書く」と明示宣言**
-   - ターン冒頭で「TDD で進めます。まず ○○ のテストを書きます」と言う
-4. **依頼スコープを超えない (外科的変更)**
-   - 隣接コードの改善・dead code 削除・気付いた別バグの修正は別ターンで合意してから
-
-これを無視して実装に入った場合、後で「TDD やった?」と聞かれたとき正直に「やってない」と答えることになります。
-TDD を本当にやらない判断をするときは、その理由を明示してください (例: 1 行 typo 修正、宣言的な config 変更など)。
+- TDD (@rules/core/tdd.md) は交渉の余地なし: RED → GREEN → REFACTOR の順で進める
+- @rules/core/design.md / testing.md / commit.md の該当項目に従う
+- 依頼スコープを超えない (外科的変更): 隣接コードの改善・dead code 削除・気付いた別バグの修正は別ターンで合意してから
+- TDD を適用しない判断をする場合 (1 行 typo 修正、宣言的な config 変更など) は、その理由を出力で明示する
 </system-reminder>`;
 
 async function main() {

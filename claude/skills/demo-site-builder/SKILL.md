@@ -110,9 +110,9 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 - スタック: React + Tailwind CSS v4 + TypeScript
 - 要素: カラーパレット / タイポ / コンポーネント（Button/Input/Card/Badge/BottomNav/Header/Checkbox）
 - 画面数とモバイル提供前提
-- まずはデザインの方向性（ムード・色・タイポ・インタラクション）を提案してもらう
+- 構築前に**互いに異なる 4 つのビジュアル方向**を提案してもらう。各方向は「背景 hex / アクセント hex / タイポグラフィ + 一言理由」の形式で、背景色系統・フォント分類（serif / sans / display）・ムードが重ならないようにする（モデルのデフォルトスタイルへの収束を防ぎ、実行ごとに多様性を出すため）
 
-スキルから戻ってきたデザイン提案に基づき、`src/index.css` の Tailwind v4 `@theme` ブロックにカラー・フォント・radius 等を反映する。
+4 方向をユーザーに提示して 1 つ選んでもらい、**選ばれた方向のみ**を実装する。選ばれたデザイン提案に基づき、`src/index.css` の Tailwind v4 `@theme` ブロックにカラー・フォント・radius 等を反映する。
 
 **無難な "若年向け tech startup blue" を避ける** — generic AI aesthetics から離れた独自コンセプトを持つこと。命名パターン例：「切符のマイページ」「手帳風ダッシュボード」「カセット UI」。
 

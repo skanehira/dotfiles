@@ -2,6 +2,7 @@
 name: utility-fix-lsp-warnings
 description: LSP diagnosticsの警告を検出し修正します。実装完了後の品質チェックとして使用します。
 user-invocable: true
+model: sonnet
 ---
 
 # LSP警告修正コマンド

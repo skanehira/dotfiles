@@ -2,7 +2,7 @@
 name: implementation-developing-agent
 description: workflow-autopilot から呼ばれる「フェーズ単位の TDD 実装」専用 subagent。PHASE_CONTEXT (autopilot が組み立てた構造化情報) を受け取り、RED → GREEN → REFACTOR サイクルでフェーズを完了する。autopilot のコンテキスト汚染を避け、長時間実行時のメモリ効率を保つために subagent 化されている。終了時は構造化 JSON で結果 + 設計乖離シグナル (P1/P2/P3) を返す。
 tools: Read, Edit, Write, Bash, Glob, Grep, Skill, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__chrome-devtools__navigate_page, mcp__chrome-devtools__take_snapshot, mcp__chrome-devtools__list_console_messages, mcp__chrome-devtools__list_pages, mcp__chrome-devtools__new_page
-model: sonnet
+model: opus
 ---
 
 # implementation-developing-agent

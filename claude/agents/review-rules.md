@@ -108,6 +108,10 @@ git ls-files --others --exclude-standard
 
 コミット履歴 (`git log`) は Review stage の時点ではまだ空 (このフェーズはまだコミットされていない)。コミット規約チェック (下記「コミット規約」節) は本 Step では対象コミットが存在しないため no-op とする。差分・変更ファイルは観点ごとに照合。
 
+### 報告方針 (coverage 優先)
+
+見つけた問題は、確信が持てないものや severity: low のものも含めて**すべて findings に載せる**。重要度・確信度による自己フィルタはこの段階では行わない。フィルタリングは下流 (severity gating) の責務であり、この段階のゴールは網羅性 — 実際の問題を黙って落とすより、後で除外される finding を出す方が良い。確信度は各 finding の `confidence` に記載し、下流がランク付けできるようにする。
+
 ### Step 4: JSON 出力
 
 ```json
@@ -127,6 +131,7 @@ git ls-files --others --exclude-standard
       "file": "src/foo.ts",
       "line": 25,
       "severity": "high|medium|low",
+      "confidence": "high|medium|low",
       "rule_source": "CLAUDE.md|rules/core/commit.md|rules/frontend/react/hooks.md",
       "rule": "scope_creep|surgical_change|minimal_impl|spec_explicit|comment_what|conventional_commit|tidy_first|heredoc|io_di|use_effect_misuse|...",
       "message": "違反内容",
