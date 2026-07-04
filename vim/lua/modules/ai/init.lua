@@ -396,6 +396,20 @@ function M.open_codex(args, context)
   open_input_buffer("codex", args, context or find_thread_context_at_cursor("codex"))
 end
 
+-- Claude スイッチャを tmux popup で開く
+-- 一覧・プレビュー・ジャンプは zsh/functions/claude-switch.zsh の実装をそのまま使う
+-- (tmux.conf の prefix+f バインドと同一 UI)
+function M.open_switcher()
+  if not tmux.is_in_tmux() then
+    vim.notify("エラー: このコマンドはtmuxセッション内でのみ使用できます", vim.log.levels.ERROR)
+    return
+  end
+  local ok, err = tmux.open_popup("zsh -c 'source ~/.zshrc; claude-switch'")
+  if not ok then
+    vim.notify("スイッチャの起動に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.ERROR)
+  end
+end
+
 -- コメントスタックを一括送信
 function M.submit(tool_name)
   if not tmux.is_in_tmux() then
@@ -528,6 +542,10 @@ function M.setup()
   vim.api.nvim_create_user_command("CodexDelete", function() M.delete_comment_at_cursor("codex") end,
     { desc = "Delete Codex comment at cursor line" })
 
+  -- スイッチャ: Claude が動いている window の一覧・プレビュー・ジャンプ
+  vim.api.nvim_create_user_command("ClaudeSwitch", function() M.open_switcher() end,
+    { desc = "Open Claude switcher (tmux popup)" })
+
   local map_opts = { noremap = true, silent = true }
 
   -- キーマップ: Claude（ノーマルモード）
@@ -539,6 +557,9 @@ function M.setup()
 
   vim.keymap.set("n", "<leader>aC", "<Cmd>Claude -c<CR>",
     vim.tbl_extend("force", map_opts, { desc = "Open Claude with -c" }))
+
+  vim.keymap.set("n", "<leader>as", "<Cmd>ClaudeSwitch<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open Claude switcher" }))
 
   -- キーマップ: Claude（ビジュアルモード）
   vim.keymap.set("x", "<leader>ac", visual_keymap_handler(function(ctx)
