@@ -13,6 +13,17 @@
   "model": "opus[1m]",
   "enableAllProjectMcpServers": true,
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tmux-status.sh start"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "matcher": "",
@@ -20,6 +31,10 @@
           {
             "type": "command",
             "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/remind-rules.ts"
+          },
+          {
+            "type": "command",
+            "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tmux-status.sh working"
           }
         ]
       }
@@ -44,6 +59,15 @@
             "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event post-bash"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tmux-status.sh working"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -57,6 +81,10 @@
           {
             "type": "command",
             "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event stop"
+          },
+          {
+            "type": "command",
+            "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tmux-status.sh idle"
           }
         ]
       }
@@ -68,6 +96,10 @@
           {
             "type": "command",
             "command": "deno run --allow-env --allow-run --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/notify.ts --type notify"
+          },
+          {
+            "type": "command",
+            "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tmux-status.sh waiting"
           }
         ]
       }
@@ -79,6 +111,10 @@
           {
             "type": "command",
             "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/archive-transcript.ts"
+          },
+          {
+            "type": "command",
+            "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tmux-status.sh clear"
           }
         ]
       }
