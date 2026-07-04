@@ -2,6 +2,7 @@
 name: workflow-create-draft-pr
 description: "ローカルのコミット履歴と差分からDraft PRを作成する。ブランチ未作成・コミット未作成の状態でも、必要に応じてブランチ作成とコミットを行ってからPRを作成する。`.github/` にPRテンプレートがあれば内容を埋めて、なければ作業内容から本文を生成し、`AskUserQuestion`で作成可否を確認してから `gh pr create --draft` を実行する。「PRを出したい」「draft PRを作成」「プルリクを作って」「PR本文を生成」などのリクエストで起動。"
 argument-hint: "[--base <branch>]"
+model: haiku
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git branch:*), Bash(git switch:*), Bash(git remote:*), Bash(git push:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh repo view:*), Bash(gh auth status:*), Read, Glob, AskUserQuestion, Skill
 ---
 

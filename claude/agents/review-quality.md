@@ -81,6 +81,10 @@ git ls-files --others --exclude-standard
 
 各変更ファイルを Read して、上記観点ごとに違反を探す。具体的な行 / 関数 / クラスを指摘。
 
+### 報告方針 (coverage 優先)
+
+見つけた問題は、確信が持てないものや severity: low のものも含めて**すべて findings に載せる**。重要度・確信度による自己フィルタはこの段階では行わない。フィルタリングは下流 (severity gating) の責務であり、この段階のゴールは網羅性 — 実際の問題を黙って落とすより、後で除外される finding を出す方が良い。確信度は各 finding の `confidence` に記載し、下流がランク付けできるようにする。
+
 ### Step 4: JSON 出力
 
 `output_path` に Write、stdout に絶対パス:
@@ -96,6 +100,7 @@ git ls-files --others --exclude-standard
       "file": "src/foo.ts",
       "line": 25,
       "severity": "high|medium|low",
+      "confidence": "high|medium|low",
       "rule": "srp|ocp|lsp|isp|dip|yagni|naming|cohesion|coupling|colocation|god_component|prop_drilling|feature_envy|shotgun_surgery",
       "message": "具体的な指摘",
       "fix_proposal": "推奨修正"

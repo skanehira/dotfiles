@@ -1,6 +1,7 @@
 ---
 name: workflow-commit
 description: "変更内容を分析し、Conventional Commit形式でコミットする (pushはユーザが手動)"
+model: haiku
 ---
 
 # /workflow-commit

@@ -85,7 +85,11 @@ git ls-files --others --exclude-standard
 
 ### Step 3: 観点ごとに heuristic 適用
 
-抽象化過不足や責務混線は機械的に判定できないので、各ファイルを Read して人間相当の判断を下す。確信度低なら `severity: low` で報告 (autopilot は high/medium のみ修正対象)。
+抽象化過不足や責務混線は機械的に判定できないので、各ファイルを Read して人間相当の判断を下す。確信度低なら `severity: low` + `confidence: low` で報告 (autopilot は high/medium のみ修正対象)。
+
+### 報告方針 (coverage 優先)
+
+見つけた問題は、確信が持てないものや severity: low のものも含めて**すべて findings に載せる**。重要度・確信度による自己フィルタはこの段階では行わない。フィルタリングは下流 (severity gating) の責務であり、この段階のゴールは網羅性 — 実際の問題を黙って落とすより、後で除外される finding を出す方が良い。確信度は各 finding の `confidence` に記載し、下流がランク付けできるようにする。
 
 ### Step 4: JSON 出力
 
@@ -100,6 +104,7 @@ git ls-files --others --exclude-standard
       "file": "src/usecase/place-order.ts",
       "line": 12,
       "severity": "high|medium|low",
+      "confidence": "high|medium|low",
       "rule": "function_size|file_size|class_size|responsibility_mix|over_abstraction|under_abstraction|design_mismatch|repository_bypass|domain_global|aggregate_internal_access",
       "message": "具体的な指摘",
       "fix_proposal": "推奨構造変更"

@@ -141,6 +141,10 @@ chrome-devtools MCP で:
 
 各 navigate 後に `list_console_messages` で console error を確認、ある場合は finding に含める。
 
+### 報告方針 (coverage 優先)
+
+見つけた問題は、確信が持てないものや severity: low のものも含めて**すべて findings に載せる**。重要度・確信度による自己フィルタはこの段階では行わない。フィルタリングは下流 (severity gating) の責務であり、この段階のゴールは網羅性 — 実際の問題を黙って落とすより、後で除外される finding を出す方が良い。確信度は各 finding の `confidence` に記載し、下流がランク付けできるようにする。
+
 ### Step 4: JSON 出力
 
 `output_path` に Write、stdout に絶対パス 1 行:
@@ -157,6 +161,7 @@ chrome-devtools MCP で:
       "file": "apps/web/src/App.tsx",
       "line": 25,
       "severity": "high|medium|low",
+      "confidence": "high|medium|low",
       "rule": "nav_unreachable|error_boundary_missing|empty_state_missing|loading_missing|seo_meta|page_404_deadloop|logout_missing|console_error|dev_server_unavailable",
       "message": "具体的な指摘 (画面名 / URL / 観測値)",
       "fix_proposal": "推奨修正"

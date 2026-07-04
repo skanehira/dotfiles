@@ -73,6 +73,7 @@ const FINDING = {
     file: { type: 'string' },
     line: { type: 'integer' },
     severity: { enum: ['high', 'medium', 'low'] },
+    confidence: { enum: ['high', 'medium', 'low'] },
     rule: { type: 'string' },
     message: { type: 'string' },
     fix_proposal: { type: 'string' },
@@ -137,7 +138,7 @@ const dev = await agent(
   `${readContextInstruction}
 その後、PHASE_CONTEXT に従いフェーズ「${ctx.phaseName}」を TDD (RED→GREEN→REFACTOR) で実装せよ。
 コミットはするな (後続 stage が行う)。実装中に設計乖離に気付いたら deviation_signals として報告せよ。`,
-  { agentType: 'implementation-developing-agent', schema: DEV_SCHEMA, label: 'dev' },
+  { agentType: 'implementation-developing-agent', schema: DEV_SCHEMA, label: 'dev', effort: 'xhigh' },
 )
 if (!dev) return escalate('dev_agent_failed')
 
@@ -158,7 +159,7 @@ design_path: ${ctx.designPath}
 design_detail_path: ${ctx.designDetailPath}
 ファイルへの出力は不要。結果は StructuredOutput で直接返せ。
 git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。`,
-    { agentType: 'architecture-guard', schema: GUARD_SCHEMA, label: `guard#${i}`, phase: 'Guard' },
+    { agentType: 'architecture-guard', schema: GUARD_SCHEMA, label: `guard#${i}`, phase: 'Guard', effort: 'low' },
   )
   if (!g) return escalate('guard_agent_failed', deviationSignals)
 
@@ -177,7 +178,7 @@ git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_
 architecture-guard が以下の違反を検出した。既存テストを緑に保ったまま、TDD で境界遵守に修正せよ (必要なら新規テスト追加)。コミットはするな。
 違反一覧:
 ${JSON.stringify(g.violations, null, 2)}`,
-    { agentType: 'implementation-developing-agent', schema: DEV_SCHEMA, label: `guard-fix#${i}`, phase: 'Guard' },
+    { agentType: 'implementation-developing-agent', schema: DEV_SCHEMA, label: `guard-fix#${i}`, phase: 'Guard', effort: 'xhigh' },
   )
   if (fix) deviationSignals.push(...fix.deviation_signals)
 }
@@ -246,7 +247,7 @@ for (let loop = 1; loop <= 4; loop++) {
 レビューで以下の致命 (severity: high) 指摘が出た。TDD で修正せよ。コミットはするな。
 指摘一覧:
 ${JSON.stringify(fatal, null, 2)}`,
-    { agentType: 'implementation-developing-agent', schema: DEV_SCHEMA, label: `review-fix#${loop}`, phase: 'Review' },
+    { agentType: 'implementation-developing-agent', schema: DEV_SCHEMA, label: `review-fix#${loop}`, phase: 'Review', effort: 'xhigh' },
   )
   if (fix) deviationSignals.push(...fix.deviation_signals)
 
@@ -267,7 +268,7 @@ const commit = await agent(
    Co-Authored-By: Claude <noreply@anthropic.com>
 5. git push は絶対にするな
 テストが失敗する状態ならコミットせず committed: false と error を返せ。`,
-  { schema: COMMIT_SCHEMA, label: 'commit', effort: 'low' },
+  { schema: COMMIT_SCHEMA, label: 'commit', model: 'haiku', effort: 'low' },
 )
 
 return {
