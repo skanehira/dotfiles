@@ -33,5 +33,7 @@
     ".claude/hooks".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/hooks";
     ".claude/rules".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/rules";
     ".claude/skills".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/skills";
+    ".claude/knowledge-profile.md".source =
+      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/knowledge-profile.md";
   };
 }
