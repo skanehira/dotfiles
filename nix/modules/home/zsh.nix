@@ -119,5 +119,6 @@
     ".config/zsh/functions/ghq-fzf.zsh".source = ../../../zsh/functions/ghq-fzf.zsh;
     ".config/zsh/functions/tmuxpopup.zsh".source = ../../../zsh/functions/tmuxpopup.zsh;
     ".config/zsh/functions/gss.zsh".source = ../../../zsh/functions/gss.zsh;
+    ".config/zsh/functions/claude-switch.zsh".source = ../../../zsh/functions/claude-switch.zsh;
   };
 }
