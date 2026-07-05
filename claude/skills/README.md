@@ -24,6 +24,7 @@ skills/
 ├── workflow-review/
 ├── workflow-spec/
 ├── demo-site-builder/
+├── saas-pricing-design/
 ├── slide-generating/
 ├── vercel-composition-patterns/
 ├── vercel-react-best-practices/
@@ -155,6 +156,7 @@ agent only (skill 無し、上位 orchestrator 専用):
 | スキル                                    | 説明                                                                                                                      |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | [demo-site-builder](./demo-site-builder/) | React 19 + Vite + TS + Tailwind v4 + React Router v7 でモバイル向け静的 SPA デモを TDD 構築 → Cloudflare Workers デプロイ |
+| [saas-pricing-design](./saas-pricing-design/) | SaaS の料金プランをコスト構造から逆算して設計 (Cloudflare 既定コストモデル → 固定/従量の料金体系 → Numbers 互換の Excel 生成 → 実機検証) |
 | [slide-generating](./slide-generating/)   | テキスト入力から Web ベース (HTML + Tailwind + JS) のプレゼンスライドを生成                                               |
 
 ### React/Vercel ベストプラクティス
