@@ -69,8 +69,6 @@ const GATED_EXTENSIONS = new Set([
   "cjs",
   "rs",
   "go",
-  "py",
-  "rb",
   "lua",
 ]);
 
