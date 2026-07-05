@@ -1,8 +1,16 @@
 #!/bin/bash
 # Keynoteでpptxを開き、全スライドをPNG画像としてエクスポートする(視覚確認用)。
-# まれにAppleEventがタイムアウトすることがあるため、失敗時はKeynoteを強制終了して1回だけ再試行する。
 #
 # 使い方: export_slides.sh <pptxの絶対パス> <出力先ディレクトリ>
+#
+# 実装上の注意:
+# - Keynoteのpptxインポートは非同期のため、AppleScriptの `open` の戻り値は
+#   信用できない(ドキュメントが開いていても missing value を返すことがある)。
+#   戻り値は使わず、open後に `count of documents` をポーリングして開くのを待つ。
+# - 失敗時にKeynoteをquit/killして再起動するリトライは行わない。
+#   動作中のKeynoteを殺すと、次回起動時にバージョン案内やウィンドウ復元などの
+#   モーダルダイアログが出てAppleEventが恒久的にブロックされる悪循環になる。
+#   Keynoteは起動したまま使い回すのが安全。
 set -euo pipefail
 
 SRC="$1"
@@ -22,22 +30,47 @@ set srcPath to "$SRC"
 set outDir to "$OUT_DIR"
 tell application id "$KEYNOTE_ID"
     activate
-    set theDoc to open POSIX file srcPath
-    delay 2
+    -- 戻り値は使わない(pptxインポートでは missing value になることがある)
+    open POSIX file srcPath
+end tell
+-- ドキュメントが開くまで最大30秒ポーリング
+set docReady to false
+repeat 30 times
+    tell application id "$KEYNOTE_ID"
+        if (count of documents) > 0 then
+            set docReady to true
+            exit repeat
+        end if
+    end tell
+    delay 1
+end repeat
+if not docReady then error "NO_DOCUMENT"
+tell application id "$KEYNOTE_ID"
+    set theDoc to front document
     export theDoc as slide images to (POSIX file outDir) with properties {image format:PNG}
     close theDoc saving no
 end tell
 EOF
 }
 
-# 注意: 失敗時にKeynoteをquit/killして再起動するリトライは行わない。
-# 動作中のKeynoteを殺すと、次回起動時にバージョン案内やウィンドウ復元などの
-# モーダルダイアログが出てAppleEventが恒久的にブロックされる悪循環になる。
-# Keynoteは起動したまま使い回すのが安全。
+# 失敗時の切り分け: モーダルダイアログでブロックされているのか、
+# 単にドキュメントを開けなかったのかをウィンドウ一覧から判別して報告する。
+report_failure() {
+  local windows
+  windows=$(osascript -e 'tell application "System Events" to tell process "Keynote" to get name of every window' 2>/dev/null || echo "")
+  if [ -n "$windows" ]; then
+    echo "エクスポートに失敗しました。Keynoteに以下のウィンドウが残っています: $windows" >&2
+    echo "モーダルダイアログ(バージョン案内・ウィンドウ復元・エラー等)の場合は" >&2
+    echo "手動で閉じてから、もう一度このスクリプトを実行してください。" >&2
+  else
+    echo "エクスポートに失敗しました。ダイアログは検出されていません。" >&2
+    echo "Keynoteがドキュメントを開けていない可能性があります(ファイルパス・形式を確認)。" >&2
+    echo "Keynoteはquit/killせず、そのまま再実行してください。" >&2
+  fi
+}
+
 if ! run_export; then
-  echo "エクスポートに失敗しました。Keynoteがモーダルダイアログ" >&2
-  echo "(バージョン案内・ウィンドウ復元・エラー等)でブロックされている可能性があります。" >&2
-  echo "画面上のダイアログを手動で閉じてから、もう一度このスクリプトを実行してください。" >&2
+  report_failure
   exit 1
 fi
 
