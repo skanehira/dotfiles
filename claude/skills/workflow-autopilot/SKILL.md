@@ -293,9 +293,9 @@ Workflow はバックグラウンドで走るので、起動後は完了通知 (
 |---|---|
 | 毎フェーズ | review-tdd + architecture-guard (機械検査は Guard stage で毎回) |
 | UI を触るフェーズ | 上記 + review-product-readiness (devServer が null なら skip) |
-| 最終フェーズ | 5 観点フル (tdd / quality / architecture / rules / product-readiness) |
+| 最終フェーズ | 全観点フル (tdd / quality / product-readiness) |
 
-heuristic 版 review-architecture は最終フェーズのみ (機械判定可能な境界違反は毎フェーズ architecture-guard が担保するため)。severity: high は最大 3 回 self-fix し、fatal だった観点のみ再実行する。
+review-quality (rules 準拠 + アーキテクチャ heuristic 統合) は最終フェーズのみ (機械判定可能な境界違反は毎フェーズ architecture-guard が担保するため)。severity: high は最大 3 回 self-fix し、fix 後は gating された全観点を再レビューする (fix の regression 検出)。
 
 ##### 返り値の処理
 
@@ -324,15 +324,15 @@ subagent 内の TDD 違反は tdd-guard hook (`tdd-guard.ts`) が並走ガード
 
 #### Step 4.6: 設計乖離の判定 (P1 / P2 / P3)
 
-Step 4.2 の Workflow 返り値 `result.deviationSignals` (dev / guard 修正 / review self-fix の全 developing-agent 呼び出し分をスクリプトが累積済み) を P 値に分類する。`review-architecture` 由来の判定は `result.findings` の `dimension: "architecture"` エントリを使う。
+Step 4.2 の Workflow 返り値 `result.deviationSignals` (dev / guard 修正 / review self-fix の全 developing-agent 呼び出し分をスクリプトが累積済み) を P 値に分類する。design 整合の判定は `result.findings` の `dimension: "quality"` かつ `rule: "design_mismatch"` 系エントリを使う。
 
 **シグナル元と分類対応**:
 
 | シグナル元 | type (developing-agent から) | 分類 | 対処 |
 |---|---|---|---|
 | developing-agent | `todo_minor` | P1 (TODO 軽微) | autopilot が `docs/TODO.md` を編集して継続。`p1_fixes_in_phase += 1`、上限 (2 回) 超過なら P2 扱いに昇格 |
-| developing-agent / review-architecture (severity: medium 以上) | `design_detail_gap` | P2 (詳細設計の不足) | autopilot が `docs/DESIGN_DETAIL.md` を更新 → `implementation-planning-tasks` で `docs/TODO.md` を再生成 → 当該フェーズの実装に必要な追加情報をユーザに簡潔に通知 (ブロックはしない) → 継続。`p2_fixes_total += 1`、上限 (3 回) 超過なら P3 扱いに昇格 |
-| developing-agent / review-architecture (severity: high で design 整合違反) | `design_overview_break` | P3 (概要設計の破綻) | エスカレ停止 |
+| developing-agent / review-quality の design 整合 finding (severity: medium 以上) | `design_detail_gap` | P2 (詳細設計の不足) | autopilot が `docs/DESIGN_DETAIL.md` を更新 → `implementation-planning-tasks` で `docs/TODO.md` を再生成 → 当該フェーズの実装に必要な追加情報をユーザに簡潔に通知 (ブロックはしない) → 継続。`p2_fixes_total += 1`、上限 (3 回) 超過なら P3 扱いに昇格 |
+| developing-agent / review-quality の design 整合 finding (severity: high) | `design_overview_break` | P3 (概要設計の破綻) | エスカレ停止 |
 
 **シグナル無しの場合**: 次の pending フェーズへ進む。
 
@@ -564,7 +564,7 @@ git commit -m "📝 docs: autopilot ${run_id} 実行レポート"
 - **tech-investigation**: POC_NEEDED マーカーの自動 PoC (Step 1.5)
 - **implementation-developing-agent**: フェーズ単位の TDD 実装 (Step 4.2)
 - **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (pipeline の Guard stage、haiku)
-- **review-tdd / review-quality / review-architecture / review-rules / review-product-readiness**: pipeline の Review stage から観点 gating 付きで起動 (毎フェーズ tdd のみ / UI フェーズ +product-readiness / 最終フェーズ 5 観点フル、fatal だった観点のみ再実行)。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査
+- **review-tdd / review-quality / review-product-readiness**: pipeline の Review stage から観点 gating 付きで起動 (毎フェーズ tdd のみ / UI フェーズ +product-readiness / 最終フェーズ全観点フル、fix 後は全観点再レビュー)。review-quality は rules 準拠 + アーキテクチャ heuristic を統合。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査
 - **security-guidance プラグイン**: セキュリティレビューはこのプラグイン (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review) に委譲。自作 subagent は持たない
 
 ### 内部呼び出し (skill)

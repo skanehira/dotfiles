@@ -133,7 +133,7 @@ AskUserQuestion({
     question: "TDD 実装が完了しました。次のアクションを選択してください。",
     header: "次のアクション",
     options: [
-      { label: "レビュー (推奨)", description: "workflow-review で 5 観点レビュー → 指摘対応後にコミットへ" },
+      { label: "レビュー (推奨)", description: "workflow-review で 3 観点レビュー → 指摘対応後にコミットへ" },
       { label: "コミット", description: "workflow-commit でコミット (push は手動)。レビュー済みの場合" },
       { label: "次フェーズ", description: "TODO.md がある場合、次フェーズの実装に進む" },
       { label: "完了", description: "ここで終了" }
