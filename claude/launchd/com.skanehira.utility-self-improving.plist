@@ -9,7 +9,7 @@
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>set -o pipefail; cd /Users/skanehira/dev/github.com/skanehira/dotfiles &amp;&amp; claude -p "/utility-self-improving" --permission-mode acceptEdits --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Agent" --output-format json | tee /Users/skanehira/.claude/logs/self-improving.json | jq -r '.[] | select(.type=="result") | .result'</string>
+        <string>set -o pipefail; cd /Users/skanehira/dev/github.com/skanehira/dotfiles &amp;&amp; perl -e 'alarm shift @ARGV; exec @ARGV' 3600 claude -p "/utility-self-improving" --permission-mode acceptEdits --allowedTools "Bash,Read,Edit,Write,Glob,Grep,Agent" --output-format json | tee /Users/skanehira/.claude/logs/self-improving.json | jq -r '.[] | select(.type=="result") | .result'; rc=$?; if [ $rc -ne 0 ]; then terminal-notifier -title "utility-self-improving" -message "週次自己改善が失敗 (exit $rc)" -subtitle "~/.claude/logs/self-improving.err を確認"; fi; exit $rc</string>
     </array>
 
     <key>StartCalendarInterval</key>
