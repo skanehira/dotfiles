@@ -25,8 +25,6 @@ skills/
 ├── workflow-spec/
 ├── demo-site-builder/
 ├── saas-pricing-design/
-├── vercel-composition-patterns/
-├── vercel-react-best-practices/
 ├── utility-create-skill/
 ├── utility-creating-rules/
 ├── utility-drawio/
@@ -157,15 +155,6 @@ agent only (skill 無し、上位 orchestrator 専用):
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | [demo-site-builder](./demo-site-builder/) | React 19 + Vite + TS + Tailwind v4 + React Router v7 でモバイル向け静的 SPA デモを TDD 構築 → Cloudflare Workers デプロイ |
 | [saas-pricing-design](./saas-pricing-design/) | SaaS の料金プランをコスト構造から逆算して設計 (Cloudflare 既定コストモデル → 固定/従量の料金体系 → Numbers 互換の Excel 生成 → 実機検証) |
-
-### React/Vercel ベストプラクティス
-
-外部プラグイン由来のリファレンススキル。
-
-| スキル                                                        | 説明                                                                 |
-| ------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [vercel-react-best-practices](./vercel-react-best-practices/) | Vercel Engineering の React/Next.js パフォーマンス最適化ガイドライン |
-| [vercel-composition-patterns](./vercel-composition-patterns/) | スケールする React composition パターン (compound/render props 等)   |
 
 ### ユーティリティ
 
