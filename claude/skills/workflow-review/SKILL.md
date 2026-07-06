@@ -1,17 +1,17 @@
 ---
 name: workflow-review
-description: ローカルの git 差分を 5 観点 (TDD / コード品質 / アーキテクチャ / プロジェクトルール / プロダクト readiness) で並列レビュー。本体ロジックは review-tdd / review-quality / review-architecture / review-rules / review-product-readiness subagent に委譲し、本 skill はメインセッション向けの薄い orchestrator として「差分検出 → PHASE_CONTEXT 組み立て → subagent 並列起動 → 結果集約・整形表示 → 修正アクション選択」を担当する。セキュリティレビューは security-guidance プラグイン (Stop hook の LLM diff review + Edit 時の pattern 検知) に委譲しており本 skill の対象外。fatal 判定は本 skill では行わず、呼び出し側に任せる。
+description: ローカルの git 差分を 3 観点 (TDD / コード品質+ルール準拠+構造 / プロダクト readiness) で並列レビュー。本体ロジックは review-tdd / review-quality / review-product-readiness subagent に委譲し、本 skill はメインセッション向けの薄い orchestrator として「差分検出 → PHASE_CONTEXT 組み立て → subagent 並列起動 → 結果集約・整形表示 → 修正アクション選択」を担当する。セキュリティレビューは security-guidance プラグイン (Stop hook の LLM diff review + Edit 時の pattern 検知) に委譲しており本 skill の対象外。fatal 判定は本 skill では行わず、呼び出し側に任せる。
 argument-hint: "[--staged | --all]"
 allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion
 ---
 
-# /workflow-review - 5 観点並列コードレビュー (subagent wrapper)
+# /workflow-review - 3 観点並列コードレビュー (subagent wrapper)
 
-5 つの review subagent を**並列起動**してコードレビューを行う薄い orchestrator。
+3 つの review subagent を**並列起動**してコードレビューを行う薄い orchestrator。
 
 ## 設計方針
 
-- **本体ロジック**: `claude/agents/review-{tdd,quality,architecture,rules,product-readiness}.md` (subagent × 5)
+- **本体ロジック**: `claude/agents/review-{tdd,quality,product-readiness}.md` (subagent × 3。quality は rules 準拠とアーキテクチャ heuristic を統合済み)
 - **本 skill**: ユーザー向けエントリポイント。差分検出と PHASE_CONTEXT 組み立て、subagent 並列起動、結果集約・整形表示
 - **workflow-autopilot は本 skill を呼ばない** (phase-pipeline.workflow.js が review subagent を観点 gating 付きで直接起動する)。本 skill は手動レビュー用
 - **観点拡張**: 観点を増やしたい場合は `claude/agents/review-<観点>.md` を追加して本 skill の起動リストに加える
@@ -89,21 +89,19 @@ const ctx = {
 
 `dev_server` が無い場合は省略してよい (`review-product-readiness` が URL 不在で no-op になる)。
 
-`args.dimensions` (optional array, 例: `["tdd", "architecture"]` のような観点名の配列) が指定されていれば、その観点の subagent だけを起動する (fatal だった観点のみ再実行するための絞り込み用)。未指定時 (手動 `/workflow-review` 実行時など) は 5 観点フル起動。
+`args.dimensions` (optional array, 例: `["tdd"]` のような観点名の配列) が指定されていれば、その観点の subagent だけを起動する (呼び出し側での絞り込み用)。未指定時 (手動 `/workflow-review` 実行時など) は 3 観点フル起動。
 
 ### Step 3: subagent 並列起動
 
 Agent ツールを同一メッセージ内に複数 tool_use として並べて並列起動:
 
 ```javascript
-const DIMENSIONS = ["tdd", "quality", "architecture", "rules", "product_readiness"]
+const DIMENSIONS = ["tdd", "quality", "product_readiness"]
 const targetDimensions = args.dimensions?.length ? args.dimensions : DIMENSIONS
 
 const AGENT_TYPE = {
   tdd: "review-tdd",
   quality: "review-quality",
-  architecture: "review-architecture",
-  rules: "review-rules",
   product_readiness: "review-product-readiness",
 }
 
@@ -119,9 +117,7 @@ const reviews = await Promise.all(
 各 subagent には dimension に応じて rules path を絞った prompt を渡す:
 
 - tdd: `rules/core/tdd.md`, `rules/core/testing.md`
-- quality: `rules/core/design.md`
-- architecture: `rules/core/design.md`
-- rules: 全 related_rules_paths + 拡張子別 (`rules/frontend/react/*.md` 等)
+- quality: `rules/core/design.md` + 拡張子別 (`rules/frontend/react/*.md` 等) + design_overview / design_detail (DESIGN 整合チェック用)
 - product_readiness: design_overview の「ゴール」(G_E2E 含む) と design_detail の「UX 設計」を必ず含める + `dev_server` (start_command と URL) を渡す。CLI / API のみなら本 dimension は no-op で素通り
 
 ### Step 4: 集約
@@ -154,14 +150,12 @@ return { findings, dimensions_reviewed: targetDimensions }
 |---|---|---|---|
 | tdd                | X | X | X |
 | quality            | X | X | X |
-| architecture       | X | X | X |
-| rules              | X | X | X |
 | product_readiness  | X | X | X |
 | **合計** | **X** | **X** | **X** |
 
 ## findings (severity 順)
 
-### [high][architecture] レイヤ境界違反 (domain → infra import)
+### [high][quality] レイヤ境界違反 (domain → infra import)
 **ファイル**: `src/domain/user.ts:12`
 **内容**: <message>
 **推奨**: <fix_proposal>
@@ -201,7 +195,7 @@ AskUserQuestion({
 
 ## 関連
 
-- subagent: `review-tdd` / `review-quality` / `review-architecture` / `review-rules` / `review-product-readiness` (本体ロジック)
+- subagent: `review-tdd` / `review-quality` / `review-product-readiness` (本体ロジック)
 - セキュリティレビュー: `security-guidance@claude-plugins-official` プラグイン (本 skill の外、Edit/Write pattern 検知 + Stop hook LLM diff review)
 - 連携 skill: `implementation-developing` (修正実行) / `workflow-commit`
 - 上位: なし (workflow-autopilot は本 skill を経由せず phase-pipeline.workflow.js から review subagent を直接起動する)

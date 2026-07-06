@@ -11,7 +11,7 @@
 //   phaseStartSha:    "<git SHA>",
 //   designPath:       "docs/DESIGN.md",
 //   designDetailPath: "docs/DESIGN_DETAIL.md",
-//   isFinalPhase:     boolean,   // 最終フェーズは 5 観点フルレビュー
+//   isFinalPhase:     boolean,   // 最終フェーズは全観点フルレビュー
 //   uiPhase:          boolean,   // このフェーズが UI (フロントエンド) ファイルを触る見込みか
 //   isNeovimPlugin:   boolean,   // Lua/Neovim プラグインなら LSP 警告修正 stage を挟む
 //   devServer:        { url, start_command } | null,  // review-product-readiness 用
@@ -202,9 +202,9 @@ if (ctx.isNeovimPlugin) {
 // ---- Review (観点 gating + 最大 3 self-fix ループ) ----
 phase('Review')
 
-// gating: 毎フェーズ tdd。UI を触ったら product-readiness。最終フェーズは 5 観点フル。
-// (architecture の機械検査は Guard stage 済み。heuristic 版 review-architecture は最終のみ)
-const ALL_DIMS = ['tdd', 'quality', 'architecture', 'rules', 'product-readiness']
+// gating: 毎フェーズ tdd。UI を触ったら product-readiness。最終フェーズは全観点フル。
+// (quality は rules 準拠 + アーキテクチャ heuristic を統合済み。機械的な境界検査は Guard stage)
+const ALL_DIMS = ['tdd', 'quality', 'product-readiness']
 let dims = ctx.isFinalPhase ? [...ALL_DIMS] : ['tdd']
 if (!ctx.isFinalPhase && ctx.uiPhase) dims.push('product-readiness')
 if (!ctx.devServer) dims = dims.filter((d) => d !== 'product-readiness')

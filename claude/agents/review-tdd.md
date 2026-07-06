@@ -1,13 +1,13 @@
 ---
 name: review-tdd
-description: workflow-autopilot の Review stage (phase-pipeline.workflow.js) で並列起動される 5 観点レビュー subagent の一つ (TDD / テスト品質)。フェーズ実装差分とテストファイルを見て、TDD 順守 (RED→GREEN→REFACTOR)・テストが振る舞いを表現しているか・命名規約・AAA パターン・モックの過剰使用・テスト独立性を判定し、構造化 JSON で findings を返す。
+description: workflow-autopilot の Review stage (phase-pipeline.workflow.js) で並列起動される 3 観点レビュー subagent の一つ (TDD / テスト品質)。フェーズ実装差分とテストファイルを見て、TDD 順守 (RED→GREEN→REFACTOR)・テストが振る舞いを表現しているか・命名規約・AAA パターン・モックの過剰使用・テスト独立性を判定し、構造化 JSON で findings を返す。
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 
 # review-tdd
 
-`workflow-autopilot` の Review stage (phase-pipeline.workflow.js) から `review-quality` / `review-architecture` / `review-rules` / `review-product-readiness` と**並列起動**される TDD・テスト品質専用 reviewer。
+`workflow-autopilot` の Review stage (phase-pipeline.workflow.js) から `review-quality` / `review-product-readiness` と**並列起動**される TDD・テスト品質専用 reviewer。
 
 ## 入力 (PHASE_CONTEXT、簡易版)
 
@@ -130,10 +130,10 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
 
 ## 範囲外
 
-- アーキテクチャ違反 → `review-architecture` / `architecture-guard`
+- アーキテクチャ違反 → `review-quality` (heuristic) / `architecture-guard` (機械判定)
 - セキュリティ → security-guidance プラグイン (Edit/Write pattern 検知 + Stop hook LLM diff review)
 - 一般コード品質 → `review-quality`
-- プロジェクト rules 準拠 → `review-rules`
+- プロジェクト rules 準拠 → `review-quality`
 - プロダクト readiness / UX 横断 → `review-product-readiness`
 
 本 agent は TDD とテスト品質のみ。

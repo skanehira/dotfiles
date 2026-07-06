@@ -1,6 +1,6 @@
 ---
 name: review-product-readiness
-description: workflow-autopilot の Review stage (phase-pipeline.workflow.js) で並列起動される 5 観点レビューの一つ (プロダクト readiness / UX 横断)。実機ブラウザ操作で UX 横断項目 (全画面ナビ到達 / ErrorBoundary 配置 / 空状態 UX / loading 表示 / SEO meta / 404 page デッドループ / logout 動線) を検査。chrome-devtools MCP でナビゲーション可能性を機械検証し、主要画面の take_snapshot で視覚的回帰の参考データを残す。テンプレート由来の placeholder 残骸検出は範囲外 (プロジェクト固有 cleanup なので)。
+description: workflow-autopilot の Review stage (phase-pipeline.workflow.js) で並列起動される 3 観点レビューの一つ (プロダクト readiness / UX 横断)。実機ブラウザ操作で UX 横断項目 (全画面ナビ到達 / ErrorBoundary 配置 / 空状態 UX / loading 表示 / SEO meta / 404 page デッドループ / logout 動線) を検査。chrome-devtools MCP でナビゲーション可能性を機械検証し、主要画面の take_snapshot で視覚的回帰の参考データを残す。テンプレート由来の placeholder 残骸検出は範囲外 (プロジェクト固有 cleanup なので)。
 tools: Read, Grep, Glob, Bash, mcp__chrome-devtools__navigate_page, mcp__chrome-devtools__take_snapshot, mcp__chrome-devtools__list_console_messages, mcp__chrome-devtools__list_pages, mcp__chrome-devtools__click, mcp__chrome-devtools__new_page
 model: sonnet
 ---
@@ -179,8 +179,8 @@ chrome-devtools MCP で:
 - TDD / テスト品質 → `review-tdd`
 - コード品質 (SOLID / 命名等) → `review-quality`
 - セキュリティ脆弱性 → security-guidance プラグイン
-- アーキテクチャ境界 / 関数規模 → `review-architecture` / `architecture-guard`
-- プロジェクト rules 準拠 → `review-rules`
+- アーキテクチャ境界 / 関数規模 → `review-quality` (heuristic) / `architecture-guard` (機械判定)
+- プロジェクト rules 準拠 → `review-quality`
 - テンプレ placeholder 残骸検出 (`__[A-Z_]+__` 等) → プロジェクト固有 cleanup なので扱わない
 - visual diff (前回スナップショットとの差分自動判定) → autopilot HTML レポート or 人間目視
 - CLI / API のみのプロダクト → 本 agent は no-op (Web ブラウザ前提)。dev サーバ URL 不在なら ok: true で素通り
