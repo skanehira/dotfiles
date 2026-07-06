@@ -133,8 +133,8 @@ AskUserQuestion({
     question: "TDD 実装が完了しました。次のアクションを選択してください。",
     header: "次のアクション",
     options: [
-      { label: "コミット", description: "workflow-commit でコミット (push は手動)" },
-      { label: "レビュー", description: "workflow-review で 5 観点レビュー" },
+      { label: "レビュー (推奨)", description: "workflow-review で 5 観点レビュー → 指摘対応後にコミットへ" },
+      { label: "コミット", description: "workflow-commit でコミット (push は手動)。レビュー済みの場合" },
       { label: "次フェーズ", description: "TODO.md がある場合、次フェーズの実装に進む" },
       { label: "完了", description: "ここで終了" }
     ],
@@ -144,8 +144,8 @@ AskUserQuestion({
 ```
 
 選択別の処理:
+- レビュー: `Skill({ skill: "workflow-review" })` → 指摘対応が終わったら Step 6 に戻る (autopilot 経路がループ内でレビューを必須にしているのと対称に、対話実装でもレビュー → コミットを既定の流れとする)
 - コミット: `Skill({ skill: "workflow-commit" })`
-- レビュー: `Skill({ skill: "workflow-review" })`
 - 次フェーズ: Step 2 に戻る (phase_tasks の次フェーズを指定)
 - 完了: 終了
 
