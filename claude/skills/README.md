@@ -25,10 +25,8 @@ skills/
 ├── workflow-spec/
 ├── demo-site-builder/
 ├── saas-pricing-design/
-├── slide-generating/
 ├── vercel-composition-patterns/
 ├── vercel-react-best-practices/
-├── utility-codex/
 ├── utility-create-skill/
 ├── utility-creating-rules/
 ├── utility-drawio/
@@ -157,7 +155,6 @@ agent only (skill 無し、上位 orchestrator 専用):
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | [demo-site-builder](./demo-site-builder/) | React 19 + Vite + TS + Tailwind v4 + React Router v7 でモバイル向け静的 SPA デモを TDD 構築 → Cloudflare Workers デプロイ |
 | [saas-pricing-design](./saas-pricing-design/) | SaaS の料金プランをコスト構造から逆算して設計 (Cloudflare 既定コストモデル → 固定/従量の料金体系 → Numbers 互換の Excel 生成 → 実機検証) |
-| [slide-generating](./slide-generating/)   | テキスト入力から Web ベース (HTML + Tailwind + JS) のプレゼンスライドを生成                                               |
 
 ### React/Vercel ベストプラクティス
 
@@ -172,7 +169,6 @@ agent only (skill 無し、上位 orchestrator 専用):
 
 | スキル                                                  | 説明                                               |
 | ------------------------------------------------------- | -------------------------------------------------- |
-| [utility-codex](./utility-codex/)                       | Codex CLI でセカンドオピニオン取得                 |
 | [utility-create-skill](./utility-create-skill/)         | スキル作成 + レビュー・自動修正                    |
 | [utility-creating-rules](./utility-creating-rules/)     | .claude/rules/ にルールファイルを作成              |
 | [utility-drawio](./utility-drawio/)                     | draw.io 図 (.drawio) の生成と PNG/SVG/PDF 書き出し |
@@ -192,7 +188,6 @@ agent only (skill 無し、上位 orchestrator 専用):
 /workflow-commit                # コミット (push は手動)
 /workflow-create-draft-pr       # Draft PR を作成 (テンプレ自動検出)
 /workflow-debate                # 複数視点で議論して結論を得る
-/utility-codex                  # Codex CLI に単体で相談
 ```
 
 ## フェーズスキル
