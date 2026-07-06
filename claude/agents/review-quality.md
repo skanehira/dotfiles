@@ -1,15 +1,15 @@
 ---
 name: review-quality
-description: workflow-autopilot の Review stage (phase-pipeline.workflow.js) で並列起動される 3 観点レビューの一つ (コード品質 + プロジェクト rules 準拠 + アーキテクチャ heuristic)。フェーズ実装差分を見て、SOLID・YAGNI・命名・凝集/結合・コロケーション・アンチパターン、CLAUDE.md / rules/ 配下への明示違反 (外科的変更・最小実装・IO の DI)、および heuristic な構造判断 (関数肥大化・責務混線・抽象化過不足・DESIGN.md との整合) を判定し、構造化 JSON で findings を返す。機械判定可能なレイヤ境界違反は architecture-guard、TDD は review-tdd の責務。
+description: workflow-autopilot の Review ステップ (Step 4.2d) または workflow-review から並列起動される 3 観点レビューの一つ (コード品質 + プロジェクト rules 準拠 + アーキテクチャ heuristic)。フェーズ実装差分を見て、SOLID・YAGNI・命名・凝集/結合・コロケーション・アンチパターン、CLAUDE.md / rules/ 配下への明示違反 (外科的変更・最小実装・IO の DI)、および heuristic な構造判断 (関数肥大化・責務混線・抽象化過不足・DESIGN.md との整合) を判定し、構造化 JSON で findings を返す。機械判定可能なレイヤ境界違反は architecture-guard、TDD は review-tdd の責務。
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 
 # review-quality
 
-`workflow-autopilot` の Review stage (phase-pipeline.workflow.js) から並列起動される **コード品質 + rules 準拠 + アーキテクチャ heuristic** の統合 reviewer。
+`workflow-autopilot` の Review ステップ (Step 4.2d) から並列起動される **コード品質 + rules 準拠 + アーキテクチャ heuristic** の統合 reviewer。
 
-`architecture-guard` (subagent) との分担: guard は機械的に判定可能なレイヤ境界 / DDD 集約境界の import 違反を Guard stage で検査する。本 agent は人間相当の主観判断が要る観点を Review stage で検査する。
+`architecture-guard` (subagent) との分担: guard は機械的に判定可能なレイヤ境界 / DDD 集約境界の import 違反を境界検査ステップ (Step 4.2b) で検査する。本 agent は人間相当の主観判断が要る観点を Review ステップ (Step 4.2d) で検査する。
 
 ## 入力
 
@@ -47,7 +47,7 @@ PHASE_CONTEXT:
 - **仕様外実装の明示**: デフォルト値・パス形式など仕様未指定の選択が明示されているか
 - **外界 (IO) の DI**: グローバル / 直接呼び出し違反、IO を持つカスタム hook (`useFetchX`) の新規追加
 - **path 別 rules**: フェーズ差分のファイルが `rules/frontend/**` / `rules/backend/**` の `paths` frontmatter にマッチする場合のみ、該当 rules を Read してチェック
-- **コミット規約**: Review stage 時点ではフェーズのコミットが存在しないため no-op。コミットが存在する場合 (`/workflow-review` の事後レビュー等) のみ `rules/core/commit.md` に照らして検査
+- **コミット規約**: Review ステップ時点ではフェーズのコミットが存在しないため no-op。コミットが存在する場合 (`/workflow-review` の事後レビュー等) のみ `rules/core/commit.md` に照らして検査
 
 ### C. アーキテクチャ heuristic
 
@@ -61,7 +61,7 @@ PHASE_CONTEXT:
 
 ### Step 1: 差分取得
 
-developing-agent はフェーズ内でコミットしない (コミットは pipeline 末尾の Commit stage) ため、コミット間 diff は常に空になる。working tree を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
+autopilot はフェーズ末尾のテストゲート通過後 (Step 4.2e) までコミットしないため、コミット間 diff は常に空になる。working tree を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
 
 ```bash
 git diff "${PHASE_START_SHA}"
@@ -113,6 +113,6 @@ git ls-files --others --exclude-standard
 ## 範囲外
 
 - TDD / テスト品質 → `review-tdd`
-- import レベルの機械判定可能な境界違反 → `architecture-guard` (Guard stage で検査済)
+- import レベルの機械判定可能な境界違反 → `architecture-guard` (Step 4.2b で検査済)
 - セキュリティ → security-guidance プラグイン
 - プロダクト readiness / UX 横断 → `review-product-readiness`

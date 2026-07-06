@@ -6,7 +6,6 @@
 
 ```
 skills/
-├── requirements/                       # /requirements オーケストレーター
 ├── requirements/                       # 要件・設計オーケストレーター (フェーズ手順は references/)
 ├── implementation-developing/
 ├── implementation-planning-tasks/
@@ -61,16 +60,16 @@ agent only (skill 無し、上位 orchestrator 専用):
 
 | agent | 呼び出し元 |
 |---|---|
-| `architecture-guard` | `workflow-autopilot` Step 4.3 |
+| `architecture-guard` | `workflow-autopilot` Step 4.2b |
 | `tech-investigation` | `workflow-autopilot` Step 1.5 |
-| `fix-lsp-warnings` | `workflow-autopilot` (Lua/Neovim フェーズ) / Agent ツールで直接起動 |
+| `fix-lsp-warnings` | `workflow-autopilot` Step 4.2c / Agent ツールで直接起動 |
 
 ### autopilot から呼ぶ場合の経路
 
-`workflow-autopilot` は autopilot 自身が orchestration するため、wrapper skill を経由するか直接 agent を呼ぶかをケース別に選ぶ:
+`workflow-autopilot` は CLAUDE.md「サブエージェントの使い方」に従い、逐次依存する TDD 実装・修正・コミットは**メインループ直営**、独立して並列化できる検査・調査だけを subagent に出す:
 
-- **直接 agent** (最短経路、コンテキスト分離最大): `implementation-developing-agent` / `architecture-guard` / `tech-investigation` を直接 Agent ツールで起動
-- **skill 経由** (ロジック一元化を優先): `workflow-review` skill → 内部で 5 review subagent 並列。autopilot は集約結果を受け取って fatal 判定のみ
+- **メインループ直営**: フェーズの TDD 実装 / guard・review 指摘の修正 / テストゲート / コミット
+- **直接 agent (fan-out)**: `architecture-guard` / `tech-investigation` / `fix-lsp-warnings` / `review-*` (レビューは同一メッセージで並列起動)
 
 ## 開発フロー
 
@@ -136,7 +135,7 @@ agent only (skill 無し、上位 orchestrator 専用):
 | スキル                                                  | 説明                                                                                                                                   |
 | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | [workflow-spec](./workflow-spec/)                       | DESIGN.md (概要) + DESIGN_DETAIL.md (詳細) + TODO.md を対話的に生成 (analyzing-requirements + interview + planning-tasks 統合)、完了後 autopilot / developing / 終了を選択 |
-| [workflow-autopilot](./workflow-autopilot/)             | TODO.md 全フェーズを自律実装。起動時に POC_NEEDED マーカーを tech-investigation subagent で自動 PoC 解決 (Step 1.5)、各フェーズで PHASE_CONTEXT を組み立てて implementation-developing-agent subagent (TDD) → architecture-guard subagent (3回まで自動修正) → fix-lsp-warnings (Lua/Neovim 専用) → 3 観点 review subagent 並列 (tdd/quality/product-readiness、3回まで self-fix、fix 後は全観点を再レビュー) → テストゲート → commit、最後に DESIGN.md ゴール達成判定 (Step 5、未達は最大2周回ループ)。セキュリティは security-guidance プラグインに委譲。subagent の TDD 違反は SubagentStop hook で機械チェック。設計乖離は P1/P2 で動的修正、P3 で停止。意思決定経緯は構造化 JSONL + HTML レポート (`docs/autopilot-reports/<run_id>.html`) |
+| [workflow-autopilot](./workflow-autopilot/)             | TODO.md 全フェーズを自律実装。起動時に POC_NEEDED マーカーを tech-investigation subagent で自動 PoC 解決 (Step 1.5)、各フェーズで **メインループが TDD 実装** → architecture-guard subagent (3回まで修正ループ) → fix-lsp-warnings (Lua/Neovim 専用) → 3 観点 review subagent 並列 (tdd/quality/product-readiness、3回まで self-fix、fix 後は全観点を再レビュー) → テストゲート (Bash 直実行) → commit、最後に DESIGN.md ゴール達成判定 (Step 5、未達は最大2周回ループ)。セキュリティは security-guidance プラグインに委譲。TDD 違反は tdd-guard hook で機械チェック。設計乖離は P1/P2 で動的修正、P3 で停止。意思決定経緯は構造化 JSONL + HTML レポート (`docs/autopilot-reports/<run_id>.html`) |
 | [workflow-review](./workflow-review/)                   | git 差分を 3 観点でコードレビュー (TDD・品質+ルール+構造・プロダクト readiness、セキュリティは security-guidance プラグインに委譲)                                                    |
 | [workflow-commit](./workflow-commit/)                   | Conventional Commit 形式でコミット (push はユーザが手動)                                                                               |
 | [workflow-create-draft-pr](./workflow-create-draft-pr/) | ローカルのコミット履歴と差分から Draft PR を作成 (`.github/` のテンプレートを自動検出、無ければ本文を生成)                             |
@@ -181,7 +180,7 @@ agent only (skill 無し、上位 orchestrator 専用):
 | ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | `/requirements`  | 要件・設計         | references/ の user-story → ui-sketch → usecase-description → feasibility-check → ddd-modeling → analyzing-requirements (+interview) を順次実行 | DESIGN.md + DESIGN_DETAIL.md      |
 | `/workflow-spec` | 設計 + 計画 + 実装 | requirements の references (analyzing-requirements → interview) → implementation-planning-tasks → (autopilot or developing 選択)                | DESIGN.md + DESIGN_DETAIL.md + TODO.md |
-| `/workflow-autopilot` | TODO 全フェーズ自律実装 + ゴール達成判定 | (Step 1.5) tech-investigation で POC_NEEDED 自動 PoC → (Step 4 ループ) PHASE_CONTEXT 組み立て → implementation-developing-agent (subagent) → architecture-guard (subagent) → fix-lsp-warnings (agent, Lua/Neovim) → 3 観点 review-* subagent 並列 → workflow-commit → (Step 5) ゴール達成判定 + 未達対応ループ → (Step 7) HTML レポート | 各フェーズのコミット + `docs/autopilot-reports/<run_id>.html` |
+| `/workflow-autopilot` | TODO 全フェーズ自律実装 + ゴール達成判定 | (Step 1.5) tech-investigation で POC_NEEDED 自動 PoC → (Step 4 ループ) PHASE_CONTEXT 組み立て → メインループで TDD 実装 → architecture-guard (subagent) → fix-lsp-warnings (agent, Lua/Neovim) → 3 観点 review-* subagent 並列 → テストゲート → commit → (Step 5) ゴール達成判定 + 未達対応ループ → (Step 7) HTML レポート | 各フェーズのコミット + `docs/autopilot-reports/<run_id>.html` |
 
 各スキル完了後に確認が入り、途中で終了することも可能。
 既存ドキュメントがある場合は、スキップして途中から開始できる。

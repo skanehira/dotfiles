@@ -13,7 +13,7 @@ allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion
 
 - **本体ロジック**: `claude/agents/review-{tdd,quality,product-readiness}.md` (subagent × 3。quality は rules 準拠とアーキテクチャ heuristic を統合済み)
 - **本 skill**: ユーザー向けエントリポイント。差分検出と PHASE_CONTEXT 組み立て、subagent 並列起動、結果集約・整形表示
-- **workflow-autopilot は本 skill を呼ばない** (phase-pipeline.workflow.js が review subagent を観点 gating 付きで直接起動する)。本 skill は手動レビュー用
+- **workflow-autopilot は本 skill を呼ばない** (autopilot 本体が Step 4.2d で review subagent を観点 gating 付きで直接起動する)。本 skill は手動レビュー用
 - **観点拡張**: 観点を増やしたい場合は `claude/agents/review-<観点>.md` を追加して本 skill の起動リストに加える
 
 skill / agent 責務分担の詳細は `skills/README.md` 参照。
@@ -198,4 +198,4 @@ AskUserQuestion({
 - subagent: `review-tdd` / `review-quality` / `review-product-readiness` (本体ロジック)
 - セキュリティレビュー: `security-guidance@claude-plugins-official` プラグイン (本 skill の外、Edit/Write pattern 検知 + Stop hook LLM diff review)
 - 連携 skill: `implementation-developing` (修正実行) / `workflow-commit`
-- 上位: なし (workflow-autopilot は本 skill を経由せず phase-pipeline.workflow.js から review subagent を直接起動する)
+- 上位: なし (workflow-autopilot は本 skill を経由せず Step 4.2d で review subagent を直接起動する)

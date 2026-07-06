@@ -92,7 +92,7 @@ case "$TARGET" in
     { git diff --name-only; git diff --staged --name-only; git ls-files --others --exclude-standard; } | sort -u
     ;;
   phase:*)
-    # developing-agent はフェーズ内でコミットしない (コミットは pipeline 末尾の Commit stage でまとめて行う) ため、
+    # autopilot はフェーズ末尾のテストゲート通過後 (Step 4.2e) までコミットしないため、
     # "$PHASE_START_SHA..HEAD" のようなコミット間 diff は常に空になる (HEAD が動いていないため)。
     # working tree (staged + unstaged) を PHASE_START_SHA と比較し、新規 untracked ファイルも加える。
     { git diff --name-only "$PHASE_START_SHA"; git ls-files --others --exclude-standard; } | sort -u
@@ -100,7 +100,7 @@ case "$TARGET" in
 esac
 ```
 
-`phase:*` ケースで `git diff --name-only "$PHASE_START_SHA"` が非0 exit code を返した場合 (`$PHASE_START_SHA` が未設定 / 存在しない SHA 等)、これは「差分が空」と区別する: `checked_files: 0` ではなく `ok: false, skip_reason: "diff_command_failed", violations: []`、`message` にコマンドの stderr を含めて返す。これにより「本当に変更なし」を装った偽陽性の `ok: true` を防ぐ (autopilot 側は guard_loop の通常の再試行に委ねるが、developing-agent の修正では解決しない性質のエラーなので、3 回失敗すれば通常通り P3 エスカレとしてユーザに気付かせる)。
+`phase:*` ケースで `git diff --name-only "$PHASE_START_SHA"` が非0 exit code を返した場合 (`$PHASE_START_SHA` が未設定 / 存在しない SHA 等)、これは「差分が空」と区別する: `checked_files: 0` ではなく `ok: false, skip_reason: "diff_command_failed", violations: []`、`message` にコマンドの stderr を含めて返す。これにより「本当に変更なし」を装った偽陽性の `ok: true` を防ぐ (autopilot 側は guard_loop の通常の再試行に委ねるが、実装修正では解決しない性質のエラーなので、3 回失敗すれば通常通り P3 エスカレとしてユーザに気付かせる)。
 
 各ファイルが「inner layer」「outer layer」「unknown」のどれに属するか、ステップ 1 の pattern で分類する。
 
