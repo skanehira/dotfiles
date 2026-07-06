@@ -2,7 +2,7 @@
 
 autopilot の Step 7 で生成する `docs/autopilot-reports/${run_id}.html` の構造とテーマ定義のリファレンス。
 
-実装方式: **単一 HTML ファイル / Tailwind CDN / CSS 変数によるテーマ / 軽量 JS でインタラクション** (slide-generating のパターンを autopilot レポート用に再設計)。データ (JSONL の中身) は HTML 生成時に inline JSON として埋め込み、ブラウザでは fetch 不要。
+実装方式: **単一 HTML ファイル / Tailwind CDN / CSS 変数によるテーマ / 軽量 JS でインタラクション**。データ (JSONL の中身) は HTML 生成時に inline JSON として埋め込み、ブラウザでは fetch 不要。
 
 ## 出力先
 

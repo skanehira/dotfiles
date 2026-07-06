@@ -253,7 +253,6 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 - `/workflow-spec` — 設計書 (DESIGN.md) とタスクリスト (TODO.md) を対話的に生成
 - `/implementation-developing` — TDD で実装
 - `/workflow-review` — コードレビュー
-- `/workflow-ask` — インタビュー→確認→実行
 - `/requirements-interview` — DESIGN.md 深掘り
 - `/workflow-commit` — Conventional Commit 形式で commit (push は手動)
 
