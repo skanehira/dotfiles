@@ -1,6 +1,6 @@
 ---
 name: workflow-autopilot
-description: 承認済みの DESIGN.md (概要) + DESIGN_DETAIL.md (詳細) + TODO.md を入力に、TODO.md の全フェーズを自律実装する。起動時に POC_NEEDED マーカー (技術選定の未確定要素) を tech-investigation subagent で自動 PoC 解決し、各フェーズで PHASE_CONTEXT ファイルを組み立てて references/phase-pipeline.workflow.js (Workflow ツール) に渡す。フェーズ内のループ制御 (dev → architecture-guard 最大3回修正 → 観点 gating 付きレビュー最大3回 self-fix → commit) は Workflow スクリプトが決定的 JS で実行し、メインセッションはフェーズ間の設計乖離判定 (P1/P2/P3) とゴール判定だけを担う。レビューは毎フェーズ tdd のみ、UI 変更フェーズで product-readiness 追加、最終フェーズで 5 観点フル (トークン削減 gating)。セキュリティレビューは security-guidance プラグインに委譲。subagent の TDD 違反は tdd-guard hook (PreToolUse で実装編集を事前ゲート) で機械的に強制。全フェーズ消化後は DESIGN.md ゴール + DESIGN_DETAIL.md 検証手順で達成判定、未達ゴールは追加フェーズで最大2周回ループ。実装中の設計乖離は P1 (TODO 軽微) / P2 (詳細設計の不足) / P3 (概要設計の破綻) に分類して動的修正かエスカレ停止する。意思決定経緯は構造化 JSONL + HTML レポート (docs/autopilot-reports/<run_id>.html) として残す。「設計済み TODO で実装を自律実行」「autopilot で TODO を消化」「残りタスクを自動で実装」などで起動。
+description: 承認済みの DESIGN.md + DESIGN_DETAIL.md + TODO.md を入力に、TODO.md の全フェーズをレビュー・コミット込みで自律実装するオーケストレーター。人間の介入はエスカレ条件 (概要設計の破綻 P3 等) のみ。「設計済み TODO で実装を自律実行」「autopilot で TODO を消化」「残りタスクを自動で実装」などで起動。
 argument-hint: "[docs ディレクトリパス、省略時は docs/]"
 allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, Workflow, AskUserQuestion
 ---

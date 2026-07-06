@@ -1,6 +1,6 @@
 ---
 name: demo-site-builder
-description: React 19 + Vite+ (`vp`) + TypeScript + Tailwind CSS v4 + React Router v7 (HashRouter) でモバイル向け静的SPAデモサイトをTDDで構築し、Cloudflare Workers (Static Assets) へ自動デプロイするまでの標準ワークフローを提供する。テンプレートリポジトリ `skanehira/demo-site-template` を `gh repo create --template` で clone することで scaffold を省略する。`localStorage` でフロントエンドのみ完結する"フロントのみ完結デモ"に特化。デザインコンセプトの確立には `frontend-design` スキルを呼び出して連携する。起動トリガー：「デモサイトを作りたい」「モバイル向け静的デモ」「SPAを作ってCloudflareにデプロイ」「静的プロトタイプを公開」「localStorage でフロントだけ完結」。ユースケース：(1)クライアント提案用のUI/UXたたき台、(2)新機能のプロトタイプ、(3)モバイル向けランディング。ツールチェーンは Vite+ (`vp`) で統合（内部 PM は pnpm）。
+description: React 19 + Vite+ + TypeScript + Tailwind v4 のモバイル向け静的 SPA デモサイトを TDD で構築し、Cloudflare Workers へデプロイするワークフロー。localStorage でフロントのみ完結するデモに特化。「デモサイトを作りたい」「モバイル向け静的デモ」「SPA を作って Cloudflare にデプロイ」「静的プロトタイプを公開」「localStorage でフロントだけ完結」などで起動。
 ---
 
 # Demo Site Builder
