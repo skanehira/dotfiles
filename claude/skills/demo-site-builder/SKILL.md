@@ -71,8 +71,7 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 | ----------------------------------------------------- | ------------------------------------------------- |
 | `frontend-design` / `frontend-design:frontend-design` | デザインコンセプト（色・フォント・ムード）の確立  |
 | `implementation-developing`                           | TDD RED→GREEN→REFACTOR の厳格な運用               |
-| `implementation-writing-tests`                        | FP アプローチ、`vi.mock` に頼らない振る舞いテスト (React/TS は `references/react-typescript.md` 参照) |
-| `utility-fix-lsp-warnings`                            | 実装完了後の型警告・未使用変数の掃除              |
+| `fix-lsp-warnings` (agent)                            | 実装完了後の型警告・未使用変数の掃除              |
 | `chrome-devtools` MCP                                 | iPhone viewport エミュレート + 画面遷移確認       |
 
 ## Step 1: プロジェクト構想の合意

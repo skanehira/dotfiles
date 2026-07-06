@@ -176,7 +176,7 @@ if (!result.ok) {
 
 - スタイル / 命名規則の指摘 → `workflow-review` の責務
 - パフォーマンス問題の指摘 → `workflow-review` の責務
-- テスト粒度・カバレッジの指摘 → `workflow-review` / `implementation-writing-tests` の責務
+- テスト粒度・カバレッジの指摘 → `workflow-review` の責務
 - 「コードの読みやすさ」「保守性」のような主観的判断 → 本 agent は機械的に判定可能な境界違反のみ
 - レイヤ定義が DESIGN.md にも慣例にもマッチしない場合の推論 → `checked_files: 0` で素通り (誤検知を出さない)
 
