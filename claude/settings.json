@@ -156,7 +156,6 @@
     ]
   },
   "enabledPlugins": {
-    "example-skills@anthropic-agent-skills": false,
     "document-skills@anthropic-agent-skills": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "lua-lsp@claude-plugins-official": true,
