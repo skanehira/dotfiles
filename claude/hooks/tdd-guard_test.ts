@@ -2,11 +2,15 @@ import { assertEquals } from "jsr:@std/assert";
 import {
   applyTestRun,
   classifyFile,
+  DENY_BASH_WRITE,
   DENY_NO_RED,
   detectTestCommand,
   didTestsFail,
+  evaluateBashCommand,
   evaluateEdit,
   evaluateStop,
+  evaluateStopAttempt,
+  extractBashWriteTargets,
   type GuardState,
   STOP_RERUN_TESTS,
   STOP_RUN_NEW_TEST,
@@ -344,4 +348,133 @@ Deno.test("evaluateStop blocks when a test was written but never run", () => {
     block: true,
     reason: STOP_RUN_NEW_TEST,
   });
+});
+
+Deno.test("evaluateStopAttempt blocks dirty stop and keeps flags for the next attempt", () => {
+  const state: GuardState = {
+    lastRun: "green",
+    testEditedSinceRun: false,
+    implEditedSinceRun: true,
+  };
+
+  assertEquals(evaluateStopAttempt(state), {
+    block: true,
+    reason: STOP_RERUN_TESTS,
+    state: {
+      lastRun: "green",
+      testEditedSinceRun: false,
+      implEditedSinceRun: true,
+      stopBlockCount: 1,
+    },
+  });
+});
+
+Deno.test("evaluateStopAttempt blocks a second dirty stop attempt", () => {
+  const state: GuardState = {
+    lastRun: "green",
+    testEditedSinceRun: false,
+    implEditedSinceRun: true,
+    stopBlockCount: 1,
+  };
+
+  assertEquals(evaluateStopAttempt(state), {
+    block: true,
+    reason: STOP_RERUN_TESTS,
+    state: {
+      lastRun: "green",
+      testEditedSinceRun: false,
+      implEditedSinceRun: true,
+      stopBlockCount: 2,
+    },
+  });
+});
+
+Deno.test("evaluateStopAttempt gives up after max blocks and clears flags", () => {
+  const state: GuardState = {
+    lastRun: "green",
+    testEditedSinceRun: true,
+    implEditedSinceRun: true,
+    stopBlockCount: 2,
+  };
+
+  assertEquals(evaluateStopAttempt(state), {
+    block: false,
+    state: {
+      lastRun: "green",
+      testEditedSinceRun: false,
+      implEditedSinceRun: false,
+      stopBlockCount: 0,
+    },
+  });
+});
+
+Deno.test("evaluateStopAttempt passes clean stop and resets the block counter", () => {
+  const state: GuardState = {
+    lastRun: "green",
+    testEditedSinceRun: false,
+    implEditedSinceRun: false,
+    stopBlockCount: 1,
+  };
+
+  assertEquals(evaluateStopAttempt(state), {
+    block: false,
+    state: {
+      lastRun: "green",
+      testEditedSinceRun: false,
+      implEditedSinceRun: false,
+      stopBlockCount: 0,
+    },
+  });
+});
+
+Deno.test("extractBashWriteTargets detects redirect, tee, and in-place edit targets", () => {
+  const cases: [string, string[]][] = [
+    ["cat > src/foo.ts", ["src/foo.ts"]],
+    ["echo 'x' >> src/foo.ts", ["src/foo.ts"]],
+    ["echo hi | tee src/foo.ts", ["src/foo.ts"]],
+    ["echo hi | tee -a src/foo.ts", ["src/foo.ts"]],
+    ["sed -i '' 's/a/b/' src/foo.ts", ["src/foo.ts"]],
+    ["patch src/foo.rs < fix.patch", ["src/foo.rs"]],
+    ["cargo test > result.log 2>&1", ["result.log"]],
+  ];
+  for (const [cmd, expected] of cases) {
+    assertEquals(extractBashWriteTargets(cmd), expected, cmd);
+  }
+});
+
+Deno.test("extractBashWriteTargets ignores quoted strings and non-write commands", () => {
+  const cases = [
+    'git commit -m "fix > src/foo.ts"',
+    "ls -la",
+    "deno test --allow-read",
+    "rg 'pattern' src/",
+  ];
+  for (const cmd of cases) {
+    assertEquals(extractBashWriteTargets(cmd), [], cmd);
+  }
+});
+
+Deno.test("evaluateBashCommand denies bash writes to gated source files", () => {
+  const cases = [
+    "cat > src/foo.ts",
+    "sed -i '' 's/a/b/' src/main.rs",
+    "echo 'test' >> src/foo.test.ts",
+  ];
+  for (const cmd of cases) {
+    const result = evaluateBashCommand(cmd);
+    assertEquals(result.decision, "deny", cmd);
+    assertEquals(result.reason?.startsWith(DENY_BASH_WRITE), true, cmd);
+  }
+});
+
+Deno.test("evaluateBashCommand allows writes to exempt files and normal commands", () => {
+  const cases = [
+    "cargo test > result.log 2>&1",
+    "echo 'note' >> README.md",
+    "git commit -m 'update src/foo.ts'",
+    "ls -la",
+  ];
+  for (const cmd of cases) {
+    assertEquals(evaluateBashCommand(cmd), { decision: "allow" }, cmd);
+  }
 });

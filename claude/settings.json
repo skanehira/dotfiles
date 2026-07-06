@@ -48,6 +48,15 @@
             "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event pre-edit"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event pre-bash"
+          }
+        ]
       }
     ],
     "PostToolUse": [

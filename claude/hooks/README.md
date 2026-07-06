@@ -26,8 +26,9 @@ macOS only (uses `terminal-notifier`).
 TDD (RED → GREEN → REFACTOR) を tool call レベルで機械的に強制する。LLM の追加ターンは発生しない。
 
 - `PreToolUse` (Edit/Write/NotebookEdit) — 実装ファイルへの編集を状態機械で判定。「失敗テスト未確認」なら deny
+- `PreToolUse` (Bash) — `> / >> / tee / sed -i / patch / git apply` によるゲート対象ソースへの書き込みを deny し、Edit/Write ツールへ誘導 (ゲート迂回の封鎖)
 - `PostToolUse` (Bash) — テストコマンド実行を検知して RED / GREEN をセッション状態に記録
-- `Stop` / `SubagentStop` — 編集後にテスト未実行のまま停止しようとしたら 1 回だけ block
+- `Stop` / `SubagentStop` — 編集後にテスト未実行のまま停止しようとしたら block。テスト実行でフラグが消えるまで最大 2 回 (上限到達で諦めて通す)
 
 状態ファイル: `~/.claude/tdd-guard/<session_id>.json`
 除外: md / json / yaml / nix / *.config.* 等の宣言的ファイル (`classifyFile` 参照)
