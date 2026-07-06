@@ -5,8 +5,6 @@
 ## 目次
 
 - 原則
-- コミット粒度
-- テスト命名（TypeScript / React）
 - Layer 1: ドメイン層（純粋関数）
 - Layer 2: Repository 層
 - Layer 3: Service 層
@@ -18,34 +16,7 @@
 
 ## 原則
 
-- **テストなしにコードなし**（交渉の余地なし）
-- RED：失敗するテストを最初に書く（`test` 実行で未実装のため FAIL）
-- GREEN：最小限のコードで pass させる
-- REFACTOR：重複削除・命名改善。**テストがグリーンの時のみ**
-- 構造的変更（リファクタ）と振る舞い変更は**別コミット**に分ける
-
-## コミット粒度
-
-```
-✨ feat: [BEHAVIORAL] add email validation
-♻️  refactor: [STRUCTURAL] extract regex to constant
-```
-
-## テスト命名（TypeScript / React）
-
-3要素：**何を / どういう条件で / どうなるか**
-
-```ts
-describe('isValidEmail', () => {
-  it('returns false when value is empty', () => {});
-  it('returns true for plus-addressed emails', () => {});
-});
-
-describe('LoginForm', () => {
-  it('shows error message when email format is invalid', () => {});
-  it('calls onSubmit with entered credentials when form is valid', () => {});
-});
-```
+TDD サイクル・コミット粒度 (Tidy First) は `rules/core/tdd.md`、テスト命名は `rules/core/references/test-naming.md` に従う。本ドキュメントはこのプロジェクト構成 (React SPA) 固有のレイヤ順序と具体例に絞る。
 
 ## Layer 1: ドメイン層（純粋関数）
 
