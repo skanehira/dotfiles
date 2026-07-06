@@ -158,7 +158,8 @@
     "codex@openai-codex": true,
     "claude-code-setup@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
-    "slide-plugin@slide-plugin": true
+    "slide-plugin@slide-plugin": true,
+    "compact-plus@compact-plus-local": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
@@ -201,6 +202,12 @@
       "source": {
         "source": "github",
         "repo": "skanehira/slide-plugin"
+      }
+    },
+    "compact-plus-local": {
+      "source": {
+        "source": "github",
+        "repo": "u-ichi/compact-plus"
       }
     }
   },
