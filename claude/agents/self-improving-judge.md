@@ -246,6 +246,14 @@ reconciliation 結果は進捗ログにも書く: `[judge] reconciled (adopted=A
 | マークなし (過去 skipped で 3 回未満だった) → 今回 3 回到達 | 通常採用 (積み上げが効いたケース) | (採用) | — |
 | `[adopted]` だが採用後も同パターンが観測され続けている | `rule_audit.conflicts` に「採用済みルールが機能していない」として記録 | (audit) | — |
 
+**処理順序 (効果測定を skip より先に行う)**: `[adopted]` に意味照合一致したクラスタは、skip する前に必ず次の順で処理する。skip は重複 PR 防止のためであり、効果測定を省略する理由にしない。
+
+1. **再観測を記録**: 一致したエントリの末尾に `[reobserved: N sessions @ YYYY-MM-DD]` を追記する (過去の reobserved があれば N を累積)
+2. **効果判定**: 再観測が続いている = 採用したルールが効いていない。`rule_audit.conflicts` に「採用済みルールが機能していない (採用 PR #N、累積再観測 M セッション)」として記録する
+3. **その後に skip**: `clusters_skipped` (`already_adopted`) にする
+
+累積 reobserved は treatment-guide の昇格条件 (3 回で文言強化、5 回で hook 化検討) の入力になる。この順序を守らないと「skip が先に効いて効果測定が永久に行われない」状態になる。
+
 照合は **意味レベル** (description の細かい違いは無視、同趣旨で一致)。これにより、ユーザーが PR を却下した後に同じ趣旨の候補が新規検出されても二度と PR 化されない。`previously_rejected` 判定時には judge が「ユーザーが過去に却下した趣旨と意味照合一致した」事実を MEMORY.md にも追記する (なぜ却下されたかの推測ではなく、事実だけ)。
 
 ### 判定後の MEMORY.md 更新

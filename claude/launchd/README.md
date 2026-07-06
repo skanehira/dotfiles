@@ -61,6 +61,11 @@ claude -p "/utility-self-improving"
 
 skill frontmatter の `allowed-tools` (Read/Edit/Write/Glob/Bash/Agent) と CLI 側 `--allowedTools` の積集合が実際の許可ツール。CLI 側は `Grep` を余分に含めているが、skill 側で絞られるため問題なし。
 
+## タイムアウトと失敗通知
+
+- `claude -p` は `perl -e 'alarm shift @ARGV; exec @ARGV' 3600` でラップしており、**1 時間でタイムアウト** する (alarm は exec を生き延び SIGALRM で kill、exit 142)。ハング・ループ時のコスト暴走防止。macOS 標準 perl のみ使用 (coreutils `timeout` 不要)
+- パイプライン全体の exit code が非ゼロなら `terminal-notifier` でデスクトップ通知する。無人実行の失敗が `.err` に埋もれて気付かない事態を防ぐ
+
 ## 停止・解除
 
 ```bash
