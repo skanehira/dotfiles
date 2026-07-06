@@ -185,7 +185,7 @@ agent only (skill 無し、上位 orchestrator 専用):
 | ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | `/requirements`  | 要件・設計         | requirements-user-story → requirements-ui-sketch → requirements-usecase-description → requirements-feasibility-check → requirements-ddd-modeling → requirements-analyzing-requirements | DESIGN.md + DESIGN_DETAIL.md      |
 | `/workflow-spec` | 設計 + 計画 + 実装 | requirements-analyzing-requirements → requirements-interview → implementation-planning-tasks → (autopilot or developing 選択)                                                          | DESIGN.md + DESIGN_DETAIL.md + TODO.md |
-| `/workflow-autopilot` | TODO 全フェーズ自律実装 + ゴール達成判定 | (Step 1.5) tech-investigation で POC_NEEDED 自動 PoC → (Step 4 ループ) PHASE_CONTEXT 組み立て → implementation-developing-agent (subagent) → architecture-guard (subagent) → utility-fix-lsp-warnings (Lua/Neovim) → 5 観点 review-* subagent 並列 → workflow-commit → (Step 5) ゴール達成判定 + 未達対応ループ → (Step 7) HTML レポート | 各フェーズのコミット + `docs/autopilot-reports/<run_id>.html` |
+| `/workflow-autopilot` | TODO 全フェーズ自律実装 + ゴール達成判定 | (Step 1.5) tech-investigation で POC_NEEDED 自動 PoC → (Step 4 ループ) PHASE_CONTEXT 組み立て → implementation-developing-agent (subagent) → architecture-guard (subagent) → fix-lsp-warnings (agent, Lua/Neovim) → 5 観点 review-* subagent 並列 → workflow-commit → (Step 5) ゴール達成判定 + 未達対応ループ → (Step 7) HTML レポート | 各フェーズのコミット + `docs/autopilot-reports/<run_id>.html` |
 
 各スキル完了後に確認が入り、途中で終了することも可能。
 既存ドキュメントがある場合は、スキップして途中から開始できる。
