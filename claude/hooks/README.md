@@ -6,6 +6,7 @@ Custom hooks for Claude Code.
 
 - `notify.ts` — Sends desktop notifications for Claude Code events
 - `tdd-guard.ts` — TDD 強制ゲート (PreToolUse / PostToolUse / Stop / SubagentStop 兼用)
+- `commit-msg-guard.ts` — コミット規約ゲート (PreToolUse Bash)
 - `remind-rules.ts` — 実装系プロンプト検知時に CLAUDE.md ルールを再注入 (UserPromptSubmit)
 - `archive-transcript.ts` — transcript のアーカイブ (SessionEnd / PreCompact)
 
@@ -34,3 +35,12 @@ TDD (RED → GREEN → REFACTOR) を tool call レベルで機械的に強制す
 除外: md / json / yaml / nix / *.config.* 等の宣言的ファイル (`classifyFile` 参照)
 無効化: 環境変数 `TDD_GUARD=off`
 テスト: `deno test claude/hooks/tdd-guard_test.ts`
+
+### Commit Message Guard Hook
+
+`git commit` の subject 行を rules/core/commit.md の `<emoji> <type>: <subject>` 形式で機械検証する (PreToolUse Bash)。
+
+- 適用範囲: cwd が `$GHQ_ROOT/github.com/skanehira/` 配下の自リポジトリのみ (外部リポの別規約を誤 deny しない)
+- 検証不能なケース (`--amend` / `-F` / メッセージ抽出不能) は allow
+- 無効化: 環境変数 `COMMIT_GUARD=off`
+- テスト: `deno test claude/hooks/commit-msg-guard_test.ts`
