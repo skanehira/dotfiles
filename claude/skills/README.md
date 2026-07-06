@@ -7,13 +7,7 @@
 ```
 skills/
 ├── requirements/                       # /requirements オーケストレーター
-├── requirements-user-story/
-├── requirements-ui-sketch/
-├── requirements-usecase-description/
-├── requirements-feasibility-check/
-├── requirements-ddd-modeling/
-├── requirements-analyzing-requirements/
-├── requirements-interview/
+├── requirements/                       # 要件・設計オーケストレーター (フェーズ手順は references/)
 ├── implementation-developing/
 ├── implementation-planning-tasks/
 ├── workflow-autopilot/                 # 自律実装オーケストレーター
@@ -116,15 +110,17 @@ agent only (skill 無し、上位 orchestrator 専用):
 
 ### 要件・設計フェーズ
 
-| スキル                                                                        | 説明                                                       | 入力                                               | 出力                  |
+`/requirements` スキルに統合済み。各フェーズの手順書は `requirements/references/` にあり、オーケストレーターが順次 Read して実行する (部分実行も可)。
+
+| フェーズ手順 (references/)                                                     | 説明                                                       | 入力                                               | 出力                  |
 | ----------------------------------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------- | --------------------- |
-| [requirements-user-story](./requirements-user-story/)                         | ユーザーストーリーを作成し、MoSCoW/ICE で優先順位付け      | -                                                  | USER_STORIES.md       |
-| [requirements-ui-sketch](./requirements-ui-sketch/)                           | 画面構成、ユーザーフロー、ASCII ワイヤーフレームを作成     | USER_STORIES.md                                    | UI_SKETCH.md          |
-| [requirements-usecase-description](./requirements-usecase-description/)       | 正常系・異常系・代替フロー、ビジネスルールを詳細化         | USER_STORIES.md                                    | USECASES.md           |
-| [requirements-feasibility-check](./requirements-feasibility-check/)           | 技術リスクを評価し、PoC 計画を作成 (POC_NEEDED マーカー形式、autopilot 自動 PoC 連携) | USECASES.md                                        | FEASIBILITY.md        |
-| [requirements-ddd-modeling](./requirements-ddd-modeling/)                     | ドメインエキスパートと対話し、用語集とドメインモデルを作成 | USECASES.md, FEASIBILITY.md, USER_STORIES.md       | GLOSSARY.md, MODEL.md |
-| [requirements-analyzing-requirements](./requirements-analyzing-requirements/) | 技術設計書を作成 (概要 + 詳細の 2 ファイル、ゴールは G1/G2... 標準形式、POC_NEEDED マーカーを DESIGN_DETAIL.md に転記) | USECASES.md, FEASIBILITY.md, GLOSSARY.md, MODEL.md | DESIGN.md, DESIGN_DETAIL.md |
-| [requirements-interview](./requirements-interview/)                           | DESIGN.md / DESIGN_DETAIL.md を深掘りして射程に応じ追記    | DESIGN.md, DESIGN_DETAIL.md                        | DESIGN.md, DESIGN_DETAIL.md (更新) |
+| [user-story](./requirements/references/user-story.md)                         | ユーザーストーリーを作成し、MoSCoW/ICE で優先順位付け      | -                                                  | USER_STORIES.md       |
+| [ui-sketch](./requirements/references/ui-sketch.md)                           | 画面構成、ユーザーフロー、ASCII ワイヤーフレームを作成     | USER_STORIES.md                                    | UI_SKETCH.md          |
+| [usecase-description](./requirements/references/usecase-description.md)       | 正常系・異常系・代替フロー、ビジネスルールを詳細化         | USER_STORIES.md                                    | USECASES.md           |
+| [feasibility-check](./requirements/references/feasibility-check.md)           | 技術リスクを評価し、PoC 計画を作成 (POC_NEEDED マーカー形式、autopilot 自動 PoC 連携) | USECASES.md                                        | FEASIBILITY.md        |
+| [ddd-modeling](./requirements/references/ddd-modeling.md)                     | ドメインエキスパートと対話し、用語集とドメインモデルを作成 | USECASES.md, FEASIBILITY.md, USER_STORIES.md       | GLOSSARY.md, MODEL.md |
+| [analyzing-requirements](./requirements/references/analyzing-requirements.md) | 技術設計書を作成 (概要 + 詳細の 2 ファイル、ゴールは G1/G2... 標準形式、POC_NEEDED マーカーを DESIGN_DETAIL.md に転記) | USECASES.md, FEASIBILITY.md, GLOSSARY.md, MODEL.md | DESIGN.md, DESIGN_DETAIL.md |
+| [interview](./requirements/references/interview.md)                           | DESIGN.md / DESIGN_DETAIL.md を深掘りして射程に応じ追記    | DESIGN.md, DESIGN_DETAIL.md                        | DESIGN.md, DESIGN_DETAIL.md (更新) |
 
 ### 実装フェーズ
 
@@ -167,7 +163,7 @@ agent only (skill 無し、上位 orchestrator 専用):
 各スキルは `/スキル名` で起動できる。
 
 ```
-/requirements-user-story        # ユーザーストーリー作成
+/requirements                   # 要件・設計フェーズ (部分実行可)
 /workflow-spec                  # 設計書 + タスクリスト生成 → 実装方式選択 (autopilot/developing/手動)
 /workflow-autopilot             # TODO.md 全フェーズを自律実装 (設計+TODO 済前提)
 /implementation-developing      # TDD 実装 (TODO.md があるとフェーズ管理)
@@ -183,8 +179,8 @@ agent only (skill 無し、上位 orchestrator 専用):
 
 | スキル           | フェーズ           | 実行スキル                                                                                                                                                                             | 主要出力                          |
 | ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `/requirements`  | 要件・設計         | requirements-user-story → requirements-ui-sketch → requirements-usecase-description → requirements-feasibility-check → requirements-ddd-modeling → requirements-analyzing-requirements | DESIGN.md + DESIGN_DETAIL.md      |
-| `/workflow-spec` | 設計 + 計画 + 実装 | requirements-analyzing-requirements → requirements-interview → implementation-planning-tasks → (autopilot or developing 選択)                                                          | DESIGN.md + DESIGN_DETAIL.md + TODO.md |
+| `/requirements`  | 要件・設計         | references/ の user-story → ui-sketch → usecase-description → feasibility-check → ddd-modeling → analyzing-requirements (+interview) を順次実行 | DESIGN.md + DESIGN_DETAIL.md      |
+| `/workflow-spec` | 設計 + 計画 + 実装 | requirements の references (analyzing-requirements → interview) → implementation-planning-tasks → (autopilot or developing 選択)                | DESIGN.md + DESIGN_DETAIL.md + TODO.md |
 | `/workflow-autopilot` | TODO 全フェーズ自律実装 + ゴール達成判定 | (Step 1.5) tech-investigation で POC_NEEDED 自動 PoC → (Step 4 ループ) PHASE_CONTEXT 組み立て → implementation-developing-agent (subagent) → architecture-guard (subagent) → fix-lsp-warnings (agent, Lua/Neovim) → 5 観点 review-* subagent 並列 → workflow-commit → (Step 5) ゴール達成判定 + 未達対応ループ → (Step 7) HTML レポート | 各フェーズのコミット + `docs/autopilot-reports/<run_id>.html` |
 
 各スキル完了後に確認が入り、途中で終了することも可能。

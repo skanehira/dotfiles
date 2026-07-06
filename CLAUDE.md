@@ -241,19 +241,17 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 ### Development Workflow Skills
 
 ```
-アイデア・企画 → 要件・設計 → 実装
+要件・設計 → 実装
 ```
 
 詳細は `claude/skills/README.md` を参照。主要スキル：
-- `/ideation` — ideation-problem-definition → ideation-competitor-analysis → ideation-slc-ideation
-- `/requirements` — requirements-user-story → ... → requirements-analyzing-requirements
+- `/requirements` — 要件・設計フェーズ (user-story → ... → analyzing-requirements → interview、手順は references/ に集約)
 - `/implementation-developing` — TDD（RED→GREEN→REFACTOR）で実装
 
 ### Workflow Skills
 - `/workflow-spec` — 設計書 (DESIGN.md) とタスクリスト (TODO.md) を対話的に生成
 - `/implementation-developing` — TDD で実装
 - `/workflow-review` — コードレビュー
-- `/requirements-interview` — DESIGN.md 深掘り
 - `/workflow-commit` — Conventional Commit 形式で commit (push は手動)
 
 ### Hooks (settings.json)

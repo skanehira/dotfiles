@@ -1,46 +1,35 @@
 ---
 name: requirements
-description: 要件・設計フェーズを実行。requirements-user-story → requirements-ui-sketch → requirements-usecase-description → requirements-feasibility-check → requirements-ddd-modeling → requirements-analyzing-requirements を順次実行し、DESIGN.md (概要) と DESIGN_DETAIL.md (詳細) を生成。「設計フェーズを開始」「要件を整理したい」「/requirements」などで起動。
+description: 要件・設計フェーズのオーケストレーター。ユーザーストーリー → UI スケッチ → ユースケース記述 → 実現可能性検証 → DDD モデリング → 概要/詳細設計 (DESIGN.md / DESIGN_DETAIL.md) → 深掘りインタビューを対話的に実行する。「設計フェーズを開始」「要件を整理したい」「ユーザーストーリーを書きたい」「UI を整理したい」「ユースケースを詳細化したい」「技術的に実現できるか確認したい」「ドメインモデルを作成」「DESIGN.md を深掘りしたい」などで起動。該当フェーズからの部分実行も可能。
 ---
 
 # 要件・設計フェーズ
 
 ## 概要
 
-6つのスキルを順次実行し、プロダクトの要件と設計をまとめる。最終的に DESIGN.md (概要) と DESIGN_DETAIL.md (詳細) の 2 ファイルを生成する。
+6 つのフェーズ (+ 任意の深掘りインタビュー) を順次実行し、プロダクトの要件と設計をまとめる。最終的に DESIGN.md (概要) と DESIGN_DETAIL.md (詳細) の 2 ファイルを生成する。
 
-## 実行スキル
+各フェーズの手順書は `references/` にある。**フェーズを開始するときに該当ファイルを Read し、その手順に従う**:
 
-1. **requirements-user-story** → docs/USER_STORIES.md
-2. **requirements-ui-sketch** → docs/UI_SKETCH.md
-3. **requirements-usecase-description** → docs/USECASES.md
-4. **requirements-feasibility-check** → docs/FEASIBILITY.md
-5. **requirements-ddd-modeling** → docs/GLOSSARY.md, docs/MODEL.md
-6. **requirements-analyzing-requirements** → docs/DESIGN.md, docs/DESIGN_DETAIL.md
+| # | フェーズ                  | 手順書                                 | 出力                                  |
+| - | ------------------------- | -------------------------------------- | ------------------------------------- |
+| 1 | ユーザーストーリー        | `references/user-story.md`             | docs/USER_STORIES.md                  |
+| 2 | UI スケッチ               | `references/ui-sketch.md`              | docs/UI_SKETCH.md                     |
+| 3 | ユースケース記述          | `references/usecase-description.md`    | docs/USECASES.md                      |
+| 4 | 実現可能性検証            | `references/feasibility-check.md`      | docs/FEASIBILITY.md                   |
+| 5 | DDD モデリング            | `references/ddd-modeling.md`           | docs/GLOSSARY.md, docs/MODEL.md       |
+| 6 | 概要/詳細設計             | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL.md |
+| 7 | 深掘りインタビュー (任意) | `references/interview.md`              | DESIGN.md / DESIGN_DETAIL.md 更新     |
 
-## 前提条件
+## 部分実行
 
-以下のファイルが存在することを推奨：
-- docs/PRODUCT_SPEC.md（/ideation で生成）
-- docs/PROBLEM_DEFINITION.md
+ユーザーの依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「DESIGN.md を深掘りしたい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。
 
-## ワークフロー
+## ワークフロー (全フェーズ実行時)
 
 ### フェーズ0: 既存ドキュメントの確認
 
-以下のファイルを確認し、開始ポイントを提案する。
-
-```javascript
-Read({ file_path: "docs/PRODUCT_SPEC.md" })
-Read({ file_path: "docs/USER_STORIES.md" })
-Read({ file_path: "docs/UI_SKETCH.md" })
-Read({ file_path: "docs/USECASES.md" })
-Read({ file_path: "docs/FEASIBILITY.md" })
-Read({ file_path: "docs/GLOSSARY.md" })
-Read({ file_path: "docs/DESIGN.md" })
-```
-
-存在するファイルがあれば、スキップするか確認：
+docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.md / USECASES.md / FEASIBILITY.md / GLOSSARY.md / DESIGN.md) を確認し、存在するものがあれば開始ポイントを AskUserQuestion で確認する:
 
 ```javascript
 AskUserQuestion({
@@ -48,137 +37,27 @@ AskUserQuestion({
     question: "既存のドキュメントがあります。どこから開始しますか？",
     header: "開始ポイント",
     options: [
-      { label: "最初から", description: "user-storyから開始" },
-      { label: "ui-sketchから", description: "USER_STORIES.mdを活用" },
-      { label: "usecase-descriptionから", description: "UI_SKETCH.mdを活用" },
-      { label: "feasibility-checkから", description: "USECASES.mdを活用" }
+      { label: "最初から", description: "フェーズ1 (ユーザーストーリー) から開始" },
+      { label: "続きから (推奨)", description: "最後に生成されたドキュメントの次のフェーズから" }
     ],
     multiSelect: false
   }]
 })
 ```
 
-**遷移条件**: 開始ポイントが決まったら該当ステップへ
+### 各フェーズの進め方
 
-### ステップ1: ユーザーストーリー
-
-進捗を表示：
+1. 進捗を表示する:
 
 ```
-📍 要件・設計フェーズ [1/6]
-   ├─ ▶ requirements-user-story（実行中）
-   ├─ ○ requirements-ui-sketch
-   ├─ ○ requirements-usecase-description
-   ├─ ○ requirements-feasibility-check
-   ├─ ○ requirements-ddd-modeling
-   └─ ○ requirements-analyzing-requirements
+📍 要件・設計フェーズ [n/6]
+   ├─ ✓ user-story（完了）
+   ├─ ▶ ui-sketch（実行中）
+   └─ ○ ...
 ```
 
-`requirements-user-story` スキルを Skill ツールで実行する。
-
-完了後、確認：
-
-```javascript
-AskUserQuestion({
-  questions: [{
-    question: "user-storyが完了しました。次に進みますか？",
-    header: "次のステップ",
-    options: [
-      { label: "次へ進む", description: "ui-sketchを開始" },
-      { label: "ここで終了", description: "後で続きを実行" }
-    ],
-    multiSelect: false
-  }]
-})
-```
-
-### ステップ2: UI設計
-
-進捗を表示：
-
-```
-📍 要件・設計フェーズ [2/6]
-   ├─ ✓ requirements-user-story（完了）
-   ├─ ▶ requirements-ui-sketch（実行中）
-   ├─ ○ requirements-usecase-description
-   ├─ ○ requirements-feasibility-check
-   ├─ ○ requirements-ddd-modeling
-   └─ ○ requirements-analyzing-requirements
-```
-
-`requirements-ui-sketch` スキルを Skill ツールで実行する。
-
-完了後、同様に確認。
-
-### ステップ3: ユースケース記述
-
-進捗を表示：
-
-```
-📍 要件・設計フェーズ [3/6]
-   ├─ ✓ requirements-user-story（完了）
-   ├─ ✓ requirements-ui-sketch（完了）
-   ├─ ▶ requirements-usecase-description（実行中）
-   ├─ ○ requirements-feasibility-check
-   ├─ ○ requirements-ddd-modeling
-   └─ ○ requirements-analyzing-requirements
-```
-
-`requirements-usecase-description` スキルを Skill ツールで実行する。
-
-完了後、同様に確認。
-
-### ステップ4: 技術検証
-
-進捗を表示：
-
-```
-📍 要件・設計フェーズ [4/6]
-   ├─ ✓ requirements-user-story（完了）
-   ├─ ✓ requirements-ui-sketch（完了）
-   ├─ ✓ requirements-usecase-description（完了）
-   ├─ ▶ requirements-feasibility-check（実行中）
-   ├─ ○ requirements-ddd-modeling
-   └─ ○ requirements-analyzing-requirements
-```
-
-`requirements-feasibility-check` スキルを Skill ツールで実行する。
-
-完了後、同様に確認。
-
-### ステップ5: ドメインモデリング
-
-進捗を表示：
-
-```
-📍 要件・設計フェーズ [5/6]
-   ├─ ✓ requirements-user-story（完了）
-   ├─ ✓ requirements-ui-sketch（完了）
-   ├─ ✓ requirements-usecase-description（完了）
-   ├─ ✓ requirements-feasibility-check（完了）
-   ├─ ▶ requirements-ddd-modeling（実行中）
-   └─ ○ requirements-analyzing-requirements
-```
-
-`requirements-ddd-modeling` スキルを Skill ツールで実行する。
-
-完了後、同様に確認。
-
-### ステップ6: 技術設計
-
-進捗を表示：
-
-```
-📍 要件・設計フェーズ [6/6]
-   ├─ ✓ requirements-user-story（完了）
-   ├─ ✓ requirements-ui-sketch（完了）
-   ├─ ✓ requirements-usecase-description（完了）
-   ├─ ✓ requirements-feasibility-check（完了）
-   ├─ ✓ requirements-ddd-modeling（完了）
-   └─ ▶ requirements-analyzing-requirements（実行中）
-```
-
-`requirements-analyzing-requirements` スキルを Skill ツールで実行する。
+2. `references/<フェーズ>.md` を Read し、手順に従って実行する
+3. フェーズ完了後、AskUserQuestion で「次へ進む / ここで終了」を確認する
 
 ### 完了
 
@@ -186,12 +65,8 @@ AskUserQuestion({
 ✅ 要件・設計フェーズ完了
 
 生成されたドキュメント：
-- docs/USER_STORIES.md
-- docs/UI_SKETCH.md
-- docs/USECASES.md
-- docs/FEASIBILITY.md
-- docs/GLOSSARY.md
-- docs/MODEL.md
+- docs/USER_STORIES.md / UI_SKETCH.md / USECASES.md / FEASIBILITY.md
+- docs/GLOSSARY.md / MODEL.md
 - docs/DESIGN.md          (概要設計)
 - docs/DESIGN_DETAIL.md   (詳細設計)
 
@@ -202,10 +77,9 @@ AskUserQuestion({
 
 ## 完了条件
 
-- [ ] 6つのスキルがすべて実行された（またはスキップ）
-- [ ] DESIGN.md (概要) と DESIGN_DETAIL.md (詳細) が生成された
+- [ ] 対象フェーズがすべて実行された（またはスキップ）
+- [ ] 全フェーズ実行時: DESIGN.md (概要) と DESIGN_DETAIL.md (詳細) が生成された
 
 ## 関連スキル
 
-- **ideation**: 前フェーズ（アイデア・企画）
-- **implementation**: 次フェーズ（実装）へ進む場合に使用
+- **workflow-spec**: 設計承認後の計画フェーズ (深掘り + TODO.md 生成)。本スキルの references/analyzing-requirements.md / interview.md を共用する

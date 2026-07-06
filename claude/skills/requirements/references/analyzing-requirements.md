@@ -1,8 +1,3 @@
----
-name: requirements-analyzing-requirements
-description: ユーザー要件を分析し、概要設計(DESIGN.md)と詳細設計(DESIGN_DETAIL.md)の2ファイルを生成します。ユーザー要件が曖昧または不明確な場合、システムアーキテクチャの設計が必要な場合、大規模な機能開発の設計仕様が必要な場合、技術的実現可能性の検証が必要な場合に使用します。不明点はAskUserQuestionツールで確認します。
----
-
 # 要件分析
 
 ## 概要
@@ -348,7 +343,7 @@ G_E2E 検証手順の書式例:
 
 DESIGN.md と DESIGN_DETAIL.md を生成する。
 
-テンプレートは [design-template.md](references/design-template.md) と [design-detail-template.md](references/design-detail-template.md) を参照 (template が無い場合はステップ 4 の振り分けに従って構造化する)。
+テンプレートは [design-template.md](design-template.md) と [design-detail-template.md](design-detail-template.md) を参照 (template が無い場合はステップ 4 の振り分けに従って構造化する)。
 
 ### ステップ6: ファイル出力
 

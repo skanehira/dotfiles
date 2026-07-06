@@ -1,10 +1,3 @@
----
-name: requirements-interview
-description: "DESIGN.md と DESIGN_DETAIL.md を読み込み、技術実装・UI/UX・懸念点・トレードオフについて深掘りインタビューを実施し、収集した仕様を概要/詳細の射程に応じて両ファイルに書き出す"
-argument-hint: "[DESIGN.mdパス]"
-allowed-tools: Read, Write, Edit, AskUserQuestion, Glob
----
-
 # /interview - 深掘りインタビューコマンド
 
 ## 概要

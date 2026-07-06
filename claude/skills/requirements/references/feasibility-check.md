@@ -1,8 +1,3 @@
----
-name: requirements-feasibility-check
-description: 技術的な実現可能性を検証し、PoCの計画を立てる。ユースケース記述後、DDDモデリングや本格実装の前に技術リスクを洗い出す場合に使用。「技術的に実現できるか確認したい」「PoCを計画したい」「技術リスクを洗い出したい」「不確実性を検証したい」などのリクエストで起動。
----
-
 # 技術検証（Feasibility Check）
 
 ## 概要
@@ -287,7 +282,7 @@ AskUserQuestion({
 
 ### フェーズ7: ドキュメント生成
 
-テンプレートは [references/feasibility-template.md](references/feasibility-template.md) を参照。
+テンプレートは [feasibility-template.md](feasibility-template.md) を参照。
 
 ### 出力ファイル
 
