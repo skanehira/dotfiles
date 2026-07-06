@@ -110,7 +110,9 @@ agent only (skill 無し、上位 orchestrator 専用):
 │           or                                                             │
 │  9b. developing           TDD でフェーズ単位の対話実装                   │
 │           ↓                                                              │
-│ 10. commit                Conventional Commit でコミット                 │
+│ 10. review                5 観点レビュー (autopilot はループ内蔵)        │
+│           ↓                                                              │
+│ 11. commit                Conventional Commit でコミット                 │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
