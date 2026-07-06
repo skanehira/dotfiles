@@ -8,13 +8,20 @@
  *
  * 状態機械 (セッション単位、~/.claude/tdd-guard/<session_id>.json に永続化):
  *
- *   - テストコマンド実行 (PostToolUse Bash) → exit 結果から lastRun = red|green
+ *   - テストコマンド実行 (PostToolUse Bash) → exit/出力から lastRun = red|green
  *   - テストファイル編集 → 常に許可、testEditedSinceRun = true
  *   - 実装ファイル編集:
+ *       テスト編集あり (testEditedSinceRun)   → 許可 (RED フェーズ = 失敗テストを書いた直後)
  *       lastRun == red                        → 許可 (GREEN フェーズ)
- *       lastRun == green && テスト編集なし     → 許可 (REFACTOR)
- *       それ以外                              → deny (先に失敗テストを書いて RED 確認)
+ *       lastRun == green                      → 許可 (REFACTOR)
+ *       テスト編集なし & lastRun == null       → deny (テストを一度も書いていない)
  *   - Stop/SubagentStop 時に「編集後テスト未実行」フラグが残っていれば 1 回だけ block
+ *
+ * RED 観測の制約: Claude Code は Bash が非ゼロ終了すると PostToolUse を発火しない。
+ * よって失敗するテスト実行 (RED) の結果をフックから捕捉できない。そのため「テストを
+ * 編集した」こと自体を RED シグナルとして扱い実装を許可する。最終的なグリーンは Stop
+ * ゲート (implEditedSinceRun が残ると block) が担保し、緑の実行時のみ PostToolUse が
+ * 発火して緑が記録される。didTestsFail は exit コードに加え出力マーカーでも失敗を拾う。
  *
  * ゲート対象: GATED_EXTENSIONS に列挙した実装言語の拡張子のみ。
  * それ以外 (md / json / yaml / nix / sh 等) と *.config.* 等の宣言的ファイルは対象外。
@@ -43,10 +50,7 @@ export type StopResult = {
 };
 
 export const DENY_NO_RED =
-  "[tdd-guard] 実装ファイルの編集を拒否しました。このセッションではまだテストが実行されていません。TDD (rules/core/tdd.md) に従い、先に失敗するテストを書いて実行し、RED を確認してから実装してください。例外 (typo 修正等) は該当ファイルがテスト対象外である理由をユーザに説明した上で、テストを先に用意してください。";
-
-export const DENY_UNVERIFIED_TEST =
-  "[tdd-guard] 実装ファイルの編集を拒否しました。テストファイルを編集した後、まだテストを実行して RED (失敗) を確認していません。先にテストを実行して失敗を確認してから実装に進んでください。";
+  "[tdd-guard] 実装ファイルの編集を拒否しました。このセッションではまだテストを書いていません。TDD (rules/core/tdd.md) に従い、先に失敗するテストを書いてから実装してください。例外 (typo 修正等) は該当ファイルがテスト対象外である理由をユーザに説明した上で、テストを先に用意してください。";
 
 export const STOP_RERUN_TESTS =
   "[tdd-guard] 実装ファイルを編集した後、テストが再実行されていません。停止する前にテストを実行して緑であることを確認してください。";
@@ -81,7 +85,9 @@ const EXEMPT_BASENAME_PATTERNS = [
 
 export function classifyFile(path: string): FileClass {
   const basename = path.split("/").pop() ?? path;
-  const ext = basename.includes(".") ? basename.split(".").pop()!.toLowerCase() : "";
+  const ext = basename.includes(".")
+    ? basename.split(".").pop()!.toLowerCase()
+    : "";
 
   if (!GATED_EXTENSIONS.has(ext)) return "exempt";
   if (EXEMPT_BASENAME_PATTERNS.some((re) => re.test(basename))) return "exempt";
@@ -121,21 +127,23 @@ export function evaluateEdit(state: GuardState, cls: FileClass): EditResult {
     };
   }
   // impl
-  if (state.lastRun === "red") {
+  // RED フェーズ: 最後のテスト実行以降にテストを編集した = 失敗するテストを書いた直後とみなす。
+  // Claude Code は Bash 非ゼロ終了時に PostToolUse を発火せず RED 実行を観測できないため、
+  // テスト編集自体を RED シグナルとして許可する(最終グリーンは Stop ゲートで担保)。
+  if (state.testEditedSinceRun) {
     return {
       decision: "allow",
       state: { ...state, implEditedSinceRun: true },
     };
   }
-  if (state.lastRun === "green" && !state.testEditedSinceRun) {
+  // GREEN フェーズ(直近の実行が赤)/ REFACTOR(直近の実行が緑・新規テストなし)。
+  if (state.lastRun === "red" || state.lastRun === "green") {
     return {
       decision: "allow",
       state: { ...state, implEditedSinceRun: true },
     };
   }
-  if (state.lastRun === "green" && state.testEditedSinceRun) {
-    return { decision: "deny", reason: DENY_UNVERIFIED_TEST, state };
-  }
+  // テストを一度も書いておらず、実行結果も無い。
   return { decision: "deny", reason: DENY_NO_RED, state };
 }
 
@@ -159,17 +167,21 @@ const FAILURE_MARKERS = [
   /\bFAILED\b/,
   /(^|\n)(--- )?FAIL\b/,
   /[1-9]\d* failed/,
+  /(^|\s)Failed :\s*[1-9]/, // plenary/busted (nvim): "Failed : 5"
+  /(^|\s)Errors :\s*[1-9]/, // plenary/busted (nvim): "Errors : 2"
 ];
 
 export function didTestsFail(response: ToolResponse): boolean {
+  const output = `${response.stdout ?? ""}\n${response.stderr ?? ""}`;
+  // exit 0 でも出力が失敗を示すランナー(0 終了する構成)があるので、出力マーカーも併用する。
+  const outputSaysFailed = FAILURE_MARKERS.some((re) => re.test(output));
   if (typeof response.exit_code === "number") {
-    return response.exit_code !== 0;
+    return response.exit_code !== 0 || outputSaysFailed;
   }
   if (typeof response.is_error === "boolean") {
-    return response.is_error;
+    return response.is_error || outputSaysFailed;
   }
-  const output = `${response.stdout ?? ""}\n${response.stderr ?? ""}`;
-  return FAILURE_MARKERS.some((re) => re.test(output));
+  return outputSaysFailed;
 }
 
 export function evaluateStop(state: GuardState): StopResult {

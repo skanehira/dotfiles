@@ -3,7 +3,6 @@ import {
   applyTestRun,
   classifyFile,
   DENY_NO_RED,
-  DENY_UNVERIFIED_TEST,
   detectTestCommand,
   didTestsFail,
   evaluateEdit,
@@ -23,9 +22,7 @@ Deno.test("classifyFile returns test for test file conventions", () => {
   const cases = [
     "src/foo.test.ts",
     "src/__tests__/Button.tsx",
-    "tests/helper.py",
     "pkg/parser_test.go",
-    "spec/models/user_spec.rb",
     "src/lib_test.rs",
   ];
   for (const path of cases) {
@@ -38,8 +35,7 @@ Deno.test("classifyFile returns impl for production code files", () => {
     "src/foo.ts",
     "src/main.rs",
     "lib/util.go",
-    "app/models/user.rb",
-    "cmd/server/handler.py",
+    "cmd/server/handler.lua",
   ];
   for (const path of cases) {
     assertEquals(classifyFile(path), "impl", path);
@@ -65,6 +61,10 @@ Deno.test("classifyFile returns exempt for docs and declarative config", () => {
     "Makefile",
     "Dockerfile",
     "references/phase-pipeline.workflow.js",
+    // py/rb は GATED_EXTENSIONS から外れたので exempt(ff3de6e で除外)
+    "tests/helper.py",
+    "app/models/user.rb",
+    "spec/models/user_spec.rb",
   ];
   for (const path of cases) {
     assertEquals(classifyFile(path), "exempt", path);
@@ -188,7 +188,9 @@ Deno.test("evaluateEdit allows refactor (impl edit on green without new tests)",
   });
 });
 
-Deno.test("evaluateEdit denies impl edit when new test is written but not yet run red", () => {
+Deno.test("evaluateEdit allows impl edit after a test edit (RED phase, even on green)", () => {
+  // Claude Code は Bash 非ゼロ終了時に PostToolUse を発火せず RED 実行を観測できないため、
+  // テスト編集自体を RED シグナルとして扱い実装を許可する。最終グリーンは Stop ゲートで担保。
   const state: GuardState = {
     lastRun: "green",
     testEditedSinceRun: true,
@@ -198,9 +200,31 @@ Deno.test("evaluateEdit denies impl edit when new test is written but not yet ru
   const result = evaluateEdit(state, "impl");
 
   assertEquals(result, {
-    decision: "deny",
-    reason: DENY_UNVERIFIED_TEST,
-    state,
+    decision: "allow",
+    state: {
+      lastRun: "green",
+      testEditedSinceRun: true,
+      implEditedSinceRun: true,
+    },
+  });
+});
+
+Deno.test("evaluateEdit allows impl edit after a test edit from a fresh state (RED phase)", () => {
+  const state: GuardState = {
+    lastRun: null,
+    testEditedSinceRun: true,
+    implEditedSinceRun: false,
+  };
+
+  const result = evaluateEdit(state, "impl");
+
+  assertEquals(result, {
+    decision: "allow",
+    state: {
+      lastRun: null,
+      testEditedSinceRun: true,
+      implEditedSinceRun: true,
+    },
   });
 });
 
@@ -262,7 +286,10 @@ Deno.test("didTestsFail uses exit_code when present", () => {
 
 Deno.test("didTestsFail uses is_error when exit_code is absent", () => {
   assertEquals(didTestsFail({ is_error: true, stdout: "", stderr: "" }), true);
-  assertEquals(didTestsFail({ is_error: false, stdout: "", stderr: "" }), false);
+  assertEquals(
+    didTestsFail({ is_error: false, stdout: "", stderr: "" }),
+    false,
+  );
 });
 
 Deno.test("didTestsFail detects failure markers in runner output", () => {
@@ -272,6 +299,8 @@ Deno.test("didTestsFail detects failure markers in runner output", () => {
     "--- FAIL: TestParse (0.00s)\nFAIL", // go
     "1 failed, 2 passed in 0.12s", // pytest
     "Tests:  1 failed, 3 passed, 4 total", // jest/vitest
+    "Success: 0 \nFailed : 5 \nErrors : 0", // plenary/busted (nvim)
+    "Success: 40 \nFailed : 0 \nErrors : 2", // plenary エラーあり
   ];
   for (const out of failures) {
     assertEquals(didTestsFail({ stdout: out, stderr: "" }), true, out);
@@ -285,10 +314,23 @@ Deno.test("didTestsFail returns false for passing runner output", () => {
     "ok  \tgithub.com/foo/bar\t0.5s", // go
     "5 passed in 0.10s", // pytest
     "Test Files  2 passed (2)", // vitest
+    "Success: 60 \nFailed : 0 \nErrors : 0", // plenary/busted 全パス
   ];
   for (const out of passes) {
     assertEquals(didTestsFail({ stdout: out, stderr: "" }), false, out);
   }
+});
+
+Deno.test("didTestsFail flags failing output even when the exit code is 0", () => {
+  // exit 0 でも出力が失敗を示すランナー(0 終了する構成)を取りこぼさない。
+  assertEquals(
+    didTestsFail({ exit_code: 0, stdout: "Failed : 3 \nErrors : 0" }),
+    true,
+  );
+  assertEquals(
+    didTestsFail({ exit_code: 0, stdout: "Failed : 0 \nErrors : 0" }),
+    false,
+  );
 });
 
 Deno.test("evaluateStop blocks when a test was written but never run", () => {
