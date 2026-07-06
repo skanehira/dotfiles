@@ -156,7 +156,8 @@
     ]
   },
   "enabledPlugins": {
-    "example-skills@anthropic-agent-skills": true,
+    "example-skills@anthropic-agent-skills": false,
+    "document-skills@anthropic-agent-skills": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "lua-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
@@ -164,7 +165,7 @@
     "code-simplifier@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
-    "deploy-on-aws@agent-plugins-for-aws": true,
+    "deploy-on-aws@agent-plugins-for-aws": false,
     "feature-dev@claude-plugins-official": true,
     "swift-lsp@claude-plugins-official": true,
     "postgres-best-practices@supabase-agent-skills": true,
@@ -235,5 +236,6 @@
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "advisorModel": "fable"
 }
