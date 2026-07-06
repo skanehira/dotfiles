@@ -48,13 +48,10 @@ function isImplementationPrompt(prompt: string): boolean {
   return IMPL_PATTERNS.some((re) => re.test(prompt));
 }
 
+// TDD の手順は tdd-guard hook が tool call レベルで強制するため、ここでは
+// 機械ゲート化できない項目 (外科的変更 / TDD 例外の明示) だけをリマインドする
 const REMINDER = `<system-reminder>
-[hook: remind-rules] 実装/修正系の指示を検知しました。着手前チェックリスト:
-
-- TDD (@rules/core/tdd.md) は交渉の余地なし: RED → GREEN → REFACTOR の順で進める
-- @rules/core/design.md / testing.md / commit.md の該当項目に従う
-- 依頼スコープを超えない (外科的変更): 隣接コードの改善・dead code 削除・気付いた別バグの修正は別ターンで合意してから
-- TDD を適用しない判断をする場合 (1 行 typo 修正、宣言的な config 変更など) は、その理由を出力で明示する
+[hook: remind-rules] 実装/修正系の指示を検知。依頼スコープを超えない (外科的変更: 隣接改善・dead code 削除は別ターンで合意)。TDD を適用しない判断 (typo 修正・宣言的 config 等) はその理由を出力で明示する。
 </system-reminder>`;
 
 async function main() {
