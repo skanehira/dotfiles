@@ -10,6 +10,7 @@
     inputs.nix-index-database.homeModules.nix-index
 
     ./modules/home/claude.nix
+    ./modules/home/codex.nix
     ./modules/home/deno.nix
     ./modules/home/direnv.nix
     ./modules/home/env.nix

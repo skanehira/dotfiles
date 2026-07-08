@@ -122,6 +122,10 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
 - **claude/** — Claude Code 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `CLAUDE.md` / `settings.json` / `agents/` / `hooks/` / `rules/` / `skills/` — 編集即反映、`drs` 不要
+- **codex/** — Codex 設定
+  - `config.base.toml` — git 管理する Codex base config。`[projects.*]` trust state は含めない
+  - `AGENTS.md` — `~/.codex/AGENTS.md` に symlink するグローバル Codex 指示
+  - `scripts/merge-config.py` — base config とローカル trust state を `~/.codex/config.toml` にマージ
 - **vim/** — Neovim 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `init.lua` / `lua/` / `after/` — 編集即反映、`drs` 不要
   - `.luarc.json` — lua_ls の dotfiles 内 lua 編集用設定 (track 対象)
@@ -142,6 +146,7 @@ nix/
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
     ├── home/
     │   ├── claude.nix    — Claude Code (bootstrap install + mkOutOfStoreSymlink で設定 live edit)
+    │   ├── codex.nix     — Codex (`~/.codex/AGENTS.md` symlink + config.toml 生成)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── env.nix       — sessionVariables / sessionPath
     │   ├── fzf.nix       — programs.fzf (default command/options, zsh integration)
