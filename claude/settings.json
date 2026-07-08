@@ -172,7 +172,8 @@
     "claude-code-setup@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
     "slide-plugin@slide-plugin": true,
-    "compact-plus@compact-plus-local": true
+    "compact-plus@compact-plus-local": true,
+    "bank-ledger-transcribe@misty-lantern": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
@@ -221,6 +222,12 @@
       "source": {
         "source": "github",
         "repo": "u-ichi/compact-plus"
+      }
+    },
+    "misty-lantern": {
+      "source": {
+        "source": "github",
+        "repo": "skanehira/misty-lantern"
       }
     }
   },
