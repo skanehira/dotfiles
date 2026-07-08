@@ -66,13 +66,18 @@ let
   ];
 
   # クラウド / インフラ
-  cloudTools = with pkgs; [
-    awscli2
-    k9s
-    kubernetes-helm
-    supabase-cli
-    terraform
-  ];
+  cloudTools =
+    with pkgs;
+    [
+      awscli2
+      k9s
+      kubernetes-helm
+      supabase-cli
+      terraform
+    ]
+    ++ [
+      inputs.google-workspace-cli.packages.${pkgs.stdenv.hostPlatform.system}.default # gws (flake input)
+    ];
 
   # ネットワーク / API
   networkTools = with pkgs; [
