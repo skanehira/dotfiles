@@ -1,6 +1,6 @@
 ---
 name: gws-slides
-description: "Google Slides: Read and write presentations."
+description: "Google Slides の読み書き。docs.google.com/presentation/... のURLが貼られたとき、「スライドを作って」「プレゼンを編集して」「gws」などのリクエストで起動。"
 metadata:
   version: 0.22.5
   openclaw:
