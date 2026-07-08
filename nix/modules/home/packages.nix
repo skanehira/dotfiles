@@ -109,6 +109,7 @@ let
     ffmpeg
     libsixel # SIXEL 画像プロトコル
     poppler # PDF レンダリング
+    qpdf
   ];
 
   # エディタ / TUI
