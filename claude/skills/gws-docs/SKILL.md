@@ -1,6 +1,6 @@
 ---
 name: gws-docs
-description: "Read and write Google Docs."
+description: "Google Docs の読み書き。docs.google.com/document/... のURLが貼られたとき、「Googleドキュメントに書いて」「ドキュメントを読んで」「gws」などのリクエストで起動。"
 metadata:
   version: 0.22.5
   openclaw:

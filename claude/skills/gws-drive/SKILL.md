@@ -1,6 +1,6 @@
 ---
 name: gws-drive
-description: "Google Drive: Manage files, folders, and shared drives."
+description: "Google Drive のファイル・フォルダ・共有ドライブ管理。drive.google.com/... のURLが貼られたとき、「Driveに保存して」「ファイルを検索して」「gws」などのリクエストで起動。"
 metadata:
   version: 0.22.5
   openclaw:

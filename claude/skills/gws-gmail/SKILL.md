@@ -1,6 +1,6 @@
 ---
 name: gws-gmail
-description: "Gmail: Send, read, and manage email."
+description: "Gmail の送受信・管理。mail.google.com/... のURLが貼られたとき、「メールを送って」「受信箱を確認して」「gws」などのリクエストで起動。"
 metadata:
   version: 0.22.5
   openclaw:

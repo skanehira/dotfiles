@@ -1,6 +1,6 @@
 ---
 name: gws-sheets
-description: "Google Sheets: Read and write spreadsheets."
+description: "Google Sheets の読み書き。docs.google.com/spreadsheets/... のURLが貼られたとき、「スプレッドシートに書いて」「シートを読んで」「gws」などのリクエストで起動。"
 metadata:
   version: 0.22.5
   openclaw:
