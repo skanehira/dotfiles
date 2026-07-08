@@ -1,0 +1,28 @@
+# Tracked Codex defaults.
+#
+# Home Manager activation merges this file into ~/.codex/config.toml while
+# preserving local [projects.*] trust entries from the previous config. Keep
+# machine-local state such as project trust, auth, notices, history, and caches
+# out of this file.
+
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+notify = ["terminal-notifier", "-message", "codex task done", "-sound", "default"]
+model = "gpt-5.5"
+model_reasoning_effort = "xhigh"
+personality = "pragmatic"
+service_tier = "default"
+plan_mode_reasoning_effort = "high"
+web_search = "live"
+
+[features]
+memories = true
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
