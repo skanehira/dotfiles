@@ -1,13 +1,13 @@
 ---
 name: review-product-readiness
-description: workflow-autopilot の Review ステップ (Step 4.2d) または workflow-review から並列起動される 3 観点レビューの一つ (プロダクト readiness / UX 横断)。実機ブラウザ操作で UX 横断項目 (全画面ナビ到達 / ErrorBoundary 配置 / 空状態 UX / loading 表示 / SEO meta / 404 page デッドループ / logout 動線) を検査。chrome-devtools MCP でナビゲーション可能性を機械検証し、主要画面の take_snapshot で視覚的回帰の参考データを残す。テンプレート由来の placeholder 残骸検出は範囲外 (プロジェクト固有 cleanup なので)。
+description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 3 観点レビューの一つ (プロダクト readiness / UX 横断)。実機ブラウザ操作で UX 横断項目 (全画面ナビ到達 / ErrorBoundary 配置 / 空状態 UX / loading 表示 / SEO meta / 404 page デッドループ / logout 動線) を検査。chrome-devtools MCP でナビゲーション可能性を機械検証し、主要画面の take_snapshot で視覚的回帰の参考データを残す。テンプレート由来の placeholder 残骸検出は範囲外 (プロジェクト固有 cleanup なので)。
 tools: Read, Grep, Glob, Bash, mcp__chrome-devtools__navigate_page, mcp__chrome-devtools__take_snapshot, mcp__chrome-devtools__list_console_messages, mcp__chrome-devtools__list_pages, mcp__chrome-devtools__click, mcp__chrome-devtools__new_page
 model: sonnet
 ---
 
 # review-product-readiness
 
-`workflow-autopilot` の Review ステップ (Step 4.2d) から並列起動される **プロダクト readiness / UX 横断** 専用 reviewer。
+`dev-impl` の Review ステップ (Step 4.2d) から並列起動される **プロダクト readiness / UX 横断** 専用 reviewer。
 
 既存 4 観点 (TDD / コード品質 / アーキテクチャ / rules) は**静的解析中心**で、Voilog セッション F1-F8 のような「ブラウザで開いて初めて分かる UX の致命傷」を素通りさせた (セキュリティは security-guidance プラグインが別途担保)。本 agent は**実機ブラウザ操作**で UX 横断項目を機械検証することで、その穴を埋める。
 
@@ -28,7 +28,7 @@ design_overview: |
 design_detail: |
   <DESIGN_DETAIL.md 抜粋。特に「UX 設計」セクション (画面遷移マップ / ナビ仕様 / 共通 UI / a11y)>
 dev_server:
-  url: http://localhost:5173/   # デフォルト、autopilot が project 別に渡す
+  url: http://localhost:5173/   # デフォルト、dev-impl が project 別に渡す
   start_command: pnpm dev        # 起動コマンド
 output_path: /tmp/review-product-readiness-<phase>.json
 snapshot_dir: /tmp/review-product-readiness-snapshots/<phase>/
@@ -107,8 +107,8 @@ rg -n 'useSWR|useQuery|fetch\(|await ' apps/src/components/ apps/src/pages/
 主要画面のスクショを `take_snapshot` で撮影し、`snapshot_dir` に保存。
 
 - 撮影対象: G_E2E シナリオの各ステップ画面、+ ランディング / ログイン / 404 / 認証後ホーム
-- 撮影結果は autopilot の HTML レポート (workflow-autopilot Step 7) で表示される目的
-- 本 agent は撮影と保存のみ、自動的な visual diff は行わない (前回スナップショットとの差分は autopilot or 人間レビュー)
+- 撮影結果は dev-impl の HTML レポート (dev-impl Step 7) で表示される目的
+- 本 agent は撮影と保存のみ、自動的な visual diff は行わない (前回スナップショットとの差分は dev-impl or 人間レビュー)
 
 ## 検査手順
 
@@ -123,7 +123,7 @@ cd "$PROJECT_ROOT" && $DEV_SERVER_START_COMMAND &
 # 起動完了を待つ (PORT が listen するまで)
 ```
 
-dev サーバが既に起動中なら skip。起動失敗 → `findings` に `severity: high`, `rule: dev_server_unavailable` のエントリを1件追加した上で Step 4 (JSON 出力) に進み終了する (他の観点の Step 2/3 は skip)。`workflow-review` / `workflow-autopilot` の fatal 判定は `findings[].severity` のみを見るため、**この finding を省略すると dev サーバ起動失敗が `findings: []` の「問題なし」として素通りしてしまう**。
+dev サーバが既に起動中なら skip。起動失敗 → `findings` に `severity: high`, `rule: dev_server_unavailable` のエントリを1件追加した上で Step 4 (JSON 出力) に進み終了する (他の観点の Step 2/3 は skip)。`workflow-review` / `dev-impl` の fatal 判定は `findings[].severity` のみを見るため、**この finding を省略すると dev サーバ起動失敗が `findings: []` の「問題なし」として素通りしてしまう**。
 
 ### Step 2: 静的解析 (観点 2-5)
 
@@ -182,5 +182,5 @@ chrome-devtools MCP で:
 - アーキテクチャ境界 / 関数規模 → `review-quality` (heuristic) / `architecture-guard` (機械判定)
 - プロジェクト rules 準拠 → `review-quality`
 - テンプレ placeholder 残骸検出 (`__[A-Z_]+__` 等) → プロジェクト固有 cleanup なので扱わない
-- visual diff (前回スナップショットとの差分自動判定) → autopilot HTML レポート or 人間目視
+- visual diff (前回スナップショットとの差分自動判定) → dev-impl HTML レポート or 人間目視
 - CLI / API のみのプロダクト → 本 agent は no-op (Web ブラウザ前提)。dev サーバ URL 不在なら ok: true で素通り

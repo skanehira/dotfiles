@@ -246,18 +246,18 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 ### Development Workflow Skills
 
 ```
-要件・設計 → 実装
+/dev-spec (設計ループ) → 承認ゲート (人間が起動) → /dev-impl (実装ループ)
 ```
 
-詳細は `claude/skills/README.md` を参照。主要スキル：
-- `/requirements` — 要件・設計フェーズ (user-story → ... → analyzing-requirements → interview、手順は references/ に集約)
-- `/implementation-developing` — TDD（RED→GREEN→REFACTOR）で実装
+詳細は `claude/skills/README.md` を参照 (タスク規模別の入口・モデル方針を含む)。主要スキル：
+- `/dev-spec` — 設計ループ (ユーザーストーリー → ... → PoC 検証 → DESIGN/DETAIL → TODO 生成 → 承認ゲート。手順は references/ に集約、クイックモード・部分実行可)
+- `/dev-impl` — 実装ループ (TODO 全フェーズを自律実装、`model: sonnet`。中小タスクはスキルを使わず plan mode / 直接依頼 + 直営 TDD)
 
 ### Workflow Skills
-- `/workflow-spec` — 設計書 (DESIGN.md) とタスクリスト (TODO.md) を対話的に生成
-- `/implementation-developing` — TDD で実装
-- `/workflow-review` — コードレビュー
+- `/workflow-review` — コードレビュー (3 観点並列、修正はメインループ直営 TDD)
 - `/workflow-commit` — Conventional Commit 形式で commit (push は手動)
+- `/workflow-create-draft-pr` — Draft PR 作成
+- `/workflow-debate` — 複数視点の議論・壁打ち
 
 ### Hooks (settings.json)
 - **Stop/Notification** — 完了時に macOS 通知（`terminal-notifier` 使用、Nix 管理）
