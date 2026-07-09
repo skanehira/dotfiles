@@ -4,6 +4,7 @@ import {
   classifyFile,
   DENY_BASH_WRITE,
   DENY_NO_RED,
+  detectDelegatedTestResult,
   detectTestCommand,
   didTestsFail,
   evaluateBashCommand,
@@ -87,6 +88,26 @@ Deno.test("classifyFile returns exempt for extensions outside the gated allowlis
   for (const path of cases) {
     assertEquals(classifyFile(path), "exempt", path);
   }
+});
+
+Deno.test("classifyFile returns exempt for Claude harness config files", () => {
+  const cases = [
+    "/Users/x/dotfiles/claude/hooks/remind-rules.ts",
+    "/Users/x/.claude/hooks/foo.ts",
+    "/Users/x/dotfiles/claude/agents/foo.ts",
+    "/Users/x/dotfiles/claude/skills/foo/bar.ts",
+    "/Users/x/dotfiles/claude/commands/foo.ts",
+    "/Users/x/dotfiles/claude/plugins/foo/bar.ts",
+  ];
+  for (const path of cases) {
+    assertEquals(classifyFile(path), "exempt", path);
+  }
+});
+
+Deno.test("classifyFile does not over-exempt a non-harness claude/ directory", () => {
+  const result = classifyFile("/proj/src/claude/model.ts");
+
+  assertEquals(result, "impl");
 });
 
 Deno.test("detectTestCommand returns true for test runner invocations", () => {
@@ -477,4 +498,33 @@ Deno.test("evaluateBashCommand allows writes to exempt files and normal commands
   for (const cmd of cases) {
     assertEquals(evaluateBashCommand(cmd), { decision: "allow" }, cmd);
   }
+});
+
+Deno.test("detectDelegatedTestResult returns green when report contains a green marker", () => {
+  const text = "テストは全て green です。\nTDD_GUARD: green\n以上です。";
+
+  assertEquals(detectDelegatedTestResult(text), "green");
+});
+
+Deno.test("detectDelegatedTestResult returns red when report contains a red marker", () => {
+  const text = "1 件失敗しました。\nTDD_GUARD: red\n";
+
+  assertEquals(detectDelegatedTestResult(text), "red");
+});
+
+Deno.test("detectDelegatedTestResult returns red when both markers are present (fail-safe)", () => {
+  const text = "TDD_GUARD: green\nTDD_GUARD: red\n";
+
+  assertEquals(detectDelegatedTestResult(text), "red");
+});
+
+Deno.test("detectDelegatedTestResult returns null when no marker is present", () => {
+  const text = "テストを実行しました。5 passed, 0 failed。";
+
+  assertEquals(detectDelegatedTestResult(text), null);
+});
+
+Deno.test("detectDelegatedTestResult detects markers regardless of case", () => {
+  assertEquals(detectDelegatedTestResult("tdd_guard: GREEN"), "green");
+  assertEquals(detectDelegatedTestResult("Tdd_Guard: Red"), "red");
 });
