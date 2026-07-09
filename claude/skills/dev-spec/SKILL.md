@@ -33,19 +33,19 @@ argument-hint: "[タスク説明]"
 
 **フェーズを開始するときに該当手順書を Read し、その手順に従う。**
 
-| # | フェーズ | 手順書 | 出力 | クイックモード |
-|---|---|---|---|---|
-| 1 | ユーザーストーリー | `references/user-story.md` | docs/USER_STORIES.md | スキップ |
-| 2 | UI スケッチ | `references/ui-sketch.md` | docs/UI_SKETCH.md | スキップ |
-| 3 | ユースケース記述 | `references/usecase-description.md` | docs/USECASES.md | スキップ |
-| 4 | 実現可能性検証 | `references/feasibility-check.md` | docs/FEASIBILITY.md (PoC 計画) | 条件付き実行 |
-| 5 | PoC 検証 | `references/poc-verification.md` | FEASIBILITY.md 更新 (PoC 結果) | 条件付き実行 |
-| 6 | DDD モデリング | `references/ddd-modeling.md` | docs/GLOSSARY.md, docs/MODEL.md | スキップ |
-| 7 | 概要/詳細設計 | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL.md | 実行 |
-| 8 | 深掘りインタビュー | `references/interview.md` | DESIGN / DETAIL 更新 | 実行 |
-| 9 | 検証手順の確認と補完 | `references/verification-review.md` | DESIGN / DETAIL 更新 | 実行 |
-| 10 | TODO.md 生成 | `references/todo-generation.md` | docs/TODO.md | 実行 |
-| 11 | 承認ゲート | (本ファイル下記) | — | 実行 |
+| #  | フェーズ             | 手順書                                 | 出力                                  | クイックモード |
+| -- | -------------------- | -------------------------------------- | ------------------------------------- | -------------- |
+| 1  | ユーザーストーリー   | `references/user-story.md`             | docs/USER_STORIES.md                  | スキップ       |
+| 2  | UI スケッチ          | `references/ui-sketch.md`              | docs/UI_SKETCH.md                     | スキップ       |
+| 3  | ユースケース記述     | `references/usecase-description.md`    | docs/USECASES.md                      | スキップ       |
+| 4  | 実現可能性検証       | `references/feasibility-check.md`      | docs/FEASIBILITY.md (PoC 計画)        | 条件付き実行   |
+| 5  | PoC 検証             | `references/poc-verification.md`       | FEASIBILITY.md 更新 (PoC 結果)        | 条件付き実行   |
+| 6  | DDD モデリング       | `references/ddd-modeling.md`           | docs/GLOSSARY.md, docs/DOMAIN_MODEL.md | スキップ       |
+| 7  | 概要/詳細設計        | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL.md | 実行           |
+| 8  | 深掘りインタビュー   | `references/interview.md`              | DESIGN / DETAIL 更新                  | 実行           |
+| 9  | 検証手順の確認と補完 | `references/verification-review.md`    | DESIGN / DETAIL 更新                  | 実行           |
+| 10 | TODO.md 生成         | `references/todo-generation.md`        | docs/TODO.md                          | 実行           |
+| 11 | 承認ゲート           | (本ファイル下記)                       | —                                     | 実行           |
 
 ### ゲート条件 (フェーズ 7 の開始条件)
 
@@ -59,9 +59,9 @@ FEASIBILITY.md に **`blocker=true` の未解決 PoC 計画が残っている間
 
 ### 0.2 既存ドキュメントの確認と開始点の決定
 
-docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.md / USECASES.md / FEASIBILITY.md / GLOSSARY.md / MODEL.md / DESIGN.md / DESIGN_DETAIL.md / TODO.md) を確認する。
+docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.md / USECASES.md / FEASIBILITY.md / GLOSSARY.md / DOMAIN_MODEL.md / DESIGN.md / DESIGN_DETAIL.md / TODO.md) を確認する。
 
-- **TODO.md まで揃っていて承認済み** → 「設計は完成しています。実装ループは `/dev-impl` を起動してください」と案内して終了
+- **DESIGN.md / DESIGN_DETAIL.md / TODO.md の 3 点が揃っている** → 「設計は完成しています。実装ループは `/dev-impl` を起動してください。設計を修正したい場合は更新モードで再実行してください」と案内して終了
 - **途中まで存在する** → 「続きから (推奨) / 最初から / 既存を更新」を AskUserQuestion で確認
 - **何もない** → モード選択へ
 

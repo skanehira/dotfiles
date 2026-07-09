@@ -391,7 +391,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"
 ```
 
-レポート内容: ヘッダー (run_id / SHA / 所要時間) / 全体サマリ / フェーズタイムライン / 動的修正詳細 (P1/P2/P3) / 技術調査結果 (POC_NEEDED) / ゴール達成判定 / フッター。
+レポート内容: ヘッダー (run_id / SHA / 所要時間) / 全体サマリ / フェーズタイムライン / 動的修正詳細 (P1/P2/P3) / POC_NEEDED 残存状況 (pending non-blocker) / ゴール達成判定 / フッター。
 
 ## エスカレ停止時の挙動
 

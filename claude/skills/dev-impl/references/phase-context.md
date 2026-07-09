@@ -23,7 +23,7 @@ related_rules_paths:                      # rules/core + 言語別 rules
   - <言語別 rules があれば追加>
 prev_phase_summary: |                     # 直前フェーズの 1-3 行要約
   <decisions.jsonl から拾う or skip>
-poc_results:                              # Step 1.5 の tech-investigation 結果
+poc_results:                              # dev-spec フェーズ 5 が FEASIBILITY.md「PoC 結果」に記録した内容から抽出
   - id: <POC_NEEDED id>
     recommended_approach: <結論>
 dev_server:                                # review-product-readiness (Step 4.2d) 用。Web プロダクトでなければ省略 (null)
