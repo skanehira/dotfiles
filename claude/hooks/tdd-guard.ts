@@ -19,6 +19,7 @@
  *     (テスト実行でフラグが消えるまで最大 MAX_STOP_BLOCKS 回。上限到達で諦めて通す)
  *   - Bash コマンドのファイル書き込み (> / >> / tee / sed -i / patch / git apply) が
  *     ゲート対象ソースを向いていたら deny し、Edit/Write ツールへ誘導 (pre-bash)
+ *   - サブエージェント委譲 (PostToolUse Task/Agent) → 報告本文の TDD_GUARD: green|red マーカーで lastRun を更新 (post-agent)
  *
  * RED 観測の制約: Claude Code は Bash が非ゼロ終了すると PostToolUse を発火しない。
  * よって失敗するテスト実行 (RED) の結果をフックから捕捉できない。そのため「テストを
@@ -28,6 +29,7 @@
  *
  * ゲート対象: GATED_EXTENSIONS に列挙した実装言語の拡張子のみ。
  * それ以外 (md / json / yaml / nix / sh 等) と *.config.* 等の宣言的ファイルは対象外。
+ * Claude harness 設定ツリー (.claude/ や claude/hooks|agents|skills|rules|commands|plugins/) も対象外。
  * 緊急脱出: 環境変数 TDD_GUARD=off で全イベント素通り。
  *
  * イベントは --event <pre-edit|post-bash|stop> で指定する (settings.json 配線)。
@@ -91,7 +93,15 @@ const EXEMPT_BASENAME_PATTERNS = [
   /\.workflow\.js$/, // Workflow スクリプト (Workflow ランタイム外で単体テスト不能)
 ];
 
+// Claude harness 設定ツリー: デプロイ済み .claude/ 配下、および dotfiles 側の
+// claude/hooks|agents|skills|rules|commands|plugins/ 配下。アプリ内にたまたま
+// claude/ ディレクトリがあっても harness サブディレクトリでなければ対象にしない。
+const CLAUDE_CONFIG_PATTERN =
+  /(^|\/)\.claude\/|(^|\/)claude\/(hooks|agents|skills|rules|commands|plugins)\//;
+
 export function classifyFile(path: string): FileClass {
+  if (CLAUDE_CONFIG_PATTERN.test(path)) return "exempt";
+
   const basename = path.split("/").pop() ?? path;
   const ext = basename.includes(".")
     ? basename.split(".").pop()!.toLowerCase()
@@ -190,6 +200,19 @@ export function didTestsFail(response: ToolResponse): boolean {
     return response.is_error || outputSaysFailed;
   }
   return outputSaysFailed;
+}
+
+// サブエージェントへテスト実行を委譲した場合、親セッションの state はサブエージェント
+// 自身の session_id に書かれてしまうため親に反映されない。報告本文に含めさせた
+// TDD_GUARD: green|red マーカーで親 state を更新する (post-agent イベント)。
+const DELEGATED_RED_PATTERN = /tdd_guard:\s*red\b/i;
+const DELEGATED_GREEN_PATTERN = /tdd_guard:\s*green\b/i;
+
+export function detectDelegatedTestResult(text: string): "green" | "red" | null {
+  // fail-safe: 両方あれば red を優先
+  if (DELEGATED_RED_PATTERN.test(text)) return "red";
+  if (DELEGATED_GREEN_PATTERN.test(text)) return "green";
+  return null;
 }
 
 export function evaluateStop(state: GuardState): StopResult {
@@ -297,7 +320,7 @@ type HookInput = {
     notebook_path?: string;
     command?: string;
   };
-  tool_response?: ToolResponse;
+  tool_response?: ToolResponse | string | unknown;
 };
 
 const INITIAL_STATE: GuardState = {
@@ -354,6 +377,15 @@ async function handlePostBash(input: HookInput, state: GuardState) {
   await saveState(input.session_id!, applyTestRun(state, failed));
 }
 
+async function handlePostAgent(input: HookInput, state: GuardState) {
+  const raw = input.tool_response;
+  const text = typeof raw === "string" ? raw : JSON.stringify(raw ?? "");
+  const result = detectDelegatedTestResult(text);
+  if (result === null) return;
+
+  await saveState(input.session_id!, applyTestRun(state, result === "red"));
+}
+
 async function handleStop(input: HookInput, state: GuardState) {
   // 汚れた状態 (編集後テスト未実行) なら MAX_STOP_BLOCKS 回まで block して
   // テスト実行を促す。テストを実行すれば post-bash がフラグとカウンタを消すので
@@ -402,6 +434,7 @@ async function main() {
     if (event === "pre-edit") await handlePreEdit(input, state);
     else if (event === "pre-bash") handlePreBash(input);
     else if (event === "post-bash") await handlePostBash(input, state);
+    else if (event === "post-agent") await handlePostAgent(input, state);
     else if (event === "stop") await handleStop(input, state);
   } catch {
     // hook の失敗でセッションを壊さない

@@ -10,7 +10,7 @@
     "deny": [],
     "defaultMode": "bypassPermissions"
   },
-  "model": "sonnet",
+  "model": "claude-fable-5[1m]",
   "enableAllProjectMcpServers": true,
   "hooks": {
     "SessionStart": [
@@ -70,6 +70,15 @@
           {
             "type": "command",
             "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event post-bash"
+          }
+        ]
+      },
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event post-agent"
           }
         ]
       },

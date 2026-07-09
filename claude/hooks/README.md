@@ -29,6 +29,7 @@ TDD (RED → GREEN → REFACTOR) を tool call レベルで機械的に強制す
 - `PreToolUse` (Edit/Write/NotebookEdit) — 実装ファイルへの編集を状態機械で判定。「失敗テスト未確認」なら deny
 - `PreToolUse` (Bash) — `> / >> / tee / sed -i / patch / git apply` によるゲート対象ソースへの書き込みを deny し、Edit/Write ツールへ誘導 (ゲート迂回の封鎖)
 - `PostToolUse` (Bash) — テストコマンド実行を検知して RED / GREEN をセッション状態に記録
+- `PostToolUse` (Task/Agent) — サブエージェント委譲時は state が委譲先自身の session_id に書かれ親に反映されないため、報告本文の `TDD_GUARD: green` / `TDD_GUARD: red` マーカー (1 行、両方あれば red 優先) を検知して親のセッション状態に反映
 - `Stop` / `SubagentStop` — 編集後にテスト未実行のまま停止しようとしたら block。テスト実行でフラグが消えるまで最大 2 回 (上限到達で諦めて通す)
 
 状態ファイル: `~/.claude/tdd-guard/<session_id>.json`
