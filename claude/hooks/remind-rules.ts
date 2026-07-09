@@ -52,6 +52,7 @@ function isImplementationPrompt(prompt: string): boolean {
 // 機械ゲート化できない項目 (外科的変更 / TDD 例外の明示) だけをリマインドする
 const REMINDER = `<system-reminder>
 [hook: remind-rules] 実装/修正系の指示を検知。依頼スコープを超えない (外科的変更: 隣接改善・dead code 削除は別ターンで合意)。TDD を適用しない判断 (typo 修正・宣言的 config 等) はその理由を出力で明示する。
+実装・テスト実行・コミットに着手する前に現在のメインループのモデルを確認する。Fable/Opus 等の高コストモデルなら、機能単位の実装は Sonnet、テスト実行・コミット実行は Haiku のサブエージェントに委譲し (結果は SendMessage で親に報告させる)、メインは制御に専念する。
 </system-reminder>`;
 
 async function main() {
