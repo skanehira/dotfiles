@@ -241,9 +241,9 @@ AskUserQuestion({
 ```
 ```
 
-このマーカー書式が後段の `workflow-autopilot` Step 1.5 と直接連動する。autopilot 起動時に `blocker=true` のマーカーは `tech-investigation` subagent で自動 PoC される。
+この PoC 計画は直後のフェーズ 5 (`references/poc-verification.md`) で `tech-investigation` subagent により実際に検証される。`blocker=true` の計画はフェーズ 5 での解決が必須。
 
-id は安定一意 (autopilot の判定ログでも参照されるため)、scope は 1 行で何を検証するかを簡潔に。
+id は安定一意 (PoC 結果・実装ループの判定ログでも参照されるため)、scope は 1 行で何を検証するかを簡潔に。
 
 **遷移条件**: PoC計画が完成したらフェーズ6へ
 
@@ -336,25 +336,22 @@ Task({
 - [ ] FEASIBILITY.mdが生成されている
 - [ ] セルフレビューが完了し、問題が解消されている
 
-## autopilot 連携
+## 後段フェーズとの連携
 
-このスキルが残した PoC 計画は、後段で次のように扱われる:
+このフェーズが残した PoC 計画は、後段で次のように扱われる:
 
-1. `requirements-analyzing-requirements` が DESIGN_DETAIL.md を生成する際、FEASIBILITY.md の **PoC 計画ごとに POC_NEEDED マーカー** を該当セクションに埋め込む (id / scope / risk / blocker を継承)
-2. `workflow-autopilot` Step 1.5 が DESIGN_DETAIL.md の `POC_NEEDED` マーカーを rg で検出
-3. `blocker=true` のマーカーは `tech-investigation` subagent で自動 PoC される (ドキュメント取得 + 最小コード実行)
-4. 解決後、自動で DESIGN_DETAIL.md に「## 技術調査結果 (autopilot 自動)」セクション追記 + マーカー削除
-
-`blocker=false` の PoC は autopilot 自動化対象外 (実装中に必要になったら個別呼び出し or 人間が判断)。
+1. **フェーズ 5 (PoC 検証)**: `blocker=true` の計画を `tech-investigation` subagent の並列 fan-out で実際に検証し、結果 (verified / fallback 採用) を FEASIBILITY.md の「PoC 結果」に記録する。未解決の blocker=true が残る限り設計書生成 (フェーズ 7) に進めない
+2. **フェーズ 7 (analyzing-requirements)**: 検証済みの PoC 結果を技術選定の根拠として DESIGN.md / DESIGN_DETAIL.md に反映する。未検証で残った `blocker=false` の計画のみ `POC_NEEDED` マーカーとして DESIGN_DETAIL.md に転記する
+3. **実装ループ (`/dev-impl`)**: 起動時に `blocker=true` マーカーの残存をチェックし、見つけたら実装に入らず dev-spec フェーズ 5 への差し戻しを案内する (安全網)
 
 このため、PoC 計画を書くときは:
 
-- **実装方針が PoC 結果で大きく変わる** → `blocker=true` を付ける (autopilot が起動前に解決する)
+- **実装方針が PoC 結果で大きく変わる** → `blocker=true` を付ける (フェーズ 5 で必ず解決される)
 - **無くても代替案で進める** → `blocker=false` (継続可、後追いで検証)
 
-## 関連スキル
+## 関連手順書
 
-- **usecase-description**: 技術検証の前にユースケースを整理する場合
-- **ddd-modeling**: 技術検証後、ドメインモデリングに進む場合
-- **analyzing-requirements**: 技術設計に進む場合 (POC_NEEDED マーカーを DESIGN_DETAIL.md に転記)
-- **workflow-autopilot**: 後段で POC_NEEDED マーカーを自動 PoC 解決
+- **usecase-description.md**: 技術検証の前にユースケースを整理する場合
+- **poc-verification.md**: 直後のフェーズ 5。PoC 計画を実際に検証する
+- **ddd-modeling.md**: 技術検証後、ドメインモデリングに進む場合
+- **analyzing-requirements.md**: 技術設計に進む場合 (未検証の blocker=false のみ POC_NEEDED マーカーとして転記)

@@ -1,13 +1,13 @@
 ---
 name: review-quality
-description: workflow-autopilot の Review ステップ (Step 4.2d) または workflow-review から並列起動される 3 観点レビューの一つ (コード品質 + プロジェクト rules 準拠 + アーキテクチャ heuristic)。フェーズ実装差分を見て、SOLID・YAGNI・命名・凝集/結合・コロケーション・アンチパターン、CLAUDE.md / rules/ 配下への明示違反 (外科的変更・最小実装・IO の DI)、および heuristic な構造判断 (関数肥大化・責務混線・抽象化過不足・DESIGN.md との整合) を判定し、構造化 JSON で findings を返す。機械判定可能なレイヤ境界違反は architecture-guard、TDD は review-tdd の責務。
+description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 3 観点レビューの一つ (コード品質 + プロジェクト rules 準拠 + アーキテクチャ heuristic)。フェーズ実装差分を見て、SOLID・YAGNI・命名・凝集/結合・コロケーション・アンチパターン、CLAUDE.md / rules/ 配下への明示違反 (外科的変更・最小実装・IO の DI)、および heuristic な構造判断 (関数肥大化・責務混線・抽象化過不足・DESIGN.md との整合) を判定し、構造化 JSON で findings を返す。機械判定可能なレイヤ境界違反は architecture-guard、TDD は review-tdd の責務。
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 
 # review-quality
 
-`workflow-autopilot` の Review ステップ (Step 4.2d) から並列起動される **コード品質 + rules 準拠 + アーキテクチャ heuristic** の統合 reviewer。
+`dev-impl` の Review ステップ (Step 4.2d) から並列起動される **コード品質 + rules 準拠 + アーキテクチャ heuristic** の統合 reviewer。
 
 `architecture-guard` (subagent) との分担: guard は機械的に判定可能なレイヤ境界 / DDD 集約境界の import 違反を境界検査ステップ (Step 4.2b) で検査する。本 agent は人間相当の主観判断が要る観点を Review ステップ (Step 4.2d) で検査する。
 
@@ -61,7 +61,7 @@ PHASE_CONTEXT:
 
 ### Step 1: 差分取得
 
-autopilot はフェーズ末尾のテストゲート通過後 (Step 4.2e) までコミットしないため、コミット間 diff は常に空になる。working tree を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
+dev-impl はフェーズ末尾のテストゲート通過後 (Step 4.2e) までコミットしないため、コミット間 diff は常に空になる。working tree を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
 
 ```bash
 git diff "${PHASE_START_SHA}"

@@ -13,7 +13,7 @@ allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion
 
 - **本体ロジック**: `claude/agents/review-{tdd,quality,product-readiness}.md` (subagent × 3。quality は rules 準拠とアーキテクチャ heuristic を統合済み)
 - **本 skill**: ユーザー向けエントリポイント。差分検出と PHASE_CONTEXT 組み立て、subagent 並列起動、結果集約・整形表示
-- **workflow-autopilot は本 skill を呼ばない** (autopilot 本体が Step 4.2d で review subagent を観点 gating 付きで直接起動する)。本 skill は手動レビュー用
+- **dev-impl (実装ループ) は本 skill を呼ばない** (dev-impl 本体が Step 4.2d で review subagent を観点 gating 付きで直接起動する)。本 skill は手動レビュー用
 - **観点拡張**: 観点を増やしたい場合は `claude/agents/review-<観点>.md` を追加して本 skill の起動リストに加える
 
 skill / agent 責務分担の詳細は `skills/README.md` 参照。
@@ -174,7 +174,7 @@ AskUserQuestion({
     question: "レビューで X 件の high / Y 件の medium が検出されました。どう進めますか？",
     header: "次のアクション",
     options: [
-      { label: "high をすべて修正", description: "implementation-developing で TDD 修正" },
+      { label: "high をすべて修正", description: "メインループで TDD 修正 (tdd-guard が順序を強制)" },
       { label: "high + medium を修正", description: "同上、対象拡張" },
       { label: "個別に選択", description: "修正対象を選んで TDD 修正" },
       { label: "終了", description: "修正せず完了" }
@@ -184,18 +184,18 @@ AskUserQuestion({
 })
 ```
 
-「修正」選択時は `Skill({ skill: "implementation-developing", args: "<修正タスク説明>" })` で TDD 修正サイクルを起動。
+「修正」選択時は findings を修正タスクとして**メインループで直接 TDD 修正サイクルを実行**する (RED: findings を再現する失敗テスト → GREEN → REFACTOR。順序は tdd-guard hook が強制)。修正後は同じ観点を再レビューして解消を確認する。
 
 ## 範囲外 (やらないこと)
 
 - 観点別の検査ロジック → 各 `review-*` subagent
 - fatal 判定 (severity 基準で「修正必須」を決める) → 呼び出し側 (本 skill 内の AskUserQuestion)
-- 修正実行 → `implementation-developing` skill (TDD で)
+- 修正実行の委譲 → しない (メインループで直接 TDD 修正する)
 - コミット → `workflow-commit`
 
 ## 関連
 
 - subagent: `review-tdd` / `review-quality` / `review-product-readiness` (本体ロジック)
 - セキュリティレビュー: `security-guidance@claude-plugins-official` プラグイン (本 skill の外、Edit/Write pattern 検知 + Stop hook LLM diff review)
-- 連携 skill: `implementation-developing` (修正実行) / `workflow-commit`
-- 上位: なし (workflow-autopilot は本 skill を経由せず Step 4.2d で review subagent を直接起動する)
+- 連携 skill: `workflow-commit` (修正後のコミット)
+- 上位: なし (dev-impl は本 skill を経由せず Step 4.2d で review subagent を直接起動する)

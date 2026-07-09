@@ -7,9 +7,9 @@
 - **`docs/DESIGN.md` (概要設計)**: 目的・スコープ・主要コンポーネント・前提制約・非機能要件・データモデル概略・技術選定。「**何を作るか**」を読み手に伝える。
 - **`docs/DESIGN_DETAIL.md` (詳細設計)**: API シグネチャ・スキーマ・データフロー詳細 (Sequence)・エラーパス・境界条件・永続化レイアウト・実装ガイド。「**どう作るか**」を実装者に伝える。
 
-TODO.md は DESIGN_DETAIL.md から planning-tasks スキルで生成する。DESIGN.md レベルの変更は概要 (前提・主要コンポーネント) の見直しが必要になるため、人間判断が要る重大変更扱い。
+TODO.md は DESIGN_DETAIL.md からフェーズ 10 (`references/todo-generation.md`) で生成する。DESIGN.md レベルの変更は概要 (前提・主要コンポーネント) の見直しが必要になるため、人間判断が要る重大変更扱い。
 
-注: タスク分解とTODO.md生成は planning-tasks スキルで行う
+注: タスク分解と TODO.md 生成はフェーズ 10 で行う
 
 ## 参照ルール
 
@@ -238,17 +238,17 @@ CLI / API のみのプロダクトでは省略可。
 
 #### 未確定要素は POC_NEEDED マーカーで残す (DESIGN_DETAIL.md 側)
 
-「実装方針が技術検証の結果次第で変わる」項目は、文章で「未確定」と書くのではなく**機械可読なマーカー**で残す。autopilot Step 1.5 がこのマーカーを検出して `tech-investigation` subagent で自動 PoC する。
+「実装方針が技術検証の結果次第で変わる」項目は、文章で「未確定」と書くのではなく**機械可読なマーカー**で残す。ただし `blocker=true` の未確定要素はフェーズ 5 (PoC 検証) で解決済みであることが前提。マーカーとして残してよいのは `blocker=false` (継続可・後追い検証) のみ。
 
 ```markdown
 <!-- POC_NEEDED: id=<unique-id>, scope=<検証対象を1行で>, risk=high|medium|low, blocker=true|false -->
 ```
 
 入力元:
-- FEASIBILITY.md が存在する場合: 「PoC 計画」セクションの id / scope / risk / blocker をそのまま転記
-- FEASIBILITY.md が無い場合: 設計中に「実装ガイド」「API 設計」「データスキーマ」で不確定要素を発見したらマーカーを追加
+- FEASIBILITY.md が存在する場合: 検証済みの PoC は「PoC 結果」を技術選定の根拠として DESIGN.md / DESIGN_DETAIL.md に反映する (マーカーにしない)。未検証で残った `blocker=false` の PoC 計画のみ id / scope / risk / blocker を転記
+- FEASIBILITY.md が無い場合: 設計中に「実装ガイド」「API 設計」「データスキーマ」で不確定要素を発見したら、実装方針を左右するもの (blocker=true 相当) はフェーズ 5 (`references/poc-verification.md`) に差し戻して PoC し、左右しないものだけ `blocker=false` マーカーで残す
 
-`blocker=true` のマーカーは autopilot 起動時に必ず解決される。`blocker=false` は継続可 (実装中に必要になったら個別判断)。
+`blocker=true` のマーカーを未解決のまま DESIGN_DETAIL.md に残してはならない。実装ループ (`/dev-impl`) は起動時にこれを検出すると実装に入らず、dev-spec のフェーズ 5 への差し戻しを案内する。
 
 例:
 
@@ -257,7 +257,7 @@ CLI / API のみのプロダクトでは省略可。
 
 ### Server Component の async data loading
 
-<!-- POC_NEEDED: id=rsc-async-suspense, scope=React Server Component で async fn + Suspense 境界が期待通り動くか検証, risk=high, blocker=true -->
+<!-- POC_NEEDED: id=rsc-async-suspense, scope=React Server Component で async fn + Suspense 境界が期待通り動くか検証, risk=medium, blocker=false -->
 
 採用パターン: `app/<route>/page.tsx` で async server component → 子の client component で `use(promise)`。Suspense 境界は親 layout に配置。
 ```
@@ -277,7 +277,7 @@ CLI / API のみのプロダクトでは省略可。
 
 #### ゴール定義の基準 (→ DESIGN.md)
 
-各ゴールは autopilot Step 5 で**機械的に達成判定**されることを前提に、以下の規約を厳守:
+各ゴールは dev-impl Step 5 で**機械的に達成判定**されることを前提に、以下の規約を厳守:
 
 - **1 件 1 行**: 「G1: ...」「G2: ...」のように番号付きで列挙
 - **ユーザー視点で観測可能**: 内部実装の詳細ではなく、外から見える振る舞い
@@ -296,7 +296,7 @@ CLI / API のみのプロダクトでは省略可。
 
 #### 必須ゴール: G_E2E (実機ブラウザでの全機能動作確認)
 
-Web アプリ・モバイル Web の場合、上記 G1, G2, ... に加えて **G_E2E を必ず追加**する (autopilot Step 5 はこのゴールを chrome-devtools MCP で機械検証する)。
+Web アプリ・モバイル Web の場合、上記 G1, G2, ... に加えて **G_E2E を必ず追加**する (dev-impl Step 5 はこのゴールを chrome-devtools MCP で機械検証する)。
 
 理由: Voilog セッション F9 / F13 で「全テスト緑・ビルド成功で完成宣言したが、実機ブラウザではトップナビ無し / 404 デッドループ / URL 直叩きでしか到達できない画面が存在」が発生した。各機能の単体検証 (G1〜Gn) は満たしていても、UI 動線が繋がっていない MVP は実質「使えない」。
 
@@ -309,10 +309,10 @@ CLI / API のみのプロダクトでは G_E2E は省略可。その場合は「
 
 #### 検証手順 (→ DESIGN_DETAIL.md)
 
-各ゴールに対して**必ず 1 対 1 で対応する検証手順**を DESIGN_DETAIL.md の「検証手順」セクションに書く。autopilot Step 5 はこの対応を読んでゴール判定する。
+各ゴールに対して**必ず 1 対 1 で対応する検証手順**を DESIGN_DETAIL.md の「検証手順」セクションに書く。dev-impl Step 5 はこの対応を読んでゴール判定する。
 
 - **自動系**: `G<n> 検証: <bash コマンド>` 形式 (例: `G1 検証: npm test -- e2e/login.spec.ts`)
-- **手動系**: `G<n> 検証 (手動): <操作手順>` 形式 (autopilot は自動判定不可、手動確認待ちとして残す)
+- **手動系**: `G<n> 検証 (手動): <操作手順>` 形式 (dev-impl は自動判定不可、手動確認待ちとして残す)
 - **G_E2E 検証**: `chrome-devtools` MCP で実機ブラウザ操作。手順を「ナビゲーションパス + 操作」で書く
 
 G_E2E 検証手順の書式例:
@@ -337,7 +337,7 @@ G_E2E 検証手順の書式例:
 
 #### 不明点の確認
 
-不明な点は AskUserQuestion で確認する。ゴールに紐づく検証コマンドが存在しない場合、`G<n> 検証 (手動)` で残してプロジェクト進行を止めない (autopilot が pending 扱いにする)。G_E2E は **必須**で省略不可 (Web アプリ・モバイル Web の場合)。
+不明な点は AskUserQuestion で確認する。ゴールに紐づく検証コマンドが存在しない場合、`G<n> 検証 (手動)` で残してプロジェクト進行を止めない (dev-impl が pending 扱いにする)。G_E2E は **必須**で省略不可 (Web アプリ・モバイル Web の場合)。
 
 ### ステップ5: ドキュメント生成
 

@@ -70,7 +70,7 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 | スキル                                                | 役割                                              |
 | ----------------------------------------------------- | ------------------------------------------------- |
 | `frontend-design` / `frontend-design:frontend-design` | デザインコンセプト（色・フォント・ムード）の確立  |
-| `implementation-developing`                           | TDD RED→GREEN→REFACTOR の厳格な運用               |
+| `rules/core/tdd.md` + tdd-guard hook                  | TDD RED→GREEN→REFACTOR の厳格な運用 (メインループ直営) |
 | `fix-lsp-warnings` (agent)                            | 実装完了後の型警告・未使用変数の掃除              |
 | `chrome-devtools` MCP                                 | iPhone viewport エミュレート + 画面遷移確認       |
 
