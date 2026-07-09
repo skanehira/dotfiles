@@ -116,11 +116,11 @@ git switch -c <generated-branch-name>
 
 ### 2.2 コミット作成（未コミット変更がある場合）
 
-`workflow-commit-push` スキルに **無条件で委譲** する（ユーザー確認なし）。
-push は本スキルの [6/6] でまとめて行うため、Skill ツールで実行する際に引数 `--no-push` を指定する。
+`workflow-commit` スキルに **無条件で委譲** する（ユーザー確認なし）。
+`workflow-commit` は push を行わないスキルなので、push は本スキルの [6/6] でまとめて行う。
 
 完了後、`git status --porcelain` で未コミット変更が残っていないことを確認する。
-残っている場合は `workflow-commit-push` が意図的にスキップした可能性があるため、ユーザーに状況を報告して `AskUserQuestion` で続行/中止を確認。
+残っている場合は `workflow-commit` が意図的にスキップした可能性があるため、ユーザーに状況を報告して `AskUserQuestion` で続行/中止を確認。
 
 ---
 
@@ -393,7 +393,7 @@ EOF
 本スキルは「**PR作成までの最低限の準備**」を目的とする:
 
 - ブランチ作成は **PR用のブランチが無い場合に限り** 行う。既存ブランチがあればそのまま使用。ブランチ名は自動生成し、ユーザー確認は行わない（やり直したい場合はPR作成後に手動で `git branch -m` で改名すればよい）
-- コミット作成は **未コミット変更がある場合のみ** `workflow-commit-push` に無条件で委譲する。論理単位での分割や Conventional Commit 形式への整形はそちらに任せる
+- コミット作成は **未コミット変更がある場合のみ** `workflow-commit` に無条件で委譲する。論理単位での分割や Conventional Commit 形式への整形はそちらに任せる
 - push は **未push or ローカルが先行している場合に自動実行**。確認は行わない（push失敗時のみエラーハンドリング）
 - 既存コミットには触らない（amend/rebase/squash は対象外）
 
