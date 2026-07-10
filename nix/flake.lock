@@ -237,11 +237,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783645494,
-        "narHash": "sha256-Ls3OmIzM/NACPf9JRB0BiYXakb9IS8ea0fNJQoQOyHk=",
+        "lastModified": 1783647189,
+        "narHash": "sha256-IkE0Qn+czXwLo87uMtRph3hs8f5U0oU2AT5yYfWNESM=",
         "owner": "skanehira",
         "repo": "screen-capture-mcp-server",
-        "rev": "192118acbb2afb565c1eb9c11ed1dbb4a8092808",
+        "rev": "a104858d06ca733339a514cbc0f26fc6f844126e",
         "type": "github"
       },
       "original": {
