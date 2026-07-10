@@ -33,23 +33,33 @@ argument-hint: "[タスク説明]"
 
 **フェーズを開始するときに該当手順書を Read し、その手順に従う。**
 
-| #  | フェーズ             | 手順書                                 | 出力                                  | クイックモード |
-| -- | -------------------- | -------------------------------------- | ------------------------------------- | -------------- |
-| 1  | ユーザーストーリー   | `references/user-story.md`             | docs/USER_STORIES.md                  | スキップ       |
-| 2  | UI スケッチ          | `references/ui-sketch.md`              | docs/UI_SKETCH.md                     | スキップ       |
-| 3  | ユースケース記述     | `references/usecase-description.md`    | docs/USECASES.md                      | スキップ       |
-| 4  | 実現可能性検証       | `references/feasibility-check.md`      | docs/FEASIBILITY.md (PoC 計画)        | 条件付き実行   |
-| 5  | PoC 検証             | `references/poc-verification.md`       | FEASIBILITY.md 更新 (PoC 結果)        | 条件付き実行   |
+| #  | フェーズ             | 手順書                                 | 出力                                   | クイックモード |
+| -- | -------------------- | -------------------------------------- | -------------------------------------- | -------------- |
+| 1  | ユーザーストーリー   | `references/user-story.md`             | docs/USER_STORIES.md                   | スキップ       |
+| 2  | UI スケッチ          | `references/ui-sketch.md`              | docs/UI_SKETCH.md                      | スキップ       |
+| 3  | ユースケース記述     | `references/usecase-description.md`    | docs/USECASES.md                       | スキップ       |
+| 4  | 実現可能性検証       | `references/feasibility-check.md`      | docs/FEASIBILITY.md (PoC 計画)         | 条件付き実行   |
+| 5  | PoC 検証             | `references/poc-verification.md`       | FEASIBILITY.md 更新 (PoC 結果)         | 条件付き実行   |
 | 6  | DDD モデリング       | `references/ddd-modeling.md`           | docs/GLOSSARY.md, docs/DOMAIN_MODEL.md | スキップ       |
-| 7  | 概要/詳細設計        | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL.md | 実行           |
-| 8  | 深掘りインタビュー   | `references/interview.md`              | DESIGN / DETAIL 更新                  | 実行           |
-| 9  | 検証手順の確認と補完 | `references/verification-review.md`    | DESIGN / DETAIL 更新                  | 実行           |
-| 10 | TODO.md 生成         | `references/todo-generation.md`        | docs/TODO.md                          | 実行           |
-| 11 | 承認ゲート           | (本ファイル下記)                       | —                                     | 実行           |
+| 7  | 概要/詳細設計        | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL.md  | 実行           |
+| 8  | 深掘りインタビュー   | `references/interview.md`              | DESIGN / DETAIL 更新                   | 実行           |
+| 9  | 検証手順の確認と補完 | `references/verification-review.md`    | DESIGN / DETAIL 更新                   | 実行           |
+| 10 | TODO.md 生成         | `references/todo-generation.md`        | docs/TODO.md                           | 実行           |
+| 11 | 承認ゲート           | (本ファイル下記)                       | —                                      | 実行           |
 
 ### ゲート条件 (フェーズ 7 の開始条件)
 
-FEASIBILITY.md に **`blocker=true` の未解決 PoC 計画が残っている間は、フェーズ 7 (設計書生成) に進んではならない**。フェーズ 5 で全件を「verified」または「ユーザーが fallback 採用を決定」の状態にしてから進む。
+FEASIBILITY.md に **`blocker=true` の未解決 PoC 計画が残っている間は、フェーズ 7 (設計書生成) に進んではならない**。判定はプロンプト遵守ではなく次のコマンドで機械的に行う:
+
+```bash
+rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
+```
+
+- 1 件以上ヒット → フェーズ 5 (PoC 検証) へ戻る
+- 0 件 → 通過
+- FEASIBILITY.md 自体が無い → フェーズ 0.3 で「不確実性なし」を確認済みの場合のみ通過。未確認ならフェーズ 0.3 の不確実性確認に戻る
+
+`POC_STATUS` 行の書式は `references/poc-verification.md` で定義する (フェーズ 4 が `status=unresolved` で書き、フェーズ 5 が更新する)。
 
 ## フェーズ 0: ルーティング
 
@@ -61,8 +71,21 @@ FEASIBILITY.md に **`blocker=true` の未解決 PoC 計画が残っている間
 
 docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.md / USECASES.md / FEASIBILITY.md / GLOSSARY.md / DOMAIN_MODEL.md / DESIGN.md / DESIGN_DETAIL.md / TODO.md) を確認する。
 
-- **DESIGN.md / DESIGN_DETAIL.md / TODO.md の 3 点が揃っている** → 「設計は完成しています。実装ループは `/dev-impl` を起動してください。設計を修正したい場合は更新モードで再実行してください」と案内して終了
-- **途中まで存在する** → 「続きから (推奨) / 最初から / 既存を更新」を AskUserQuestion で確認
+- **DESIGN.md / DESIGN_DETAIL.md / TODO.md が揃い、TODO.md 先頭に承認スタンプ (`<!-- dev-spec:approved ... -->`) がある** → 「設計は完成しています。実装ループは `/dev-impl` を起動してください。設計を修正したい場合は更新モードで再実行してください」と案内して終了
+- **3 点は揃っているが承認スタンプが無い** → 未承認。フェーズ 11 (承認ゲート) から再開する
+- **途中まで存在する** → 「続きから (推奨) / 最初から / 既存を更新」を AskUserQuestion で確認。「続きから」の再開フェーズは次の表で決める (存在する成果物のうち最も下流のものを見る):
+
+| 最も下流の既存成果物 | 再開フェーズ |
+| --- | --- |
+| USER_STORIES.md | 2 (UI スケッチ) |
+| UI_SKETCH.md | 3 (ユースケース) |
+| USECASES.md | 4 (実現可能性) |
+| FEASIBILITY.md (blocker=true が unresolved) | 5 (PoC 検証) |
+| FEASIBILITY.md (全件解決済み) | 6 (DDD)。クイックモードなら 7 |
+| GLOSSARY.md / DOMAIN_MODEL.md | 7 (設計書生成) |
+| DESIGN.md + DESIGN_DETAIL.md | 8 (深掘り)。深掘り済みが明らかなら 9 |
+| TODO.md (承認スタンプ無し) | 11 (承認ゲート) |
+
 - **何もない** → モード選択へ
 
 更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する。
@@ -83,11 +106,11 @@ AskUserQuestion({
 })
 ```
 
-クイック選択時は「この実装に、成立するか未検証の技術要素 (未経験のライブラリ・外部 API 連携・性能懸念など) はありますか?」を確認し、あればフェーズ 4 → 5 を実行してから 7 へ、なければ 7 から開始する。
+クイック選択時は、まず Claude 自身がタスク説明と会話履歴から不確実性候補 (未経験ライブラリ / 外部 API 連携 / 性能・スケール懸念 / 新しいプラットフォーム機能) を走査して列挙し、その候補を提示した上で「これらを含め、成立するか未検証の技術要素はありますか?」と AskUserQuestion で確認する (人間の記憶だけに頼らない)。あればフェーズ 4 → 5 を実行してから 7 へ、なければ 7 から開始する (この「不確実性なし」の確認が、ゲート条件の「FEASIBILITY.md 無し」通過の根拠になる)。
 
 ### 部分実行
 
-依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「DESIGN.md を深掘りしたい」「TODO だけ作り直したい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。
+依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「DESIGN.md を深掘りしたい」「TODO だけ作り直したい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。**ただし対象にフェーズ 7 が含まれる場合は、実行前に必ず「ゲート条件」の判定コマンドを実行する** (ゲートはどの経路から入っても効かせる)。
 
 ## 各フェーズの進め方
 
@@ -120,6 +143,8 @@ AskUserQuestion({
 - docs/FEASIBILITY.md    (PoC 結果: verified x 件 / fallback 採用 y 件)
 ```
 
+FEASIBILITY.md を作成していない場合 (クイックモードで不確実性なし) は、その行を省略する。
+
 ### 11.2 最終承認
 
 ```javascript
@@ -137,9 +162,14 @@ AskUserQuestion({
 })
 ```
 
+「修正」の戻り先は指摘内容で決める: ゴール・検証手順 → フェーズ 9、設計内容 → フェーズ 7〜8、タスク分割 → フェーズ 10。戻った後は当該フェーズ以降を再実行し、再度この承認ゲートに来る。
+
 ### 11.3 実装ループへの引き継ぎ案内
 
-承認されたら以下を表示して**このスキルを終了する** (dev-impl を Skill ツールで起動しない):
+承認されたら次の 2 つを行って**このスキルを終了する** (dev-impl を Skill ツールで起動しない):
+
+1. **承認スタンプの書き込み**: `docs/TODO.md` の先頭 (1 行目) に `<!-- dev-spec:approved YYYY-MM-DD -->` を挿入する (既存スタンプがあれば日付を更新)。dev-impl は起動時 (Step 1 構造ゲート) にこのスタンプを機械チェックし、無ければ実装に入らない
+2. 以下を表示する:
 
 ```
 ✓ 設計が承認されました。実装ループは以下のいずれかで開始してください:
@@ -159,6 +189,7 @@ B: このセッションで続行
 - [ ] 対象フェーズがすべて実行された (またはユーザー判断でスキップ)
 - [ ] blocker=true の PoC 計画がすべて解決済み (verified または fallback 採用)
 - [ ] 全フェーズ実行時: DESIGN.md / DESIGN_DETAIL.md / TODO.md が生成され、承認ゲートを通過した
+- [ ] 承認時: TODO.md 先頭に承認スタンプが書き込まれた
 
 ## 参照ルール
 

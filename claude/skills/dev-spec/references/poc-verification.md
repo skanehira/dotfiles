@@ -4,15 +4,30 @@
 
 FEASIBILITY.md に書かれた PoC 計画を**実際に実行して**、技術的実現可能性を機械検証する。「できるはず」という自己申告を、PoC コードの実行結果という観測可能な事実に置き換えてから設計書生成に進む。
 
+## POC_STATUS 行 (機械判定用の状態書式)
+
+各 PoC 計画は直下に必ず 1 行、次の書式の status 行を持つ (フェーズ 4 が `status=unresolved` で書き、本フェーズが更新する)。フィールドの順序は固定:
+
+```
+<!-- POC_STATUS: id=<id>, blocker=<true|false>, status=<unresolved|verified|fallback_adopted|scope_reduced>, confidence=<0.0-1.0> -->
+```
+
+- `status=unresolved`: 未検証 (フェーズ 4 直後の初期値。confidence は省略)
+- `status=verified`: 検証済み、当初案で進める
+- `status=fallback_adopted`: 当初案不成立、ユーザーが fallback 採用を決定
+- `status=scope_reduced`: ユーザーがスコープ縮小を決定
+
+フェーズ 7 のゲートはこの行を `rg 'POC_STATUS:.*blocker=true.*status=unresolved'` で判定する。**本文の説明ではなくこの行が唯一の判定ソース**なので、更新漏れ = ゲートが閉じたままになる (安全側)。
+
 ## ワークフロー
 
-### 1. PoC 計画の抽出
+### 1. 対象の抽出
 
-docs/FEASIBILITY.md を Read し、PoC 計画 (id / risk / blocker / スコープ / 成功基準) を抽出する。
+docs/FEASIBILITY.md を Read し、`status=unresolved` の POC_STATUS 行を抽出する。
 
 - **blocker=true**: このフェーズでの検証が必須
 - **blocker=false**: 任意。risk=high なら検証を推奨し、ユーザーに確認する
-- **PoC 計画が 0 件**: 「PoC 検証: 対象なし (スキップ)」と表示して次フェーズへ
+- **対象 0 件**: 「PoC 検証: 対象なし (スキップ)」と表示して次フェーズへ
 
 ### 2. tech-investigation の並列 fan-out
 
@@ -35,47 +50,60 @@ Task({
 })
 ```
 
-### 3. 結果の反映
+### 3. 結果の分類と反映
 
-各 subagent の output_path から結果 JSON を Read し、FEASIBILITY.md に「## PoC 結果」セクションとして追記する。各項目に含めるもの:
+各 subagent の output_path から結果 JSON を Read し、次の表で分類する。**agent の失敗や低確信をパス扱いにしない** (未検証は未検証のまま人間に回す):
+
+| 結果 | 扱い |
+| --- | --- |
+| `result: verified` かつ `confidence >= 0.7` | 自動で解決。POC_STATUS を `status=verified, confidence=<値>` に更新 |
+| `result: verified` かつ `confidence < 0.7` | **自動解決しない** (ドキュメント確認のみ等、実行結果の裏付けが弱い)。ステップ 4 の人間判断へ |
+| `result: partial` / `fallback_needed` | ステップ 4 の人間判断へ |
+| stdout が `INVALID_MARKER` / `NO_CONTEXT_DOCS` / `INVESTIGATION_FAILED`、または JSON が読めない・agent が応答しない | **その計画は未検証のまま** (status は unresolved を維持)。ステップ 4 の人間判断へ (選択肢に「再試行」を含める) |
+
+解決した計画は FEASIBILITY.md に「## PoC 結果」セクションとして追記する:
 
 ```markdown
 ## PoC 結果
 
-### <id> — verified | partial | fallback_needed
+### <id> — verified (confidence 0.85)
 - 検証日: YYYY-MM-DD
 - 観測した事実: (実行したコード・コマンドと出力の要点)
 - 結論: 成功基準に対する判定
-- fallback: (fallback_needed の場合のみ) 代替案
+- fallback: (採用した場合のみ) 代替案と採用理由
 ```
 
-対応する PoC 計画には `**status**: resolved (verified)` のように解決状態を記す。
+### 4. 人間判断 (Stop)
 
-### 4. 失敗時の分岐 (Stop)
-
-`fallback_needed` または `partial` の結果が出た場合、**勝手に設計を曲げず**、ユーザーに判断を仰ぐ:
+自動解決できなかった計画ごとに、**勝手に設計を曲げず**ユーザーに判断を仰ぐ:
 
 ```javascript
 AskUserQuestion({
   questions: [{
-    question: "PoC「<id>」で当初案が成立しないことが確認されました。\n\n観測した事実: <要点>\n\nどうしますか?",
-    header: "PoC 失敗",
+    question: "PoC「<id>」が自動解決できませんでした。\n\n理由: <verified だが confidence 0.6 / fallback_needed / agent 失敗 など>\n観測した事実: <要点>\n\nどうしますか?",
+    header: "PoC 判断",
     options: [
+      { label: "この結果で採用", description: "verified 扱いにする (POC_STATUS を verified に更新)" },
       { label: "fallback 採用", description: "<tech-investigation が提示した代替案の要点>" },
       { label: "スコープ縮小", description: "この機能要素を今回のスコープから外す" },
-      { label: "設計を再検討", description: "実現可能性検証 (フェーズ 4) に戻って前提から見直す" },
-      { label: "中止", description: "設計ループを終了する" }
+      { label: "再試行 / 再検討", description: "PoC を追加指示付きで再実行する、またはフェーズ 4 に戻って前提から見直す" }
     ],
     multiSelect: false
   }]
 })
 ```
 
-ユーザーの決定を FEASIBILITY.md の該当 PoC 結果に「**採用した判断**: ...」として記録する。
+ユーザーの決定に従って POC_STATUS を更新し、「PoC 結果」に「**採用した判断**: ...」として記録する。「再試行」の場合は status を unresolved のまま残してステップ 2 に戻る。
 
-### 5. ゲート判定
+### 5. ゲート判定 (機械)
 
-blocker=true の全 PoC 計画が「verified」または「ユーザーが fallback 採用 / スコープ縮小を決定」になったことを確認してから、次フェーズへ進む。未解決が残る場合はこのフェーズを完了扱いにしない。
+フェーズ完了前に必ず実行する:
+
+```bash
+rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
+```
+
+0 件になるまでこのフェーズを完了扱いにしない (1 件以上残っていればステップ 2 または 4 に戻る)。
 
 ## 後段との連動
 
