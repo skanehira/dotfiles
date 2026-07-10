@@ -67,7 +67,7 @@ rg -n '<!-- POC_NEEDED: .* -->' docs/DESIGN.md docs/DESIGN_DETAIL.md
 | 検出結果 | 対処 |
 |---|---|
 | 0 件 | Step 2 へ (no-op) |
-| `blocker=false` のみ | テキストログに `[dev-impl] POC_NEEDED ${id} pending (non-blocker)` と記録して Step 2 へ (実装中に検証が必要になったら `tech-investigation` subagent を個別に呼ぶ) |
+| `blocker=false` のみ | テキストログに `[dev-impl] POC_NEEDED ${id} pending (non-blocker)`、JSONL に `event_type: poc_pending` (context に id / scope / risk) を記録して Step 2 へ (実装中に検証が必要になったら `tech-investigation` subagent を個別に呼ぶ。HTML レポートのセクション 5 がこのエントリを表示する) |
 | `blocker=true` あり | **エスカレ停止** (`poc_marker_unresolved`)。「未解決の blocker マーカーが残っています。`/dev-spec` のフェーズ 5 (PoC 検証) で解決してから `/dev-impl` を再実行してください」とユーザー通知 |
 
 ### Step 2: フェーズ抽出
