@@ -205,6 +205,7 @@
         "nix-index-database": "nix-index-database",
         "nix-vite-plus": "nix-vite-plus",
         "nixpkgs": "nixpkgs_2",
+        "screen-capture-mcp-server": "screen-capture-mcp-server",
         "version-lsp": "version-lsp"
       }
     },
@@ -226,6 +227,26 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "screen-capture-mcp-server": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1783645494,
+        "narHash": "sha256-Ls3OmIzM/NACPf9JRB0BiYXakb9IS8ea0fNJQoQOyHk=",
+        "owner": "skanehira",
+        "repo": "screen-capture-mcp-server",
+        "rev": "192118acbb2afb565c1eb9c11ed1dbb4a8092808",
+        "type": "github"
+      },
+      "original": {
+        "owner": "skanehira",
+        "repo": "screen-capture-mcp-server",
         "type": "github"
       }
     },

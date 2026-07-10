@@ -136,9 +136,14 @@ let
     ];
 
   # AI
-  aiUtils = with pkgs; [
-    ollama
-  ];
+  aiUtils =
+    with pkgs;
+    [
+      ollama
+    ]
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      screen-capture-mcp-server # Claude Code 用画面キャプチャ MCP サーバー
+    ];
 
   # LSP servers (Mason 廃止、全て Nix declarative 管理)。
   # vim/lua/plugins/lsp/lspconfig.lua の vim.lsp.enable(servers) で起動される。
