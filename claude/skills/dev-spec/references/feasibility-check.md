@@ -258,6 +258,12 @@ AskUserQuestion({
 ```
 ```
 
+**POC_STATUS 行 (機械判定用、必須)**: 各 PoC 計画の直下に次の 1 行を書く。フェーズ 5 が検証後に status を更新し、フェーズ 7 のゲートはこの行を rg で判定する (書式詳細は `poc-verification.md`):
+
+```
+<!-- POC_STATUS: id=<id>, blocker=<true|false>, status=unresolved -->
+```
+
 この PoC 計画は直後のフェーズ 5 (`references/poc-verification.md`) で `tech-investigation` subagent により実際に検証される。`blocker=true` の計画はフェーズ 5 での解決が必須。
 
 id は安定一意 (PoC 結果・実装ループの判定ログでも参照されるため)、scope は 1 行で何を検証するかを簡潔に。
