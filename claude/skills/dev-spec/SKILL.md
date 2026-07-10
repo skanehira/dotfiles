@@ -75,16 +75,16 @@ docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.md / USECASES.md / F
 - **3 点は揃っているが承認スタンプが無い** → 未承認。フェーズ 11 (承認ゲート) から再開する
 - **途中まで存在する** → 「続きから (推奨) / 最初から / 既存を更新」を AskUserQuestion で確認。「続きから」の再開フェーズは次の表で決める (存在する成果物のうち最も下流のものを見る):
 
-| 最も下流の既存成果物 | 再開フェーズ |
-| --- | --- |
-| USER_STORIES.md | 2 (UI スケッチ) |
-| UI_SKETCH.md | 3 (ユースケース) |
-| USECASES.md | 4 (実現可能性) |
-| FEASIBILITY.md (blocker=true が unresolved) | 5 (PoC 検証) |
-| FEASIBILITY.md (全件解決済み) | 6 (DDD)。クイックモードなら 7 |
-| GLOSSARY.md / DOMAIN_MODEL.md | 7 (設計書生成) |
-| DESIGN.md + DESIGN_DETAIL.md | 8 (深掘り)。深掘り済みが明らかなら 9 |
-| TODO.md (承認スタンプ無し) | 11 (承認ゲート) |
+| 最も下流の既存成果物                        | 再開フェーズ                         |
+| ------------------------------------------- | ------------------------------------ |
+| USER_STORIES.md                             | 2 (UI スケッチ)                      |
+| UI_SKETCH.md                                | 3 (ユースケース)                     |
+| USECASES.md                                 | 4 (実現可能性)                       |
+| FEASIBILITY.md (blocker=true が unresolved) | 5 (PoC 検証)                         |
+| FEASIBILITY.md (全件解決済み)               | 6 (DDD)。クイックモードなら 7        |
+| GLOSSARY.md / DOMAIN_MODEL.md               | 7 (設計書生成)                       |
+| DESIGN.md + DESIGN_DETAIL.md                | 8 (深掘り)。深掘り済みが明らかなら 9 |
+| TODO.md (承認スタンプ無し)                  | 11 (承認ゲート)                      |
 
 - **何もない** → モード選択へ
 
