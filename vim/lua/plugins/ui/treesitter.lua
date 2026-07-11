@@ -34,9 +34,11 @@ local treesitter = {
         local lang = vim.treesitter.language.get_lang(ev.match) or ev.match
         if lang == '' then return end
 
-        -- parser バイナリの有無で install 済みかを判定 (runtimepath 上に
-        -- parser/<lang>.so があれば installed)
+        -- parser バイナリと highlights query の両方があって初めて installed とみなす
+        -- (プラグイン dir に残った旧 master 時代の .so だけがヒットして
+        --  queries 未配置のまま無色になるのを防ぐ)
         local installed = #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.so', false) > 0
+          and #vim.api.nvim_get_runtime_file('queries/' .. lang .. '/highlights.scm', false) > 0
 
         if installed then
           pcall(vim.treesitter.start, ev.buf, lang)
