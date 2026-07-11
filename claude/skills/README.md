@@ -64,13 +64,15 @@ skills/
 
 ## モデル方針 (ループエンジニアリング)
 
-原則: **実行器のモデル ≤ 検証器のモデル**。モデルの賢さは検証器の薄いところに配置する。設計思想の全体像 (7 要素・三大失敗モード) は [rules/core/references/loop-engineering.md](../rules/core/references/loop-engineering.md) を参照。
+モデル割当の正は **CLAUDE.md「オーケストレーションとモデル階層」** (トリアージ手順・割当マトリクス・Fable → Opus 4.8 フォールバック規定)。ここではスキル側への適用だけを記す。原則: **実行器のモデル ≤ 検証器のモデル**。モデルの賢さは検証器の薄いところに配置する。設計思想の全体像 (7 要素・三大失敗モード) は [rules/core/references/loop-engineering.md](../rules/core/references/loop-engineering.md) を参照。
 
 | 対象 | モデル | 理由 |
 |---|---|---|
-| dev-spec (設計ループ) | セッション継承 (Fable / Opus 推奨) | 検証器が人間しかいないため、生成側を賢くする |
+| dev-spec (設計ループ) | セッション継承 (最上位 tier 推奨) | 検証器が人間しかいないため、生成側を賢くする |
 | dev-impl (実装ループ) | `model: sonnet` (frontmatter) | tdd-guard・テストゲート・レビュー fan-out という検証器が厚いため actor は下げられる |
-| review-* subagent | `model: opus` (呼び出し時明示) | 検証器は実行器より賢く保つ |
+| review-* subagent | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より賢く保つ。frontmatter も opus にして、呼び出し時の明示忘れで無音でセッション継承より下に落ちない防御とする |
+
+モデル指定はすべて alias (`opus` / `sonnet` / `haiku`) で書く (固定 ID 禁止。世代交代への自動追従のため)。
 
 制約: skill frontmatter の `model` は**ユーザーが直接起動したターンだけ**有効 (Skill ツール経由では無視される、実測済み)。このため dev-spec → dev-impl の遷移は必ず人間が `/dev-impl` をタイプする。これは承認ゲートを構造的に強制する仕掛けでもある。
 

@@ -49,10 +49,15 @@ function isImplementationPrompt(prompt: string): boolean {
 }
 
 // TDD の手順は tdd-guard hook が tool call レベルで強制するため、ここでは
-// 機械ゲート化できない項目 (外科的変更 / TDD 例外の明示) だけをリマインドする
+// 機械ゲート化できない項目 (トリアージ / rules の遅延 Read / 外科的変更 /
+// TDD 例外の明示) だけをリマインドする。rules/core/*.md は CLAUDE.md から
+// 即時展開されない (遅延参照) ため、この Read 指示が実質の読込トリガー。
 const REMINDER = `<system-reminder>
-[hook: remind-rules] 実装/修正系の指示を検知。依頼スコープを超えない (外科的変更: 隣接改善・dead code 削除は別ターンで合意)。TDD を適用しない判断 (typo 修正・宣言的 config 等) はその理由を出力で明示する。
-実装はメインループ直営で行う (逐次実装のサブエージェント委譲は禁止。委譲は並列 fan-out と巨大出力の隔離のみ)。テスト実行 (E2E 等の巨大出力のみ)・コミット実行は Haiku に委譲する (コミットメッセージは親が起草し、Haiku には実行だけさせる)。
+[hook: remind-rules] 実装/修正系の指示を検知。
+1. トリアージ: 着手前にタスクを分解し、ユニットごとのモデル割当 (CLAUDE.md「オーケストレーションとモデル階層」の 3 軸判定: 難易度/コンテキスト連続性/並列性) を 1 行で出力する。セッションが最上位 tier (Fable/Mythos 級) で実装作業が支配的なら、着手前に /model sonnet (または opus) への切替をユーザに提案する。
+2. rules: このセッションで未読なら ~/.claude/rules/core/ の tdd.md / design.md / testing.md を Read してから着手する (読了済みなら再読不要)。
+3. 外科的変更: 依頼スコープを超えない (隣接改善・dead code 削除は別ターンで合意)。TDD を適用しない判断 (typo 修正・宣言的 config 等) はその理由を出力で明示する。
+4. 委譲: 実装はメインループ直営 (逐次実装のサブエージェント委譲は禁止。委譲は並列 fan-out と巨大出力の隔離のみ、fan-out 時は難易度に応じ model: sonnet/opus を明示)。テスト実行 (E2E 等の巨大出力のみ)・コミット実行は Haiku に委譲する (コミットメッセージは親が起草し、Haiku には実行だけさせる)。
 </system-reminder>`;
 
 async function main() {
