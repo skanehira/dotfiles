@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/remind-rules.ts"
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/remind-rules.ts"
           },
           {
             "type": "command",
