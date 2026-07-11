@@ -11,6 +11,7 @@
     "defaultMode": "bypassPermissions"
   },
   "model": "claude-fable-5[1m]",
+  "fallbackModel": ["claude-opus-4-8", "sonnet"],
   "enableAllProjectMcpServers": true,
   "hooks": {
     "SessionStart": [
@@ -243,7 +244,7 @@
   "language": "Japanese",
   "spinnerTipsEnabled": false,
   "alwaysThinkingEnabled": true,
-  "advisorModel": "opus",
+  "advisorModel": "fable",
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "verbose": true,
