@@ -19,12 +19,24 @@
 
 ## 概要
 
-曖昧なユーザーリクエストを具体的で実行可能な設計仕様に変換する。要件を深く理解し、技術的実現可能性を検証し、アーキテクチャを設計し、開発者が従える設計ドキュメントを2ファイルに分けて生成する。
+曖昧なユーザーリクエストを具体的で実行可能な設計仕様に変換する。要件を深く理解し、技術的実現可能性を検証し、アーキテクチャを設計し、開発者が従える設計ドキュメントを3ファイルに分けて生成する。
 
-- **`docs/DESIGN.md` (概要設計)**: 目的・スコープ・主要コンポーネント・前提制約・非機能要件・データモデル概略・技術選定。「**何を作るか**」を読み手に伝える。
-- **`docs/DESIGN_DETAIL.md` (詳細設計)**: API シグネチャ・スキーマ・データフロー詳細 (Sequence)・エラーパス・境界条件・永続化レイアウト・実装ガイド。「**どう作るか**」を実装者に伝える。
+- **`docs/DESIGN.md` (概要設計)**: 共通 (目的・スコープ・ゴール・全体構成図・技術選定) + アプリ概要 + インフラ概要の 3 章構成。「**何を作るか**」を読み手に伝える。
+- **`docs/DESIGN_DETAIL_APP.md` (アプリ詳細設計)**: プロジェクトセットアップ・API シグネチャ・スキーマ・データフロー詳細 (Sequence)・エラーパス・UX 設計・実装ガイド。「**どう実装するか**」を実装者に伝える。
+- **`docs/DESIGN_DETAIL_INFRA.md` (インフラ詳細設計)**: リソース定義・IaC・CI/CD (GitHub Actions 固定)・監視・シークレット管理。「**どう構築・運用するか**」を構築者に伝える。
 
-TODO.md は DESIGN_DETAIL.md からフェーズ 10 (`references/todo-generation.md`) で生成する。DESIGN.md レベルの変更は概要 (前提・主要コンポーネント) の見直しが必要になるため、人間判断が要る重大変更扱い。
+**アプリ / インフラの境界基準**: 「変更に IaC・クラウドコンソール操作・環境設定変更が要るか」。要るなら INFRA、要らない (リポジトリ内のコード変更で完結する) なら APP。判断が割れやすい項目の振り分け:
+
+| 項目 | 振り分け | 理由 |
+|---|---|---|
+| DB スキーマ定義・マイグレーションコード | APP | ドメインモデル起因、アプリコードで管理 |
+| DB プロビジョニング・バックアップ設定 | INFRA | リソースの作成・運用設定 |
+| CI で走らせるテストの中身 | APP | テストコードと一体 |
+| workflow ファイル定義・デプロイパイプライン | INFRA | 環境・デプロイ設定 |
+| ログ出力方針 (フォーマット・レベル) | APP | アプリコードの実装詳細 |
+| ログ収集基盤・アラート閾値 | INFRA | 監視基盤の設定 |
+
+TODO.md は DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md からフェーズ 10 (`references/todo-generation.md`) で生成する。DESIGN.md レベルの変更は概要 (前提・主要コンポーネント) の見直しが必要になるため、人間判断が要る重大変更扱い。
 
 注: タスク分解と TODO.md 生成はフェーズ 10 で行う
 
@@ -160,36 +172,35 @@ AskUserQuestion({
 
 ### ステップ4: アーキテクチャ設計
 
-システム全体の構成と技術選定を行う。**各項目は出力先 (DESIGN.md or DESIGN_DETAIL.md) を明示する**。
+システム全体の構成と技術選定を行う。**各項目は出力先 (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md) を明示する**。振り分けに迷ったら冒頭「概要」の境界基準 (IaC・コンソール操作・環境設定変更が要るか) で判定する。
 
-#### → DESIGN.md (概要) に書く
+#### → DESIGN.md (概要設計、3 章構成) に書く
 
-**システム構成 (ハイレベル)**
-- コンポーネント構成と責務分担 (概念図)
-- レイヤーアーキテクチャ（プレゼンテーション層、ビジネスロジック層、データアクセス層）
-- モジュール間の依存関係 (方向)
+**共通章**
+- システム概要・機能要件 (MUST / NICE)
+- ゴール (ステップ 4.5 で定義)
+- 全体構成図 (Mermaid `flowchart`。アプリ + インフラを 1 枚で俯瞰)
+- 技術スタック一覧 (区分 / 技術 / 選定理由の表。CI/CD は GitHub Actions 固定)
+- 制約と前提
 
-**技術選定**
-- プログラミング言語とフレームワーク (理由含む)
-- データベース選定（RDBMS、NoSQL、キャッシュ、理由含む）
-- 外部サービス連携（認証、決済、通知など、選定理由含む）
-- インフラストラクチャ（クラウド、コンテナ、CI/CD）
+**アプリケーション概要章**
+- 主要コンポーネントと責務、レイヤーアーキテクチャ、依存の方向
+- 主要エンティティ一覧 (フィールド詳細は DESIGN_DETAIL_APP へ)
+- 非機能要件のうちアプリ側 (パフォーマンス目標 (数値)、セキュリティ方針)
+- テスト戦略 (方針): テストピラミッド比率、カバレッジ目標値
 
-**データ設計 (概略)**
-- 主要エンティティ一覧 (フィールド詳細は DESIGN_DETAIL へ)
-- ER 図のハイレベル概要
+**インフラ概要章**
+- 実行環境とデプロイ先 (環境の面数含む)
+- 主要インフラリソース一覧 (詳細は DESIGN_DETAIL_INFRA へ)
+- CI/CD 方針 (GitHub Actions 前提のトリガー・デプロイフロー概要)
+- 非機能要件のうちインフラ側 (可用性・信頼性 (SLO 等)、スケーラビリティ方針、監視方針)
 
-**非機能要件**
-- セキュリティ方針（認証、認可、暗号化、脆弱性対策の方向性）
-- パフォーマンス目標 (数値)
-- スケーラビリティ方針（負荷分散、水平/垂直スケール）
-- 可用性と信頼性 (SLO 等)
+#### → DESIGN_DETAIL_APP.md (アプリ詳細) に書く
 
-**テスト戦略 (方針)**
-- テストピラミッド比率 (単体/統合/E2E の役割分担)
-- カバレッジ目標値 (ライン/ブランチ/重要パス)
-
-#### → DESIGN_DETAIL.md (詳細) に書く
+**プロジェクトセットアップ**
+- スキャフォールドコマンドとテンプレート指定 (例: vite+ で React + TypeScript、miniflare 追加)
+- テンプレートから削除するもの・残すもの・追加設定
+- 初回起動確認コマンド (dev サーバ起動・テスト実行が通ること)
 
 **コンポーネント間の通信**
 - 通信プロトコルとインターフェース仕様
@@ -204,11 +215,11 @@ AskUserQuestion({
 **データスキーマ詳細**
 - 全フィールドの型・制約・デフォルト値
 - インデックス設計
-- マイグレーション方針
-- ER 図 (詳細)
+- マイグレーション方針 (コードとしての管理。適用パイプラインは INFRA 側)
+- ER 図 (Mermaid `erDiagram`)
 
 **データフロー詳細**
-- 主要シナリオの Sequence 図
+- 主要シナリオの Sequence 図 (Mermaid `sequenceDiagram`)
 - データ変換 (DTO ↔ Domain ↔ Persistence) の流れ
 
 **エラー戦略 (具体)**
@@ -216,13 +227,13 @@ AskUserQuestion({
 - エラーハンドリング実装方針（例外処理、Result型、エラーコード体系）
 - リトライポリシー（回数、間隔、バックオフ戦略の具体値）
 - フォールバック処理（代替動作、グレースフルデグラデーション）
-- エラーログ・通知（ログレベル、アラート条件、通知先）
+- ログ出力方針 (レベル基準・フォーマット。収集基盤・アラート閾値は INFRA 側)
 
 **テスト戦略 (具体)**
 - テストデータ戦略（フィクスチャ、ファクトリ、シード）
 - モック/スタブ方針（外部依存の扱い、DI 方針）
-- CI 統合（テスト実行タイミング、失敗時の動作）
 - 実行コマンド (例: `npm test`, `make test`)
+- CI 統合 (どのテストをどのタイミングで走らせるか。workflow 定義自体は INFRA 側)
 
 **実装ガイド**
 - 採用パターン (Repository / UseCase / Adapter 等)
@@ -231,7 +242,7 @@ AskUserQuestion({
 
 **UX 設計 (Web / モバイル Web 必須)**
 
-技術設計に偏らないよう、UX 設計を必須セクションとして書く。Voilog セッション F12 で「subagent が自分の UC の画面だけ実装、横断 UX (ナビ / ErrorBoundary / loading) が後回し」になった上流原因の対策。
+技術設計に偏らないよう、UX 設計を必須セクションとして書く。Voilog セッション F12 で「subagent が自分の UC の画面だけ実装、横断 UX (ナビ / ErrorBoundary / loading) が後回し」になった上流原因の対策。CLI / API のみのプロダクトでは省略可。
 
 - **画面遷移マップ**: Mermaid flowchart で全画面 + 遷移を可視化。`/ui-sketch` のフロー図と整合させる
 - **ナビゲーション仕様**:
@@ -251,9 +262,32 @@ AskUserQuestion({
 - **ErrorBoundary 配置**: ルート単位 / レイアウト単位 / 個別画面単位 (ホワイトアウト回避方針)
 - **a11y 方針**: aria-label / role / focus トラップ / キーボード操作 / 色コントラスト最低基準
 
-CLI / API のみのプロダクトでは省略可。
+#### → DESIGN_DETAIL_INFRA.md (インフラ詳細) に書く
 
-#### 未確定要素は POC_NEEDED マーカーで残す (DESIGN_DETAIL.md 側)
+**インフラ構成図・リソース定義**
+- 環境ごとの構成図 (Mermaid `flowchart`)
+- リソース一覧 (環境 × スペック / プラン × プロビジョニング方法)
+- ネットワーク設計 (該当する場合)
+- データストア運用 (バックアップ方式と頻度、リストア手順)
+
+**IaC**
+- ツール (wrangler.toml / Terraform 等)、管理対象と除外、state 管理、ディレクトリ構成
+
+**CI/CD パイプライン (GitHub Actions 固定)**
+- workflow ファイル一覧 (トリガー / ジョブ構成)
+- デプロイフロー (ブランチ・イベント → 環境の対応、承認ステップ、ロールバック手順)
+- GitHub Environments 定義と protection rule
+
+**シークレット・環境変数管理**
+- 名前 / 種別 / 置き場所 / 用途の一覧、ローカル開発での扱い
+
+**監視・アラート**
+- 収集基盤、アラート条件 (メトリクス × 閾値 × 継続時間)、通知先
+
+**スケーリング・可用性・コスト**
+- スケール方式とトリガー条件、障害復旧 (RTO / RPO)、コスト概算
+
+#### 未確定要素は POC_NEEDED マーカーで残す (DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md 側)
 
 「実装方針が技術検証の結果次第で変わる」項目は、文章で「未確定」と書くのではなく**機械可読なマーカー**で残す。ただし `blocker=true` の未確定要素はフェーズ 5 (PoC 検証) で解決済みであることが前提。マーカーとして残してよいのは `blocker=false` (継続可・後追い検証) のみ。
 
@@ -261,11 +295,13 @@ CLI / API のみのプロダクトでは省略可。
 <!-- POC_NEEDED: id=<unique-id>, scope=<検証対象を1行で>, risk=high|medium|low, blocker=true|false -->
 ```
 
-入力元:
-- FEASIBILITY.md が存在する場合: 検証済みの PoC は「PoC 結果」を技術選定の根拠として DESIGN.md / DESIGN_DETAIL.md に反映する (マーカーにしない)。未検証で残った `blocker=false` の PoC 計画のみ id / scope / risk / blocker を転記
-- FEASIBILITY.md が無い場合: 設計中に「実装ガイド」「API 設計」「データスキーマ」で不確定要素を発見したら、実装方針を左右するもの (blocker=true 相当) はフェーズ 5 (`references/poc-verification.md`) に差し戻して PoC し、左右しないものだけ `blocker=false` マーカーで残す
+マーカーの置き場所は検証対象で決める: アプリ実装に関する未確定要素 (ライブラリ挙動・API パターン等) は DESIGN_DETAIL_APP.md、インフラ構成に関するもの (プラットフォーム機能・デプロイ方式等) は DESIGN_DETAIL_INFRA.md の該当セクションに埋め込む。
 
-`blocker=true` のマーカーを未解決のまま DESIGN_DETAIL.md に残してはならない。実装ループ (`/dev-impl`) は起動時にこれを検出すると実装に入らず、dev-spec のフェーズ 5 への差し戻しを案内する。
+入力元:
+- FEASIBILITY.md が存在する場合: 検証済みの PoC は「PoC 結果」を技術選定の根拠として DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md に反映する (マーカーにしない)。未検証で残った `blocker=false` の PoC 計画のみ id / scope / risk / blocker を転記
+- FEASIBILITY.md が無い場合: 設計中に「実装ガイド」「API 設計」「データスキーマ」「リソース定義」「CI/CD」で不確定要素を発見したら、実装方針を左右するもの (blocker=true 相当) はフェーズ 5 (`references/poc-verification.md`) に差し戻して PoC し、左右しないものだけ `blocker=false` マーカーで残す
+
+`blocker=true` のマーカーを未解決のまま DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md に残してはならない。実装ループ (`/dev-impl`) は起動時にこれを検出すると実装に入らず、dev-spec のフェーズ 5 への差し戻しを案内する。
 
 例:
 
@@ -281,7 +317,7 @@ CLI / API のみのプロダクトでは省略可。
 
 ### ステップ4.5: ゴールと検証手順の定義
 
-最終的なゴールと検証手順を定義する。**ゴール定義は DESIGN.md、検証手順の具体的な操作は DESIGN_DETAIL.md**。
+最終的なゴールと検証手順を定義する。**ゴール定義は DESIGN.md (共通章)、検証手順の具体的な操作はローカル / CI で実行できるものを DESIGN_DETAIL_APP.md、デプロイ・環境依存のものを DESIGN_DETAIL_INFRA.md** に書く。
 
 #### 情報収集
 
@@ -324,13 +360,18 @@ G_E2E の効果:
 
 CLI / API のみのプロダクトでは G_E2E は省略可。その場合は「全 UC を CLI / curl で通しシナリオで再現できる」をゴールにする。
 
-#### 検証手順 (→ DESIGN_DETAIL.md)
+#### 検証手順 (→ DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md)
 
-各ゴールに対して**必ず 1 対 1 で対応する検証手順**を DESIGN_DETAIL.md の「検証手順」セクションに書く。dev-impl Step 5 はこの対応を読んでゴール判定する。
+各ゴールに対して**必ず 1 対 1 で対応する検証手順**を「検証手順」セクションに書く。dev-impl Step 5 はこの対応を読んでゴール判定する。記載先は実行環境で決める:
+
+- **DESIGN_DETAIL_APP.md**: ローカル / CI で実行できるもの (自動テスト、実機ブラウザ検証)
+- **DESIGN_DETAIL_INFRA.md**: デプロイ・環境依存のもの (本番 / ステージング URL への疎通、workflow 実行、IaC plan)
+
+書式:
 
 - **自動系**: `G<n> 検証: <bash コマンド>` 形式 (例: `G1 検証: npm test -- e2e/login.spec.ts`)
 - **手動系**: `G<n> 検証 (手動): <操作手順>` 形式 (dev-impl は自動判定不可、手動確認待ちとして残す)
-- **G_E2E 検証**: `chrome-devtools` MCP で実機ブラウザ操作。手順を「ナビゲーションパス + 操作」で書く
+- **G_E2E 検証**: `chrome-devtools` MCP で実機ブラウザ操作。手順を「ナビゲーションパス + 操作」で書く (→ APP 側)
 
 G_E2E 検証手順の書式例:
 ```markdown
@@ -358,44 +399,48 @@ G_E2E 検証手順の書式例:
 
 ### ステップ5: ドキュメント生成
 
-DESIGN.md と DESIGN_DETAIL.md を生成する。
+DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md を生成する。
 
-テンプレートは [design-template.md](design-template.md) と [design-detail-template.md](design-detail-template.md) を参照 (template が無い場合はステップ 4 の振り分けに従って構造化する)。
+テンプレートは [design-template.md](design-template.md)、[design-detail-app-template.md](design-detail-app-template.md)、[design-detail-infra-template.md](design-detail-infra-template.md) を参照する。
 
 ### ステップ6: ファイル出力
 
-設計ドキュメントを 2 ファイルに分けて書き出す：
+設計ドキュメントを 3 ファイルに分けて書き出す：
 ```javascript
-// docs ディレクトリに DESIGN.md (概要) と DESIGN_DETAIL.md (詳細) を出力
+// docs ディレクトリに概要 1 本 + 詳細 2 本を出力
 Write(
     file_path="docs/DESIGN.md",
     content=designOverviewContent
 )
 Write(
-    file_path="docs/DESIGN_DETAIL.md",
-    content=designDetailContent
+    file_path="docs/DESIGN_DETAIL_APP.md",
+    content=designDetailAppContent
+)
+Write(
+    file_path="docs/DESIGN_DETAIL_INFRA.md",
+    content=designDetailInfraContent
 )
 ```
 
-**ファイル間の参照**: DESIGN.md の各セクションから対応する DESIGN_DETAIL.md のセクションへリンクする (例: `主要 API → [詳細は DESIGN_DETAIL.md#API-設計](./DESIGN_DETAIL.md#api-設計)`)。これにより読み手は概要から詳細へ辿れる。
+**ファイル間の参照**: DESIGN.md の各セクションから対応する詳細ファイルのセクションへリンクする (例: `主要 API → [詳細は DESIGN_DETAIL_APP.md#API-設計](./DESIGN_DETAIL_APP.md#3-api-設計)`)。詳細 2 ファイルは冒頭で相互リンクし、境界をまたぐ言及 (例: APP のマイグレーション方針 → INFRA の適用パイプライン) にも相手側セクションへのリンクを付ける。
 
 ### ステップ7: セルフレビュー
 
-生成した DESIGN.md と DESIGN_DETAIL.md を**両方**セルフレビューし、問題がなくなるまで修正を繰り返す。
+生成した DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md を**すべて**セルフレビューし、問題がなくなるまで修正を繰り返す。
 
 #### レビュー観点
 
-1. **完全性**: すべての要件がカバーされているか (DESIGN.md / DESIGN_DETAIL.md 双方)
-2. **一貫性**: 用語・表記・設計方針が両ファイルで統一されているか
+1. **完全性**: すべての要件がカバーされているか (3 ファイル全体で)
+2. **一貫性**: 用語・表記・設計方針が全ファイルで統一されているか
 3. **実現可能性**: 技術的に実装可能な設計か
 4. **明確性**: 曖昧な表現や不明確な箇所がないか
-5. **整合性**: DESIGN.md の概要と DESIGN_DETAIL.md の詳細が矛盾していないか
-6. **責務境界**: 概要・詳細の振り分けが守られているか (概要に細かい API スキーマが紛れ込んでいない等)
+5. **整合性**: DESIGN.md の概要と詳細 2 ファイルが矛盾していないか
+6. **責務境界**: 概要・詳細の振り分けと APP / INFRA の境界基準が守られているか (概要に API スキーマが紛れ込んでいない、workflow 定義が APP に書かれていない等)
 
 #### レビュープロセス
 
 ```
-1. DESIGN.md と DESIGN_DETAIL.md を両方読み返す
+1. DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md をすべて読み返す
 2. 以下のチェックリストで問題を洗い出す
 3. 問題があれば修正してファイルを更新
 4. 問題がなくなるまで1-3を繰り返す（最大3回）
@@ -404,30 +449,45 @@ Write(
 #### セルフレビューチェックリスト
 
 **DESIGN.md (概要)**
+- [ ] 目次があり、共通 / アプリ概要 / インフラ概要の 3 章構成になっている
 - [ ] 目的・スコープが明記されている
-- [ ] 主要コンポーネントとレイヤーが理解しやすく図示されている
-- [ ] 技術選定の理由が明記されている
+- [ ] 全体構成図 (Mermaid flowchart) がアプリ + インフラを俯瞰できる
+- [ ] 技術選定の理由が明記されている (CI/CD は GitHub Actions 固定)
 - [ ] 非機能要件が具体的な数値で定義されている
-- [ ] 主要エンティティが一覧化されている (詳細は DESIGN_DETAIL へ)
+- [ ] 主要エンティティが一覧化されている (詳細は DESIGN_DETAIL_APP へ)
 - [ ] 最終ゴールが観測可能・検証可能な形で定義されている
-- [ ] 詳細は DESIGN_DETAIL.md へのリンクで参照している
+- [ ] 詳細は DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md へのリンクで参照している
 
-**DESIGN_DETAIL.md (詳細)**
+**DESIGN_DETAIL_APP.md (アプリ詳細)**
+- [ ] 目次がある
+- [ ] プロジェクトセットアップがコピーして実行できるコマンドで書かれている
 - [ ] API シグネチャ・スキーマが具体的に書かれている
 - [ ] データスキーマ (全フィールド型・制約) が網羅されている
-- [ ] 主要シナリオの Sequence / データフローがある
+- [ ] 主要シナリオの Sequence / データフロー (Mermaid) がある
 - [ ] エラー分類・コード・リトライポリシーが具体値で書かれている
-- [ ] 検証手順 (実行コマンド・操作レベル) が書かれている
+- [ ] 検証手順 (ローカル / CI 実行系) が書かれている
 - [ ] 実装ガイド (採用パターン・ライブラリ) が明記されている
+- [ ] UX 設計がある (Web / モバイル Web の場合)
 
-**両ファイル共通**
-- [ ] 用語・命名・設計方針が両ファイルで一貫している
+**DESIGN_DETAIL_INFRA.md (インフラ詳細)**
+- [ ] 目次がある
+- [ ] インフラ構成図 (Mermaid flowchart) が環境ごとに書かれている
+- [ ] リソース定義とプロビジョニング方法が書かれている
+- [ ] CI/CD (GitHub Actions) の workflow 一覧・トリガー・デプロイフローが具体的に書かれている
+- [ ] シークレット・環境変数の一覧と置き場所が書かれている
+- [ ] 監視・アラートが閾値・通知先まで書かれている
+- [ ] 検証手順 (デプロイ・環境依存系) が書かれている
+- [ ] 該当しないセクションは「該当なし (理由)」と明記されている (無言の省略が無い)
+
+**全ファイル共通**
+- [ ] 用語・命名・設計方針が全ファイルで一貫している
 - [ ] DESIGN.md の概要に詳細が紛れ込んでいない (責務境界遵守)
-- [ ] DESIGN_DETAIL.md の詳細が DESIGN.md の概要と矛盾していない
+- [ ] APP / INFRA の境界基準 (IaC・コンソール操作・環境設定変更が要るか) に反する記載が無い
+- [ ] 詳細 2 ファイルが冒頭で相互リンクし、境界をまたぐ言及に相手側へのリンクがある
 
 **実装への橋渡し**
-- [ ] planning-tasks スキルが DESIGN_DETAIL.md から TODO.md を生成できる粒度
-- [ ] 開発者が迷わず実装を開始できる情報量がある
+- [ ] フェーズ 10 (todo-generation) が DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md から TODO.md を生成できる粒度
+- [ ] 開発者が迷わず実装・構築を開始できる情報量がある
 - [ ] 依存関係と制約が明確
 
 #### 問題発見時の対応
@@ -448,13 +508,14 @@ Write(
 - [ ] アーキテクチャ設計が明確で実装可能
 - [ ] 非機能要件（セキュリティ、パフォーマンス等）が考慮されている
 - [ ] エラー戦略とテスト戦略が定義されている
-- [ ] データ設計と API 設計が明確 (詳細は DESIGN_DETAIL.md)
+- [ ] データ設計と API 設計が明確 (詳細は DESIGN_DETAIL_APP.md)
+- [ ] インフラ構成と CI/CD が明確 (詳細は DESIGN_DETAIL_INFRA.md)
 - [ ] 技術スタックの選定理由が明確
 - [ ] 制約と前提が文書化されている
 - [ ] 不明点は AskUserQuestion ツールで確認済み
-- [ ] DESIGN.md (概要) と DESIGN_DETAIL.md (詳細) の両方が生成されている
-- [ ] 2 ファイル間の責務境界が守られている
+- [ ] DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の 3 ファイルが生成されている
+- [ ] ファイル間の責務境界が守られている
 - [ ] セルフレビューが完了し、問題が解消されている
 
-### 関連スキル
-- **planning-tasks**: DESIGN_DETAIL.md 完成後、このスキルを使用してタスク分解と TODO.md 生成を行う
+### 関連手順書
+- **todo-generation.md (フェーズ 10)**: 詳細設計 2 ファイル完成後、タスク分解と TODO.md 生成を行う

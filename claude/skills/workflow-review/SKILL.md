@@ -66,7 +66,7 @@ related_rules_paths:
 design_overview: |
   <docs/DESIGN.md があれば全文 or 抜粋>
 design_detail: |
-  <docs/DESIGN_DETAIL.md があれば全文 or 抜粋>
+  <docs/DESIGN_DETAIL_APP.md / docs/DESIGN_DETAIL_INFRA.md があれば全文 or 抜粋 (旧形式 docs/DESIGN_DETAIL.md しか無ければそれを使う)>
 dev_server:                                        # review-product-readiness 用。Web プロダクトでなければ省略 (null)
   url: <検出できた URL>
   start_command: <package.json の dev/start script>
@@ -82,7 +82,9 @@ const ctx = {
   related_source_files: args.related_source_files ?? gitStatusPorcelainFiles(),
   related_rules_paths: args.related_rules_paths ?? defaultRulesPaths(),
   design_overview: args.design_overview ?? readIfExists("docs/DESIGN.md"),
-  design_detail: args.design_detail ?? readIfExists("docs/DESIGN_DETAIL.md"),
+  design_detail: args.design_detail ??
+    [readIfExists("docs/DESIGN_DETAIL_APP.md"), readIfExists("docs/DESIGN_DETAIL_INFRA.md")]
+      .filter(Boolean).join("\n\n") || readIfExists("docs/DESIGN_DETAIL.md"), // 旧形式フォールバック
   dev_server: args.dev_server, // 無ければ undefined のまま (review-product-readiness が no-op で扱う)
 }
 ```

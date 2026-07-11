@@ -107,5 +107,5 @@ rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
 
 ## 後段との連動
 
-- フェーズ 7 (analyzing-requirements) は、FEASIBILITY.md の PoC 結果を技術選定の根拠として DESIGN.md に反映し、未検証で残った `blocker=false` の PoC 計画のみ `POC_NEEDED` マーカーとして DESIGN_DETAIL.md に転記する
-- 実装ループ (`/dev-impl`) は起動時に DESIGN_DETAIL.md の `blocker=true` マーカー残存をチェックし、見つけたら実装に入らず本フェーズへの差し戻しを案内する (安全網)
+- フェーズ 7 (analyzing-requirements) は、FEASIBILITY.md の PoC 結果を技術選定の根拠として DESIGN.md に反映し、未検証で残った `blocker=false` の PoC 計画のみ `POC_NEEDED` マーカーとして DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側に転記する
+- 実装ループ (`/dev-impl`) は起動時に DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の `blocker=true` マーカー残存をチェックし、見つけたら実装に入らず本フェーズへの差し戻しを案内する (安全網)

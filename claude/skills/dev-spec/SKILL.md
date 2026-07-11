@@ -2,7 +2,7 @@
 name: dev-spec
 description: >-
   設計ループ。ユーザーストーリー → UI スケッチ → ユースケース → 実現可能性検証 → PoC 検証 →
-  DDD モデリング → 概要/詳細設計 (DESIGN.md / DESIGN_DETAIL.md) → 深掘りインタビュー →
+  DDD モデリング → 概要/詳細設計 (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md) → 深掘りインタビュー →
   検証手順補完 → TODO.md 生成までを対話的に実行し、承認ゲートで実装ループ (/dev-impl) へ引き渡す。
   「設計フェーズを開始」「要件を整理したい」「計画を立てたい」「ユーザーストーリーを書きたい」
   「技術的に実現できるか確認したい」「TODO.md を作りたい」「DESIGN.md を深掘りしたい」などで起動。
@@ -14,10 +14,11 @@ argument-hint: "[タスク説明]"
 
 ## 概要
 
-設計ループを回して docs/ 配下に設計成果物を生成し、承認ゲートを経て実装ループ (`/dev-impl`) に引き渡す。最終成果物は次の 3 ファイル:
+設計ループを回して docs/ 配下に設計成果物を生成し、承認ゲートを経て実装ループ (`/dev-impl`) に引き渡す。最終成果物は次の 4 ファイル:
 
-- **docs/DESIGN.md** (概要設計): 目的・スコープ・主要コンポーネント・技術選定・ゴール
-- **docs/DESIGN_DETAIL.md** (詳細設計): API・スキーマ・シーケンス・エラー実装・検証手順
+- **docs/DESIGN.md** (概要設計): 共通 (目的・スコープ・ゴール・全体構成図・技術選定) + アプリ概要 + インフラ概要の 3 章構成
+- **docs/DESIGN_DETAIL_APP.md** (アプリ詳細設計): セットアップ・API・スキーマ・シーケンス・エラー実装・UX・検証手順 (ローカル / CI 系)
+- **docs/DESIGN_DETAIL_INFRA.md** (インフラ詳細設計): リソース・IaC・CI/CD (GitHub Actions 固定)・監視・シークレット・検証手順 (環境依存系)
 - **docs/TODO.md**: TDD 準拠の実装タスクリスト
 
 フェーズごとに Feedback (検証手段) が異なる:
@@ -41,7 +42,7 @@ argument-hint: "[タスク説明]"
 | 4  | 実現可能性検証       | `references/feasibility-check.md`      | docs/FEASIBILITY.md (PoC 計画)         | 条件付き実行   |
 | 5  | PoC 検証             | `references/poc-verification.md`       | FEASIBILITY.md 更新 (PoC 結果)         | 条件付き実行   |
 | 6  | DDD モデリング       | `references/ddd-modeling.md`           | docs/GLOSSARY.md, docs/DOMAIN_MODEL.md | スキップ       |
-| 7  | 概要/詳細設計        | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL.md  | 実行           |
+| 7  | 概要/詳細設計        | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL_APP.md, docs/DESIGN_DETAIL_INFRA.md | 実行           |
 | 8  | 深掘りインタビュー   | `references/interview.md`              | DESIGN / DETAIL 更新                   | 実行           |
 | 9  | 検証手順の確認と補完 | `references/verification-review.md`    | DESIGN / DETAIL 更新                   | 実行           |
 | 10 | TODO.md 生成         | `references/todo-generation.md`        | docs/TODO.md                           | 実行           |
@@ -69,10 +70,12 @@ rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
 
 ### 0.2 既存ドキュメントの確認と開始点の決定
 
-docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.md / USECASES.md / FEASIBILITY.md / GLOSSARY.md / DOMAIN_MODEL.md / DESIGN.md / DESIGN_DETAIL.md / TODO.md) を確認する。
+docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.md / USECASES.md / FEASIBILITY.md / GLOSSARY.md / DOMAIN_MODEL.md / DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) を確認する。
 
-- **DESIGN.md / DESIGN_DETAIL.md / TODO.md が揃い、TODO.md 先頭に承認スタンプ (`<!-- dev-spec:approved ... -->`) がある** → 「設計は完成しています。実装ループは `/dev-impl` を起動してください。設計を修正したい場合は更新モードで再実行してください」と案内して終了
-- **3 点は揃っているが承認スタンプが無い** → 未承認。フェーズ 11 (承認ゲート) から再開する
+旧形式の単一 `docs/DESIGN_DETAIL.md` を見つけたら、`references/todo-generation.md` のフォールバック A (APP / INFRA への分割移行) を案内してから続行する。
+
+- **DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md が揃い、TODO.md 先頭に承認スタンプ (`<!-- dev-spec:approved ... -->`) がある** → 「設計は完成しています。実装ループは `/dev-impl` を起動してください。設計を修正したい場合は更新モードで再実行してください」と案内して終了
+- **4 点は揃っているが承認スタンプが無い** → 未承認。フェーズ 11 (承認ゲート) から再開する
 - **途中まで存在する** → 「続きから (推奨) / 最初から / 既存を更新」を AskUserQuestion で確認。「続きから」の再開フェーズは次の表で決める (存在する成果物のうち最も下流のものを見る):
 
 | 最も下流の既存成果物                        | 再開フェーズ                         |
@@ -83,7 +86,7 @@ docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.md / USECASES.md / F
 | FEASIBILITY.md (blocker=true が unresolved) | 5 (PoC 検証)                         |
 | FEASIBILITY.md (全件解決済み)               | 6 (DDD)。クイックモードなら 7        |
 | GLOSSARY.md / DOMAIN_MODEL.md               | 7 (設計書生成)                       |
-| DESIGN.md + DESIGN_DETAIL.md                | 8 (深掘り)。深掘り済みが明らかなら 9 |
+| DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md | 8 (深掘り)。深掘り済みが明らかなら 9 |
 | TODO.md (承認スタンプ無し)                  | 11 (承認ゲート)                      |
 
 - **何もない** → モード選択へ
@@ -137,10 +140,11 @@ AskUserQuestion({
 ✓ 設計ループ完了
 
 生成されたファイル:
-- docs/DESIGN.md         (概要設計)
-- docs/DESIGN_DETAIL.md  (詳細設計)
-- docs/TODO.md           (タスクリスト、全 n フェーズ)
-- docs/FEASIBILITY.md    (PoC 結果: verified x 件 / fallback 採用 y 件)
+- docs/DESIGN.md              (概要設計)
+- docs/DESIGN_DETAIL_APP.md   (アプリ詳細設計)
+- docs/DESIGN_DETAIL_INFRA.md (インフラ詳細設計)
+- docs/TODO.md                (タスクリスト、全 n フェーズ)
+- docs/FEASIBILITY.md         (PoC 結果: verified x 件 / fallback 採用 y 件)
 ```
 
 FEASIBILITY.md を作成していない場合 (クイックモードで不確実性なし) は、その行を省略する。
@@ -188,7 +192,7 @@ B: このセッションで続行
 
 - [ ] 対象フェーズがすべて実行された (またはユーザー判断でスキップ)
 - [ ] blocker=true の PoC 計画がすべて解決済み (verified または fallback 採用)
-- [ ] 全フェーズ実行時: DESIGN.md / DESIGN_DETAIL.md / TODO.md が生成され、承認ゲートを通過した
+- [ ] 全フェーズ実行時: DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md が生成され、承認ゲートを通過した
 - [ ] 承認時: TODO.md 先頭に承認スタンプが書き込まれた
 
 ## 参照ルール

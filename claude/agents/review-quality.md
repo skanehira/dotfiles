@@ -1,6 +1,6 @@
 ---
 name: review-quality
-description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 3 観点レビューの一つ (コード品質 + プロジェクト rules 準拠 + アーキテクチャ heuristic)。フェーズ実装差分を見て、SOLID・YAGNI・命名・凝集/結合・コロケーション・アンチパターン、CLAUDE.md / rules/ 配下への明示違反 (外科的変更・最小実装・IO の DI)、および heuristic な構造判断 (関数肥大化・責務混線・抽象化過不足・DESIGN.md との整合) を判定し、構造化 JSON で findings を返す。機械判定可能なレイヤ境界違反は architecture-guard、TDD は review-tdd の責務。
+description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 3 観点レビューの一つ (コード品質 + プロジェクト rules 準拠 + アーキテクチャ heuristic)。フェーズ実装差分を見て、SOLID・YAGNI・命名・凝集/結合・コロケーション・アンチパターン、CLAUDE.md / rules/ 配下への明示違反 (外科的変更・最小実装・IO の DI)、および heuristic な構造判断 (関数肥大化・責務混線・抽象化過不足・DESIGN.md / DESIGN_DETAIL_APP.md との整合) を判定し、構造化 JSON で findings を返す。機械判定可能なレイヤ境界違反は architecture-guard、TDD は review-tdd の責務。
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -21,7 +21,7 @@ PHASE_CONTEXT:
   design_overview: |
     <DESIGN.md 関連節抜粋: 主要コンポーネント / レイヤ方針>
   design_detail: |
-    <DESIGN_DETAIL.md 関連節抜粋: 実装ガイド / 採用パターン>
+    <DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md 関連節抜粋: 実装ガイド / 採用パターン (通常は APP 側)>
   related_rules_paths:
     - rules/core/design.md
     - rules/frontend/react/hooks.md       # (TypeScript/React なら)
@@ -54,7 +54,7 @@ PHASE_CONTEXT:
 - **規模**: 関数 50 行以上 (medium) / ファイル 500 行以上 (low) / クラス 10 メソッド以上 (medium)。数値は目安、プロジェクト慣例で調整
 - **責務の混線**: 1 関数に入力検証 + DB 操作 + 通知送信など複数責務、横断的関心事と業務ロジックの混在
 - **抽象化の過不足**: 単一実装の boilerplate interface (過剰) / 同一パターン 3 箇所以上重複 (不足)
-- **DESIGN との整合**: DESIGN.md の主要コンポーネント名・責務、DESIGN_DETAIL.md の採用パターン (Repository / UseCase / Adapter 等) と差分が一致するか。違反は P2 (詳細設計の不足) シグナルとして fix_proposal を出す
+- **DESIGN との整合**: DESIGN.md の主要コンポーネント名・責務、DESIGN_DETAIL_APP.md の採用パターン (Repository / UseCase / Adapter 等) と差分が一致するか。違反は P2 (詳細設計の不足) シグナルとして fix_proposal を出す
 - **Clean Architecture / DDD 補足**: アプリケーション層の直接 ORM 呼び出し、domain entity の DI 不能なグローバル参照、aggregate root を介さない集約内 entity 操作
 
 ## 検査手順
