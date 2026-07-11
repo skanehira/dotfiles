@@ -1,0 +1,4 @@
+/* previm 同梱 mermaid.min.css のフォント指定に日本語グリフがなく、幅計測と描画のフォントが食い違ってテキストがはみ出すため上書き */
+.node text, .label, div.mermaidTooltip {
+  font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif !important;
+}
