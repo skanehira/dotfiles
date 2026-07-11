@@ -99,8 +99,12 @@ const EXEMPT_BASENAME_PATTERNS = [
 const CLAUDE_CONFIG_PATTERN =
   /(^|\/)\.claude\/|(^|\/)claude\/(hooks|agents|skills|rules|commands|plugins)\//;
 
+// Neovim lazy.nvim のプラグイン定義 (vim/lua/plugins/ 配下): 宣言的な plugin spec でテスト対象外
+const NVIM_PLUGIN_SPEC_PATTERN = /(^|\/)vim\/lua\/plugins\//;
+
 export function classifyFile(path: string): FileClass {
   if (CLAUDE_CONFIG_PATTERN.test(path)) return "exempt";
+  if (NVIM_PLUGIN_SPEC_PATTERN.test(path)) return "exempt";
 
   const basename = path.split("/").pop() ?? path;
   const ext = basename.includes(".")

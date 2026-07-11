@@ -110,6 +110,23 @@ Deno.test("classifyFile does not over-exempt a non-harness claude/ directory", (
   assertEquals(result, "impl");
 });
 
+Deno.test("classifyFile returns exempt for Neovim lazy.nvim plugin specs", () => {
+  const cases = [
+    "/Users/x/dotfiles/vim/lua/plugins/docs/previm.lua",
+    "/Users/x/dotfiles/vim/lua/plugins/ui/treesitter.lua",
+    "vim/lua/plugins/develop/dadbod.lua",
+  ];
+  for (const path of cases) {
+    assertEquals(classifyFile(path), "exempt", path);
+  }
+});
+
+Deno.test("classifyFile does not over-exempt non-plugin lua under vim/lua", () => {
+  const result = classifyFile("/Users/x/dotfiles/vim/lua/modules/ai/init.lua");
+
+  assertEquals(result, "impl");
+});
+
 Deno.test("detectTestCommand returns true for test runner invocations", () => {
   const cases = [
     "deno test --allow-read",
