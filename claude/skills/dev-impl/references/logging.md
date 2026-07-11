@@ -35,7 +35,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
     "diff_after": "...",
     "rationale": "なぜこの修正を選んだか",
     "affected_files": ["src/foo.ts"],
-    "related_design_section": "DESIGN_DETAIL.md#api-設計"
+    "related_design_section": "DESIGN_DETAIL_APP.md#api-設計"
   }
 }
 ```
@@ -61,7 +61,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 ## 範例: typical な実行ログ
 
 ```
-[2026-06-30 10:00:00] dev-impl start (docs/DESIGN.md + DESIGN_DETAIL.md + TODO.md)
+[2026-06-30 10:00:00] dev-impl start (docs/DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md)
 [2026-06-30 10:00:01] phase-1 / start
 [2026-06-30 10:01:23] phase-1 / implement (main) / done
 [2026-06-30 10:01:30] phase-1 / architecture-guard / violations=0

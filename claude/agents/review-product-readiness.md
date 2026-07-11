@@ -26,7 +26,7 @@ related_source_files: [...]
 design_overview: |
   <DESIGN.md 抜粋。特に「ゴール」セクション (G_E2E のシナリオ含む)>
 design_detail: |
-  <DESIGN_DETAIL.md 抜粋。特に「UX 設計」セクション (画面遷移マップ / ナビ仕様 / 共通 UI / a11y)>
+  <DESIGN_DETAIL_APP.md 抜粋。特に「UX 設計」セクション (画面遷移マップ / ナビ仕様 / 共通 UI / a11y)>
 dev_server:
   url: http://localhost:5173/   # デフォルト、dev-impl が project 別に渡す
   start_command: pnpm dev        # 起動コマンド
@@ -38,7 +38,7 @@ snapshot_dir: /tmp/review-product-readiness-snapshots/<phase>/
 
 ### 1. 全画面ナビ到達
 
-DESIGN.md / DESIGN_DETAIL.md から主要画面リストを抽出 (G_E2E シナリオがあればそれを使う)。各画面が**ヘッダー or フッター or ナビからリンククリックで到達できる**か検証:
+DESIGN.md / DESIGN_DETAIL_APP.md から主要画面リストを抽出 (G_E2E シナリオがあればそれを使う)。各画面が**ヘッダー or フッター or ナビからリンククリックで到達できる**か検証:
 
 1. ルート URL `http://localhost:5173/` を `navigate_page`
 2. `take_snapshot` で初期画面の DOM を取得
@@ -55,7 +55,7 @@ rg -n 'ErrorBoundary' apps/ src/
 ```
 
 - ルート単位 / レイアウト単位 / 個別画面単位のどこにも配置が無ければ違反 (severity: high)
-- DESIGN_DETAIL.md の UX 設計に書かれた配置方針と差分があれば違反 (severity: medium)
+- DESIGN_DETAIL_APP.md の UX 設計に書かれた配置方針と差分があれば違反 (severity: medium)
 
 ### 3. 空状態 UX
 
@@ -65,7 +65,7 @@ list / grid view のソースを grep で抽出 (`map(`, `forEach(`)、各々で
 rg -n '\.length === 0|\.length > 0' apps/src/
 ```
 
-DESIGN_DETAIL.md の empty パターン仕様と比較。空状態専用画面が無く、空配列のまま render しているコードがあれば違反。
+DESIGN_DETAIL_APP.md の empty パターン仕様と比較。空状態専用画面が無く、空配列のまま render しているコードがあれば違反。
 
 ### 4. loading 表示
 

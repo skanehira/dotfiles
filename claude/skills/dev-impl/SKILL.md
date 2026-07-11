@@ -1,6 +1,6 @@
 ---
 name: dev-impl
-description: 実装ループ。承認済みの DESIGN.md + DESIGN_DETAIL.md + TODO.md を入力に、TODO.md の全フェーズをレビュー・コミット込みで自律実装するオーケストレーター。人間の介入はエスカレ条件 (概要設計の破綻 P3 等) のみ。dev-spec の承認ゲート通過後にユーザーが直接起動する。エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「設計済み TODO で実装を自律実行」「残りタスクを自動で実装」などで起動。
+description: 実装ループ。承認済みの DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md を入力に、TODO.md の全フェーズをレビュー・コミット込みで自律実装するオーケストレーター。人間の介入はエスカレ条件 (概要設計の破綻 P3 等) のみ。dev-spec の承認ゲート通過後にユーザーが直接起動する。エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「設計済み TODO で実装を自律実行」「残りタスクを自動で実装」などで起動。
 argument-hint: "[docs ディレクトリパス、省略時は docs/]"
 model: sonnet
 allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
@@ -22,10 +22,11 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 - `$ARGUMENTS` で docs ディレクトリパスが指定されていればそれを基点にする。省略時は `docs/` を使う
 - 必須ファイル:
   - `docs/DESIGN.md` (概要)
-  - `docs/DESIGN_DETAIL.md` (詳細)
+  - `docs/DESIGN_DETAIL_APP.md` (アプリ詳細)
+  - `docs/DESIGN_DETAIL_INFRA.md` (インフラ詳細)
   - `docs/TODO.md` (タスクリスト、フェーズ単位)
 
-DESIGN_DETAIL.md が無ければ dev-spec の詳細抽出フォールバック (`../dev-spec/references/todo-generation.md`) でまず分割するよう促してから dev-impl 起動を再案内する。
+詳細設計 2 ファイルが無ければ dev-spec のフォールバック (`../dev-spec/references/todo-generation.md`。旧形式 DESIGN_DETAIL.md からの分割移行 = フォールバック A、DESIGN.md からの抽出 = フォールバック B) でまず生成するよう促してから dev-impl 起動を再案内する。
 
 ## 参照ルール
 
@@ -55,16 +56,17 @@ DESIGN_DETAIL.md が無ければ dev-spec の詳細抽出フォールバック (
 ### Step 1: 前提ドキュメントの確認
 
 1. `docs/DESIGN.md` を Read
-2. `docs/DESIGN_DETAIL.md` を Read
-3. `docs/TODO.md` を Read
+2. `docs/DESIGN_DETAIL_APP.md` を Read
+3. `docs/DESIGN_DETAIL_INFRA.md` を Read
+4. `docs/TODO.md` を Read
 
 #### 不在時の挙動
 
-| 不在ファイル     | 対処                                                                                                              |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------- |
-| TODO.md          | エスカレ停止: 「TODO.md が無い。`/dev-spec` (フェーズ 10) で生成してから再実行」とユーザー通知                    |
-| DESIGN_DETAIL.md | エスカレ停止: 「DESIGN_DETAIL.md が無い。`/dev-spec` の詳細抽出フォールバックで生成してから再実行」とユーザー通知 |
-| DESIGN.md        | エスカレ停止: 「DESIGN.md が無い。`/dev-spec` で生成」とユーザー通知                                              |
+| 不在ファイル           | 対処                                                                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| TODO.md                | エスカレ停止: 「TODO.md が無い。`/dev-spec` (フェーズ 10) で生成してから再実行」とユーザー通知                              |
+| DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md | エスカレ停止: 「詳細設計 2 ファイルが無い。`/dev-spec` のフォールバック (旧形式からの分割移行 or 抽出) で生成してから再実行」とユーザー通知 (旧形式の単一 `docs/DESIGN_DETAIL.md` しか無い場合も同じ) |
+| DESIGN.md              | エスカレ停止: 「DESIGN.md が無い。`/dev-spec` で生成」とユーザー通知                                                        |
 
 #### 構造ゲート (fail fast)
 
@@ -74,7 +76,7 @@ DESIGN_DETAIL.md が無ければ dev-spec の詳細抽出フォールバック (
 | ----------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | 承認スタンプ            | TODO.md 先頭に `<!-- dev-spec:approved` がある                                                       | `design_not_approved`: 「dev-spec フェーズ 11 の承認ゲートを通してから再実行」  |
 | ゴール定義              | `rg -n '^- G[0-9]+:\|^G[0-9]+:' docs/DESIGN.md` が 1 件以上                                          | `goals_missing`: 「dev-spec フェーズ 9 でゴールを定義してから再実行」           |
-| ゴール ↔ 検証手順の 1:1 | 抽出した各 `G<n>` に対応する `G<n> 検証` 行が DESIGN_DETAIL.md にある                                | `verification_missing`: 欠落ゴール ID を列挙して dev-spec フェーズ 9 へ差し戻し |
+| ゴール ↔ 検証手順の 1:1 | 抽出した各 `G<n>` に対応する `G<n> 検証` 行が DESIGN_DETAIL_APP.md または DESIGN_DETAIL_INFRA.md にある | `verification_missing`: 欠落ゴール ID を列挙して dev-spec フェーズ 9 へ差し戻し |
 | G_E2E (Web のみ)        | Web プロダクト判定 (phase-context.md の dev_server 判定と同じ基準) が真なら `G_E2E` ゴールが存在する | `verification_missing` (同上)                                                   |
 
 ### Step 1.5: 未解決 PoC マーカーの残存ガード
@@ -82,7 +84,7 @@ DESIGN_DETAIL.md が無ければ dev-spec の詳細抽出フォールバック (
 技術検証 (PoC) は前段の dev-spec フェーズ 5 (PoC 検証) で完了していることが前提。ここでは未解決マーカーの残存だけを機械チェックする:
 
 ```bash
-rg -n '<!-- POC_NEEDED: .* -->' docs/DESIGN.md docs/DESIGN_DETAIL.md
+rg -n '<!-- POC_NEEDED: .* -->' docs/DESIGN.md docs/DESIGN_DETAIL_APP.md docs/DESIGN_DETAIL_INFRA.md
 ```
 
 | 検出結果             | 対処                                                                                                                                                                                                                                                                                        |
@@ -223,7 +225,7 @@ git diff ${PHASE_START_SHA} --diff-filter=D --name-only -- '*test*' '*spec*'   #
 git diff ${PHASE_START_SHA} -U0 | rg '^\+.*\.(skip|only)\s*\(|^\+\s*(xit|xdescribe|xtest)\b|^\+.*#\[ignore\]'   # skip/only/ignore の追加
 ```
 
-ヒットした場合、その削除・skip が TODO.md / DESIGN_DETAIL.md にトレースできる意図的な変更 (設計変更で仕様ごと削除等) か確認し、トレースできなければ `test_weakening_detected` でエスカレ停止する (パス扱いしない)。
+ヒットした場合、その削除・skip が TODO.md / DESIGN_DETAIL_APP.md にトレースできる意図的な変更 (設計変更で仕様ごと削除等) か確認し、トレースできなければ `test_weakening_detected` でエスカレ停止する (パス扱いしない)。
 
 緑を確認したら `rules/core/commit.md` に従いメインセッションがコミットする (関心事分割 / STRUCTURAL・BEHAVIORAL 分離。形式は commit-msg-guard hook が機械検証する)。push はしない (ユーザ手動)。
 
@@ -247,7 +249,7 @@ Step 4.2 でメインループが記録・累積した deviation_signals (実装
 | シグナル元                                                                       | type                    | 分類                | 対処                                                                                                                                                                                                                                                                    |
 | -------------------------------------------------------------------------------- | ----------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | メインループ実装                                                                 | `todo_minor`            | P1 (TODO 軽微)      | dev-impl が `docs/TODO.md` を編集して継続。`p1_fixes_in_phase += 1`、上限 (2 回) 超過なら P2 扱いに昇格                                                                                                                                                                 |
-| メインループ実装 / review-quality の design 整合 finding (severity: medium 以上) | `design_detail_gap`     | P2 (詳細設計の不足) | dev-impl が `docs/DESIGN_DETAIL.md` を更新 → `../dev-spec/references/todo-generation.md` の手順で `docs/TODO.md` を再生成 → 当該フェーズの実装に必要な追加情報をユーザに簡潔に通知 (ブロックはしない) → 継続。`p2_fixes_total += 1`、上限 (3 回) 超過なら P3 扱いに昇格 |
+| メインループ実装 / review-quality の design 整合 finding (severity: medium 以上) | `design_detail_gap`     | P2 (詳細設計の不足) | dev-impl が `docs/DESIGN_DETAIL_APP.md` / `docs/DESIGN_DETAIL_INFRA.md` の該当側を更新 → `../dev-spec/references/todo-generation.md` の手順で `docs/TODO.md` を再生成 → 当該フェーズの実装に必要な追加情報をユーザに簡潔に通知 (ブロックはしない) → 継続。`p2_fixes_total += 1`、上限 (3 回) 超過なら P3 扱いに昇格 |
 | メインループ実装 / review-quality の design 整合 finding (severity: high)        | `design_overview_break` | P3 (概要設計の破綻) | エスカレ停止 (Step 4.2 内で検知した時点で commit 前に停止済み)                                                                                                                                                                                                          |
 
 **シグナル無しの場合**: 次の pending フェーズへ進む。
@@ -267,12 +269,12 @@ Step 4.2 でメインループが記録・累積した deviation_signals (実装
 
 ```
 1. `p2_fixes_total += 1`。`p2_fixes_total > 3` なら本シグナルを P3 (design_overview_break) として扱い、エスカレ停止する (以降のステップは実行しない)
-2. DESIGN_DETAIL.md の該当セクションを Edit
+2. DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側 (境界基準: 変更に IaC・コンソール操作・環境設定変更が要るなら INFRA) のセクションを Edit
 3. `../dev-spec/references/todo-generation.md` を Read し、その手順に従ってメインループで TODO.md を再生成する (差分更新モード)
 4. Step 2 のフェーズ抽出 (`rg -n '^### フェーズ' docs/TODO.md`) を再実行してフェーズ一覧を更新する。既に `- [x]` 済みのタスクはそのまま完了扱いを維持し、再生成で新規追加された未完了タスクだけを pending に加える
 5. ログに「P2 fix: <更新セクション>」を残す
-6. 当該フェーズの再実行 (Step 4.2 から) か次フェーズへ進むかを判定: 再生成後の TODO.md で **当該フェーズ内に新規の未完了タスク (`- [ ]`) が追加されていれば Step 4.2 から再実行**、既存タスクが全て完了済みのまま (DESIGN_DETAIL.md の記述を補っただけで実装側の追加作業が無い) なら次フェーズへ進む
-7. ユーザに対する通知は「DESIGN_DETAIL.md / TODO.md を更新しました (詳細はログ参照)」程度 (dev-impl は止まらない)
+6. 当該フェーズの再実行 (Step 4.2 から) か次フェーズへ進むかを判定: 再生成後の TODO.md で **当該フェーズ内に新規の未完了タスク (`- [ ]`) が追加されていれば Step 4.2 から再実行**、既存タスクが全て完了済みのまま (詳細設計の記述を補っただけで実装側の追加作業が無い) なら次フェーズへ進む
+7. ユーザに対する通知は「DESIGN_DETAIL_APP.md (または _INFRA.md) / TODO.md を更新しました (詳細はログ参照)」程度 (dev-impl は止まらない)
 ```
 
 ##### P3 検出時
@@ -297,7 +299,7 @@ rg -n '^- G[0-9]+:|^G[0-9]+:' docs/DESIGN.md
 
 #### Step 5.2: 検証手順の取得
 
-DESIGN_DETAIL.md の「検証手順」セクションから、各ゴールに紐付いた検証方法を抽出:
+DESIGN_DETAIL_APP.md (ローカル / CI 実行系) と DESIGN_DETAIL_INFRA.md (デプロイ・環境依存系) の「検証手順」セクションから、各ゴールに紐付いた検証方法を抽出:
 
 - 自動: `G1 検証: <bash コマンド>` 形式 → Bash で実行、exit code で判定
 - E2E: `G_E2E` → review-product-readiness subagent による実機検証 (5.3 参照)
@@ -317,7 +319,7 @@ else
 fi
 ```
 
-**G_E2E の判定**: bash では判定できないため、`review-product-readiness` subagent (`model: opus`) に検証を委譲する (chrome-devtools MCP の実機操作は subagent 側のツールで行うため、dev-impl 本体にブラウザツールは不要)。prompt には dev_server 情報と DESIGN_DETAIL.md の UX 設計 (画面遷移マップ) を渡し、全画面へ URL 直叩きなしで到達できるかを検証させる。ナビ系 findings (`nav_unreachable` 等) の severity: high が 0 件 → achieved、1 件以上 → unmet (未達対応ループの対象)。**dev_server が推定できない場合は判定不能** = `verification_skipped` を記録して手動 pending に落とす (achieved 扱いにしない)。
+**G_E2E の判定**: bash では判定できないため、`review-product-readiness` subagent (`model: opus`) に検証を委譲する (chrome-devtools MCP の実機操作は subagent 側のツールで行うため、dev-impl 本体にブラウザツールは不要)。prompt には dev_server 情報と DESIGN_DETAIL_APP.md の UX 設計 (画面遷移マップ) を渡し、全画面へ URL 直叩きなしで到達できるかを検証させる。ナビ系 findings (`nav_unreachable` 等) の severity: high が 0 件 → achieved、1 件以上 → unmet (未達対応ループの対象)。**dev_server が推定できない場合は判定不能** = `verification_skipped` を記録して手動 pending に落とす (achieved 扱いにしない)。
 
 判定結果を JSONL に `event_type: goal_check` で記録 (各ゴールの `id / status / actual_output (失敗時)`)。
 
@@ -423,7 +425,7 @@ git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"
 - P3 検出 (DESIGN.md 概要レベルの再設計必要)
 - `p2_fixes_total > 3` (P3 扱いに昇格)
 - `goal_loop > 2` (ゴール達成判定 → 未達対応の 3 周回でも未達ゴール残存)
-- 必須ドキュメント (DESIGN.md / DESIGN_DETAIL.md / TODO.md) 欠如
+- 必須ドキュメント (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) 欠如
 - `blocker=true` の POC_NEEDED マーカーが残存 (`poc_marker_unresolved`。dev-spec フェーズ 5 で解決してから再実行)
 - Step 1 構造ゲートの欠落 (`design_not_approved` / `goals_missing` / `verification_missing`)
 - テスト弱体化が設計にトレースできない (`test_weakening_detected`)
@@ -448,7 +450,7 @@ git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"
 - 最終成功 commit: <SHA>
 
 次のステップ:
-- 上記詳細を踏まえ DESIGN.md / DESIGN_DETAIL.md を見直す
+- 上記詳細を踏まえ DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md を見直す
 - (フェーズ実装やり直したい場合) git restore で working tree クリア後、dev-impl 再起動
 - (DESIGN 修正後) /dev-spec で TODO 再生成後、/dev-impl を再起動
 ```
@@ -461,11 +463,11 @@ git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"
 
 ## 範囲外 (やらないこと)
 
-- 設計の合意 (DESIGN.md / DESIGN_DETAIL.md 生成) → `/dev-spec`
+- 設計の合意 (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md 生成) → `/dev-spec`
 - TODO.md の初期生成 → `/dev-spec` (フェーズ 10)
 - git push → ユーザー手動
 - ブランチ切替・PR 作成 → ユーザー手動 (or `/workflow-create-draft-pr`)
-- 動作検証 (実 UI / API テスト) → ユーザーが DESIGN_DETAIL.md の検証手順に従って実施
+- 動作検証 (実 UI / API テスト) → ユーザーが DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の検証手順に従って実施
 
 ## 関連スキル / agent
 

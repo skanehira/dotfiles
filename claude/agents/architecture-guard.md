@@ -20,7 +20,7 @@ Clean Architecture と DDD の**境界違反だけ**を検出する専用 review
   - `"working_tree"` (未コミットの全差分)
   - `"phase:<phase-name>"` (TODO.md のフェーズ名、dev-impl からの呼び出し時)
 - `design_path`: 概要設計書のパス (デフォルト `docs/DESIGN.md`)。レイヤ定義と aggregate 一覧を抽出する
-- `design_detail_path`: 詳細設計書のパス (デフォルト `docs/DESIGN_DETAIL.md`)。実装ガイドに記載されたディレクトリ構造を読む
+- `design_detail_path`: アプリ詳細設計書のパス (デフォルト `docs/DESIGN_DETAIL_APP.md`)。実装ガイドに記載されたディレクトリ構造を読む (レイヤ境界検査に必要なのはアプリ側のみ。INFRA 側は読まない)
 - `output_path`: 検出結果 JSON の書き出し先 (デフォルト `/tmp/architecture-guard-result.json`)
 
 ## 出力
@@ -73,7 +73,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] <message>" >> "$LOG"
 
 ### ステップ 1: レイヤ定義の抽出
 
-1. `design_path` (`docs/DESIGN.md`) と `design_detail_path` (`docs/DESIGN_DETAIL.md`) を Read
+1. `design_path` (`docs/DESIGN.md`) と `design_detail_path` (`docs/DESIGN_DETAIL_APP.md`) を Read
 2. 「主要コンポーネント」「レイヤーアーキテクチャ」「ディレクトリ構造」セクションから、以下を抽出:
    - **inner layer pattern** (依存される側): `domain/`, `entities/`, `application/`, `usecases/`, `usecase/` 等のディレクトリ pattern
    - **outer layer pattern** (依存する側): `infrastructure/`, `infra/`, `adapter/`, `adapters/`, `framework/`, `frameworks/`, `presentation/`, `ui/`, `interface/`, `web/`, `cli/`, `http/`, `persistence/`, `repository/` (実装のみ — interface は inner にあるべき) 等
@@ -162,7 +162,7 @@ const guardResult = await Agent({
   prompt: `target_diff: phase:phase-3
 PHASE_START_SHA: ${phaseStartSha}
 design_path: docs/DESIGN.md
-design_detail_path: docs/DESIGN_DETAIL.md
+design_detail_path: docs/DESIGN_DETAIL_APP.md
 output_path: /tmp/guard-phase3.json`
 })
 // guardResult は stdout の output_path (パス)
@@ -182,5 +182,5 @@ if (!result.ok) {
 
 ## エスカレ条件
 
-- DESIGN.md / DESIGN_DETAIL.md が両方無い → stdout に `NO_DESIGN_DOCS` と出してエラー終了 (dev-impl 側でユーザー判断にエスカレ)
+- DESIGN.md / DESIGN_DETAIL_APP.md が両方無い → stdout に `NO_DESIGN_DOCS` と出してエラー終了 (dev-impl 側でユーザー判断にエスカレ)
 - 検査対象ファイルが 1000 件超え → stdout に `TOO_MANY_FILES` と出してエラー終了 (フェーズが大きすぎる、要分割)

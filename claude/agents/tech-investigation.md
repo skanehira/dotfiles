@@ -1,6 +1,6 @@
 ---
 name: tech-investigation
-description: FEASIBILITY.md の PoC 計画や DESIGN_DETAIL.md の POC_NEEDED マーカー (技術選定の未確定要素) に対して、最新ライブラリドキュメント取得 + 最小 PoC コード実行 + fallback 案提示までを自動で行う調査 subagent。dev-spec のフェーズ 5 (PoC 検証) から並列 fan-out で内部呼び出しされる。人間判断を仰がず、結果を構造化 JSON で返す。
+description: FEASIBILITY.md の PoC 計画や DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の POC_NEEDED マーカー (技術選定の未確定要素) に対して、最新ライブラリドキュメント取得 + 最小 PoC コード実行 + fallback 案提示までを自動で行う調査 subagent。dev-spec のフェーズ 5 (PoC 検証) から並列 fan-out で内部呼び出しされる。人間判断を仰がず、結果を構造化 JSON で返す。
 tools: Read, Grep, Glob, Bash, WebFetch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
 ---
@@ -16,7 +16,7 @@ model: sonnet
 呼び出し元から以下を受け取る:
 
 - `marker`: PoC 計画 / POC_NEEDED マーカー本文 (例: `id=react-19-suspense, scope=async-data-loading, risk=high, blocker=true`)
-- `context_paths`: 検証対象の文脈を読むドキュメントのリスト (dev-spec フェーズ 5 からは `docs/FEASIBILITY.md`、設計後の個別呼び出しでは `docs/DESIGN.md` + `docs/DESIGN_DETAIL.md`)
+- `context_paths`: 検証対象の文脈を読むドキュメントのリスト (dev-spec フェーズ 5 からは `docs/FEASIBILITY.md`、設計後の個別呼び出しでは `docs/DESIGN.md` + `docs/DESIGN_DETAIL_APP.md` / `docs/DESIGN_DETAIL_INFRA.md` のマーカーがある側)
 - `output_path`: 結果 JSON の書き出し先 (例 `/tmp/tech-investigation-<id>.json`)
 - `workspace_dir`: PoC コード用の作業ディレクトリ (例 `/tmp/poc-<id>/`、無ければ作る)
 
@@ -37,7 +37,7 @@ model: sonnet
     "console エラーなし、期待動作確認"
   ],
   "recommended_approach": "Server Component から async データ取得し、子の Client Component で use(promise) で読み出す。Suspense 境界は親 layout に置く",
-  "fallback": "Suspense が使えない場合は SWR fetcher にフォールバック (DESIGN_DETAIL.md 既存記述と整合)",
+  "fallback": "Suspense が使えない場合は SWR fetcher にフォールバック (DESIGN_DETAIL_APP.md 既存記述と整合)",
   "references": [
     "https://react.dev/reference/react/use",
     "context7: /facebook/react v19.0.0"
@@ -50,7 +50,7 @@ model: sonnet
 
 - `result`: `verified` (検証完了、推奨アプローチで進める) / `partial` (一部のみ検証可、要追加調査だが進める) / `fallback_needed` (検証で問題発覚、fallback で進める)
 - `confidence`: 0.0 - 1.0。`verified` でも 0.7 未満なら呼び出し側は人間確認を推奨
-- `recommended_approach`: FEASIBILITY.md「PoC 結果」/ DESIGN_DETAIL.md に追記する文章
+- `recommended_approach`: FEASIBILITY.md「PoC 結果」/ 詳細設計 (APP / INFRA の該当側) に追記する文章
 - `fallback`: `result != verified` のとき必須
 - `blocker_resolved`: blocker=true の計画を解決済みとして進めて良いかの最終判定
 
@@ -75,7 +75,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [${MARKER_ID}] <message>" >> "$LOG"
 
 1. `mcp__context7__resolve-library-id` でライブラリ ID を解決
 2. `mcp__context7__query-docs` で該当機能のドキュメントを取得
-3. context7 で見つからない場合のみ `WebFetch` で公式ドキュメント URL から取得 (URL は scope / マーカー id から推測 or DESIGN_DETAIL.md の references から)
+3. context7 で見つからない場合のみ `WebFetch` で公式ドキュメント URL から取得 (URL は scope / マーカー id から推測 or 詳細設計の references から)
 4. ドキュメント内容を `investigation_steps` に 1 行で記録
 
 ### Step 3: 最小 PoC コード実行 (必要時)

@@ -7,7 +7,7 @@
 - <DESIGN にあるが実装されていない画面>
 
 ### 未実装ナビ経路
-- <DESIGN_DETAIL.md UX 設計のナビ仕様に対して、実機で到達できない画面>
+- <DESIGN_DETAIL_APP.md UX 設計のナビ仕様に対して、実機で到達できない画面>
   (review-product-readiness の `nav_unreachable` finding を反映)
 
 ### frontend-design 未適用フラグ
