@@ -34,19 +34,20 @@ argument-hint: "[タスク説明]"
 
 **フェーズを開始するときに該当手順書を Read し、その手順に従う。**
 
-| #  | フェーズ             | 手順書                                 | 出力                                   | クイックモード |
-| -- | -------------------- | -------------------------------------- | -------------------------------------- | -------------- |
-| 1  | ユーザーストーリー   | `references/user-story.md`             | docs/USER_STORIES.md                   | スキップ       |
-| 2  | UI スケッチ          | `references/ui-sketch.md`              | docs/UI_SKETCH.md                      | スキップ       |
-| 3  | ユースケース記述     | `references/usecase-description.md`    | docs/USECASES.md                       | スキップ       |
-| 4  | 実現可能性検証       | `references/feasibility-check.md`      | docs/FEASIBILITY.md (PoC 計画)         | 条件付き実行   |
-| 5  | PoC 検証             | `references/poc-verification.md`       | FEASIBILITY.md 更新 (PoC 結果)         | 条件付き実行   |
-| 6  | DDD モデリング       | `references/ddd-modeling.md`           | docs/GLOSSARY.md, docs/DOMAIN_MODEL.md | スキップ       |
-| 7  | 概要/詳細設計        | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL_APP.md, docs/DESIGN_DETAIL_INFRA.md | 実行           |
-| 8  | 深掘りインタビュー   | `references/interview.md`              | DESIGN / DETAIL 更新                   | 実行           |
-| 9  | 検証手順の確認と補完 | `references/verification-review.md`    | DESIGN / DETAIL 更新                   | 実行           |
-| 10 | TODO.md 生成         | `references/todo-generation.md`        | docs/TODO.md                           | 実行           |
-| 11 | 承認ゲート           | (本ファイル下記)                       | —                                      | 実行           |
+| #    | フェーズ             | 手順書                                 | 出力                                                                   | クイックモード |
+| ---- | -------------------- | -------------------------------------- | ---------------------------------------------------------------------- | -------------- |
+| 1    | ユーザーストーリー   | `references/user-story.md`             | docs/USER_STORIES.md                                                   | スキップ       |
+| 2    | UI スケッチ          | `references/ui-sketch.md`              | docs/UI_SKETCH.md                                                      | スキップ       |
+| 3    | ユースケース記述     | `references/usecase-description.md`    | docs/USECASES.md                                                       | スキップ       |
+| 4    | 実現可能性検証       | `references/feasibility-check.md`      | docs/FEASIBILITY.md (PoC 計画)                                         | 条件付き実行   |
+| 5    | PoC 検証             | `references/poc-verification.md`       | FEASIBILITY.md 更新 (PoC 結果)                                         | 条件付き実行   |
+| 6    | DDD モデリング       | `references/ddd-modeling.md`           | docs/GLOSSARY.md, docs/DOMAIN_MODEL.md                                 | スキップ       |
+| 7    | 概要/詳細設計        | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL_APP.md, docs/DESIGN_DETAIL_INFRA.md | 実行           |
+| 8    | 深掘りインタビュー   | `references/interview.md`              | DESIGN / DETAIL 更新                                                   | 実行           |
+| 9    | 検証手順の確認と補完 | `references/verification-review.md`    | DESIGN / DETAIL 更新                                                   | 実行           |
+| 10   | TODO.md 生成         | `references/todo-generation.md`        | docs/TODO.md                                                           | 実行           |
+| 10.5 | 設計整合監査         | (本ファイル下記)                       | 監査 findings (修正は 7〜10 へ差し戻し)                                | 実行           |
+| 11   | 承認ゲート           | (本ファイル下記)                       | —                                                                      | 実行           |
 
 ### ゲート条件 (フェーズ 7 の開始条件)
 
@@ -75,19 +76,19 @@ docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.md / USECASES.md / F
 旧形式の単一 `docs/DESIGN_DETAIL.md` を見つけたら、`references/todo-generation.md` のフォールバック A (APP / INFRA への分割移行) を案内してから続行する。
 
 - **DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md が揃い、TODO.md 先頭に承認スタンプ (`<!-- dev-spec:approved ... -->`) がある** → 「設計は完成しています。実装ループは `/dev-impl` を起動してください。設計を修正したい場合は更新モードで再実行してください」と案内して終了
-- **4 点は揃っているが承認スタンプが無い** → 未承認。フェーズ 11 (承認ゲート) から再開する
+- **4 点は揃っているが承認スタンプが無い** → 未承認。フェーズ 10.5 (設計整合監査) から再開する
 - **途中まで存在する** → 「続きから (推奨) / 最初から / 既存を更新」を AskUserQuestion で確認。「続きから」の再開フェーズは次の表で決める (存在する成果物のうち最も下流のものを見る):
 
-| 最も下流の既存成果物                        | 再開フェーズ                         |
-| ------------------------------------------- | ------------------------------------ |
-| USER_STORIES.md                             | 2 (UI スケッチ)                      |
-| UI_SKETCH.md                                | 3 (ユースケース)                     |
-| USECASES.md                                 | 4 (実現可能性)                       |
-| FEASIBILITY.md (blocker=true が unresolved) | 5 (PoC 検証)                         |
-| FEASIBILITY.md (全件解決済み)               | 6 (DDD)。クイックモードなら 7        |
-| GLOSSARY.md / DOMAIN_MODEL.md               | 7 (設計書生成)                       |
+| 最も下流の既存成果物                                      | 再開フェーズ                         |
+| --------------------------------------------------------- | ------------------------------------ |
+| USER_STORIES.md                                           | 2 (UI スケッチ)                      |
+| UI_SKETCH.md                                              | 3 (ユースケース)                     |
+| USECASES.md                                               | 4 (実現可能性)                       |
+| FEASIBILITY.md (blocker=true が unresolved)               | 5 (PoC 検証)                         |
+| FEASIBILITY.md (全件解決済み)                             | 6 (DDD)。クイックモードなら 7        |
+| GLOSSARY.md / DOMAIN_MODEL.md                             | 7 (設計書生成)                       |
 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md | 8 (深掘り)。深掘り済みが明らかなら 9 |
-| TODO.md (承認スタンプ無し)                  | 11 (承認ゲート)                      |
+| TODO.md (承認スタンプ無し)                                | 10.5 (設計整合監査)                  |
 
 - **何もない** → モード選択へ
 
@@ -120,7 +121,7 @@ AskUserQuestion({
 1. 進捗を表示する:
 
 ```
-📍 設計ループ [n/11]
+📍 設計ループ [n/12]
    ├─ ✓ user-story（完了）
    ├─ ▶ ui-sketch（実行中）
    └─ ○ ...
@@ -129,6 +130,30 @@ AskUserQuestion({
 2. 手順書を Read し、手順に従って実行する
 3. フェーズ完了後、AskUserQuestion で「次へ進む / ここで終了」を確認する
 4. ユーザーが修正内容を入力した場合は反映して再承認を取る (承認されるまで繰り返す)
+
+## フェーズ 10.5: 設計整合監査 (第三者検証)
+
+人間承認 (フェーズ 11) の前捌きとして、`review-spec-compliance` subagent (mode: pre-approval) に docs 4 ファイルの整合を fresh context で監査させる。設計者本人 (このセッション) のセルフレビューでは検出できない見落とし (TODO カバレッジ漏れ / ゴールと検証手順の意味的不整合 / 検証コマンドの空虚性 / APP・INFRA 境界誤配置 / 概要↔詳細の矛盾) を承認前に潰す。**人間承認の代替ではない** (フェーズ 11 は残る)。
+
+```javascript
+const audit = await Agent({
+  description: "設計整合の第三者監査",
+  subagent_type: "review-spec-compliance",
+  model: "opus",   // 呼び出し時明示 (実行器 ≤ 検証器)
+  prompt: `mode: pre-approval
+docs_dir: docs/
+output_path: /tmp/review-spec-compliance-pre-approval.json
+docs (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) は自分で全文 Read すること。
+作業結果 (output_path のパス) は必ず最終メッセージで親に返すこと。`
+})
+```
+
+結果の分岐 (**最大 2 周**):
+
+- **severity: high の findings あり** → 指摘の対象で戻り先を決めて修正する: TODO カバレッジ → フェーズ 10、検証手順・空虚性 → フェーズ 9、設計内容・境界・矛盾 → フェーズ 7〜8。修正後に本フェーズを再実行する
+- **2 周しても high が残る** → 差し戻しを打ち切り、残存 findings をフェーズ 11 のサマリーに「監査で未解消の指摘」として添付し、人間の判断に委ねる
+- **high が 0 件 (medium/low のみ)** → findings をフェーズ 11 のサマリーに参考情報として添付し、フェーズ 11 へ進む
+- **agent がエラー / JSON 解釈不能** → 監査未実施のまま進まない。ユーザーに「監査 agent が失敗しました。再試行 / 監査なしで承認ゲートへ / 中止」を AskUserQuestion で確認する (未検証を silent にパス扱いしない)
 
 ## フェーズ 11: 承認ゲート (設計 → 実装の遷移)
 
@@ -148,6 +173,8 @@ AskUserQuestion({
 ```
 
 FEASIBILITY.md を作成していない場合 (クイックモードで不確実性なし) は、その行を省略する。
+
+フェーズ 10.5 の監査 findings があれば続けて列挙する (未解消の high は「監査で未解消の指摘」、medium/low は「参考」として区別する)。
 
 ### 11.2 最終承認
 
@@ -172,7 +199,18 @@ AskUserQuestion({
 
 承認されたら次の 2 つを行って**このスキルを終了する** (dev-impl を Skill ツールで起動しない):
 
-1. **承認スタンプの書き込み**: `docs/TODO.md` の先頭 (1 行目) に `<!-- dev-spec:approved YYYY-MM-DD -->` を挿入する (既存スタンプがあれば日付を更新)。dev-impl は起動時 (Step 1 構造ゲート) にこのスタンプを機械チェックし、無ければ実装に入らない
+1. **承認スタンプの書き込み**: まず受入基準のハッシュを計算する:
+
+```bash
+GOALS_SHA=$(
+  {
+    rg --no-filename '^- G[0-9]+:|^G[0-9]+:|^- G_E2E:|^G_E2E:' docs/DESIGN.md
+    rg --no-filename 'G[0-9]+ 検証|G_E2E 検証' docs/DESIGN_DETAIL_APP.md docs/DESIGN_DETAIL_INFRA.md
+  } | shasum -a 256 | awk '{print $1}'
+)
+```
+
+`docs/TODO.md` の先頭 (1 行目) に `<!-- dev-spec:approved YYYY-MM-DD goals_sha=${GOALS_SHA} -->` を挿入する (既存スタンプがあれば行ごと置換)。ハッシュ対象は**ゴール定義行と検証手順行のみ**で、承認時点の受入基準をスタンプにバインドする。dev-impl は起動時 (Step 1 構造ゲート) にスタンプの存在とハッシュ一致を機械チェックし、承認後に受入基準が変更されていれば実装に入らない (`approval_stale`)。P2 動的修正 (実装ガイド等の追記) はハッシュ対象外なので正当に通る
 2. 以下を表示する:
 
 ```
@@ -193,7 +231,8 @@ B: このセッションで続行
 - [ ] 対象フェーズがすべて実行された (またはユーザー判断でスキップ)
 - [ ] blocker=true の PoC 計画がすべて解決済み (verified または fallback 採用)
 - [ ] 全フェーズ実行時: DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md が生成され、承認ゲートを通過した
-- [ ] 承認時: TODO.md 先頭に承認スタンプが書き込まれた
+- [ ] フェーズ 10.5 の設計整合監査が実行された (high findings は解消、または未解消のまま人間判断に添付)
+- [ ] 承認時: TODO.md 先頭に承認スタンプ (goals_sha 付き) が書き込まれた
 
 ## 参照ルール
 
@@ -207,4 +246,5 @@ B: このセッションで続行
 
 - **dev-impl**: 実装ループ (旧 workflow-autopilot)。承認ゲート通過後にユーザーが起動する
 - **tech-investigation** (subagent): フェーズ 5 の PoC 検証で並列 fan-out される
+- **review-spec-compliance** (subagent): フェーズ 10.5 の設計整合監査 (mode: pre-approval、`model: opus` 明示)
 - **workflow-debate**: 設計判断の壁打ちが必要なとき

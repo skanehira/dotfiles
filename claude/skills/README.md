@@ -113,7 +113,7 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 | スキル | 説明 | 入力 | 出力 |
 |---|---|---|---|
 | [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、承認ゲートで実装ループへ引き渡す。クイックモード・部分実行・途中再開可 | なし (docs/ の状態から再開可) | USER_STORIES.md 〜 DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md |
-| [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (メインループ TDD → guard → review fan-out → テストゲート → commit)、ゴール達成判定、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
+| [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (メインループ TDD → guard → review fan-out → テストゲート → commit)、完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須、承認スタンプは goals_sha 付き) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / ddd-modeling / analyzing-requirements / interview / verification-review / todo-generation)。
 
