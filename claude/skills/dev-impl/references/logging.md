@@ -26,7 +26,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
   "timestamp": "2026-06-30T10:00:00+09:00",
   "phase": "phase-3",
   "step": "architecture-guard",
-  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped",
+  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance",
   "severity": "info|warn|error",
   "summary": "1 行サマリ (テキストログにも残る内容)",
   "context": {
@@ -53,6 +53,18 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
   }
 }
 ```
+
+`event_type: spec_compliance` の場合 (Step 5.3 参照)、`context` には review-spec-compliance の結果を入れる:
+
+```json
+"context": {
+  "mode": "post-impl",
+  "goal_results": [{ "id": "G1", "status": "achieved", "exit_code": 0, "evidence": "..." }],
+  "findings": [{ "rule": "unimplemented_api", "severity": "high", "file": "...", "message": "..." }]
+}
+```
+
+`event_type: goal_check` の判定主体は review-spec-compliance (自動系) / review-product-readiness (G_E2E) であり、メインループは集約して記録するだけ (Step 5.2〜5.3)。
 
 書き込みは `jq -nc --arg ... '{...}' >> $JSONL` で 1 行 1 エントリの append-only。`context` は event_type に応じて中身が変わる (`start` / `done` ではほぼ空でも良い)。
 

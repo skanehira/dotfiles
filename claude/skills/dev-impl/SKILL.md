@@ -62,22 +62,34 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 
 #### 不在時の挙動
 
-| 不在ファイル           | 対処                                                                                                                        |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| TODO.md                | エスカレ停止: 「TODO.md が無い。`/dev-spec` (フェーズ 10) で生成してから再実行」とユーザー通知                              |
+| 不在ファイル                                  | 対処                                                                                                                                                                                                  |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TODO.md                                       | エスカレ停止: 「TODO.md が無い。`/dev-spec` (フェーズ 10) で生成してから再実行」とユーザー通知                                                                                                        |
 | DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md | エスカレ停止: 「詳細設計 2 ファイルが無い。`/dev-spec` のフォールバック (旧形式からの分割移行 or 抽出) で生成してから再実行」とユーザー通知 (旧形式の単一 `docs/DESIGN_DETAIL.md` しか無い場合も同じ) |
-| DESIGN.md              | エスカレ停止: 「DESIGN.md が無い。`/dev-spec` で生成」とユーザー通知                                                        |
+| DESIGN.md                                     | エスカレ停止: 「DESIGN.md が無い。`/dev-spec` で生成」とユーザー通知                                                                                                                                  |
 
 #### 構造ゲート (fail fast)
 
 ファイルが揃っていても、以下に欠けがあれば**実装に入らずエスカレ停止**する。全フェーズ実装後に発覚しても手遅れなので、起動時に機械判定する:
 
-| チェック                | 判定                                                                                                 | 欠落時の reason / 対処                                                          |
-| ----------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 承認スタンプ            | TODO.md 先頭に `<!-- dev-spec:approved` がある                                                       | `design_not_approved`: 「dev-spec フェーズ 11 の承認ゲートを通してから再実行」  |
-| ゴール定義              | `rg -n '^- G[0-9]+:\|^G[0-9]+:' docs/DESIGN.md` が 1 件以上                                          | `goals_missing`: 「dev-spec フェーズ 9 でゴールを定義してから再実行」           |
-| ゴール ↔ 検証手順の 1:1 | 抽出した各 `G<n>` に対応する `G<n> 検証` 行が DESIGN_DETAIL_APP.md または DESIGN_DETAIL_INFRA.md にある | `verification_missing`: 欠落ゴール ID を列挙して dev-spec フェーズ 9 へ差し戻し |
-| G_E2E (Web のみ)        | Web プロダクト判定 (phase-context.md の dev_server 判定と同じ基準) が真なら `G_E2E` ゴールが存在する | `verification_missing` (同上)                                                   |
+| チェック                | 判定                                                                                                    | 欠落時の reason / 対処                                                                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 承認スタンプ            | TODO.md 先頭に `<!-- dev-spec:approved` がある                                                          | `design_not_approved`: 「dev-spec フェーズ 11 の承認ゲートを通してから再実行」                                                                                                                    |
+| 承認ハッシュ            | スタンプの `goals_sha=<値>` と再計算値 (下記) が一致する                                                | `approval_stale`: 「承認後に受入基準 (ゴール / 検証手順) が変更されている。dev-spec フェーズ 9 → 11 で再承認してから再実行」。スタンプに `goals_sha=` が無い旧形式は警告ログのみで通過 (後方互換) |
+| ゴール定義              | `rg -n '^- G[0-9]+:\|^G[0-9]+:' docs/DESIGN.md` が 1 件以上                                             | `goals_missing`: 「dev-spec フェーズ 9 でゴールを定義してから再実行」                                                                                                                             |
+| ゴール ↔ 検証手順の 1:1 | 抽出した各 `G<n>` に対応する `G<n> 検証` 行が DESIGN_DETAIL_APP.md または DESIGN_DETAIL_INFRA.md にある | `verification_missing`: 欠落ゴール ID を列挙して dev-spec フェーズ 9 へ差し戻し                                                                                                                   |
+| G_E2E (Web のみ)        | Web プロダクト判定 (phase-context.md の dev_server 判定と同じ基準) が真なら `G_E2E` ゴールが存在する    | `verification_missing` (同上)                                                                                                                                                                     |
+
+承認ハッシュの再計算コマンド (dev-spec 11.3 の生成と同一定義。P2 ガードでも使う):
+
+```bash
+GOALS_SHA=$(
+  {
+    rg --no-filename '^- G[0-9]+:|^G[0-9]+:|^- G_E2E:|^G_E2E:' docs/DESIGN.md
+    rg --no-filename 'G[0-9]+ 検証|G_E2E 検証' docs/DESIGN_DETAIL_APP.md docs/DESIGN_DETAIL_INFRA.md
+  } | shasum -a 256 | awk '{print $1}'
+)
+```
 
 ### Step 1.5: 未解決 PoC マーカーの残存ガード
 
@@ -246,11 +258,11 @@ Step 4.2 でメインループが記録・累積した deviation_signals (実装
 
 **シグナル元と分類対応**:
 
-| シグナル元                                                                       | type                    | 分類                | 対処                                                                                                                                                                                                                                                                    |
-| -------------------------------------------------------------------------------- | ----------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| メインループ実装                                                                 | `todo_minor`            | P1 (TODO 軽微)      | dev-impl が `docs/TODO.md` を編集して継続。`p1_fixes_in_phase += 1`、上限 (2 回) 超過なら P2 扱いに昇格                                                                                                                                                                 |
+| シグナル元                                                                       | type                    | 分類                | 対処                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------------------------- | ----------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| メインループ実装                                                                 | `todo_minor`            | P1 (TODO 軽微)      | dev-impl が `docs/TODO.md` を編集して継続。`p1_fixes_in_phase += 1`、上限 (2 回) 超過なら P2 扱いに昇格                                                                                                                                                                                                              |
 | メインループ実装 / review-quality の design 整合 finding (severity: medium 以上) | `design_detail_gap`     | P2 (詳細設計の不足) | dev-impl が `docs/DESIGN_DETAIL_APP.md` / `docs/DESIGN_DETAIL_INFRA.md` の該当側を更新 → `../dev-spec/references/todo-generation.md` の手順で `docs/TODO.md` を再生成 → 当該フェーズの実装に必要な追加情報をユーザに簡潔に通知 (ブロックはしない) → 継続。`p2_fixes_total += 1`、上限 (3 回) 超過なら P3 扱いに昇格 |
-| メインループ実装 / review-quality の design 整合 finding (severity: high)        | `design_overview_break` | P3 (概要設計の破綻) | エスカレ停止 (Step 4.2 内で検知した時点で commit 前に停止済み)                                                                                                                                                                                                          |
+| メインループ実装 / review-quality の design 整合 finding (severity: high)        | `design_overview_break` | P3 (概要設計の破綻) | エスカレ停止 (Step 4.2 内で検知した時点で commit 前に停止済み)                                                                                                                                                                                                                                                       |
 
 **シグナル無しの場合**: 次の pending フェーズへ進む。
 
@@ -270,6 +282,11 @@ Step 4.2 でメインループが記録・累積した deviation_signals (実装
 ```
 1. `p2_fixes_total += 1`。`p2_fixes_total > 3` なら本シグナルを P3 (design_overview_break) として扱い、エスカレ停止する (以降のステップは実行しない)
 2. DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側 (境界基準: 変更に IaC・コンソール操作・環境設定変更が要るなら INFRA) のセクションを Edit
+2.5. 受入基準ガード: Edit 直後に goals_sha を再計算 (Step 1 のコマンド) し、承認スタンプの値と照合する。
+     不一致 = 受入基準 (ゴール / 検証手順行) を触った P2 であり、実装者による自己適用は禁止。
+     Edit を revert せず `acceptance_criteria_change` でエスカレ停止する
+     (「受入基準の変更が必要になった。dev-spec フェーズ 9 → 11 で再承認せよ」と通知。
+      実装ガイド・スキーマ等の追記はハッシュ対象外なので通過する)
 3. `../dev-spec/references/todo-generation.md` を Read し、その手順に従ってメインループで TODO.md を再生成する (差分更新モード)
 4. Step 2 のフェーズ抽出 (`rg -n '^### フェーズ' docs/TODO.md`) を再実行してフェーズ一覧を更新する。既に `- [x]` 済みのタスクはそのまま完了扱いを維持し、再生成で新規追加された未完了タスクだけを pending に加える
 5. ログに「P2 fix: <更新セクション>」を残す
@@ -297,38 +314,53 @@ rg -n '^- G[0-9]+:|^G[0-9]+:' docs/DESIGN.md
 
 ゴール定義は Step 1 の構造ゲートで存在を保証済み。万一この時点で抽出できない場合は `goals_missing` でエスカレ停止する (**skip しない** — ゴール判定を省くと完了条件が「全 TODO 消化」という作業量ベースの自己申告になるため)。
 
-#### Step 5.2: 検証手順の取得
+#### Step 5.2: 第三者監査の並列起動
 
-DESIGN_DETAIL_APP.md (ローカル / CI 実行系) と DESIGN_DETAIL_INFRA.md (デプロイ・環境依存系) の「検証手順」セクションから、各ゴールに紐付いた検証方法を抽出:
+自動系ゴールの検証は**メインループが自分で実行しない** (実装者本人による自己判定を避ける)。`review-spec-compliance` (mode: post-impl) と `review-product-readiness` (G_E2E) を**同一メッセージ内の複数 Agent tool_use として並列起動**する。両 agent とも `model: opus` を明示する:
 
-- 自動: `G1 検証: <bash コマンド>` 形式 → Bash で実行、exit code で判定
-- E2E: `G_E2E` → review-product-readiness subagent による実機検証 (5.3 参照)
-- 手動: `G1 検証 (手動): <操作手順>` 形式 → 人間確認待ちリストに追加
+```javascript
+// 1 体目: 受入監査 (自動系ゴールの独立再実行 + 設計突合 + 改変検知)
+Agent({
+  description: "受入基準と成果物全体の第三者監査",
+  subagent_type: "review-spec-compliance",
+  model: "opus",
+  prompt: `mode: post-impl
+docs_dir: docs/
+approved_stamp: "<TODO.md 1 行目をそのまま>"
+run_start_sha: ${START_SHA}
+decisions_jsonl: ~/.claude/logs/dev-impl/${run_id}/decisions.jsonl
+output_path: /tmp/review-spec-compliance-${run_id}.json
+docs は自分で全文 Read すること。G_E2E は実行しないこと (別 agent が担当)。
+作業結果 (output_path のパス) は必ず最終メッセージで親に返すこと。`
+})
 
-#### Step 5.3: ゴール判定実行
-
-各ゴールについて:
-
-```bash
-# 自動系
-cd "$PROJECT_ROOT" && eval "$VERIFICATION_COMMAND"
-if [ $? -eq 0 ]; then
-  STATUS="achieved"
-else
-  STATUS="unmet"
-fi
+// 2 体目: G_E2E 実機検証 (Web プロダクトのみ。従来どおり)
+Agent({ subagent_type: "review-product-readiness", model: "opus", prompt: `<dev_server 情報 + DESIGN_DETAIL_APP.md の UX 設計>` })
 ```
 
-**G_E2E の判定**: bash では判定できないため、`review-product-readiness` subagent (`model: opus`) に検証を委譲する (chrome-devtools MCP の実機操作は subagent 側のツールで行うため、dev-impl 本体にブラウザツールは不要)。prompt には dev_server 情報と DESIGN_DETAIL_APP.md の UX 設計 (画面遷移マップ) を渡し、全画面へ URL 直叩きなしで到達できるかを検証させる。ナビ系 findings (`nav_unreachable` 等) の severity: high が 0 件 → achieved、1 件以上 → unmet (未達対応ループの対象)。**dev_server が推定できない場合は判定不能** = `verification_skipped` を記録して手動 pending に落とす (achieved 扱いにしない)。
+**G_E2E の判定** (review-product-readiness): ナビ系 findings (`nav_unreachable` 等) の severity: high が 0 件 → achieved、1 件以上 → unmet。**dev_server が推定できない場合は判定不能** = `verification_skipped` を記録して手動 pending に落とす (achieved 扱いにしない)。
 
-判定結果を JSONL に `event_type: goal_check` で記録 (各ゴールの `id / status / actual_output (失敗時)`)。
+#### Step 5.3: 監査結果の集約と gate 分岐
+
+review-spec-compliance の `goal_results` (自動系) + review-product-readiness の判定 (G_E2E) + 手動系 (`G<n> 検証 (手動):` は manual_pending のまま) を統合し、JSONL に `event_type: goal_check` で記録する (各ゴールの `id / status / evidence`)。findings は `event_type: spec_compliance` で記録する。
+
+findings ごとの分岐:
+
+| findings (rule)                                                              | 対処                                                                                                                                            |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verification_tampered` (high)                                               | **即エスカレ停止 (P3、修正ループなし)**。受入基準の改変は実行者に直させる対象ではなく、人間の再承認 (dev-spec フェーズ 11) 事案                 |
+| `goal_result_mismatch` (high)                                                | 監査 agent の実行結果を正とし、当該ゴールを unmet として未達対応ループへ (自己申告ログとの食い違い自体も JSONL に残す)                          |
+| unmet ゴール / `unimplemented_api` / `schema_drift` / `infra_missing` (high) | Step 5.5 の未達対応ループへ (finding の `fix_proposal` / `evidence` を新フェーズの内容に使う)                                                   |
+| `vacuous_verification` (high)                                                | **自動修正させない** (検証コマンドを実行者が「直す」のは骨抜きの温床)。当該ゴールを手動 pending に落とし、Step 6 サマリで人間確認要求として明示 |
+| medium / low のみ                                                            | JSONL 記録 + POST_MVP.md へ転記 (Step 5.6)。status `partial` 判定に反映                                                                         |
+| agent エラー / JSON 解釈不能                                                 | `review_agent_failed` でエスカレ停止 (未検証をパス扱いにしない)                                                                                 |
 
 #### Step 5.4: 結果分岐
 
-| 状況                                     | 対処                   |
-| ---------------------------------------- | ---------------------- |
-| 全ゴール achieved (or 手動 pending のみ) | Step 6 へ (完了サマリ) |
-| 自動ゴールで unmet が 1 件以上           | 未達対応ループへ       |
+| 状況                                                    | 対処                   |
+| ------------------------------------------------------- | ---------------------- |
+| 全ゴール achieved (or 手動 pending のみ) かつ high 0 件 | Step 6 へ (完了サマリ) |
+| unmet ゴール or 修正可能な high findings が 1 件以上    | 未達対応ループへ       |
 
 #### Step 5.5: 未達対応ループ
 
@@ -336,11 +368,11 @@ fi
 
 それ以外:
 
-1. 未達ゴールごとに TODO.md に新規フェーズを追加 (例: `### フェーズN+1: ゴール G2 達成タスク`)
-   - フェーズ内容は「G2 が未達。検証コマンド `<cmd>` が exit code != 0。失敗ログ: `<actual_output>`。これを満たす実装を追加する」
+1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing`) ごとに TODO.md に新規フェーズを追加 (例: `### フェーズN+1: ゴール G2 達成タスク`)
+   - フェーズ内容は「G2 が未達。検証コマンド `<cmd>` が exit code != 0。失敗ログ: `<evidence>`。これを満たす実装を追加する」(findings 由来は `message` + `fix_proposal` を使う)
    - JSONL に `event_type: phase_added` で記録
 2. Step 4 のフェーズループに戻る (新規追加フェーズだけが pending)
-3. 完了後、Step 5.1 に戻ってゴール再判定
+3. 完了後、Step 5.1 に戻って再判定 (Step 5.2 の監査 agent も**再起動**する。前回結果の使い回しは不可 — 修正が別の乖離を生んでいないかを再監査する)
 
 手動 pending ゴールは Step 6 サマリで「人間確認必要」として明示する (dev-impl は判定せず保留)。
 
@@ -382,6 +414,7 @@ UI/UX gap セクションが**空でなければ** dev-impl の終了 status を
 新規コミット: <git rev-list --count $START_SHA..HEAD>
 動的修正: P1 <X> 回 / P2 <Y> 回 / P3 0 回 (停止無し)
 ゴール達成: <achieved>/<total> (うち手動確認待ち <manual_pending>)
+受入監査 (spec_compliance): high <X> 件 / medium <Y> 件 / vacuous_verification による手動 pending 落ち <Z> 件
 未検証 (skip された検証): <verification_skipped の一覧、なければ「なし」>
 UI/UX gap: <未実装画面数> 画面 / <未実装ナビ経路数> 経路 / frontend-design: <適用|未適用>
 
@@ -416,7 +449,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"
 ```
 
-レポート内容: ヘッダー (run_id / SHA / 所要時間) / 全体サマリ / フェーズタイムライン / 動的修正詳細 (P1/P2/P3) / POC_NEEDED 残存状況 (pending non-blocker) / ゴール達成判定 / フッター。
+レポート内容: ヘッダー (run_id / SHA / 所要時間) / 全体サマリ / フェーズタイムライン / 動的修正詳細 (P1/P2/P3) / POC_NEEDED 残存状況 (pending non-blocker) / ゴール達成判定 / 受入監査結果 (spec_compliance findings) / フッター。
 
 ## エスカレ停止時の挙動
 
@@ -427,8 +460,10 @@ git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"
 - `goal_loop > 2` (ゴール達成判定 → 未達対応の 3 周回でも未達ゴール残存)
 - 必須ドキュメント (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) 欠如
 - `blocker=true` の POC_NEEDED マーカーが残存 (`poc_marker_unresolved`。dev-spec フェーズ 5 で解決してから再実行)
-- Step 1 構造ゲートの欠落 (`design_not_approved` / `goals_missing` / `verification_missing`)
+- Step 1 構造ゲートの欠落 (`design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing`)
 - テスト弱体化が設計にトレースできない (`test_weakening_detected`)
+- P2 動的修正が受入基準 (ゴール / 検証手順行) を変更した (`acceptance_criteria_change`。dev-spec フェーズ 9 → 11 で再承認)
+- 受入監査が受入基準の改変を検知 (`verification_tampered`。P3 扱い、修正ループなし)
 
 停止時の処理:
 
@@ -476,7 +511,8 @@ git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"
 - **tech-investigation**: 実装中に新たな技術検証が必要になった場合の個別呼び出しのみ (起動前の PoC は dev-spec フェーズ 5 の責務)
 - **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.2b、haiku)
 - **fix-lsp-warnings**: Lua/Neovim の LSP 警告修正 (Step 4.2c)
-- **review-tdd / review-quality / review-product-readiness**: Step 4.2d から観点 gating 付きで `model: opus` 明示で並列起動 (毎フェーズ tdd のみ / UI フェーズ +product-readiness / 最終フェーズ全観点フル、fix 後は全観点再レビュー)。review-quality は rules 準拠 + アーキテクチャ heuristic を統合。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査
+- **review-tdd / review-quality / review-product-readiness**: Step 4.2d から観点 gating 付きで `model: opus` 明示で並列起動 (毎フェーズ tdd のみ / UI フェーズ +product-readiness / 最終フェーズ全観点フル、fix 後は全観点再レビュー)。review-quality は rules 準拠 + アーキテクチャ heuristic を統合。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査 (Step 5.2 の G_E2E 判定も担当)
+- **review-spec-compliance**: Step 5.2 から `model: opus` 明示で起動する第三者受入監査 (mode: post-impl)。承認ハッシュの独立照合・自動系ゴール検証コマンドの独立再実行・成果物全体 ↔ 詳細設計の突合・検証コマンドの空虚性検査。PHASE_CONTEXT 抜粋は渡さず docs を自分で全文 Read させる (被監査者が編纂した入力を信用しない)
 - **security-guidance プラグイン**: セキュリティレビューはこのプラグイン (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review) に委譲。自作 subagent は持たない
 
 フェーズの TDD 実装・修正・テスト実行・コミットは**メインセッションが直接行う** (CLAUDE.md「サブエージェントの使い方」: 逐次依存する多段作業は subagent に出さない)。
