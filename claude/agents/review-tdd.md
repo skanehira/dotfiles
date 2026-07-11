@@ -2,7 +2,7 @@
 name: review-tdd
 description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 3 観点レビュー subagent の一つ (TDD / テスト品質)。フェーズ実装差分とテストファイルを見て、TDD 順守 (RED→GREEN→REFACTOR)・テストが振る舞いを表現しているか・命名規約・AAA パターン・モックの過剰使用・テスト独立性を判定し、構造化 JSON で findings を返す。
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 # review-tdd
