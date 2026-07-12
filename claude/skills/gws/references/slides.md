@@ -1,19 +1,4 @@
----
-name: gws-slides
-description: "Google Slides の読み書き。docs.google.com/presentation/... のURLが貼られたとき、「スライドを作って」「プレゼンを編集して」「gws」などのリクエストで起動。"
-metadata:
-  version: 0.22.5
-  openclaw:
-    category: "productivity"
-    requires:
-      bins:
-        - gws
-    cliHelp: "gws slides --help"
----
-
 # slides (v1)
-
-> **PREREQUISITE:** Read `../gws-shared/SKILL.md` for auth, global flags, and security rules. If missing, run `gws generate-skills` to create it.
 
 ```bash
 gws slides <resource> <method> [flags]
@@ -27,18 +12,3 @@ gws slides <resource> <method> [flags]
   - `create` — Creates a blank presentation using the title given in the request. If a `presentationId` is provided, it is used as the ID of the new presentation. Otherwise, a new ID is generated. Other fields in the request, including any provided content, are ignored. Returns the created presentation.
   - `get` — Gets the latest version of the specified presentation.
   - `pages` — Operations on the 'pages' resource
-
-## Discovering Commands
-
-Before calling any API method, inspect it:
-
-```bash
-# Browse resources and methods
-gws slides --help
-
-# Inspect a method's required params, types, and defaults
-gws schema slides.<resource>.<method>
-```
-
-Use `gws schema` output to build your `--params` and `--json` flags.
-

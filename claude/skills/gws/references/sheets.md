@@ -1,19 +1,4 @@
----
-name: gws-sheets
-description: "Google Sheets の読み書き。docs.google.com/spreadsheets/... のURLが貼られたとき、「スプレッドシートに書いて」「シートを読んで」「gws」などのリクエストで起動。"
-metadata:
-  version: 0.22.5
-  openclaw:
-    category: "productivity"
-    requires:
-      bins:
-        - gws
-    cliHelp: "gws sheets --help"
----
-
 # sheets (v4)
-
-> **PREREQUISITE:** Read `../gws-shared/SKILL.md` for auth, global flags, and security rules. If missing, run `gws generate-skills` to create it.
 
 ```bash
 gws sheets <resource> <method> [flags]
@@ -21,10 +6,10 @@ gws sheets <resource> <method> [flags]
 
 ## Helper Commands
 
-| Command | Description |
-|---------|-------------|
-| [`+append`](../gws-sheets-append/SKILL.md) | Append a row to a spreadsheet |
-| [`+read`](../gws-sheets-read/SKILL.md) | Read values from a spreadsheet |
+| Command   | Description                    |
+| --------- | ------------------------------ |
+| `+append` | Append a row to a spreadsheet  |
+| `+read`   | Read values from a spreadsheet |
 
 ## API Resources
 
@@ -37,18 +22,3 @@ gws sheets <resource> <method> [flags]
   - `developerMetadata` — Operations on the 'developerMetadata' resource
   - `sheets` — Operations on the 'sheets' resource
   - `values` — Operations on the 'values' resource
-
-## Discovering Commands
-
-Before calling any API method, inspect it:
-
-```bash
-# Browse resources and methods
-gws sheets --help
-
-# Inspect a method's required params, types, and defaults
-gws schema sheets.<resource>.<method>
-```
-
-Use `gws schema` output to build your `--params` and `--json` flags.
-

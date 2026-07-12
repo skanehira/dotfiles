@@ -1,19 +1,4 @@
----
-name: gws-drive
-description: "Google Drive のファイル・フォルダ・共有ドライブ管理。drive.google.com/... のURLが貼られたとき、「Driveに保存して」「ファイルを検索して」「gws」などのリクエストで起動。"
-metadata:
-  version: 0.22.5
-  openclaw:
-    category: "productivity"
-    requires:
-      bins:
-        - gws
-    cliHelp: "gws drive --help"
----
-
 # drive (v3)
-
-> **PREREQUISITE:** Read `../gws-shared/SKILL.md` for auth, global flags, and security rules. If missing, run `gws generate-skills` to create it.
 
 ```bash
 gws drive <resource> <method> [flags]
@@ -21,9 +6,9 @@ gws drive <resource> <method> [flags]
 
 ## Helper Commands
 
-| Command | Description |
-|---------|-------------|
-| [`+upload`](../gws-drive-upload/SKILL.md) | Upload a file with automatic metadata |
+| Command   | Description                           |
+| --------- | ------------------------------------- |
+| `+upload` | Upload a file with automatic metadata |
 
 ## API Resources
 
@@ -121,18 +106,3 @@ gws drive <resource> <method> [flags]
   - `get` — Deprecated: Use `drives.get` instead.
   - `list` — Deprecated: Use `drives.list` instead.
   - `update` — Deprecated: Use `drives.update` instead.
-
-## Discovering Commands
-
-Before calling any API method, inspect it:
-
-```bash
-# Browse resources and methods
-gws drive --help
-
-# Inspect a method's required params, types, and defaults
-gws schema drive.<resource>.<method>
-```
-
-Use `gws schema` output to build your `--params` and `--json` flags.
-
