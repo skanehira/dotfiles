@@ -1,6 +1,6 @@
 ---
 name: review-tdd
-description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 3 観点レビュー subagent の一つ (TDD / テスト品質)。フェーズ実装差分とテストファイルを見て、TDD 順守 (RED→GREEN→REFACTOR)・テストが振る舞いを表現しているか・命名規約・AAA パターン・モックの過剰使用・テスト独立性を判定し、構造化 JSON で findings を返す。
+description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 4 観点レビュー subagent の一つ (TDD / テスト品質)。フェーズ実装差分とテストファイルを見て、TDD 順守 (RED→GREEN→REFACTOR)・テストが振る舞いを表現しているか・命名規約・AAA パターン・モックの過剰使用・テスト独立性を判定し、構造化 JSON で findings を返す。
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -135,5 +135,6 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
 - 一般コード品質 → `review-quality`
 - プロジェクト rules 準拠 → `review-quality`
 - プロダクト readiness / UX 横断 → `review-product-readiness`
+- テストが基準時点 (PHASE_START_SHA) から弱体化していないか (assertion 緩和・トートロジー化・skip 隠蔽) の差分検知、実装への能動的攻撃、完了報告の反証 → `review-adversarial`
 
 本 agent は TDD とテスト品質のみ。

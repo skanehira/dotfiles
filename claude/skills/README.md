@@ -95,7 +95,7 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 | skill (wrapper) | agent (本体) |
 |---|---|
 | `/utility-self-improving` | `self-improving-extractor` + `self-improving-judge` |
-| `/workflow-review` | `review-tdd` + `review-quality` + `review-product-readiness` (3 並列。セキュリティは security-guidance プラグインに委譲) |
+| `/workflow-review` | `review-tdd` + `review-quality` + `review-product-readiness` + `review-adversarial` (4 並列。セキュリティは security-guidance プラグインに委譲) |
 
 ### agent only (skill 無し、上位 orchestrator 専用)
 
@@ -104,7 +104,7 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 | `tech-investigation` | `dev-spec` フェーズ 5 (PoC 検証、並列 fan-out) |
 | `architecture-guard` | `dev-impl` Step 4.2b |
 | `fix-lsp-warnings` | `dev-impl` Step 4.2c / Agent ツールで直接起動 |
-| `review-*` | `dev-impl` Step 4.2d (model: opus 明示) / `workflow-review` |
+| `review-*` (tdd / quality / product-readiness / adversarial) | `dev-impl` Step 4.2d (model: opus 明示) / `workflow-review` |
 
 ## スキル一覧
 
@@ -113,7 +113,7 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 | スキル | 説明 | 入力 | 出力 |
 |---|---|---|---|
 | [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、承認ゲートで実装ループへ引き渡す。クイックモード・部分実行・途中再開可 | なし (docs/ の状態から再開可) | USER_STORIES.md 〜 DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md |
-| [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (メインループ TDD → guard → review fan-out → テストゲート → commit)、完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須、承認スタンプは goals_sha 付き) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
+| [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (メインループ TDD → guard → review fan-out (敵対的レビュー含む) → テストゲート → commit)、完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須、承認スタンプは goals_sha 付き) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / ddd-modeling / analyzing-requirements / interview / verification-review / todo-generation)。
 
@@ -121,7 +121,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 
 | スキル | 説明 |
 |---|---|
-| [workflow-review](./workflow-review/) | git 差分を 3 観点でレビュー (TDD・品質+ルール+構造・プロダクト readiness)。修正はメインループ直営 TDD |
+| [workflow-review](./workflow-review/) | git 差分を 4 観点でレビュー (TDD・品質+ルール+構造・プロダクト readiness・敵対的レビュー)。修正はメインループ直営 TDD |
 | [workflow-commit](./workflow-commit/) | Conventional Commit 形式でコミット (push はユーザが手動) |
 | [workflow-create-draft-pr](./workflow-create-draft-pr/) | ローカルのコミット履歴と差分から Draft PR を作成 (`.github/` のテンプレート自動検出) |
 | [workflow-debate](./workflow-debate/) | 複数サブエージェントで議論を反復し、相違が収束するまで議題を検証 |

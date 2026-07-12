@@ -48,3 +48,5 @@ dev_server:                                # review-product-readiness (Step 4.2d
     ```
     **推定に確信が持てない場合 (上記いずれにも一致しない) は `dev_server` ごと省略する** (誤ったポートを渡すと review-product-readiness が `dev_server_unavailable` の偽陽性を報告し、self-fix loop が実装側で直しようのないエラーを無限に再試行することになるため)
 
+review-adversarial は本ファイルを受け取らない (fresh context 監査のため、phase_name / phase_start_sha / docs_dir / dev_server / scratch_dir / output_path のみを直接渡す)。
+
