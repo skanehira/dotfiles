@@ -1,17 +1,17 @@
 ---
 name: workflow-review
-description: ローカルの git 差分を 3 観点 (TDD / コード品質+ルール準拠+構造 / プロダクト readiness) で並列レビュー。本体ロジックは review-tdd / review-quality / review-product-readiness subagent に委譲し、本 skill はメインセッション向けの薄い orchestrator として「差分検出 → PHASE_CONTEXT 組み立て → subagent 並列起動 → 結果集約・整形表示 → 修正アクション選択」を担当する。セキュリティレビューは security-guidance プラグイン (Stop hook の LLM diff review + Edit 時の pattern 検知) に委譲しており本 skill の対象外。fatal 判定は本 skill では行わず、呼び出し側に任せる。
+description: ローカルの git 差分を 4 観点 (TDD / コード品質+ルール準拠+構造 / プロダクト readiness / 敵対的レビュー) で並列レビュー。本体ロジックは review-tdd / review-quality / review-product-readiness / review-adversarial subagent に委譲し、本 skill はメインセッション向けの薄い orchestrator として「差分検出 → PHASE_CONTEXT 組み立て → subagent 並列起動 → 結果集約・整形表示 → 修正アクション選択」を担当する。セキュリティレビューは security-guidance プラグイン (Stop hook の LLM diff review + Edit 時の pattern 検知) に委譲しており本 skill の対象外。fatal 判定は本 skill では行わず、呼び出し側に任せる。
 argument-hint: "[--staged | --all]"
 allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion
 ---
 
-# /workflow-review - 3 観点並列コードレビュー (subagent wrapper)
+# /workflow-review - 4 観点並列コードレビュー (subagent wrapper)
 
-3 つの review subagent を**並列起動**してコードレビューを行う薄い orchestrator。
+4 つの review subagent を**並列起動**してコードレビューを行う薄い orchestrator。
 
 ## 設計方針
 
-- **本体ロジック**: `claude/agents/review-{tdd,quality,product-readiness}.md` (subagent × 3。quality は rules 準拠とアーキテクチャ heuristic を統合済み)
+- **本体ロジック**: `claude/agents/review-{tdd,quality,product-readiness,adversarial}.md` (subagent × 4。quality は rules 準拠とアーキテクチャ heuristic を統合済み。adversarial は実装破壊・reward hacking 検知・完了報告の反証の 3 レンズ)
 - **本 skill**: ユーザー向けエントリポイント。差分検出と PHASE_CONTEXT 組み立て、subagent 並列起動、結果集約・整形表示
 - **dev-impl (実装ループ) は本 skill を呼ばない** (dev-impl 本体が Step 4.2d で review subagent を観点 gating 付きで直接起動する)。本 skill は手動レビュー用
 - **観点拡張**: 観点を増やしたい場合は `claude/agents/review-<観点>.md` を追加して本 skill の起動リストに加える
@@ -91,20 +91,38 @@ const ctx = {
 
 `dev_server` が無い場合は省略してよい (`review-product-readiness` が URL 不在で no-op になる)。
 
-`args.dimensions` (optional array, 例: `["tdd"]` のような観点名の配列) が指定されていれば、その観点の subagent だけを起動する (呼び出し側での絞り込み用)。未指定時 (手動 `/workflow-review` 実行時など) は 3 観点フル起動。
+`args.dimensions` (optional array, 例: `["tdd"]` のような観点名の配列) が指定されていれば、その観点の subagent だけを起動する (呼び出し側での絞り込み用)。未指定時 (手動 `/workflow-review` 実行時など) は 4 観点フル起動 (ただし adversarial は下記スキップ述語を満たせば自動的に外れる)。
+
+### Step 2.5: review-adversarial のスキップ判定
+
+dev-impl Step 4.2d と同じ機械述語を評価する (手動利用なので JSONL 記録はしない。Step 5 のサマリに `adversarial: skipped (trivial diff: N 行)` の形で表示する)。基準は Step 2 の `phase_start_sha` (= `HEAD`) に揃える (`--staged` 実行時に staged 差分が判定から漏れることや、ctx が使う基準と述語の基準がズレることを防ぐため。`$CHANGED` は porcelain の 2 文字ステータスプレフィックス付き出力ではなく `git diff --name-only` + `git ls-files --others` のプレーンなパス一覧を使う (プレフィックス付き出力にアンカー正規表現 `(^|/)tests?/` を当てると先頭一致が機能しない)):
+
+```bash
+CHANGED=$({ git diff --name-only HEAD; git ls-files --others --exclude-standard; } | sort -u)
+TRACKED_LINES=$(git diff --shortstat HEAD | rg -o '[0-9]+' | tail -n +2 | paste -sd+ - | bc)
+UNTRACKED_LINES=$(git ls-files --others --exclude-standard -z | xargs -0 cat 2>/dev/null | wc -l)
+LINES=$(( ${TRACKED_LINES:-0} + ${UNTRACKED_LINES:-0} ))
+TEST_FILE_CHANGED=$(echo "$CHANGED" | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)' || true)
+TRACKED_CONTENT_CHANGED=$(git diff HEAD -U0 -- ':!*.md' ':!docs/' | rg '^[+-].*(#\[(test|cfg\(test\)|tokio::test|rstest)\]|func Test[A-Z]|\b(it|test|describe)\s*\(|def\s+test_|@pytest\.)' || true)
+UNTRACKED_CONTENT_CHANGED=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 -I{} rg -l '#\[(test|cfg\(test\)|tokio::test|rstest)\]|func Test[A-Z]|\b(it|test|describe)\s*\(|def\s+test_|@pytest\.' {} 2>/dev/null || true)
+TEST_CONTENT_CHANGED="${TRACKED_CONTENT_CHANGED}${UNTRACKED_CONTENT_CHANGED}"
+```
+
+テスト変更なし (`$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空) かつ変更総行数 ≤ 20 (または `.md`/`docs/` のみの差分) かつ CI・ビルド設定変更なしなら skip 可 (基準の詳細は dev-impl SKILL.md Step 4.2d 参照)。
 
 ### Step 3: subagent 並列起動
 
 Agent ツールを同一メッセージ内に複数 tool_use として並べて並列起動:
 
 ```javascript
-const DIMENSIONS = ["tdd", "quality", "product_readiness"]
+const DIMENSIONS = ["tdd", "quality", "product_readiness", "adversarial"]
 const targetDimensions = args.dimensions?.length ? args.dimensions : DIMENSIONS
 
 const AGENT_TYPE = {
   tdd: "review-tdd",
   quality: "review-quality",
   product_readiness: "review-product-readiness",
+  adversarial: "review-adversarial",
 }
 
 const reviews = await Promise.all(
@@ -121,6 +139,7 @@ const reviews = await Promise.all(
 - tdd: `rules/core/tdd.md`, `rules/core/testing.md`
 - quality: `rules/core/design.md` + 拡張子別 (`rules/frontend/react/*.md` 等) + design_overview / design_detail (DESIGN 整合チェック用)
 - product_readiness: design_overview の「ゴール」(G_E2E 含む) と design_detail の「UX 設計」を必ず含める + `dev_server` (start_command と URL) を渡す。CLI / API のみなら本 dimension は no-op で素通り
+- adversarial: design 抜粋は渡さない (fresh context 監査のため)。`phase_name` (= ctx.phase_name、既定 `"working-tree-review"`) / `phase_start_sha` (= Step 1 の基準 SHA) / `docs_dir` (docs/ が存在すれば) / `dev_server` / `scratch_dir` (`/tmp/review-adversarial-working-tree/`) / `output_path` を渡す。review-adversarial.md の入力仕様は phase_name を TODO.md 該当節の切り出しキーとして要求するため必須 (`docs_dir` が無い場合はレンズ C は対象なしとして agent 側が skip する)
 
 ### Step 4: 集約
 
@@ -153,6 +172,7 @@ return { findings, dimensions_reviewed: targetDimensions }
 | tdd                | X | X | X |
 | quality            | X | X | X |
 | product_readiness  | X | X | X |
+| adversarial        | X | X | X |
 | **合計** | **X** | **X** | **X** |
 
 ## findings (severity 順)
@@ -197,7 +217,7 @@ AskUserQuestion({
 
 ## 関連
 
-- subagent: `review-tdd` / `review-quality` / `review-product-readiness` (本体ロジック)
+- subagent: `review-tdd` / `review-quality` / `review-product-readiness` / `review-adversarial` (本体ロジック)
 - セキュリティレビュー: `security-guidance@claude-plugins-official` プラグイン (本 skill の外、Edit/Write pattern 検知 + Stop hook LLM diff review)
 - 連携 skill: `workflow-commit` (修正後のコミット)
 - 上位: なし (dev-impl は本 skill を経由せず Step 4.2d で review subagent を直接起動する)

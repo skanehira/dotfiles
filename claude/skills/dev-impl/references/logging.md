@@ -49,7 +49,8 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
     "quality": [],
     "architecture": [],
     "rules": [{ "file": "...", "line": 5, "severity": "medium", "message": "..." }],
-    "product_readiness": []
+    "product_readiness": [],
+    "adversarial": []
   }
 }
 ```
@@ -65,6 +66,17 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 ```
 
 `event_type: goal_check` の判定主体は review-spec-compliance (自動系) / review-product-readiness (G_E2E) であり、メインループは集約して記録するだけ (Step 5.2〜5.3)。
+
+`event_type: verification_skipped` で review-adversarial をスキップした場合 (Step 4.2d のスキップ述語参照)、`context` には判定に使った値をそのまま入れる:
+
+```json
+"context": {
+  "target": "review-adversarial",
+  "changed_files": ["docs/TODO.md"],
+  "changed_lines": 6,
+  "criteria_result": { "test_changed": false, "lines_le_20": true, "ci_config_changed": false, "final_phase": false }
+}
+```
 
 書き込みは `jq -nc --arg ... '{...}' >> $JSONL` で 1 行 1 エントリの append-only。`context` は event_type に応じて中身が変わる (`start` / `done` ではほぼ空でも良い)。
 

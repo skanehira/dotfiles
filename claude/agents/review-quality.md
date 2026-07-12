@@ -1,6 +1,6 @@
 ---
 name: review-quality
-description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 3 観点レビューの一つ (コード品質 + プロジェクト rules 準拠 + アーキテクチャ heuristic)。フェーズ実装差分を見て、SOLID・YAGNI・命名・凝集/結合・コロケーション・アンチパターン、CLAUDE.md / rules/ 配下への明示違反 (外科的変更・最小実装・IO の DI)、および heuristic な構造判断 (関数肥大化・責務混線・抽象化過不足・DESIGN.md / DESIGN_DETAIL_APP.md との整合) を判定し、構造化 JSON で findings を返す。機械判定可能なレイヤ境界違反は architecture-guard、TDD は review-tdd の責務。
+description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 4 観点レビューの一つ (コード品質 + プロジェクト rules 準拠 + アーキテクチャ heuristic)。フェーズ実装差分を見て、SOLID・YAGNI・命名・凝集/結合・コロケーション・アンチパターン、CLAUDE.md / rules/ 配下への明示違反 (外科的変更・最小実装・IO の DI)、および heuristic な構造判断 (関数肥大化・責務混線・抽象化過不足・DESIGN.md / DESIGN_DETAIL_APP.md との整合) を判定し、構造化 JSON で findings を返す。機械判定可能なレイヤ境界違反は architecture-guard、TDD は review-tdd の責務。
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
