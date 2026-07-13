@@ -110,6 +110,7 @@ let
     libsixel # SIXEL 画像プロトコル
     poppler # PDF レンダリング
     qpdf
+    yt-dlp
   ];
 
   # エディタ / TUI
