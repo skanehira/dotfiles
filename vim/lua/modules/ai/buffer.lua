@@ -186,7 +186,6 @@ function M.create_input_buffer(config)
       -- ウィンドウに表示されていない場合は新しいfloatで開く
       open_buffer_in_float_window(existing_bufnr, config.name)
     end
-    vim.cmd("startinsert")
     return existing_bufnr
   end
 
@@ -211,8 +210,6 @@ function M.create_input_buffer(config)
 
   -- キーマップを設定（新しいバッファの場合のみ）
   setup_keymaps(bufnr, config)
-
-  vim.cmd("startinsert")
 
   return bufnr
 end
