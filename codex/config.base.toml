@@ -9,8 +9,8 @@ approval_policy = "never"
 sandbox_mode = "danger-full-access"
 
 notify = ["terminal-notifier", "-message", "codex task done", "-sound", "default"]
-model = "gpt-5.5"
-model_reasoning_effort = "xhigh"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
 personality = "pragmatic"
 service_tier = "default"
 plan_mode_reasoning_effort = "high"
