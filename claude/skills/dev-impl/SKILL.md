@@ -179,6 +179,15 @@ PHASE_CONTEXT の `phase_tasks` と設計抜粋に従い、メインセッショ
 - `design_overview_break` を検知したら**即エスカレ停止** (commit しない)
 - 全テスト緑を確認してから 4.2b へ
 
+##### 実装ノートの記録 (design_decision / open_question)
+
+deviation_signals (設計と*矛盾する*変更) とは別に、以下は**設計が沈黙・あいまいな箇所での自律判断**として JSONL に記録する (ループは止めない。スキーマは [references/logging.md](./references/logging.md) を参照):
+
+- **`design_decision`**: DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md のいずれにも規定が無い実装の細部 (デフォルト値・パス/命名形式・ログ/エラーフォーマット・機能の適用範囲・ライブラリ API の選択等) を自分で選んだとき、および代替案を検討して棄却したとき
+- **`open_question`**: エスカレ条件 (P3 等) には該当しないが、選択に確信が持てずユーザの事後確認が必要なとき。暫定処理を明記して前進する (CLAUDE.md「自律モード時の優先順位」に整合)。Step 4/5 のどのステップからでも記録可
+
+同一の判断・質問を後続フェーズで踏襲するだけの場合は再記録しない (初回のみ)。「同一」は対象 (`affected_files` が指す機能・レイヤ) と根拠 (`rationale` / `background`) が両方一致する場合を指す。対象または根拠が異なれば別判断として新規に記録する。
+
 ##### 4.2b: 境界検査 (architecture-guard subagent、最大 3 修正ループ)
 
 ```javascript
@@ -450,6 +459,7 @@ UI/UX gap セクションが**空でなければ** dev-impl の終了 status を
 受入監査 (spec_compliance): high <X> 件 / medium <Y> 件 / vacuous_verification による手動 pending 落ち <Z> 件
 未検証 (skip された検証): <verification_skipped の一覧、なければ「なし」>
 UI/UX gap: <未実装画面数> 画面 / <未実装ナビ経路数> 経路 / frontend-design: <適用|未適用>
+実装ノート: 設計判断 <X> 件 / 未解決の質問 <Y> 件 (詳細は HTML レポート)
 
 範囲:
 - 開始 SHA: <START_SHA>
@@ -482,7 +492,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"
 ```
 
-レポート内容: ヘッダー (run_id / SHA / 所要時間) / 全体サマリ / フェーズタイムライン / 動的修正詳細 (P1/P2/P3) / POC_NEEDED 残存状況 (pending non-blocker) / ゴール達成判定 / 受入監査結果 (spec_compliance findings) / フッター。
+レポート内容: ヘッダー (run_id / SHA / 所要時間) / 全体サマリ / フェーズタイムライン / 動的修正詳細 (P1/P2/P3) / レビュー残課題 (low/medium) / 実装ノート (設計判断 / 未解決の質問) / POC_NEEDED 残存状況 (pending non-blocker) / ゴール達成判定 / 受入監査結果 (spec_compliance findings) / フッター。
 
 ## エスカレ停止時の挙動
 
@@ -516,6 +526,7 @@ git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"
 範囲:
 - 完了済みフェーズ: <完了数> / <全フェーズ数>
 - 最終成功 commit: <SHA>
+- 実装ノート: 設計判断 <X> 件 / 未解決の質問 <Y> 件 (詳細は HTML レポート)
 
 次のステップ:
 - 上記詳細を踏まえ DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md を見直す
