@@ -82,6 +82,8 @@ git ls-files --others --exclude-standard
 
 ### Step 4: JSON 出力
 
+各 finding は判定根拠を `evidence` に含める (該当コードの引用、または確認に使ったコマンドと出力)。主観的判定のみで終わらせない。
+
 `output_path` に Write、stdout に絶対パス:
 
 ```json
@@ -98,6 +100,7 @@ git ls-files --others --exclude-standard
       "confidence": "high|medium|low",
       "rule": "srp|ocp|lsp|isp|dip|yagni|naming|cohesion|coupling|colocation|god_component|prop_drilling|feature_envy|shotgun_surgery|scope_creep|minimal_impl|spec_explicit|io_di|use_effect_misuse|function_size|file_size|class_size|responsibility_mix|over_abstraction|under_abstraction|design_mismatch|repository_bypass|domain_global|aggregate_internal_access|...",
       "message": "具体的な指摘",
+      "evidence": "該当箇所のコード引用、または判定に使ったコマンドと出力",
       "fix_proposal": "推奨修正"
     }
   ]

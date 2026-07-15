@@ -100,6 +100,8 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
 
 ### Step 4: JSON 出力
 
+各 finding は判定根拠を `evidence` に含める (該当コードの引用、または確認に使ったコマンドと出力)。主観的判定のみで終わらせない。
+
 `output_path` に Write、stdout に絶対パスのみ:
 
 ```json
@@ -116,6 +118,7 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
       "confidence": "high|medium|low",
       "rule": "tdd_red_first|behavior_assertion|naming|aaa|exact_match|mock_overuse|test_isolation",
       "message": "具体的な指摘内容",
+      "evidence": "該当箇所のコード引用、または判定に使ったコマンドと出力",
       "fix_proposal": "推奨修正"
     }
   ]
