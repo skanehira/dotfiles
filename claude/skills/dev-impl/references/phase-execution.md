@@ -1,0 +1,57 @@
+# フェーズ実行の詳細手順 (dev-impl Step 4.2)
+
+`dev-impl/SKILL.md` の Step 4.2 (フェーズ実装) 各節から参照される実行コマンドの詳細。判断基準・観点 gating・ループ規則・エスカレ条件は SKILL.md 本体にあるので、そちらを先に読んでから該当節だけをここで参照する。
+
+## 4.2: 事前判定
+
+```bash
+# Lua/Neovim プラグイン判定 (LSP 警告修正ステップの有無)
+if test -f init.lua || test -d lua || ls plugin/*.lua >/dev/null 2>&1; then
+  IS_NEOVIM_PLUGIN=true
+else
+  IS_NEOVIM_PLUGIN=false
+fi
+```
+
+UI フェーズ判定 (`uiPhase`): `phase_tasks` / フェーズ名に UI キーワード (画面 / コンポーネント / page / component / style / CSS / レイアウト) が含まれる、または `related_source_files` にフロントエンド dir (`apps/web/`, `frontend/`, `src/components/`, `src/pages/` 等) が含まれる場合に true。
+
+## 4.2b: architecture-guard 呼び出し
+
+```javascript
+const guard = await Agent({
+  description: "境界違反の機械検査",
+  subagent_type: "architecture-guard",
+  prompt: `PHASE_CONTEXT: docs/.dev-impl/<run_id>/phase-<n>-context.md を Read。
+target_diff: working tree vs ${PHASE_START_SHA}
+git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。`
+})
+```
+
+## 4.2d: review-adversarial スキップ述語
+
+```bash
+CHANGED=$({ git diff --name-only "${PHASE_START_SHA}"; git ls-files --others --exclude-standard; } | sort -u)
+# LINES は tracked (コミット済との差分) + untracked (新規ファイル) の合算。dev-impl は 4.2e まで
+# コミットしないため、フェーズの新規実装ファイルは常に untracked であり、tracked 差分だけでは
+# 大規模な新規実装を「変更 0 行」と誤判定してしまう
+TRACKED_LINES=$(git diff --shortstat "${PHASE_START_SHA}" | rg -o '[0-9]+' | tail -n +2 | paste -sd+ - | bc)
+UNTRACKED_LINES=$(git ls-files --others --exclude-standard -z | xargs -0 cat 2>/dev/null | wc -l)
+LINES=$(( ${TRACKED_LINES:-0} + ${UNTRACKED_LINES:-0} ))
+# テストコードへの変更検知は「ファイル名」と「差分内容」の 2 層、かつ tracked/untracked 両方を見る
+# (Rust のインラインテストは src ファイル内に書かれるためファイル名 glob では検知できず、
+# その内容層も git diff だけでは untracked ファイルを見ないため、両方を欠くと検知が完全に抜ける)。
+# 内容層は .md / docs/ を除外する (ドキュメント散文中の `test(` 等の字句引用による誤検知を防ぐため)
+TEST_FILE_CHANGED=$(echo "$CHANGED" | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)' || true)
+TRACKED_CONTENT_CHANGED=$(git diff "${PHASE_START_SHA}" -U0 -- ':!*.md' ':!docs/' | rg '^[+-].*(#\[(test|cfg\(test\)|tokio::test|rstest)\]|func Test[A-Z]|\b(it|test|describe)\s*\(|def\s+test_|@pytest\.)' || true)
+UNTRACKED_CONTENT_CHANGED=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 -I{} rg -l '#\[(test|cfg\(test\)|tokio::test|rstest)\]|func Test[A-Z]|\b(it|test|describe)\s*\(|def\s+test_|@pytest\.' {} 2>/dev/null || true)
+TEST_CONTENT_CHANGED="${TRACKED_CONTENT_CHANGED}${UNTRACKED_CONTENT_CHANGED}"
+```
+
+判定条件テーブルと skip/実行の遷移規則は SKILL.md 側の 4.2d を参照。
+
+## 4.2e: テスト弱体化検知コマンド
+
+```bash
+git diff ${PHASE_START_SHA} --diff-filter=D --name-only -- '*test*' '*spec*'   # テストファイルの削除
+git diff ${PHASE_START_SHA} -U0 | rg '^\+.*\.(skip|only)\s*\(|^\+\s*(xit|xdescribe|xtest)\b|^\+.*#\[ignore\]'   # skip/only/ignore の追加
+```
