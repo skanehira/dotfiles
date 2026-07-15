@@ -63,26 +63,23 @@ local function setup_keymaps(bufnr, config)
     end
   end, vim.tbl_extend("force", opts, { desc = "Close float window" }))
 
-  -- tmuxペインへの単純パススルー keymap 群
+  -- herdrペインへの単純パススルー keymap 群
   -- { mode = キーマップモード, key = キー, cb = config のコールバック名, desc = キーマップ説明 }
   local passthrough_keymaps = {
-    { mode = "n", key = "<C-x><C-x>", cb = "on_interrupt",          desc = "Interrupt process in tmux pane" },
-    { mode = "n", key = "<C-d>",      cb = "on_scroll_down",        desc = "Send PageDown to tmux pane" },
-    { mode = "n", key = "<C-u>",      cb = "on_scroll_up",          desc = "Send PageUp to tmux pane" },
-    { mode = "n", key = "<C-g><C-b>", cb = "on_scroll_to_bottom",   desc = "Send Ctrl+End to tmux pane (jump to bottom)" },
-    { mode = "n", key = "<Tab>",      cb = "on_send_tab",           desc = "Send Tab to tmux pane" },
-    { mode = "n", key = "<S-Tab>",    cb = "on_send_shift_tab",     desc = "Send Shift+Tab to tmux pane" },
-    { mode = "n", key = "<Space>",    cb = "on_send_space",         desc = "Send Space to tmux pane" },
-    { mode = "n", key = "<C-c>",      cb = "on_send_ctrl_c",        desc = "Send C-c to tmux pane" },
-    { mode = "n", key = "<Esc>",      cb = "on_send_escape",        desc = "Send Escape to tmux pane" },
-    { mode = "n", key = "R",          cb = "on_send_double_escape", desc = "Send Escape x2 to tmux pane (rewind)" },
-    { mode = "n", key = "<Up>",       cb = "on_send_up",            desc = "Send Up to tmux pane" },
-    { mode = "n", key = "<C-p>",      cb = "on_send_up",            desc = "Send Up to tmux pane" },
-    { mode = "n", key = "<Down>",     cb = "on_send_down",          desc = "Send Down to tmux pane" },
-    { mode = "n", key = "<C-n>",      cb = "on_send_down",          desc = "Send Down to tmux pane" },
-    { mode = "n", key = "<Left>",     cb = "on_send_left",          desc = "Send Left to tmux pane" },
-    { mode = "n", key = "<Right>",    cb = "on_send_right",         desc = "Send Right to tmux pane" },
-    { mode = "i", key = "<C-v>",      cb = "on_send_ctrl_v",        desc = "Send Ctrl+V to tmux pane" },
+    { mode = "n", key = "<C-x><C-x>", cb = "on_interrupt",          desc = "Interrupt process in herdr pane" },
+    { mode = "n", key = "<Tab>",      cb = "on_send_tab",           desc = "Send Tab to herdr pane" },
+    { mode = "n", key = "<S-Tab>",    cb = "on_send_shift_tab",     desc = "Send Shift+Tab to herdr pane" },
+    { mode = "n", key = "<Space>",    cb = "on_send_space",         desc = "Send Space to herdr pane" },
+    { mode = "n", key = "<C-c>",      cb = "on_send_ctrl_c",        desc = "Send C-c to herdr pane" },
+    { mode = "n", key = "<Esc>",      cb = "on_send_escape",        desc = "Send Escape to herdr pane" },
+    { mode = "n", key = "R",          cb = "on_send_double_escape", desc = "Send Escape x2 to herdr pane (rewind)" },
+    { mode = "n", key = "<Up>",       cb = "on_send_up",            desc = "Send Up to herdr pane" },
+    { mode = "n", key = "<C-p>",      cb = "on_send_up",            desc = "Send Up to herdr pane" },
+    { mode = "n", key = "<Down>",     cb = "on_send_down",          desc = "Send Down to herdr pane" },
+    { mode = "n", key = "<C-n>",      cb = "on_send_down",          desc = "Send Down to herdr pane" },
+    { mode = "n", key = "<Left>",     cb = "on_send_left",          desc = "Send Left to herdr pane" },
+    { mode = "n", key = "<Right>",    cb = "on_send_right",         desc = "Send Right to herdr pane" },
+    { mode = "i", key = "<C-v>",      cb = "on_send_ctrl_v",        desc = "Send Ctrl+V to herdr pane" },
   }
   -- ループ変数の closure キャプチャを避けるため factory で生成
   local function make_passthrough(cb_name)
@@ -166,9 +163,6 @@ end
 --   - name: string バッファ名（例: "[Claude Input]"）
 --   - filetype: string ファイルタイプ（例: "markdown"）
 --   - on_submit: function(content, bufnr) テキスト送信時のコールバック
---   - on_scroll_down: function() 下スクロール時のコールバック
---   - on_scroll_up: function() 上スクロール時のコールバック
---   - on_scroll_to_bottom: function() 最下部へジャンプ時のコールバック
 --   - on_interrupt: function() プロセス割り込み時のコールバック
 --   - on_send_shift_tab: function() Shift+Tab送信時のコールバック
 -- @return number 作成/再利用されたバッファ番号

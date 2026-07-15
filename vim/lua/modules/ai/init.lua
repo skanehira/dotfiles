@@ -1,7 +1,7 @@
--- AIツール（Claude/Codex）のtmux統合モジュール
+-- AIツール（Claude/Codex）のherdr統合モジュール
 -- 公開APIとコマンド登録を提供
 
-local tmux = require("modules.ai.tmux")
+local herdr = require("modules.ai.herdr")
 local buffer = require("modules.ai.buffer")
 local comments = require("modules.ai.comments")
 
@@ -21,7 +21,7 @@ local function validate_pane(pane_id)
     return nil
   end
 
-  if tmux.pane_exists(pane_id) then
+  if herdr.pane_exists(pane_id) then
     return pane_id
   end
 
@@ -43,7 +43,7 @@ local function get_or_create_pane(tool_name, args)
 
   -- メモリ上にない場合、現在のウィンドウ内でコマンド名で検索して復元
   if not pane_id then
-    pane_id = tmux.find_pane_by_command(tool_name)
+    pane_id = herdr.find_pane_by_command(tool_name)
     if pane_id then
       -- 状態を復元
       if tool_name == "claude" then
@@ -68,9 +68,9 @@ local function get_or_create_pane(tool_name, args)
   -- 新規ペインを作成（30%）、ツールを起動
   -- コマンド終了時にペインも自動的に閉じられる
   local err
-  pane_id, err = tmux.create_pane(40, command)
+  pane_id, err = herdr.create_pane(40, command)
   if not pane_id then
-    vim.notify("tmuxペインの作成に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.ERROR)
+    vim.notify("herdrペインの作成に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.ERROR)
     return nil
   end
 
@@ -111,9 +111,9 @@ end
 -- @param context table|nil コメントコンテキスト
 --   { file_path = string, scope = "range"|"file", start_line = number?, end_line = number? }
 local function open_input_buffer(tool_name, args, context)
-  -- tmuxセッション内かチェック
-  if not tmux.is_in_tmux() then
-    vim.notify("エラー: このコマンドはtmuxセッション内でのみ使用できます", vim.log.levels.ERROR)
+  -- herdrペイン内かチェック
+  if not herdr.is_in_herdr() then
+    vim.notify("エラー: このコマンドはherdrペイン内でのみ使用できます", vim.log.levels.ERROR)
     return
   end
 
@@ -140,7 +140,7 @@ local function open_input_buffer(tool_name, args, context)
     return current_id
   end
 
-  -- tmuxペイン作成後、Neovimのリサイズが反映されてからfloatを作成
+  -- herdrペイン作成後、Neovimのリサイズが反映されてからfloatを作成
   local buffer_name = string.format("[%s Input]", tool_name:gsub("^%l", string.upper))
   vim.schedule(function()
     local buf_config = {
@@ -157,7 +157,7 @@ local function open_input_buffer(tool_name, args, context)
             vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
             return
           end
-          local ok, err = tmux.send_text(current_pane, finalize_text(tool_name, message))
+          local ok, err = herdr.send_text(current_pane, finalize_text(tool_name, message))
           if not ok then
             vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"),
               vim.log.levels.ERROR)
@@ -214,7 +214,7 @@ local function open_input_buffer(tool_name, args, context)
         if ctx then
           text = string.format("@%s#L%d-%d %s", ctx.file_path, ctx.start_line, ctx.end_line, message)
         end
-        local ok, err = tmux.send_text(current_pane, finalize_text(tool_name, text))
+        local ok, err = herdr.send_text(current_pane, finalize_text(tool_name, text))
         if not ok then
           vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"),
             vim.log.levels.ERROR)
@@ -227,7 +227,7 @@ local function open_input_buffer(tool_name, args, context)
           return
         end
 
-        local success, err = tmux.kill_pane(current_pane)
+        local success, err = herdr.kill_pane(current_pane)
         if success then
           if tool_name == "claude" then
             state.claude_pane = nil
@@ -240,27 +240,21 @@ local function open_input_buffer(tool_name, args, context)
         end
       end,
     }
-    -- tmuxペインへ単純にキーを送る callback を一括生成
-    -- { cb = bufferモジュール側のコールバック名, key = tmux send-keys に渡すキー名, label = エラー表示用ラベル }
+    -- herdrペインへ単純にキーを送る callback を一括生成
+    -- { cb = bufferモジュール側のコールバック名, key = herdr send-keys に渡すキー名（配列なら複数キーを連続送信）, label = エラー表示用ラベル }
     local passthrough_keys = {
-      { cb = "on_send_ctrl_e",        key = "C-e",           label = "Ctrl+E" },
-      { cb = "on_send_ctrl_a",        key = "C-a",           label = "Ctrl+A" },
-      { cb = "on_send_ctrl_f",        key = "C-f",           label = "Ctrl+F" },
-      { cb = "on_send_ctrl_b",        key = "C-b",           label = "Ctrl+B" },
-      { cb = "on_send_ctrl_h",        key = "C-h",           label = "Ctrl+H" },
-      { cb = "on_scroll_to_bottom",   key = "C-End",         label = "Ctrl+End" },
-      { cb = "on_send_tab",           key = "Tab",           label = "Tab" },
-      { cb = "on_send_shift_tab",     key = "BTab",          label = "Shift+Tab" },
-      { cb = "on_send_space",         key = "Space",         label = "Space" },
-      { cb = "on_send_ctrl_c",        key = "C-c",           label = "C-c" },
-      { cb = "on_send_escape",        key = "Escape",        label = "Escape" },
+      { cb = "on_send_tab",           key = "tab",              label = "Tab" },
+      { cb = "on_send_shift_tab",     key = "shift+tab",        label = "Shift+Tab" },
+      { cb = "on_send_space",         key = "space",            label = "Space" },
+      { cb = "on_send_ctrl_c",        key = "ctrl+c",           label = "C-c" },
+      { cb = "on_send_escape",        key = "esc",              label = "Escape" },
       -- 1コマンドで2連送信することで、Claudeのrewind検出タイムウィンドウ内に確実に届ける
-      { cb = "on_send_double_escape", key = "Escape Escape", label = "Escape x2" },
-      { cb = "on_send_ctrl_v",        key = "C-v",           label = "Ctrl+V" },
-      { cb = "on_send_up",            key = "Up",            label = "Up" },
-      { cb = "on_send_down",          key = "Down",          label = "Down" },
-      { cb = "on_send_left",          key = "Left",          label = "Left" },
-      { cb = "on_send_right",         key = "Right",         label = "Right" },
+      { cb = "on_send_double_escape", key = { "esc", "esc" },   label = "Escape x2" },
+      { cb = "on_send_ctrl_v",        key = "ctrl+v",           label = "Ctrl+V" },
+      { cb = "on_send_up",            key = "up",               label = "Up" },
+      { cb = "on_send_down",          key = "down",             label = "Down" },
+      { cb = "on_send_left",          key = "left",             label = "Left" },
+      { cb = "on_send_right",         key = "right",            label = "Right" },
     }
     -- ループ変数の closure キャプチャを避けるため factory で生成
     local function make_send_keys_callback(key_name, label)
@@ -270,7 +264,7 @@ local function open_input_buffer(tool_name, args, context)
           vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
           return
         end
-        local success, err = tmux.send_keys(current_pane, key_name)
+        local success, err = herdr.send_keys(current_pane, key_name)
         if not success then
           vim.notify(string.format("%sの送信に失敗しました:\n%s", label, err or "不明なエラー"), vim.log.levels.WARN)
         end
@@ -278,30 +272,6 @@ local function open_input_buffer(tool_name, args, context)
     end
     for _, p in ipairs(passthrough_keys) do
       buf_config[p.cb] = make_send_keys_callback(p.key, p.label)
-    end
-    -- copy-mode によるページ送り callback（codex 用）
-    local function make_scroll_callback(direction)
-      return function()
-        local current_pane = get_current_pane_id()
-        if not current_pane then
-          vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
-          return
-        end
-        local success, err = tmux.scroll(current_pane, direction)
-        if not success then
-          vim.notify(string.format("スクロールに失敗しました:\n%s", err or "不明なエラー"), vim.log.levels.WARN)
-        end
-      end
-    end
-    -- ページ送りはツールで挙動が異なる
-    -- - codex: copy-mode に入って halfpage スクロール（旧来の挙動）
-    -- - claude: fullscreen TUI が解釈するので PageUp/PageDown をキー送信
-    if tool_name == "codex" then
-      buf_config.on_scroll_down = make_scroll_callback("down")
-      buf_config.on_scroll_up = make_scroll_callback("up")
-    else
-      buf_config.on_scroll_down = make_send_keys_callback("PageDown", "PageDown")
-      buf_config.on_scroll_up = make_send_keys_callback("PageUp", "PageUp")
     end
     local bufnr = buffer.create_input_buffer(buf_config)
     -- バッファ内容の判定（書きかけがあるか）
@@ -398,8 +368,8 @@ end
 
 -- コメントスタックを一括送信
 function M.submit(tool_name)
-  if not tmux.is_in_tmux() then
-    vim.notify("エラー: このコマンドはtmuxセッション内でのみ使用できます", vim.log.levels.ERROR)
+  if not herdr.is_in_herdr() then
+    vim.notify("エラー: このコマンドはherdrペイン内でのみ使用できます", vim.log.levels.ERROR)
     return
   end
 
@@ -414,7 +384,7 @@ function M.submit(tool_name)
     return
   end
 
-  local ok, err = tmux.send_text(pane_id, finalize_text(tool_name, text))
+  local ok, err = herdr.send_text(pane_id, finalize_text(tool_name, text))
   if not ok then
     vim.notify(string.format("%sへの送信に失敗しました:\n%s", tool_name, err or "不明なエラー"),
       vim.log.levels.ERROR)
@@ -499,7 +469,7 @@ function M.setup()
     M.open_claude(opts.args)
   end, {
     nargs = "*",
-    desc = "Open Claude in tmux pane with input buffer",
+    desc = "Open Claude in herdr pane with input buffer",
   })
 
   -- :Codex コマンド（引数を受け取る）
@@ -507,7 +477,7 @@ function M.setup()
     M.open_codex(opts.args)
   end, {
     nargs = "*",
-    desc = "Open Codex in tmux pane with input buffer",
+    desc = "Open Codex in herdr pane with input buffer",
   })
 
   -- コメントスタック操作系コマンド
