@@ -253,6 +253,7 @@
   "advisorModel": "fable",
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
+  "skipWorkflowUsageWarning": true,
   "verbose": true,
   "preferredNotifChannel": "terminal_bell",
   "remoteControlAtStartup": false,
@@ -260,5 +261,5 @@
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
   "voiceEnabled": true,
-  "skipWorkflowUsageWarning": true
+  "model": "opusplan"
 }
