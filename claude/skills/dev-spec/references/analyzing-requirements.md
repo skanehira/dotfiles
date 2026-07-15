@@ -157,6 +157,7 @@ AskUserQuestion({
 #### 機能要件
 - 必須機能（MUST have）
 - オプション機能（NICE to have）
+- 非ゴール（意図的に除外する機能と理由）
 - 将来の拡張性の考慮
 
 #### 非機能要件
@@ -174,14 +175,18 @@ AskUserQuestion({
 
 システム全体の構成と技術選定を行う。**各項目は出力先 (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md) を明示する**。振り分けに迷ったら冒頭「概要」の境界基準 (IaC・コンソール操作・環境設定変更が要るか) で判定する。
 
+**記載範囲は「間違えたときのコストが高い決定」に絞る**: 設計書に議論として書くのは、後から変更するコストが高い決定 (データストア選定・API の外部契約・認証方式・データ保持ポリシー等) のみ。数時間で直せる低コストの選択 (UI 細部・命名・ページネーション方式等) は実装ループに委ねる (TODO の実装ガイドに書かない選択は dev-impl が判断し、選択と根拠を出力に明示する既存ルールでカバーされる)。
+
 #### → DESIGN.md (概要設計、3 章構成) に書く
 
 **共通章**
-- システム概要・機能要件 (MUST / NICE)
+- システム概要・機能要件 (MUST / NICE / 非ゴール)
 - ゴール (ステップ 4.5 で定義)
 - 全体構成図 (Mermaid `flowchart`。アプリ + インフラを 1 枚で俯瞰)
 - 技術スタック一覧 (区分 / 技術 / 選定理由の表。CI/CD は GitHub Actions 固定)
+- 検討した代替案 (高コスト決定のみ。決定事項 / 採用案 / 却下案 / 却下理由の表)
 - 制約と前提
+- 未解決の論点 (Open Issues。非技術の未決定事項。技術検証系は POC_NEEDED マーカー側)
 
 **アプリケーション概要章**
 - 主要コンポーネントと責務、レイヤーアーキテクチャ、依存の方向
@@ -298,7 +303,7 @@ AskUserQuestion({
 マーカーの置き場所は検証対象で決める: アプリ実装に関する未確定要素 (ライブラリ挙動・API パターン等) は DESIGN_DETAIL_APP.md、インフラ構成に関するもの (プラットフォーム機能・デプロイ方式等) は DESIGN_DETAIL_INFRA.md の該当セクションに埋め込む。
 
 入力元:
-- FEASIBILITY.md が存在する場合: 検証済みの PoC は「PoC 結果」を技術選定の根拠として DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md に反映する (マーカーにしない)。未検証で残った `blocker=false` の PoC 計画のみ id / scope / risk / blocker を転記
+- FEASIBILITY.md が存在する場合: 検証済みの PoC は「PoC 結果」を技術選定の根拠として DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md に反映する (マーカーにしない)。`status=fallback_adopted` / `scope_reduced` の PoC は当初案の却下理由を DESIGN.md の「検討した代替案」にも転記する。未検証で残った `blocker=false` の PoC 計画のみ id / scope / risk / blocker を転記
 - FEASIBILITY.md が無い場合: 設計中に「実装ガイド」「API 設計」「データスキーマ」「リソース定義」「CI/CD」で不確定要素を発見したら、実装方針を左右するもの (blocker=true 相当) はフェーズ 5 (`references/poc-verification.md`) に差し戻して PoC し、左右しないものだけ `blocker=false` マーカーで残す
 
 `blocker=true` のマーカーを未解決のまま DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md に残してはならない。実装ループ (`/dev-impl`) は起動時にこれを検出すると実装に入らず、dev-spec のフェーズ 5 への差し戻しを案内する。
@@ -456,6 +461,8 @@ Write(
 - [ ] 非機能要件が具体的な数値で定義されている
 - [ ] 主要エンティティが一覧化されている (詳細は DESIGN_DETAIL_APP へ)
 - [ ] 最終ゴールが観測可能・検証可能な形で定義されている
+- [ ] 非ゴールが理由付きで明記されている
+- [ ] 未解決の論点が Open Issues に集約されている (本文中に「未定」「TBD」が散在していない)
 - [ ] 詳細は DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md へのリンクで参照している
 
 **DESIGN_DETAIL_APP.md (アプリ詳細)**
