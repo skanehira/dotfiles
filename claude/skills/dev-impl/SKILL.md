@@ -125,7 +125,7 @@ rg -n '^### フェーズ' docs/TODO.md
 | `p1_fixes_in_phase` (現フェーズ内 P1 修正回数)  | 2       | P2 として扱う (次のループでは P2 として処理) |
 | `p2_fixes_total` (dev-impl 全体の P2 修正回数)  | 3       | P3 扱いに昇格してエスカレ停止                |
 | `goal_loop` (ゴール達成判定 → 未達対応の周回数) | 2       | P3 として停止                                |
-| `run_elapsed_minutes` (run 開始からの経過時間)  | 240 (分。プロジェクト規模に応じて起動時に調整可) | `time_budget_exceeded` でエスカレ停止 (P3 扱い) |
+| `run_elapsed_minutes` (run 開始からの経過時間)  | 480 (分 = 8 時間。プロジェクト規模に応じて起動時に調整可) | `time_budget_exceeded` でエスカレ停止 (P3 扱い) |
 
 各フェーズ開始時に `p1_fixes_in_phase` を 0 にリセットする。`p2_fixes_total` と `goal_loop` は dev-impl 実行中通して保持し、**再入時は Step 0 で decisions.jsonl から復元した値を初期値にする** (リセットしない)。
 
@@ -478,7 +478,7 @@ git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"
 - P3 検出 (DESIGN.md 概要レベルの再設計必要)
 - `p2_fixes_total > 3` (P3 扱いに昇格)
 - `goal_loop > 2` (ゴール達成判定 → 未達対応の 3 周回でも未達ゴール残存)
-- `run_elapsed_minutes > 240` (`time_budget_exceeded`。試行回数の上限だけでなく経過時間でも打ち切る)
+- `run_elapsed_minutes > 480` (`time_budget_exceeded`。試行回数の上限だけでなく経過時間でも打ち切る)
 - 必須ドキュメント (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) 欠如
 - `blocker=true` の POC_NEEDED マーカーが残存 (`poc_marker_unresolved`。dev-spec フェーズ 5 で解決してから再実行)
 - Step 1 構造ゲートの欠落 (`design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing`)
