@@ -20,6 +20,7 @@ approved_stamp: "<TODO.md 1 行目の承認スタンプをそのまま>"   # pos
 run_start_sha: <SHA>               # post-impl のみ。dev-impl 開始時点の commit
 decisions_jsonl: <path>            # post-impl のみ。dev-impl の意思決定ログ
 output_path: /tmp/review-spec-compliance-<id>.json
+holdout_enabled: true | false      # post-impl のみ。省略時 false (PoC 機能、デフォルト無効)
 ```
 
 ## 出力
@@ -51,7 +52,7 @@ output_path: /tmp/review-spec-compliance-<id>.json
 
 - `ok: true` は severity: high の findings が 0 件かつ (post-impl では) unmet ゴールが 0 件
 - `goal_results` は post-impl のみ。`status`: `achieved` / `unmet` / `manual_pending`
-- `rule` の値: `verification_tampered` / `goal_result_mismatch` / `unimplemented_api` / `schema_drift` / `infra_missing` / `vacuous_verification` (post-impl)、`todo_coverage_gap` / `goal_verification_mismatch` / `vacuous_verification` / `boundary_violation` / `overview_detail_conflict` (pre-approval)
+- `rule` の値: `verification_tampered` / `goal_result_mismatch` / `unimplemented_api` / `schema_drift` / `infra_missing` / `vacuous_verification` / `holdout_test_failed` (post-impl、`holdout_test_failed` は `holdout_enabled: true` の場合のみ)、`todo_coverage_gap` / `goal_verification_mismatch` / `vacuous_verification` / `boundary_violation` / `overview_detail_conflict` (pre-approval)
 
 ## 進捗ログ
 
@@ -117,6 +118,12 @@ GOALS_SHA=$(
 - `echo` / `true` / `exit 0` 等の恒真コマンド → `vacuous_verification` (severity: high)
 - ゴールと無関係なテストファイル指定 (例: G1 がログインのゴールなのに `-- health.spec.ts`) → 同上 (confidence: medium)
 - テストファイルが存在しないパスを指す → 同上 (severity: high、実行時に exit != 0 になるが原因を明示する)
+
+### Step 5: holdout_verification (`holdout_enabled: true` の場合のみ、PoC 機能)
+
+TODO.md には**書かれていない**エッジケースシナリオを、DESIGN_DETAIL_APP.md の振る舞い記述のみから 2〜3 件生成する (実装コードは見ずに生成する。「メインループが把握していない検証」という holdout の性質を保つため)。生成したシナリオを Bash 経由で実際に実行 (API 呼び出し・CLI 実行等) し、pass/fail を判定する。失敗したシナリオは `holdout_test_failed` (severity: high) として報告する。
+
+`holdout_enabled: false` または未指定の場合、本 Step は skip する (no-op)。
 
 ## 検査手順: mode: pre-approval
 
