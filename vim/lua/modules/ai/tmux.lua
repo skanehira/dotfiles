@@ -162,22 +162,6 @@ function M.get_current_pane()
   return exec_tmux("tmux display-message -p '#{pane_id}'")
 end
 
--- コマンドを tmux popup で開く
--- popup は tmux client 全体のオーバーレイなので、Neovim の画面上にもそのまま被さる。
--- popup 表示中に Neovim をブロックしないよう非同期 (jobstart) で起動する。
--- サイズは tmux.conf の `bind f display-popup` と揃えている。
--- @param shell_command string popup 内で実行するコマンド
--- @return boolean, string|nil 成功時は (true, nil)、失敗時は (false, エラーメッセージ)
-function M.open_popup(shell_command)
-  local job_id = vim.fn.jobstart({
-    "tmux", "display-popup", "-E", "-w", "90%", "-h", "80%", shell_command,
-  })
-  if job_id <= 0 then
-    return false, string.format("failed to start tmux display-popup (job id: %d)", job_id)
-  end
-  return true, nil
-end
-
 -- ペインで動いているプロセスに割り込み信号（Ctrl+C）を送信
 -- @param pane_id string ペインID
 -- @return boolean, string|nil 成功時は (true, nil)、失敗時は (false, エラーメッセージ)
