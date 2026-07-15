@@ -1,6 +1,13 @@
-# フェーズ実行の詳細手順 (dev-impl Step 4.2)
+# フェーズ実行の詳細手順 (dev-impl Step 4)
 
-`dev-impl/SKILL.md` の Step 4.2 (フェーズ実装) 各節から参照される実行コマンドの詳細。判断基準・観点 gating・ループ規則・エスカレ条件は SKILL.md 本体にあるので、そちらを先に読んでから該当節だけをここで参照する。
+`dev-impl/SKILL.md` の Step 4 (各フェーズの実行) 各節から参照される実行コマンドの詳細。判断基準・観点 gating・ループ規則・エスカレ条件は SKILL.md 本体にあるので、そちらを先に読んでから該当節だけをここで参照する。
+
+## 4.1: run_elapsed_minutes 計算
+
+```bash
+RUN_START_EPOCH=$(date -j -f '%Y%m%d-%H%M%S' "$run_id" +%s 2>/dev/null || date -d "${run_id:0:8} ${run_id:9:2}:${run_id:11:2}:${run_id:13:2}" +%s)
+run_elapsed_minutes=$(( ($(date +%s) - RUN_START_EPOCH) / 60 ))
+```
 
 ## 4.2: 事前判定
 
