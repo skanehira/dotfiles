@@ -17,6 +17,7 @@
     ./modules/home/fzf.nix
     ./modules/home/gh.nix
     ./modules/home/git.nix
+    ./modules/home/herdr.nix
     ./modules/home/neovim.nix
     ./modules/home/packages.nix
     ./modules/home/rustup.nix

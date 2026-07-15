@@ -1,0 +1,12 @@
+# ~/.config/herdr/config.toml へ mkOutOfStoreSymlink で symlink (編集即反映、drs 不要)。
+# リロードは prefix+shift+r または `herdr server reload-config`。
+
+[keys]
+prefix = "ctrl+s"
+zoom = ["prefix+z", "prefix+m"]
+split_vertical = ["prefix+v", "prefix+backslash"]
+detach = ["prefix+q", "prefix+d"]
+
+[ui]
+show_agent_labels_on_pane_borders = false
+agent_panel_sort = "priority"
