@@ -142,6 +142,9 @@ let
     [
       ollama
     ]
+    ++ [
+      inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.default # AI agent multiplexer TUI (flake input)
+    ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       screen-capture-mcp-server # Claude Code 用画面キャプチャ MCP サーバー
     ];
