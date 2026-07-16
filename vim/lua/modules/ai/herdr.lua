@@ -27,7 +27,7 @@ local function exec_herdr(args)
   return vim.trim(result), nil
 end
 
--- JSON レスポンスから result.pane.pane_id を取り出す
+-- JSON レスポンスから result.pane.pane_id を取り出す（pane split / pane current 用）
 -- @param json_str string herdrコマンドのJSON出力
 -- @return string|nil pane_id、取り出せない場合はnil
 local function parse_pane_id(json_str)
@@ -38,30 +38,61 @@ local function parse_pane_id(json_str)
   return decoded.result.pane.pane_id
 end
 
--- 現在のペインを右方向に分割して新規ペインを作成し、コマンドを実行する
+-- JSON レスポンスから result.agent.pane_id を取り出す（agent start 用）
+-- @param json_str string herdrコマンドのJSON出力
+-- @return string|nil pane_id、取り出せない場合はnil
+local function parse_agent_pane_id(json_str)
+  local ok, decoded = pcall(vim.json.decode, json_str)
+  if not ok or not decoded.result or not decoded.result.agent then
+    return nil
+  end
+  return decoded.result.agent.pane_id
+end
+
+-- 現在のペインを右方向に分割し、シェルを経由せずargvを直接起動する
+-- （agent start は split と起動が原子的なため、シェル起動→タイプ→実行の遅延が発生しない）
 -- @param size_percent number 新規ペインのサイズ（%）
--- @param shell_command string|nil 実行するコマンド（省略時は通常のシェル）
+-- @param argv table 実行するコマンドと引数のリスト（例: {"claude", "-r"}）
 -- @return string|nil, string|nil 成功時は (ペインID, nil)、失敗時は (nil, エラーメッセージ)
-function M.create_pane(size_percent, shell_command)
-  local ratio = tostring(size_percent / 100)
-  local output, err = exec_herdr({
-    "herdr", "pane", "split", "--current", "--direction", "right",
-    "--ratio", ratio, "--no-focus",
-  })
+function M.create_pane(size_percent, argv)
+  local tab_id = vim.env.HERDR_TAB_ID
+  if not tab_id then
+    return nil, "HERDR_TAB_ID is not set (not running inside a herdr pane)"
+  end
+
+  -- agent name はグローバル一意が必要なため、コマンド名 + タブIDで構成する
+  local name = string.format("%s-%s", argv[1], tab_id:gsub(":", "-"))
+
+  local args = {
+    "herdr", "agent", "start", name,
+    "--tab", tab_id,
+    "--cwd", vim.fn.getcwd(),
+    "--split", "right",
+    "--no-focus",
+    "--",
+  }
+  for _, a in ipairs(argv) do
+    table.insert(args, a)
+  end
+
+  local output, err = exec_herdr(args)
   if not output then
     return nil, err
   end
 
-  local pane_id = parse_pane_id(output)
+  local pane_id = parse_agent_pane_id(output)
   if not pane_id then
     return nil, "Failed to parse pane ID from output: " .. output
   end
 
-  if shell_command then
-    local _, run_err = exec_herdr({ "herdr", "pane", "run", pane_id, shell_command })
-    if run_err then
-      return nil, run_err
-    end
+  -- agent start は分割比率を指定できず50/50固定になるため、既存挙動と合わせてリサイズする
+  local target_ratio = size_percent / 100
+  local _, resize_err = exec_herdr({
+    "herdr", "pane", "resize", "--pane", pane_id,
+    "--direction", "left", "--amount", tostring(0.5 - target_ratio),
+  })
+  if resize_err then
+    return nil, resize_err
   end
 
   return pane_id, nil

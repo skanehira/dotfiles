@@ -59,16 +59,16 @@ local function get_or_create_pane(tool_name, args)
     return pane_id
   end
 
-  -- コマンドを構築（引数があれば追加）
-  local command = tool_name
+  -- argvを構築（引数があれば追加）
+  local argv = { tool_name }
   if args and args ~= "" then
-    command = string.format("%s %s", tool_name, args)
+    vim.list_extend(argv, vim.split(args, "%s+", { trimempty = true }))
   end
 
-  -- 新規ペインを作成（30%）、ツールを起動
+  -- 新規ペインを作成（既存nvimペイン40% / 新規ツールペイン60%）、シェルを経由せずargvを直接起動する
   -- コマンド終了時にペインも自動的に閉じられる
   local err
-  pane_id, err = herdr.create_pane(40, command)
+  pane_id, err = herdr.create_pane(40, argv)
   if not pane_id then
     vim.notify("herdrペインの作成に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.ERROR)
     return nil
