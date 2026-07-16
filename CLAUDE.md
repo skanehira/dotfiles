@@ -260,7 +260,6 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 - `/workflow-debate` — 複数視点の議論・壁打ち
 
 ### Hooks (settings.json)
-- **Stop/Notification** — 完了時に macOS 通知（`terminal-notifier` 使用、Nix 管理）
 - **PostToolUse** — Write/Edit 後に自動フォーマット
 
 ### Rules (claude/rules/)

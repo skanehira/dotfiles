@@ -115,7 +115,7 @@ PostToolUse / Stop / Notification で自動チェックを差し込む。
 - 「テスト書き忘れ」 → 新規ファイル作成時に対応する test ファイル不在を警告する hook
 - 「コミット前のフォーマット忘れ」 → PostToolUse で format を強制
 
-hook の言語: 既存の `notify.ts` に倣い Deno (TypeScript) で書く。
+hook の言語: 既存の `tdd-guard.ts` に倣い Deno (TypeScript) で書く。
 
 ## 複数ファイルへの分割
 

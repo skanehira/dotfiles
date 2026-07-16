@@ -4,7 +4,6 @@ Custom hooks for Claude Code.
 
 ## Files
 
-- `notify.ts` — Sends desktop notifications for Claude Code events
 - `tdd-guard.ts` — TDD 強制ゲート (PreToolUse / PostToolUse / Stop / SubagentStop 兼用)
 - `commit-msg-guard.ts` — コミット規約ゲート (PreToolUse Bash)
 - `remind-rules.ts` — 実装系プロンプト検知時に CLAUDE.md ルールを再注入 (UserPromptSubmit)
@@ -13,14 +12,6 @@ Custom hooks for Claude Code.
 ## Usage
 
 Hooks are configured in `../settings.json` and run automatically on the specified events.
-
-### Notify Hook
-
-Sends a desktop notification on:
-- `Stop` event — Claude Code finishes a response
-- `Notification` event — Claude Code needs user attention (e.g., permission prompt)
-
-macOS only (uses `terminal-notifier`).
 
 ### TDD Guard Hook
 
