@@ -133,7 +133,7 @@ let
       tirith # shell security guard (homograph URL / pipe-to-shell 等を実行前にブロック)
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
-      terminal-notifier # macOS notification API。Linux では notify.ts 側で no-op
+      terminal-notifier # macOS notification API (launchd 週次ジョブの失敗通知 / codex notify で使用)
     ];
 
   # AI
