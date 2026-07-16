@@ -6,6 +6,10 @@ prefix = "ctrl+s"
 zoom = ["prefix+z", "prefix+m"]
 split_vertical = ["prefix+v", "prefix+backslash"]
 detach = ["prefix+q", "prefix+d"]
+navigate_workspace_up = "k"
+navigate_workspace_down = "j"
+previous_workspace = "prefix+<"
+next_workspace = "prefix+>"
 
 [ui]
 show_agent_labels_on_pane_borders = false
