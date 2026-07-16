@@ -138,7 +138,8 @@
     "slide-plugin@slide-plugin": true,
     "compact-plus@compact-plus-local": true,
     "bank-ledger-transcribe@misty-lantern": true,
-    "skill-creator@claude-plugins-official": true
+    "skill-creator@claude-plugins-official": true,
+    "archify@misty-lantern": true
   },
   "extraKnownMarketplaces": {
     "anthropic-agent-skills": {
