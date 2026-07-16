@@ -29,6 +29,8 @@
     ".claude/CLAUDE.md".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/CLAUDE.md";
     ".claude/settings.json".source =
       config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/settings.json";
+    ".claude/keybindings.json".source =
+      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/keybindings.json";
     ".claude/agents".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/agents";
     ".claude/hooks".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/hooks";
     ".claude/rules".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/rules";

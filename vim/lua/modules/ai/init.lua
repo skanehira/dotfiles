@@ -244,7 +244,10 @@ local function open_input_buffer(tool_name, args, context)
     -- { cb = bufferモジュール側のコールバック名, key = herdr send-keys に渡すキー名（配列なら複数キーを連続送信）, label = エラー表示用ラベル }
     local passthrough_keys = {
       { cb = "on_send_tab",           key = "tab",              label = "Tab" },
-      { cb = "on_send_shift_tab",     key = "shift+tab",        label = "Shift+Tab" },
+      -- herdrのsend-keys shift+tabは常にlegacy ESC[Zを送るため、kitty keyboard protocolを
+      -- 有効化したClaude Codeには届かない。claude/keybindings.jsonでalt+mにmode切替を
+      -- バインドし、claudeへはそれを送る（codexは従来どおりshift+tab）
+      { cb = "on_send_shift_tab",     key = tool_name == "claude" and "alt+m" or "shift+tab", label = "Shift+Tab" },
       { cb = "on_send_space",         key = "space",            label = "Space" },
       { cb = "on_send_ctrl_c",        key = "ctrl+c",           label = "C-c" },
       { cb = "on_send_escape",        key = "esc",              label = "Escape" },
