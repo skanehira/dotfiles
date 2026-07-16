@@ -19,6 +19,7 @@ local gin_config = function()
   vim.g.gin_status_persistent_args = { '++opener=new' }
   vim.g.gin_log_persistent_args = { '++opener=new' }
   vim.g.gin_branch_persistent_args = { '++opener=new' }
+  vim.g.gin_proxy_apply_without_confirm = true
 
   vim.api.nvim_create_autocmd('FileType', {
     pattern = 'gin-status',
