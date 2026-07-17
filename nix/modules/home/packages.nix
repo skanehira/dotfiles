@@ -107,8 +107,9 @@ let
   # メディア / ファイル
   mediaTools = with pkgs; [
     ffmpeg
+    libreoffice-bin # pptx/docx のヘッドレス PDF 変換 (スライド視覚 QA 用)
     libsixel # SIXEL 画像プロトコル
-    poppler # PDF レンダリング
+    poppler-utils # PDF レンダリング + pdftoppm 等の CLI (lib は poppler-glib を内包)
     qpdf
     yt-dlp
   ];
