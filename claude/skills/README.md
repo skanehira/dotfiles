@@ -9,7 +9,8 @@
 | 規模 | 入口 | 中身 |
 |---|---|---|
 | **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → (承認ゲート) → `/dev-impl` | 設計ループ (要件〜PoC 検証〜設計書〜TODO) → 実装ループ (全フェーズ自律実装)。プロダクトモード (cli/webapp) は省略時タスク説明から推論 |
-| **M: 1 機能・リファクタ** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD (順序は tdd-guard hook が強制) |
+| **M: 1 機能・リファクタの一括委任 (docs 不要)** | `/dev-impl-quick` | 軽量実装ループ。タスク分解 → 直営 TDD → テストゲート → タスク単位コミット。レビュー fan-out・ログ・レポートは持たない (TDD 順序は tdd-guard hook が強制) |
+| **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD (順序は tdd-guard hook が強制) |
 | **S: バグ修正・typo** | 直接依頼 | スキル不要。tdd-guard + remind-rules hook が既定の品質を守る |
 
 横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-draft-pr` (PR 作成)。
@@ -48,6 +49,7 @@
 skills/
 ├── dev-spec/                  # 設計ループ (フェーズ手順は references/)
 ├── dev-impl/                  # 実装ループ (旧 workflow-autopilot)
+├── dev-impl-quick/            # 軽量実装ループ (docs 不要)
 ├── workflow-commit/
 ├── workflow-create-draft-pr/
 ├── workflow-debate/
@@ -60,7 +62,7 @@ skills/
 
 > **命名規則**: Claude Code はディレクトリ名をスキル識別子として使用するため、フラット構造。
 >
-> - `dev-*` — 開発フローの 2 大ループ (設計 / 実装)
+> - `dev-*` — 開発フローの 2 大ループ (設計 / 実装) + 軽量実装ループ
 > - `workflow-*` — 横断ユーティリティ (レビュー / コミット / PR / 壁打ち)
 > - `utility-*` — 単発のユーティリティ
 
@@ -116,6 +118,7 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 |---|---|---|---|
 | [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、承認ゲートで実装ループへ引き渡す。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md |
 | [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (メインループ TDD → guard → review fan-out (敵対的レビュー含む) → テストゲート → commit)、完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須、承認スタンプは goals_sha 付き) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
+| [dev-impl-quick](./dev-impl-quick/) | 軽量実装ループ。依頼文をタスク分解 → 1 件ずつ直営 TDD → テストゲート → タスク単位 commit。レビュー subagent fan-out・進捗ログ・レポートは持たない (TDD 順序は tdd-guard hook が強制) | 依頼文または簡易タスクリスト (docs 不要) | タスク単位のコミット |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / ddd-modeling / analyzing-requirements / interview / verification-review / todo-generation)。
 
