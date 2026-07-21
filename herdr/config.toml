@@ -1,3 +1,4 @@
+onboarding = false
 # ~/.config/herdr/config.toml へ mkOutOfStoreSymlink で symlink (編集即反映、drs 不要)。
 # リロードは prefix+shift+r または `herdr server reload-config`。
 
