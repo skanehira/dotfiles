@@ -151,7 +151,7 @@
     "slide-plugin@slide-plugin": true,
     "swift-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "ui-ux-pro-max@ui-ux-pro-max-skill": false,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "claude-security@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
