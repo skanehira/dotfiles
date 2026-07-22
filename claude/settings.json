@@ -1,9 +1,136 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "advisorModel": "fable",
-  "agentPushNotifEnabled": true,
-  "alwaysThinkingEnabled": true,
+  "env": {
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-fable-5[1m]",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5[1m]",
+    "ANTHROPIC_MODEL": "opusplan",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "ENABLE_COMMIT_REVIEW": "0"
+  },
+  "includeCoAuthoredBy": true,
+  "permissions": {
+    "allow": [],
+    "deny": [],
+    "defaultMode": "plan"
+  },
+  "fallbackModel": [
+    "claude-opus-4-8",
+    "sonnet"
+  ],
   "enableAllProjectMcpServers": true,
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event post-bash"
+          }
+        ]
+      },
+      {
+        "matcher": "Task|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event post-agent"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/archive-transcript.ts"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event pre-edit"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event pre-bash"
+          },
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/commit-msg-guard.ts"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/archive-transcript.ts"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/Users/skanehira/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event stop"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event stop"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/remind-rules.ts"
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
     "archify@misty-lantern": true,
     "bank-ledger-transcribe@misty-lantern": true,
@@ -26,201 +153,74 @@
     "typescript-lsp@claude-plugins-official": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": false
   },
-  "env": {
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-fable-5[1m]",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5[1m]",
-    "ANTHROPIC_MODEL": "opusplan",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "ENABLE_COMMIT_REVIEW": "0"
-  },
   "extraKnownMarketplaces": {
     "agent-plugins-for-aws": {
       "source": {
-        "repo": "awslabs/agent-plugins",
-        "source": "github"
+        "source": "github",
+        "repo": "awslabs/agent-plugins"
       }
     },
     "anthropic-agent-skills": {
       "source": {
-        "repo": "anthropics/skills",
-        "source": "github"
+        "source": "github",
+        "repo": "anthropics/skills"
       }
     },
     "claude-plugins-official": {
       "source": {
-        "repo": "anthropics/claude-plugins-official",
-        "source": "github"
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
       }
     },
     "compact-plus-local": {
       "source": {
-        "repo": "u-ichi/compact-plus",
-        "source": "github"
+        "source": "github",
+        "repo": "u-ichi/compact-plus"
       }
     },
     "misty-lantern": {
       "source": {
-        "repo": "skanehira/misty-lantern",
-        "source": "github"
+        "source": "github",
+        "repo": "skanehira/misty-lantern"
       }
     },
     "openai-codex": {
       "source": {
-        "repo": "openai/codex-plugin-cc",
-        "source": "github"
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
       }
     },
     "slide-plugin": {
       "source": {
-        "repo": "skanehira/slide-plugin",
-        "source": "github"
+        "source": "github",
+        "repo": "skanehira/slide-plugin"
       }
     },
     "supabase-agent-skills": {
       "source": {
-        "repo": "supabase/agent-skills",
-        "source": "github"
+        "source": "github",
+        "repo": "supabase/agent-skills"
       }
     },
     "ui-ux-pro-max-skill": {
       "source": {
-        "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
-        "source": "github"
+        "source": "github",
+        "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
       }
     }
   },
-  "fallbackModel": [
-    "claude-opus-4-8",
-    "sonnet"
-  ],
-  "hooks": {
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event post-bash",
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event post-agent",
-            "type": "command"
-          }
-        ],
-        "matcher": "Task|Agent"
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/archive-transcript.ts",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event pre-edit",
-            "type": "command"
-          }
-        ],
-        "matcher": "Edit|Write|NotebookEdit"
-      },
-      {
-        "hooks": [
-          {
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event pre-bash",
-            "type": "command"
-          },
-          {
-            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/commit-msg-guard.ts",
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/archive-transcript.ts",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "command": "bash '/Users/skanehira/.claude/hooks/herdr-agent-state.sh' session",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": "*"
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event stop",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event stop",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/remind-rules.ts",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    ]
-  },
-  "includeCoAuthoredBy": true,
-  "inputNeededNotifEnabled": false,
   "language": "Japanese",
-  "permissions": {
-    "allow": [],
-    "defaultMode": "plan",
-    "deny": []
-  },
-  "preferredNotifChannel": "terminal_bell",
-  "remoteControlAtStartup": false,
-  "skipAutoPermissionPrompt": true,
+  "spinnerTipsEnabled": false,
+  "alwaysThinkingEnabled": true,
+  "advisorModel": "fable",
+  "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
-  "spinnerTipsEnabled": false,
-  "tui": "fullscreen",
   "verbose": true,
+  "preferredNotifChannel": "terminal_bell",
+  "remoteControlAtStartup": false,
+  "inputNeededNotifEnabled": false,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true,
   "voiceEnabled": true
 }
