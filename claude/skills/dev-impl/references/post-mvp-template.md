@@ -1,5 +1,7 @@
 # POST_MVP.md「UI/UX gap」セクション テンプレート (dev-impl Step 5.6)
 
+適用条件: `PRODUCT_MODE` (Step 1 でスタンプから判定) が `webapp` のときは常に本セクションを書く。`unknown` のときは dev_server 推定が真の場合のみ書く (推定できなければ省略)。`cli` の場合は本セクション自体を省略する。
+
 ```markdown
 ## UI/UX gap (dev-impl ${run_id} 時点)
 

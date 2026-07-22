@@ -4,6 +4,30 @@
 
 ## 5.2: 監査 agent の並列起動
 
+`PRODUCT_MODE=cli` かどうかで起動 agent 数が変わる。
+
+**cli の場合 (review-spec-compliance が G_E2E も担当、review-product-readiness は起動しない)**:
+
+```javascript
+Agent({
+  description: "受入基準と成果物全体の第三者監査 (G_E2E 含む)",
+  subagent_type: "review-spec-compliance",
+  model: "opus",
+  prompt: `mode: post-impl
+product_mode: cli
+docs_dir: docs/
+approved_stamp: "<TODO.md 1 行目をそのまま>"
+run_start_sha: ${START_SHA}
+decisions_jsonl: ~/.claude/logs/dev-impl/${run_id}/decisions.jsonl
+output_path: /tmp/review-spec-compliance-${run_id}.json
+holdout_enabled: false
+docs は自分で全文 Read すること。product_mode: cli のため G_E2E も自動系ゴールとして自分で実行し goal_results に含めること (他 agent は起動しない)。
+作業結果 (output_path のパス) は必ず最終メッセージで親に返すこと。`
+})
+```
+
+**webapp / unknown の場合 (従来どおり 2 体並列)**:
+
 ```javascript
 // 1 体目: 受入監査 (自動系ゴールの独立再実行 + 設計突合 + 改変検知)
 Agent({
@@ -11,6 +35,7 @@ Agent({
   subagent_type: "review-spec-compliance",
   model: "opus",
   prompt: `mode: post-impl
+product_mode: webapp
 docs_dir: docs/
 approved_stamp: "<TODO.md 1 行目をそのまま>"
 run_start_sha: ${START_SHA}

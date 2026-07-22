@@ -173,11 +173,11 @@ AskUserQuestion({
 - [ ] 監査ログ / observability (該当する場合)
 - [ ] Rate limit / セキュリティ最終確認 (該当する場合)
 - [ ] [REVIEW] フェーズ実装の簡易セルフレビューと修正
-- [ ] [CHECK] lint/format/build の実行と確認
+- [ ] [CHECK] lint/format/build の実行と確認。**cli モードでは併せて G_E2E 通しシナリオ (自動系コマンド) を実行し green を確認する** (フェーズN-c が無いため、G_E2E の実行はここが唯一の場所)
 
-### フェーズN-c: UI/UX 仕上げ (Web / モバイル Web プロダクトのみ)
+### フェーズN-c: UI/UX 仕上げ (webapp モードのみ)
 
-CLI / API のみのプロダクトでは省略可。本フェーズの目的は「ブラウザで開いたら実際に使える状態」をゴールに、Voilog セッション F1-F8 のような UX 仕上げ不足を防ぐこと。
+DESIGN.md のプロダクトモードスタンプが `cli` の場合、本フェーズは生成しない (機械判定: `rg -o -m1 '<!-- product-mode: (cli|webapp) -->' -r '$1' docs/DESIGN.md`)。本フェーズの目的は「ブラウザで開いたら実際に使える状態」をゴールに、Voilog セッション F1-F8 のような UX 仕上げ不足を防ぐこと。
 
 - [ ] frontend-design スキルの適用結果を全画面に反映済か確認 (UI_SKETCH.html ベースと整合)
 - [ ] アプリシェル仕上げ (ヘッダー / ナビ / フッター / 404 / 認証ガード / ErrorBoundary / グローバルトースト の最終チェック、`/ui-sketch` フェーズ 4.5 で設計したもの)
