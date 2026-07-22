@@ -18,6 +18,8 @@
 
 ## 概要
 
+**cli モードでは本フェーズは実行しない** (dev-spec/SKILL.md フェーズ一覧の cli モード列を参照)。CLI インターフェース仕様はフェーズ 7 (`analyzing-requirements.md`) の DESIGN_DETAIL_APP.md 内で設計する。
+
 対話を通じてUIの方向性を整理し、成果物を **単一の `docs/UI_SKETCH.html` に集約**する。
 この HTML 1ファイルに以下をすべて含める：
 1. 画面一覧

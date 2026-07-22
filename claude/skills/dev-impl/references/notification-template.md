@@ -13,7 +13,7 @@
 ゴール達成: <achieved>/<total> (うち手動確認待ち <manual_pending>)
 受入監査 (spec_compliance): high <X> 件 / medium <Y> 件 / vacuous_verification による手動 pending 落ち <Z> 件
 未検証 (skip された検証): <verification_skipped の一覧、なければ「なし」>
-UI/UX gap: <未実装画面数> 画面 / <未実装ナビ経路数> 経路 / frontend-design: <適用|未適用>
+UI/UX gap: <未実装画面数> 画面 / <未実装ナビ経路数> 経路 / frontend-design: <適用|未適用> (product-mode: cli の場合は「該当なし (product-mode: cli)」)
 実装ノート: 設計判断 <X> 件 / 未解決の質問 <Y> 件 (詳細は HTML レポート)
 
 範囲:

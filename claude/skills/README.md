@@ -8,7 +8,7 @@
 
 | 規模 | 入口 | 中身 |
 |---|---|---|
-| **L: 新規プロダクト・大きい機能** | `/dev-spec` → (承認ゲート) → `/dev-impl` | 設計ループ (要件〜PoC 検証〜設計書〜TODO) → 実装ループ (全フェーズ自律実装) |
+| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → (承認ゲート) → `/dev-impl` | 設計ループ (要件〜PoC 検証〜設計書〜TODO) → 実装ループ (全フェーズ自律実装)。プロダクトモード (cli/webapp) は省略時タスク説明から推論 |
 | **M: 1 機能・リファクタ** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD (順序は tdd-guard hook が強制) |
 | **S: バグ修正・typo** | 直接依頼 | スキル不要。tdd-guard + remind-rules hook が既定の品質を守る |
 
@@ -18,13 +18,15 @@
 ┌────────────────────────────────────────────────────────────────┐
 │  /dev-spec — 設計ループ (賢いモデルのセッションで起動)          │
 │                                                                │
-│  1 user-story → 2 ui-sketch → 3 usecase → 4 feasibility        │
-│      → 5 ★PoC 検証 (tech-investigation 並列 fan-out)           │
+│  1 user-story → 2 ui-sketch (webapp のみ) → 3 usecase          │
+│      → 4 feasibility → 5 ★PoC 検証 (tech-investigation 並列)  │
 │      → 6 ddd-modeling → 7 DESIGN/DETAIL 生成 → 8 interview     │
 │      → 9 検証手順補完 → 10 TODO 生成 → 11 ★承認ゲート          │
 │                                                                │
 │  Feedback: 設計 = 人間承認 / 技術実現性 = PoC 実行結果         │
 │  クイックモード: 7〜11 のみ (不確実性があれば 4〜5 を通す)     │
+│  プロダクトモード: cli は 2 ui-sketch をスキップし CLI I/F     │
+│  仕様をフェーズ 7 内で設計 (DESIGN.md にスタンプで記録)        │
 └──────────────────────────┬─────────────────────────────────────┘
                            │ 承認ゲート = 人間が /dev-impl を起動
                            │ (Claude は自律的に越えられない)
@@ -112,7 +114,7 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 
 | スキル | 説明 | 入力 | 出力 |
 |---|---|---|---|
-| [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、承認ゲートで実装ループへ引き渡す。クイックモード・部分実行・途中再開可 | なし (docs/ の状態から再開可) | USER_STORIES.md 〜 DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md |
+| [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、承認ゲートで実装ループへ引き渡す。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md |
 | [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (メインループ TDD → guard → review fan-out (敵対的レビュー含む) → テストゲート → commit)、完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須、承認スタンプは goals_sha 付き) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / ddd-modeling / analyzing-requirements / interview / verification-review / todo-generation)。
