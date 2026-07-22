@@ -1,6 +1,6 @@
 ---
 name: review-spec-compliance
-description: 設計成果物と実装の第三者監査 agent (2 モード)。mode: post-impl は dev-impl Step 5 から起動され、承認ハッシュ (goals_sha) の独立照合・ゴール検証コマンドの独立再実行・成果物全体 ↔ DESIGN_DETAIL_APP/INFRA の突合 (未実装 API / スキーマ乖離 / インフラ欠落)・検証コマンドの空虚性検査を行う。mode: pre-approval は dev-spec フェーズ 10.5 (承認ゲート直前) から起動され、docs 4 ファイルの整合 (TODO カバレッジ / ゴール↔検証手順の意味的整合 / APP・INFRA 境界誤配置 / 概要↔詳細の矛盾) を fresh context で監査する。実装者・設計者本人が編纂した抜粋 (PHASE_CONTEXT) は受け取らず、docs を自分で全文 Read するのが存在意義。構造化 JSON で findings を返し、修正は行わない。
+description: 設計成果物と実装の第三者監査 agent (2 モード)。mode: post-impl は dev-impl Step 5 から起動され、承認ハッシュ (goals_sha) の独立照合・ゴール検証コマンドの独立再実行・成果物全体 ↔ DESIGN_DETAIL_APP/INFRA の突合 (未実装 API / スキーマ乖離 / インフラ欠落)・検証コマンドの空虚性検査を行う。mode: pre-approval は dev-spec フェーズ 10.5 (承認ゲート直前) から起動され、docs 4 ファイルの整合 (TODO カバレッジ / ゴール↔検証手順の意味的整合 / 検証手順の空虚性 / APP・INFRA 境界誤配置 / 概要↔詳細の矛盾 / トランザクション境界の記載カバレッジ) を fresh context で監査する。実装者・設計者本人が編纂した抜粋 (PHASE_CONTEXT) は受け取らず、docs を自分で全文 Read するのが存在意義。構造化 JSON で findings を返し、修正は行わない。
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -53,7 +53,7 @@ holdout_enabled: true | false      # post-impl のみ。省略時 false (PoC 機
 
 - `ok: true` は severity: high の findings が 0 件かつ (post-impl では) unmet ゴールが 0 件
 - `goal_results` は post-impl のみ。`status`: `achieved` / `unmet` / `manual_pending`
-- `rule` の値: `verification_tampered` / `goal_result_mismatch` / `unimplemented_api` / `schema_drift` / `infra_missing` / `vacuous_verification` / `holdout_test_failed` (post-impl、`holdout_test_failed` は `holdout_enabled: true` の場合のみ)、`todo_coverage_gap` / `goal_verification_mismatch` / `vacuous_verification` / `boundary_violation` / `overview_detail_conflict` (pre-approval)
+- `rule` の値: `verification_tampered` / `goal_result_mismatch` / `unimplemented_api` / `schema_drift` / `infra_missing` / `vacuous_verification` / `holdout_test_failed` (post-impl、`holdout_test_failed` は `holdout_enabled: true` の場合のみ)、`todo_coverage_gap` / `goal_verification_mismatch` / `vacuous_verification` / `boundary_violation` / `overview_detail_conflict` / `transaction_boundary_gap` (pre-approval)
 
 ## 進捗ログ
 
@@ -156,6 +156,10 @@ post-impl の Step 4 と同じ判定 (コマンド実行はしない。静的判
 ### Step 5: overview_detail_conflict (概要↔詳細の矛盾)
 
 DESIGN.md の技術スタック・主要コンポーネント・非機能目標と、詳細 2 ファイルの記述が矛盾していないか (例: 概要は PostgreSQL、詳細は D1) → `overview_detail_conflict` (severity: high)。
+
+### Step 6: transaction_boundary_gap (トランザクション境界の記載カバレッジ)
+
+書き込み系ユースケースの抽出元は `product_mode` で分岐する: `webapp` は「API 設計」のエンドポイント一覧 (書き込み系 = POST/PUT/PATCH/DELETE)、`cli` は「CLI インターフェース仕様」のコマンド体系 (書き込み系 = 状態変更を伴うサブコマンド)。抽出した各書き込み系ユースケースの識別子 (HTTP メソッド+パス、または コマンド名) が「トランザクション境界」表の「対応 API / コマンド」列に存在するかを照合する (自由記述のユースケース名同士ではなく、この識別子列で機械的に突合する)。欠落 → `transaction_boundary_gap` (severity: medium)。書き込み系ユースケースが一切存在しない場合は「該当なし」の明記有無のみ確認する (良し悪しの判断ではなく記載有無の照合)。
 
 ## 範囲外 (やらないこと)
 
