@@ -8,11 +8,6 @@
     "ENABLE_COMMIT_REVIEW": "0"
   },
   "includeCoAuthoredBy": true,
-  "permissions": {
-    "allow": [],
-    "deny": [],
-    "defaultMode": "plan"
-  },
   "fallbackModel": [
     "claude-opus-4-8",
     "sonnet"
@@ -215,6 +210,28 @@
   "alwaysThinkingEnabled": true,
   "advisorModel": "fable",
   "tui": "fullscreen",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash(rg *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(cat *)",
+      "Bash(pwd)",
+      "Bash(awk *)",
+      "Bash(python3 *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(gh *)",
+      "WebFetch(domain:*)"
+    ],
+    "defaultMode": "plan",
+    "deny": []
+  },
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
   "verbose": true,
