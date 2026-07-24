@@ -1,0 +1,4 @@
+interface:
+  display_name: "会議録音から議事録を作成"
+  short_description: "会議録音をローカルで文字起こしし、検証済みの議事録を作成"
+  default_prompt: "Use $transcribing-meeting-minutes to create verified meeting minutes from this recording."
