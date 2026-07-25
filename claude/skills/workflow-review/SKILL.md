@@ -213,7 +213,7 @@ AskUserQuestion({
     question: "レビューで X 件の high / Y 件の medium が検出されました。どう進めますか？",
     header: "次のアクション",
     options: [
-      { label: "high をすべて修正", description: "メインループで TDD 修正 (tdd-guard が順序を強制)" },
+      { label: "high をすべて修正", description: "メインループで TDD 修正 (RED→GREEN→REFACTOR)" },
       { label: "high + medium を修正", description: "同上、対象拡張" },
       { label: "個別に選択", description: "修正対象を選んで TDD 修正" },
       { label: "終了", description: "修正せず完了" }
@@ -223,7 +223,7 @@ AskUserQuestion({
 })
 ```
 
-「修正」選択時は findings を修正タスクとして**メインループで直接 TDD 修正サイクルを実行**する (RED: findings を再現する失敗テスト → GREEN → REFACTOR。順序は tdd-guard hook が強制)。修正後は同じ観点を再レビューして解消を確認する。
+「修正」選択時は findings を修正タスクとして**メインループで直接 TDD 修正サイクルを実行**する (RED: findings を再現する失敗テスト → GREEN → REFACTOR)。修正後は同じ観点を再レビューして解消を確認する。
 
 ## 範囲外 (やらないこと)
 

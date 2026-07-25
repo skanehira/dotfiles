@@ -28,10 +28,10 @@ autopilot・一括委任 (「全部やって」「のこりを実装して」)�
 
 実装系ルールは即時展開しない (セッション・subagent spawn ごとのコンテキスト固定費削減のため遅延参照)。**実装着手前に必要なものを Read する** (remind-rules hook が毎プロンプトでリマインドする):
 
-- TDD で実装する → `~/.claude/rules/core/tdd.md`。**tdd-guard hook (`~/.claude/hooks/tdd-guard.ts`) が RED→GREEN→REFACTOR の順序と「実装編集後の再テスト」を tool call レベルで機械的に強制する**（実装ファイルの編集は失敗テストなしでは deny、テスト未再実行のまま Stop しようとすると `[tdd-guard] ...` という reason で block される。状態はセッション単位で `~/.claude/tdd-guard/<session_id>.json` に永続化）。過去セッションで tdd-guard.ts を探し回ったことが複数回あるので、次に見たら原因調査やファイル探索はせず即座に対処すること。ゲートの解除方法は deny/block の種類で異なる:
-  - **実装編集の deny (失敗テスト未確認)**: 失敗テストを先に書くのが基本。編集がテスト不要 (スタイル調整・宣言的変更等で振る舞いを変えない) だと考える場合のみ、deny reason に従い `Agent(subagent_type: "tdd-judge")` に sentinel 形式で編集内容を渡して判定させる (trivial 判定なら同一内容の編集をリトライすると通る)
-  - **Stop block (テスト未実行)**: `[tdd-guard] ... テストを実行して ...` → 該当言語のテストコマンドを実行するだけで解除される
-  - **Stop block (レビュー未実施)**: `[tdd-guard] ... review-tdd agent ...` → まとまったテスト差分 (新規テストファイル or 20 行超) を書いた後にのみ発火する。`review-tdd` subagent (`model: "sonnet"` 明示、`output_path` 指定必須) を起動し、findings JSON が `ok: true` になるまで解除されない (マーカー自己申告では解除されない)
+- TDD で実装する → `~/.claude/rules/core/tdd.md`。RED→GREEN→REFACTOR の順序と「実装編集後の再テスト」は機械ゲートではなく自律遵守する。TDD を適用しない判断 (typo 修正・宣言的 config 変更など、観測可能な振る舞いを変えない編集) をした場合はその理由を出力に明示する
+- 実装が一段落したら**レビュー agent で事後検証する**。スキル (dev-impl / dev-impl-quick) を使う場合はフロー内のレビューゲートに任せ、スキルを使わない実装 (plan mode・直接依頼) では自分で起動する:
+  - テスト差分がまとまっている (新規テストファイル or 20 行超) → `review-tdd` subagent (`model: "opus"` 明示、`output_path` 指定) でテスト品質を検証し、high/medium findings を修正してからテストを再実行する
+  - 複数観点で見たい差分 (機能追加・リファクタ) → `/workflow-review` で 4 観点並列レビュー
 - 設計原則（SOLID / YAGNI / 凝集度・結合度・コロケーション / 外界 DI）→ `~/.claude/rules/core/design.md`
 - テスト方針 (戦略 / ピラミッド / シナリオ網羅) → `~/.claude/rules/core/testing.md`
 - コミット規約 → `~/.claude/rules/core/commit.md` (subject 形式自体は commit-msg-guard hook が機械検証)
@@ -84,8 +84,8 @@ Agent ツールの `model` は**未指定だと親のセッションモデルを
 サブエージェントは spawn ごとに独自コンテキストを読み直す固定費がかかる (実測: セッション全体の cache creation の 68.5% が subagent 由来)。委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」のためだけに行い、単価節約のためには行わない。
 
 - **fan-out する (サブエージェント向き)**: 複数ファイル・複数観点にまたがる調査、互いに独立で並列化できる作業 (独立ファイル群の一括変換・観点別レビュー等)。同一ターンで複数起動して並列化する。**実装・修正を fan-out する場合は、指示文に「着手前に `~/.claude/rules/core/` の tdd.md / design.md / testing.md を Read せよ」を必ず含める** (rules は CLAUDE.md から即時展開されず、subagent には親の hooks も効かないため、指示文経由でしか届かない)
-- **メインループで直接やる**: 逐次依存する多段作業 (TDD の実装等) と、サブエージェントへの指示文の方が差分より大きくなる軽微な修正。逐次実装の委譲は禁止 (固定費と報告往復で総トークン・時間とも増え、subagent には tdd-guard 等の親 hooks が効かない)
-- **テスト実行・コミット実行 (Haiku)**: テスト・lint・型チェック等のコマンド実行と結果確認は `model: haiku` のサブエージェントに委譲する。ただし**親が自分でコードを編集したターンのテスト実行は親が直接行う** (tdd-guard の state がセッション単位のため、委譲すると親の Stop が block される)。テスト実行を委譲してよいのは出力が巨大なもの (E2E 等) のみで、その場合は同期 spawn (`run_in_background: false`) にし、報告本文に `TDD_GUARD: green` または `TDD_GUARD: red` のマーカーを 1 行含めさせる (PostToolUse hook が親 state に反映する)。ファイル編集はさせず、pass/fail 件数と失敗の要点 (テスト名 + 原因が分かる最小限のエラー引用) を親に報告させる。コミットも同様に、親がステージ対象ファイルとコミットメッセージ全文を指定して Haiku に実行させる (メッセージの起草・変更内容の判断はさせない)
+- **メインループで直接やる**: 逐次依存する多段作業 (TDD の実装等) と、サブエージェントへの指示文の方が差分より大きくなる軽微な修正。逐次実装の委譲は禁止 (固定費と報告往復で総トークン・時間とも増え、subagent には commit-msg-guard 等の親 hooks も効かない)
+- **テスト実行・コミット実行 (Haiku)**: テスト・lint・型チェック等のコマンド実行と結果確認は `model: haiku` のサブエージェントに委譲する。委譲してよいのは出力が巨大なもの (E2E 等) のみで、その場合は同期 spawn (`run_in_background: false`) にする。ファイル編集はさせず、pass/fail 件数と失敗の要点 (テスト名 + 原因が分かる最小限のエラー引用) を親に報告させる。コミットも同様に、親がステージ対象ファイルとコミットメッセージ全文を指定して Haiku に実行させる (メッセージの起草・変更内容の判断はさせない)
 
 ### 結果の受け取り
 
