@@ -37,6 +37,7 @@ docs/FEASIBILITY.md を Read し、`status=unresolved` の POC_STATUS 行を抽�
 Task({
   description: "PoC: <id>",
   subagent_type: "tech-investigation",
+  model: "opus",   // 調査 fan-out は opus 明示 (CLAUDE.md の割当表)。agent 側 frontmatter も opus だが、明示忘れで無音にセッションモデル継承へ落ちないよう二重に指定する
   prompt: `
 以下の PoC 計画を検証してください。
 
