@@ -375,18 +375,28 @@ export function buildExemptions(
   return result;
 }
 
+// tool_response を素のテキストに正規化する。文字列でなければ JSON 文字列にする
+// (このとき応答内の改行は 2 文字の `\` + `n` に化ける点に注意)。
+export function toResponseText(raw: unknown): string {
+  return typeof raw === "string" ? raw : JSON.stringify(raw ?? "");
+}
+
 // review-tdd の応答テキストから findings JSON の絶対パスを取り出す。
 // 「応答は output_path 1行のみ」という契約だが、実際の応答は素の trim では読めない:
 //   - Claude Code の Agent ツールが末尾に `agentId: xxx (use SendMessage...)` を
 //     区切りなしで連結し、`<usage>` ブロックを付けることがある
-//   - tool_response が文字列でない場合 handlePostAgent が JSON.stringify するため、
-//     パスが `"text":"/private/...` のように引用符直後に現れる
-// そこで最初に現れる「絶対パスかつ .json で終わる」部分だけを拾う。直前の文字は
-// 単語構成文字・ドット・ハイフン以外に限ることで `relative/path/x.json` の部分一致を防ぐ。
-// lazy 量指定子なので `...findings.jsonagentId: ...` からは `...findings.json` で止まる。
+//   - tool_response が構造化オブジェクトだと JSON 化され、パスが `"text":"/private/...`
+//     のように引用符直後や、エスケープされた改行 (`\` + `n`) の直後に現れる
+// 誤ってレビュー対象外のファイルを読まないよう、候補は次の条件で絞る:
+//   - 直前が単語構成文字・ドット・ハイフン・スラッシュ・コロン・チルダ・バックスラッシュ
+//     のいずれでもないこと。URL (`https://host/x.json`) や `~/x.json`、
+//     `relative/path/x.json` を絶対パスと誤認しないため
+//   - 候補となる相異なるパスが 2 つ以上あれば null。散文が前回の findings に言及すると
+//     古い ok: true のファイルでゲートが開いてしまうため、曖昧なら開けない (fail-safe)
 export function extractReviewReportPath(text: string): string | null {
-  const match = text.match(/(?:^|[^\w.\-])(\/[^\s"]+?\.json)/);
-  return match ? match[1] : null;
+  const pattern = /(?:^|\\n|\\t|[^\w.\-/:~\\])(\/[^\s"\\]+?\.json)/g;
+  const found = new Set([...text.matchAll(pattern)].map((m) => m[1]));
+  return found.size === 1 ? [...found][0] : null;
 }
 
 export function applyTestRun(state: GuardState, failed: boolean): GuardState {
@@ -624,8 +634,7 @@ async function handlePostBash(input: HookInput, state: GuardState) {
 }
 
 async function handlePostAgent(input: HookInput, state: GuardState) {
-  const raw = input.tool_response;
-  const text = typeof raw === "string" ? raw : JSON.stringify(raw ?? "");
+  const text = toResponseText(input.tool_response);
 
   if (input.tool_input?.subagent_type === "tdd-judge") {
     await handleJudgeReport(input, state, text);
