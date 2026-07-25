@@ -375,6 +375,17 @@ export function buildExemptions(
   return result;
 }
 
+// review-tdd の応答テキストから findings JSON の絶対パスを取り出す。
+// 「応答は output_path 1行のみ」という契約だが、Claude Code の Agent ツールは応答末尾に
+// `agentId: xxx (use SendMessage...)` を区切りなしで連結し、さらに `<usage>` ブロックを
+// 付けることがあるため、素の trim では読めないパスになる。最初に現れる
+// 「行頭または空白直後から始まる絶対パスかつ .json で終わる」部分だけを拾う。
+// lazy 量指定子なので `...findings.jsonagentId: ...` からは `...findings.json` で止まる。
+export function extractReviewReportPath(text: string): string | null {
+  const match = text.match(/(?:^|\s)(\/\S+?\.json)/);
+  return match ? match[1] : null;
+}
+
 export function applyTestRun(state: GuardState, failed: boolean): GuardState {
   // pendingExemptions (tdd-judge の免除) と testEditedSinceReview/testDiffLines
   // (レビューゲート) はテスト実行と無関係に持ち越す。RED→GREEN サイクルのたびに
@@ -662,7 +673,7 @@ async function handleReviewReport(
   state: GuardState,
   responseText: string,
 ) {
-  const path = responseText.trim();
+  const path = extractReviewReportPath(responseText);
   if (!path) return;
 
   let parsed: unknown;

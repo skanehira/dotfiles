@@ -15,6 +15,7 @@ import {
   evaluateStopAttempt,
   extractBashWriteTargets,
   extractJudgeSentinels,
+  extractReviewReportPath,
   type GuardState,
   type JudgedEdit,
   matchExemption,
@@ -1035,4 +1036,49 @@ Deno.test("applyTestRun still drops stopBlockCount as before (test run resets th
     testEditedSinceRun: false,
     implEditedSinceRun: false,
   });
+});
+
+Deno.test("extractReviewReportPath returns the path when the response is the bare path only", () => {
+  assertEquals(
+    extractReviewReportPath("/tmp/scratchpad/review-tdd-findings.json"),
+    "/tmp/scratchpad/review-tdd-findings.json",
+  );
+});
+
+Deno.test("extractReviewReportPath trims surrounding whitespace and newlines around a bare path", () => {
+  assertEquals(
+    extractReviewReportPath("  \n/tmp/scratchpad/findings.json\n  "),
+    "/tmp/scratchpad/findings.json",
+  );
+});
+
+Deno.test("extractReviewReportPath strips the agentId suffix the Agent tool concatenates without a separator", () => {
+  const response =
+    "/private/tmp/claude-501/session/scratchpad/review-tdd-findings-final.jsonagentId: a2c957833e88184fa (use SendMessage with to: 'a2c957833e88184fa', summary: '<recap>' to continue this agent)";
+
+  assertEquals(
+    extractReviewReportPath(response),
+    "/private/tmp/claude-501/session/scratchpad/review-tdd-findings-final.json",
+  );
+});
+
+Deno.test("extractReviewReportPath strips a trailing usage block appended after the path", () => {
+  const response =
+    "/tmp/scratchpad/findings.json\n<usage>subagent_tokens: 66232\ntool_uses: 19</usage>";
+
+  assertEquals(extractReviewReportPath(response), "/tmp/scratchpad/findings.json");
+});
+
+Deno.test("extractReviewReportPath returns null when the response contains no absolute json path", () => {
+  const cases = [
+    "",
+    "   ",
+    "レビューが完了しました。high/medium findings はありません。",
+    "relative/path/findings.json",
+    "/tmp/scratchpad/findings.txt",
+  ];
+
+  for (const text of cases) {
+    assertEquals(extractReviewReportPath(text), null, text);
+  }
 });
