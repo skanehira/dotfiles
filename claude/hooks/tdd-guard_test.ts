@@ -1,6 +1,8 @@
 import { assertEquals } from "jsr:@std/assert";
 import {
   applyTestRun,
+  buildEditContent,
+  buildExemptions,
   classifyFile,
   DENY_BASH_WRITE,
   DENY_NO_RED,
@@ -12,8 +14,14 @@ import {
   evaluateStop,
   evaluateStopAttempt,
   extractBashWriteTargets,
+  extractJudgeSentinels,
   type GuardState,
+  type JudgedEdit,
+  matchExemption,
+  parseJudgeVerdicts,
+  REVIEW_GATE_LINE_THRESHOLD,
   STOP_RERUN_TESTS,
+  STOP_REQUEST_REVIEW,
   STOP_RUN_NEW_TEST,
 } from "./tdd-guard.ts";
 
@@ -546,4 +554,485 @@ Deno.test("detectDelegatedTestResult returns null when no marker is present", ()
 Deno.test("detectDelegatedTestResult detects markers regardless of case", () => {
   assertEquals(detectDelegatedTestResult("tdd_guard: GREEN"), "green");
   assertEquals(detectDelegatedTestResult("Tdd_Guard: Red"), "red");
+});
+
+// ---- tdd-judge 判定機構 ----
+
+Deno.test("extractJudgeSentinels parses a single edit sentinel", () => {
+  const prompt = [
+    '<<<TDD_JUDGE_EDIT 1 op="edit" file_path="src/foo.ts">>>',
+    "--- old ---",
+    "const x = 1",
+    "--- new ---",
+    "const x = 2",
+    "<<<END_TDD_JUDGE_EDIT 1>>>",
+  ].join("\n");
+
+  const result = extractJudgeSentinels(prompt);
+
+  assertEquals(result, [
+    {
+      index: 1,
+      edit: {
+        op: "edit",
+        filePath: "src/foo.ts",
+        oldString: "const x = 1",
+        newString: "const x = 2",
+      },
+    },
+  ]);
+});
+
+Deno.test("extractJudgeSentinels parses a single write sentinel", () => {
+  const prompt = [
+    '<<<TDD_JUDGE_EDIT 2 op="write" file_path="src/bar.ts">>>',
+    "--- content ---",
+    "export const bar = 1",
+    "<<<END_TDD_JUDGE_EDIT 2>>>",
+  ].join("\n");
+
+  const result = extractJudgeSentinels(prompt);
+
+  assertEquals(result, [
+    {
+      index: 2,
+      edit: {
+        op: "write",
+        filePath: "src/bar.ts",
+        content: "export const bar = 1",
+      },
+    },
+  ]);
+});
+
+Deno.test("extractJudgeSentinels parses multiple sentinels in one prompt", () => {
+  const prompt = [
+    "先にテストを書いてください。以下は trivial だと考える編集です。",
+    '<<<TDD_JUDGE_EDIT 1 op="edit" file_path="src/foo.ts">>>',
+    "--- old ---",
+    "old1",
+    "--- new ---",
+    "new1",
+    "<<<END_TDD_JUDGE_EDIT 1>>>",
+    '<<<TDD_JUDGE_EDIT 2 op="write" file_path="src/bar.ts">>>',
+    "--- content ---",
+    "content2",
+    "<<<END_TDD_JUDGE_EDIT 2>>>",
+  ].join("\n");
+
+  const result = extractJudgeSentinels(prompt);
+
+  assertEquals(result.length, 2);
+  assertEquals(result[0].index, 1);
+  assertEquals(result[1].index, 2);
+});
+
+Deno.test("extractJudgeSentinels returns empty array when no sentinel is present", () => {
+  assertEquals(extractJudgeSentinels("テスト不要だと思います"), []);
+});
+
+Deno.test("extractJudgeSentinels ignores a sentinel with mismatched index end tag", () => {
+  const prompt = [
+    '<<<TDD_JUDGE_EDIT 1 op="edit" file_path="src/foo.ts">>>',
+    "--- old ---",
+    "old1",
+    "--- new ---",
+    "new1",
+    "<<<END_TDD_JUDGE_EDIT 2>>>",
+  ].join("\n");
+
+  assertEquals(extractJudgeSentinels(prompt), []);
+});
+
+Deno.test("parseJudgeVerdicts parses a clean JSON response", () => {
+  const text = JSON.stringify({
+    verdicts: [
+      { index: 1, file_path: "src/foo.ts", verdict: "trivial", reason: "スタイルのみ" },
+      { index: 2, file_path: "src/bar.ts", verdict: "behavioral", reason: "分岐追加" },
+    ],
+  });
+
+  assertEquals(parseJudgeVerdicts(text), [
+    { index: 1, filePath: "src/foo.ts", verdict: "trivial" },
+    { index: 2, filePath: "src/bar.ts", verdict: "behavioral" },
+  ]);
+});
+
+Deno.test("parseJudgeVerdicts extracts JSON even when wrapped in prose", () => {
+  const text = [
+    "判定結果は以下の通りです。",
+    JSON.stringify({
+      verdicts: [{ index: 1, file_path: "src/foo.ts", verdict: "trivial", reason: "ok" }],
+    }),
+    "以上です。",
+  ].join("\n");
+
+  assertEquals(parseJudgeVerdicts(text), [
+    { index: 1, filePath: "src/foo.ts", verdict: "trivial" },
+  ]);
+});
+
+Deno.test("parseJudgeVerdicts returns null for unparsable text", () => {
+  assertEquals(parseJudgeVerdicts("判定できませんでした"), null);
+});
+
+Deno.test("parseJudgeVerdicts returns null when verdicts is not an array", () => {
+  assertEquals(parseJudgeVerdicts(JSON.stringify({ verdicts: "trivial" })), null);
+});
+
+Deno.test("parseJudgeVerdicts returns null when a verdict value is invalid", () => {
+  const text = JSON.stringify({
+    verdicts: [{ index: 1, file_path: "src/foo.ts", verdict: "maybe", reason: "?" }],
+  });
+
+  assertEquals(parseJudgeVerdicts(text), null);
+});
+
+Deno.test("buildExemptions keeps only trivial verdicts matched by index and file_path", () => {
+  const sentinels = [
+    {
+      index: 1,
+      edit: {
+        op: "edit" as const,
+        filePath: "src/foo.ts",
+        oldString: "old1",
+        newString: "new1",
+      },
+    },
+    {
+      index: 2,
+      edit: { op: "write" as const, filePath: "src/bar.ts", content: "content2" },
+    },
+  ];
+  const verdicts = [
+    { index: 1, filePath: "src/foo.ts", verdict: "trivial" as const },
+    { index: 2, filePath: "src/bar.ts", verdict: "behavioral" as const },
+  ];
+
+  assertEquals(buildExemptions(sentinels, verdicts), [
+    { op: "edit", filePath: "src/foo.ts", oldString: "old1", newString: "new1" },
+  ]);
+});
+
+Deno.test("buildExemptions discards a verdict whose file_path does not match the sentinel", () => {
+  const sentinels = [
+    {
+      index: 1,
+      edit: {
+        op: "edit" as const,
+        filePath: "src/foo.ts",
+        oldString: "old1",
+        newString: "new1",
+      },
+    },
+  ];
+  const verdicts = [
+    { index: 1, filePath: "src/other.ts", verdict: "trivial" as const },
+  ];
+
+  assertEquals(buildExemptions(sentinels, verdicts), []);
+});
+
+Deno.test("buildExemptions discards a verdict with no matching sentinel index", () => {
+  const sentinels: { index: number; edit: JudgedEdit }[] = [];
+  const verdicts = [
+    { index: 1, filePath: "src/foo.ts", verdict: "trivial" as const },
+  ];
+
+  assertEquals(buildExemptions(sentinels, verdicts), []);
+});
+
+Deno.test("matchExemption finds an equal edit entry and returns its index", () => {
+  const list: JudgedEdit[] = [
+    { op: "edit", filePath: "src/foo.ts", oldString: "old1", newString: "new1" },
+    { op: "write", filePath: "src/bar.ts", content: "content2" },
+  ];
+
+  assertEquals(
+    matchExemption(list, { op: "edit", filePath: "src/foo.ts", oldString: "old1", newString: "new1" }),
+    0,
+  );
+  assertEquals(
+    matchExemption(list, { op: "write", filePath: "src/bar.ts", content: "content2" }),
+    1,
+  );
+});
+
+Deno.test("matchExemption returns -1 when no entry matches exactly", () => {
+  const list: JudgedEdit[] = [
+    { op: "edit", filePath: "src/foo.ts", oldString: "old1", newString: "new1" },
+  ];
+
+  // 内容が微妙に異なる (厳密一致のみ許可)
+  assertEquals(
+    matchExemption(list, { op: "edit", filePath: "src/foo.ts", oldString: "old1", newString: "new1 " }),
+    -1,
+  );
+  // op が異なる (同じ file_path/content でも write と edit は別物)
+  assertEquals(
+    matchExemption(list, { op: "write", filePath: "src/foo.ts", content: "new1" }),
+    -1,
+  );
+});
+
+Deno.test("buildEditContent maps Write tool_input to a write JudgedEdit", () => {
+  assertEquals(
+    buildEditContent("src/bar.ts", { content: "export const bar = 1" }),
+    { op: "write", filePath: "src/bar.ts", content: "export const bar = 1" },
+  );
+});
+
+Deno.test("buildEditContent maps Edit tool_input to an edit JudgedEdit", () => {
+  assertEquals(
+    buildEditContent("src/foo.ts", { old_string: "old1", new_string: "new1" }),
+    { op: "edit", filePath: "src/foo.ts", oldString: "old1", newString: "new1" },
+  );
+});
+
+Deno.test("buildEditContent returns undefined when neither content nor old/new_string is present", () => {
+  assertEquals(buildEditContent("src/foo.ts", {}), undefined);
+  assertEquals(buildEditContent("src/foo.ts", undefined), undefined);
+});
+
+Deno.test("evaluateEdit allows an impl edit that exactly matches a pending exemption and consumes it", () => {
+  const state: GuardState = {
+    lastRun: null,
+    testEditedSinceRun: false,
+    implEditedSinceRun: false,
+    pendingExemptions: [
+      { op: "edit", filePath: "src/foo.ts", oldString: "old1", newString: "new1" },
+      { op: "write", filePath: "src/bar.ts", content: "content2" },
+    ],
+  };
+  const editContent: JudgedEdit = {
+    op: "edit",
+    filePath: "src/foo.ts",
+    oldString: "old1",
+    newString: "new1",
+  };
+
+  const result = evaluateEdit(state, "impl", editContent);
+
+  assertEquals(result, {
+    decision: "allow",
+    state: {
+      lastRun: null,
+      testEditedSinceRun: false,
+      implEditedSinceRun: false,
+      pendingExemptions: [
+        { op: "write", filePath: "src/bar.ts", content: "content2" },
+      ],
+    },
+  });
+});
+
+Deno.test("evaluateEdit denies an impl edit that does not match any pending exemption", () => {
+  const state: GuardState = {
+    lastRun: null,
+    testEditedSinceRun: false,
+    implEditedSinceRun: false,
+    pendingExemptions: [
+      { op: "edit", filePath: "src/foo.ts", oldString: "old1", newString: "new1" },
+    ],
+  };
+  const editContent: JudgedEdit = {
+    op: "edit",
+    filePath: "src/foo.ts",
+    oldString: "old1",
+    newString: "different",
+  };
+
+  const result = evaluateEdit(state, "impl", editContent);
+
+  assertEquals(result, { decision: "deny", reason: DENY_NO_RED, state });
+});
+
+Deno.test("evaluateEdit denies an impl edit with no editContent and no exemptions as before", () => {
+  const result = evaluateEdit(initialState, "impl");
+
+  assertEquals(result, {
+    decision: "deny",
+    reason: DENY_NO_RED,
+    state: initialState,
+  });
+});
+
+// ---- スキル非依存のテスト品質ゲート (testEditedSinceReview) ----
+
+Deno.test("evaluateEdit arms the review gate on a new test file Write regardless of size", () => {
+  const editContent: JudgedEdit = {
+    op: "write",
+    filePath: "src/foo.test.ts",
+    content: "line1\nline2",
+  };
+
+  const result = evaluateEdit(initialState, "test", editContent);
+
+  assertEquals(result, {
+    decision: "allow",
+    state: {
+      lastRun: null,
+      testEditedSinceRun: true,
+      implEditedSinceRun: false,
+      testEditedSinceReview: true,
+      testDiffLines: 2,
+    },
+  });
+});
+
+Deno.test("evaluateEdit does not arm the review gate for a small test file Edit under the threshold", () => {
+  const editContent: JudgedEdit = {
+    op: "edit",
+    filePath: "src/foo.test.ts",
+    oldString: "old",
+    newString: "line1\nline2\nline3",
+  };
+
+  const result = evaluateEdit(initialState, "test", editContent);
+
+  assertEquals(result, {
+    decision: "allow",
+    state: {
+      lastRun: null,
+      testEditedSinceRun: true,
+      implEditedSinceRun: false,
+      testEditedSinceReview: false,
+      testDiffLines: 3,
+    },
+  });
+});
+
+Deno.test("evaluateEdit arms the review gate once accumulated test edit lines exceed the threshold", () => {
+  const bigNewString = Array.from(
+    { length: REVIEW_GATE_LINE_THRESHOLD + 1 },
+    (_, i) => `line${i}`,
+  ).join("\n");
+  const editContent: JudgedEdit = {
+    op: "edit",
+    filePath: "src/foo.test.ts",
+    oldString: "old",
+    newString: bigNewString,
+  };
+
+  const result = evaluateEdit(initialState, "test", editContent);
+
+  assertEquals(result.decision, "allow");
+  assertEquals(result.state.testEditedSinceReview, true);
+  assertEquals(result.state.testDiffLines, REVIEW_GATE_LINE_THRESHOLD + 1);
+});
+
+Deno.test("evaluateEdit accumulates testDiffLines across edits and arms once the running total crosses the threshold", () => {
+  const firstState: GuardState = {
+    lastRun: null,
+    testEditedSinceRun: false,
+    implEditedSinceRun: false,
+    testEditedSinceReview: false,
+    testDiffLines: 15,
+  };
+  const editContent: JudgedEdit = {
+    op: "edit",
+    filePath: "src/foo.test.ts",
+    oldString: "old",
+    newString: "line1\nline2\nline3\nline4\nline5\nline6",
+  };
+
+  const result = evaluateEdit(firstState, "test", editContent);
+
+  assertEquals(result.state.testDiffLines, 21);
+  assertEquals(result.state.testEditedSinceReview, true);
+});
+
+Deno.test("evaluateEdit keeps the review gate armed once already armed, even for a small follow-up edit", () => {
+  const state: GuardState = {
+    lastRun: null,
+    testEditedSinceRun: false,
+    implEditedSinceRun: false,
+    testEditedSinceReview: true,
+    testDiffLines: 30,
+  };
+  const editContent: JudgedEdit = {
+    op: "edit",
+    filePath: "src/foo.test.ts",
+    oldString: "old",
+    newString: "line1",
+  };
+
+  const result = evaluateEdit(state, "test", editContent);
+
+  assertEquals(result.state.testEditedSinceReview, true);
+});
+
+Deno.test("evaluateStop blocks with STOP_REQUEST_REVIEW when the review gate is armed and nothing else is dirty", () => {
+  const state: GuardState = {
+    lastRun: "green",
+    testEditedSinceRun: false,
+    implEditedSinceRun: false,
+    testEditedSinceReview: true,
+    testDiffLines: 25,
+  };
+
+  assertEquals(evaluateStop(state), { block: true, reason: STOP_REQUEST_REVIEW });
+});
+
+Deno.test("evaluateStop prioritizes STOP_RERUN_TESTS over the review gate", () => {
+  const state: GuardState = {
+    lastRun: "green",
+    testEditedSinceRun: false,
+    implEditedSinceRun: true,
+    testEditedSinceReview: true,
+    testDiffLines: 25,
+  };
+
+  assertEquals(evaluateStop(state), { block: true, reason: STOP_RERUN_TESTS });
+});
+
+Deno.test("evaluateStop passes when the review gate was never armed", () => {
+  const state: GuardState = {
+    lastRun: "green",
+    testEditedSinceRun: false,
+    implEditedSinceRun: false,
+    testEditedSinceReview: false,
+    testDiffLines: 5,
+  };
+
+  assertEquals(evaluateStop(state), { block: false });
+});
+
+Deno.test("applyTestRun preserves pendingExemptions, testEditedSinceReview, and testDiffLines across a test run", () => {
+  const state: GuardState = {
+    lastRun: "red",
+    testEditedSinceRun: true,
+    implEditedSinceRun: true,
+    pendingExemptions: [
+      { op: "edit", filePath: "src/foo.ts", oldString: "old1", newString: "new1" },
+    ],
+    testEditedSinceReview: true,
+    testDiffLines: 25,
+  };
+
+  assertEquals(applyTestRun(state, false), {
+    lastRun: "green",
+    testEditedSinceRun: false,
+    implEditedSinceRun: false,
+    pendingExemptions: [
+      { op: "edit", filePath: "src/foo.ts", oldString: "old1", newString: "new1" },
+    ],
+    testEditedSinceReview: true,
+    testDiffLines: 25,
+  });
+});
+
+Deno.test("applyTestRun still drops stopBlockCount as before (test run resets the block counter)", () => {
+  const state: GuardState = {
+    lastRun: "green",
+    testEditedSinceRun: true,
+    implEditedSinceRun: true,
+    stopBlockCount: 2,
+  };
+
+  assertEquals(applyTestRun(state, false), {
+    lastRun: "green",
+    testEditedSinceRun: false,
+    implEditedSinceRun: false,
+  });
 });
