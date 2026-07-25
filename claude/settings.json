@@ -36,26 +36,6 @@
   ],
   "enableAllProjectMcpServers": true,
   "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event post-bash"
-          }
-        ]
-      },
-      {
-        "matcher": "Task|Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event post-agent"
-          }
-        ]
-      }
-    ],
     "PreCompact": [
       {
         "matcher": "",
@@ -69,21 +49,8 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|NotebookEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event pre-edit"
-          }
-        ]
-      },
-      {
         "matcher": "Bash",
         "hooks": [
-          {
-            "type": "command",
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event pre-bash"
-          },
           {
             "type": "command",
             "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/commit-msg-guard.ts"
@@ -110,28 +77,6 @@
             "type": "command",
             "command": "bash '/Users/skanehira/.claude/hooks/herdr-agent-state.sh' session",
             "timeout": 10
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event stop"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "deno run --allow-env --allow-read --allow-write $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/tdd-guard.ts --event stop"
           }
         ]
       }

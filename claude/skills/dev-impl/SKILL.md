@@ -15,7 +15,7 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 ## モデル方針
 
 - 本スキルは frontmatter で `model: sonnet` を指定している。モデル切り替えが効くのは**ユーザーが `/dev-impl` を直接起動したターンだけ** (Skill ツール経由の起動では適用されない)。エスカレーションに回答した後の再開も `/dev-impl` の再実行で行う (TODO.md の `- [x]` 状態から途中再開できるため、再実行で override が再適用される)
-- 検証 subagent (review-*) は起動時に **`model: opus` を明示**する。原則は「実行器のモデル ≤ 検証器のモデル」。実装ループの actor を Sonnet に下げられるのは、tdd-guard・テストゲート・レビュー fan-out という検証器が厚いため
+- 検証 subagent (review-*) は起動時に **`model: opus` を明示**する。原則は「実行器のモデル ≤ 検証器のモデル」。実装ループの actor を Sonnet に下げられるのは、テストゲート・レビュー fan-out という検証器が厚いため
 
 ## 入力
 
@@ -171,7 +171,7 @@ PHASE_CONTEXT の YAML テンプレートと抜粋ロジック (design 節の抜
 
 PHASE_CONTEXT の `phase_tasks` と設計抜粋に従い、メインセッションが TDD (RED→GREEN→REFACTOR) でフェーズを実装する。
 
-- `rules/core/tdd.md` に従う (サイクル順序は tdd-guard hook が tool call レベルで強制する)
+- `rules/core/tdd.md` に従う (サイクル順序は自律遵守し、Step 4.2d のレビュー fan-out で事後検証する)
 - コミットはまだしない (4.2e でまとめて行う)
 - 実装中に設計乖離に気付いたら deviation_signals として JSONL に記録する (`type: todo_minor | design_detail_gap | design_overview_break`)
 - `design_overview_break` を検知したら**即エスカレ停止** (commit しない)
@@ -466,7 +466,6 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
 ### 連携 hook
 
-- **tdd-guard hook (`tdd-guard.ts`)**: メインループの TDD 違反を機械的に強制 (PreToolUse で実装編集を事前ゲート + Bash 書き込み検知 + 停止時テスト未実行チェック)。dev-impl は意識しない
 - **commit-msg-guard hook (`commit-msg-guard.ts`)**: Step 4.2e のコミット形式を機械検証
 
 ### 前段 / 後段

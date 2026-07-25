@@ -97,20 +97,21 @@ export function isDocumentationPrompt(prompt: string): boolean {
     DOC_ACTION_PATTERNS.some((re) => re.test(prompt));
 }
 
-// TDD の手順は tdd-guard hook が tool call レベルで強制するため、ここでは
-// 機械ゲート化できない項目 (トリアージ / rules の遅延 Read / 外科的変更 /
-// TDD 例外の明示) だけをリマインドする。rules/core/*.md は CLAUDE.md から
+// TDD の手順を強制する機械ゲートは無く、順序は自律遵守 + 事後レビューで担保する。
+// ここではその運用 (トリアージ / rules の遅延 Read / 外科的変更 / TDD 例外の明示 /
+// 実装後のレビュー) をリマインドする。rules/core/*.md は CLAUDE.md から
 // 即時展開されない (遅延参照) ため、この Read 指示が実質の読込トリガー。
 export const IMPL_REMINDER_FULL =
   `[hook: remind-rules] 実装/修正系の指示を検知。
 1. トリアージ: 着手前にタスクを分解し、ユニットごとのモデル割当 (CLAUDE.md「オーケストレーションとモデル階層」の 3 軸判定: 難易度/コンテキスト連続性/並列性) を 1 行で出力する。セッションが最上位 tier (Fable/Mythos 級) で実装作業が支配的なら、着手前に /model sonnet (または opus) への切替をユーザに提案する。
 2. rules: このセッションで未読なら ~/.claude/rules/core/ の tdd.md / design.md / testing.md を Read してから着手する (読了済みなら再読不要)。
 3. 外科的変更: 依頼スコープを超えない (隣接改善・dead code 削除は別ターンで合意)。TDD を適用しない判断 (typo 修正・宣言的 config 等) はその理由を出力で明示する。
-4. 委譲: 実装はメインループ直営 (逐次実装のサブエージェント委譲は禁止。委譲は並列 fan-out と巨大出力の隔離のみ、fan-out 時は難易度に応じ model: sonnet/opus を明示し、実装系なら指示文に rules の Read 指示を含める)。テスト実行 (E2E 等の巨大出力のみ)・コミット実行は Haiku に委譲する (コミットメッセージは親が起草し、Haiku には実行だけさせる)。`;
+4. 委譲: 実装はメインループ直営 (逐次実装のサブエージェント委譲は禁止。委譲は並列 fan-out と巨大出力の隔離のみ、fan-out 時は難易度に応じ model: sonnet/opus を明示し、実装系なら指示文に rules の Read 指示を含める)。テスト実行 (E2E 等の巨大出力のみ)・コミット実行は Haiku に委譲する (コミットメッセージは親が起草し、Haiku には実行だけさせる)。
+5. 事後レビュー: TDD 順序を強制する機械ゲートは無いので自律遵守する。スキル (dev-impl / dev-impl-quick) を使わない実装では、まとまったテスト差分 (新規テストファイル or 20 行超) を書いたら完了報告の前に review-tdd subagent (model: opus 明示・output_path 指定) でテスト品質を検証し、high/medium findings を修正してテストを再実行する。複数観点で見たい差分は /workflow-review を使う。`;
 
 // 2 回目以降: フル版の要点への短いポインタだけ再注入する (反復コスト削減)。
 export const IMPL_REMINDER_SHORT =
-  `[hook: remind-rules] 実装/修正系の指示を検知 (詳細は本セッション初回のフル版リマインダと CLAUDE.md「オーケストレーションとモデル階層」)。トリアージ (モデル割当 1 行明示・rules 未読なら Read) / 外科的変更 (TDD 例外は理由明示) / 委譲は並列 fan-out と巨大出力の隔離のみ (テスト・コミット実行は Haiku)。`;
+  `[hook: remind-rules] 実装/修正系の指示を検知 (詳細は本セッション初回のフル版リマインダと CLAUDE.md「オーケストレーションとモデル階層」)。トリアージ (モデル割当 1 行明示・rules 未読なら Read) / 外科的変更 (TDD 例外は理由明示) / 委譲は並列 fan-out と巨大出力の隔離のみ (テスト・コミット実行は Haiku) / まとまったテスト差分を書いたら完了前に review-tdd で事後レビュー。`;
 
 export const DOC_REMINDER =
   `[hook: remind-rules] ドキュメント修正系の指示を検知しました。
