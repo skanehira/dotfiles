@@ -108,9 +108,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 
 ### 並列モードの event_type (Step 2 / Step 4)
 
-wave 実行 ([parallel-execution.md](./parallel-execution.md)) で使う 6 種。`phase` フィールドには wave 全体の事象なら `wave-<index>`、個別フェーズの事象ならそのフェーズ名を入れる:
-
-`phase` フィールドの表記は逐次モードと揃えて `phase-<識別子>` 形式 (例: `phase-4-a`) を使い、context 内の `phases` / `phase` は識別子のみ (例: `["2", "4-a"]`) を入れる。
+wave 実行 ([parallel-execution.md](./parallel-execution.md)) で使う 8 種。`phase` フィールドは wave 全体の事象なら `wave-<index>` (例: `wave-2`)、個別フェーズの事象なら逐次モードと揃えて `phase-<識別子>` 形式 (例: `phase-4-a`) を使う。context 内の `phases` / `phase` は識別子のみ (例: `["2", "4-a"]`) を入れる。
 
 | event_type | severity | 記録タイミング | context |
 | --- | --- | --- | --- |
