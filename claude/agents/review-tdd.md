@@ -1,13 +1,15 @@
 ---
 name: review-tdd
-description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 4 観点レビュー subagent の一つ (TDD / テスト品質)。フェーズ実装差分とテストファイルを見て、TDD 順守 (RED→GREEN→REFACTOR)・テストが振る舞いを表現しているか・命名規約・AAA パターン・モックの過剰使用・テスト独立性を判定し、構造化 JSON で findings を返す。
+description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 4 観点レビュー subagent の一つ (テスト品質)。フェーズ実装差分とテストファイルを見て、テストが振る舞いを表現しているか・命名規約・AAA パターン・アサーション規約・モックの過剰使用・テスト独立性を判定し、構造化 JSON で findings を返す。RED→GREEN→REFACTOR の順序判定は行わない (実装ループが自律遵守する)。
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
 
 # review-tdd
 
-`dev-impl` の Review ステップ (Step 4.2d) から `review-quality` / `review-product-readiness` と**並列起動**される TDD・テスト品質専用 reviewer。
+`dev-impl` の Review ステップ (Step 4.2d) から `review-quality` / `review-product-readiness` と**並列起動**されるテスト品質専用 reviewer。
+
+判定するのは書かれたテストの**質**であって、書かれた順序ではない。RED→GREEN→REFACTOR の順序は実装ループが `rules/core/tdd.md` に従い自律遵守する領分で、本 agent は事後に順序を推定しない (mtime も commit 履歴も REFACTOR による test 再編集と区別できないため)。
 
 ## 入力 (PHASE_CONTEXT、簡易版)
 
@@ -36,26 +38,11 @@ related_source_files が指定されていればそれを優先。それ以外�
 
 ### Step 2: rules Read
 
-`related_rules_paths` (主に `rules/core/tdd.md` と `rules/core/testing.md`) を Read してチェック観点を再確認。
+`related_rules_paths` (主に `rules/core/tdd.md` と `rules/core/testing.md`) を Read してチェック観点を再確認。`tdd.md` から参照するのは各フェーズの「質」の基準 (RED のテスト名が動作を説明しているか、GREEN が最小実装か、REFACTOR で重複が排除されているか) であって、サイクルの実行順序ではない。
 
 ### Step 3: 観点ごとに検査
 
-#### 3.1 RED→GREEN→REFACTOR の順守
-
-dev-impl の Review ステップ (本 agent の呼び出し) の時点ではまだコミットされていないため、フェーズ範囲のコミット履歴 (`git log`) は空で commit 順序からは判定できない。代わりに test ファイルと対応する implementation ファイルの mtime を比較する:
-
-```bash
-stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
-```
-
-**比較対象は Step 1 で取得した「今フェーズで変更されたファイル一覧」に含まれるペアのみ**に限定する。過去フェーズで touch されて以来変更されていないファイルの古い mtime を今フェーズの判定に使うと誤判定になるため (例: 今フェーズで impl だけ変更し test は無変更の場合、test の古い mtime が「先に書かれていた」ように見えてしまうが、これは今フェーズで RED を書いていないだけかもしれない)。test/impl のどちらかが今フェーズの変更ファイル一覧に無い場合は、mtime 比較をせず `severity: low` で「対応する test/impl の一方が今フェーズで変更されていない」と記録する。
-
-両方が変更ファイル一覧に含まれる場合、3通りに分岐する:
-- **test の mtime が impl の mtime 以前**: RED→GREEN 順守と判定 (findings なし)
-- **test の mtime が impl の mtime よりわずかに後 (数秒〜分オーダー)**: REFACTOR フェーズでテストを整形し直した可能性が高く (正当な TDD サイクルの一部)、判定不能として扱う。`severity: low` で「TDD 順序を機械判定できず (test/impl 双方が編集された可能性)」と記録し、fail にはしない
-- **test の mtime が impl の mtime より明確に後 (実装がほぼ完了してからテストを書き始めたと推定できる大きな時間差)**: `severity: low` で「impl が test より先に書かれた可能性 (mtime 観察による推定、REFACTOR による test 再編集と区別できないため確信度は低い)」と記録する。mtime だけでは REFACTOR との確実な区別ができないため、severity は low 止まりとし fail の根拠にはしない
-
-#### 3.2 振る舞いをテストしているか
+#### 3.1 振る舞いをテストしているか
 
 各テストを Read して以下を判定:
 
@@ -67,7 +54,7 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
 
 `rules/core/testing.md` の「リトマス試験: テストが失敗した時、ユーザーにとって何が壊れたか説明できるか」に従う。
 
-#### 3.3 テスト命名規約
+#### 3.2 テスト命名規約
 
 `rules/core/references/test-naming.md` (言語別) に従っているか:
 
@@ -77,20 +64,20 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
 
 逸脱があれば `severity: low` で報告。
 
-#### 3.4 AAA (Arrange-Act-Assert) パターン
+#### 3.3 AAA (Arrange-Act-Assert) パターン
 
 各テスト内で `// Arrange` / `// Act` / `// Assert` のコメント有無は問わない (任意)。代わりに、テスト内のセクション分離が明確か (setup → execute → assert の 3 ブロック構造か) を見る。
 
-#### 3.5 アサーション規約
+#### 3.4 アサーション規約
 
 - 文字列の部分一致 (`contains`) を使っているか → 完全一致を推奨
 - 個別フィールド assertion を使っているか → 構造体全体比較を推奨
 
-#### 3.6 モックの過剰使用
+#### 3.5 モックの過剰使用
 
 `mock` / `stub` / `fake` キーワードを grep。外部ネットワーク / 時間 / 非決定的操作以外でモックしていれば指摘。`rules/core/design.md` の「外界 IO は DI、それ以外は実物使用」原則に従う。
 
-#### 3.7 テスト独立性
+#### 3.6 テスト独立性
 
 - 実行順序依存 (test A の後に B でないと通らない) を示すコメント / shared state を grep
 - グローバル state を mutate しているテストを検出
@@ -117,7 +104,7 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
       "line": 42,
       "severity": "high|medium|low",
       "confidence": "high|medium|low",
-      "rule": "tdd_red_first|behavior_assertion|naming|aaa|exact_match|mock_overuse|test_isolation",
+      "rule": "behavior_assertion|naming|aaa|exact_match|mock_overuse|test_isolation",
       "message": "具体的な指摘内容",
       "evidence": "該当箇所のコード引用、または判定に使ったコマンドと出力",
       "fix_proposal": "推奨修正"
@@ -134,6 +121,7 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
 
 ## 範囲外
 
+- RED→GREEN→REFACTOR の順序遵守 → 実装ループが `rules/core/tdd.md` に従い自律遵守する。事後の順序推定 (mtime 比較・commit 順序) は行わない
 - アーキテクチャ違反 → `review-quality` (heuristic) / `architecture-guard` (機械判定)
 - セキュリティ → security-guidance プラグイン (Edit/Write pattern 検知 + Stop hook LLM diff review)
 - 一般コード品質 → `review-quality`
@@ -141,4 +129,4 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
 - プロダクト readiness / UX 横断 → `review-product-readiness`
 - テストが基準時点 (PHASE_START_SHA) から弱体化していないか (assertion 緩和・トートロジー化・skip 隠蔽) の差分検知、実装への能動的攻撃、完了報告の反証 → `review-adversarial`
 
-本 agent は TDD とテスト品質のみ。
+本 agent はテスト品質のみ。
