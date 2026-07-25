@@ -32,7 +32,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, TaskCreate, TaskUpdat
 1. **タスク分解と見える化**: 依頼をタスク単位に分解し `TaskCreate` でリスト化する。CLAUDE.md「オーケストレーションとモデル階層」のトリアージ (難易度・コンテキスト連続性・並列可能性) を 1 行で出力してから着手する
 2. **1 件ずつ実装**: `TaskUpdate` で in_progress にし、メインループ直営で TDD 実装する (RED→GREEN→REFACTOR の順序は tdd-guard hook が強制するため、着手前にセッション未読なら `~/.claude/rules/core/tdd.md` / `design.md` / `testing.md` を Read する)。TDD を適用しない判断 (typo 修正・宣言的 config 変更など) をした場合は理由を出力に明示する
 3. **テストゲート**: 関連テストを Bash で実行し exit code で green を確認する。テストの削除・skip・弱体化によるゲート通過は禁止 — やむを得ない場合は理由を明示してユーザーに判断を仰ぐ
-4. **review-tdd (単一観点レビュー)**: テスト green 後、`review-tdd` subagent を `model: opus` 明示・`Agent` ツールで起動する。指示文にはそのタスクの diff (実装ファイル + テストファイル) と「振る舞いのテストか / トートロジーではないか / AAA パターン / モックの過剰使用 / テスト独立性を判定して構造化 JSON を返し、結果は必ず `SendMessage` で親に送ること」を含める。CONFIRMED/PLAUSIBLE な finding があればメインループで直接 self-fix し、ステップ 3 に戻る (この往復も次項の失敗カウントに含める)。finding が無ければ次へ
+4. **review-tdd (単一観点レビュー)**: テスト green 後、`review-tdd` subagent を `model: opus` 明示・`Agent` ツールで起動する。指示文にはそのタスクの diff (実装ファイル + テストファイル)、`output_path` (例: `/tmp/review-tdd-<task>.json`。tdd-guard hook の post-agent がこのファイルを直接読んでレビューゲートを解除するため必須)、「振る舞いのテストか / トートロジーではないか / AAA パターン / モックの過剰使用 / テスト独立性を判定して構造化 JSON を返し、結果は必ず `SendMessage` で親に送ること」を含める。CONFIRMED/PLAUSIBLE な finding があればメインループで直接 self-fix し、ステップ 3 に戻る (この往復も次項の失敗カウントに含める)。finding が無ければ次へ
 5. **コミット**: review-tdd 通過後、そのタスク単位で `~/.claude/rules/core/commit.md` 準拠のコミットを作成する (push はしない)
 6. **`TaskUpdate` で completed にして次のタスクへ**: 全タスク消化まで 1〜5 を繰り返す
 7. **停止条件**: 同一タスクでステップ 3〜4 の同一アプローチが 2 回失敗したら戦略を変える、3 回失敗したら詰まっている箇所を具体化してユーザーにエスカレーションする。破壊的・不可逆操作 (force push・削除・外部公開) は必ず停止して確認する
