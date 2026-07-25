@@ -23,6 +23,10 @@ local keys = {
   { key = 't', mods = 'CMD',        action = action.SpawnTab 'DefaultDomain' },
   { key = 'w', mods = 'CMD',        action = wezterm.action.CloseCurrentTab { confirm = true } },
   { key = "[", mods = "CMD|SHIFT",  action = wezterm.action.ActivateCopyMode },
+  -- herdr の workspace 切り替え。macOS では CMD 修飾を pty へエンコードできないため、
+  -- WezTerm 側で herdr の prefix (ctrl+s = \x13) + キーのバイト列を送出する
+  { key = "[", mods = "CMD|CTRL",   action = action.SendString '\x13{' },
+  { key = "]", mods = "CMD|CTRL",   action = action.SendString '\x13}' },
   -- { key = "¥", mods = "CMD", action=action{SplitHorizontal={domain="CurrentPaneDomain"}}},
   -- { key = "-", mods = "CMD", action=action{SplitVertical={domain="CurrentPaneDomain"}}},
   -- { key = "h", mods = "LEADER", action=action{AdjustPaneSize={"Left", 5}}},
