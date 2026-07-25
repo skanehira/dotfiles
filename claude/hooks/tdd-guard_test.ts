@@ -24,6 +24,7 @@ import {
   STOP_RERUN_TESTS,
   STOP_REQUEST_REVIEW,
   STOP_RUN_NEW_TEST,
+  toResponseText,
 } from "./tdd-guard.ts";
 
 const initialState: GuardState = {
@@ -1086,6 +1087,33 @@ Deno.test("extractReviewReportPath finds the path when the response was JSON-str
   );
 });
 
+Deno.test("extractReviewReportPath finds the path when JSON-stringified prose puts an escaped newline before it", () => {
+  const response = JSON.stringify({
+    content: [{ type: "text", text: "レビュー完了\n/private/tmp/session/findings.json" }],
+  });
+
+  assertEquals(
+    extractReviewReportPath(response),
+    "/private/tmp/session/findings.json",
+  );
+});
+
+Deno.test("extractReviewReportPath returns null when the response names two different report paths", () => {
+  // 散文が前回の findings (ok: true) に言及していると、最初の一致を採る実装では
+  // 今回の ok: false を無視して古い合格結果でゲートが開いてしまう
+  const response =
+    "前回の /tmp/previous-findings.json と同じ観点です。\n/tmp/current-findings.json";
+
+  assertEquals(extractReviewReportPath(response), null);
+});
+
+Deno.test("extractReviewReportPath still resolves a path repeated several times in the response", () => {
+  const response =
+    "/tmp/findings.json に出力しました。詳細は /tmp/findings.json を参照してください。";
+
+  assertEquals(extractReviewReportPath(response), "/tmp/findings.json");
+});
+
 Deno.test("extractReviewReportPath returns null when the response contains no absolute json path", () => {
   const cases = [
     "",
@@ -1098,4 +1126,40 @@ Deno.test("extractReviewReportPath returns null when the response contains no ab
   for (const text of cases) {
     assertEquals(extractReviewReportPath(text), null, text);
   }
+});
+
+Deno.test("extractReviewReportPath returns null for json references that are not local absolute paths", () => {
+  const cases = [
+    "https://example.com/schema/findings.json",
+    "見つかりました: ~/scratchpad/findings.json",
+    "file://localhost/tmp/findings.json",
+  ];
+
+  for (const text of cases) {
+    assertEquals(extractReviewReportPath(text), null, text);
+  }
+});
+
+Deno.test("toResponseText passes a string response through and serializes a structured one", () => {
+  assertEquals(toResponseText("/tmp/findings.json"), "/tmp/findings.json");
+  // 応答なしは空文字のJSON表現になる (パスは取れないので後段でゲートは開かない)
+  assertEquals(toResponseText(undefined), '""');
+  assertEquals(
+    toResponseText({ content: [{ type: "text", text: "/tmp/findings.json" }] }),
+    '{"content":[{"type":"text","text":"/tmp/findings.json"}]}',
+  );
+});
+
+Deno.test("toResponseText and extractReviewReportPath together recover the path from a structured tool_response", () => {
+  const toolResponse = {
+    content: [{
+      type: "text",
+      text: "/private/tmp/session/findings.jsonagentId: abc123 (use SendMessage...)",
+    }],
+  };
+
+  assertEquals(
+    extractReviewReportPath(toResponseText(toolResponse)),
+    "/private/tmp/session/findings.json",
+  );
 });
