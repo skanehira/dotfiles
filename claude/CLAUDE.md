@@ -28,7 +28,10 @@ autopilot・一括委任 (「全部やって」「のこりを実装して」)�
 
 実装系ルールは即時展開しない (セッション・subagent spawn ごとのコンテキスト固定費削減のため遅延参照)。**実装着手前に必要なものを Read する** (remind-rules hook が毎プロンプトでリマインドする):
 
-- TDD で実装する → `~/.claude/rules/core/tdd.md`。**tdd-guard hook (`~/.claude/hooks/tdd-guard.ts`) が RED→GREEN→REFACTOR の順序と「実装編集後の再テスト」を tool call レベルで機械的に強制する**（実装ファイルの編集は失敗テストなしでは deny、テスト未再実行のまま Stop しようとすると `[tdd-guard] ...` という reason で block される。状態はセッション単位で `~/.claude/tdd-guard/<session_id>.json` に永続化）。このメッセージが出たら原因調査やファイル探索はせず、**該当言語のテストコマンドを実行するだけ**で解除される（過去セッションで tdd-guard.ts を探し回ったことが複数回あるので、次に見たら即座にテスト実行すること）
+- TDD で実装する → `~/.claude/rules/core/tdd.md`。**tdd-guard hook (`~/.claude/hooks/tdd-guard.ts`) が RED→GREEN→REFACTOR の順序と「実装編集後の再テスト」を tool call レベルで機械的に強制する**（実装ファイルの編集は失敗テストなしでは deny、テスト未再実行のまま Stop しようとすると `[tdd-guard] ...` という reason で block される。状態はセッション単位で `~/.claude/tdd-guard/<session_id>.json` に永続化）。過去セッションで tdd-guard.ts を探し回ったことが複数回あるので、次に見たら原因調査やファイル探索はせず即座に対処すること。ゲートの解除方法は deny/block の種類で異なる:
+  - **実装編集の deny (失敗テスト未確認)**: 失敗テストを先に書くのが基本。編集がテスト不要 (スタイル調整・宣言的変更等で振る舞いを変えない) だと考える場合のみ、deny reason に従い `Agent(subagent_type: "tdd-judge")` に sentinel 形式で編集内容を渡して判定させる (trivial 判定なら同一内容の編集をリトライすると通る)
+  - **Stop block (テスト未実行)**: `[tdd-guard] ... テストを実行して ...` → 該当言語のテストコマンドを実行するだけで解除される
+  - **Stop block (レビュー未実施)**: `[tdd-guard] ... review-tdd agent ...` → まとまったテスト差分 (新規テストファイル or 20 行超) を書いた後にのみ発火する。`review-tdd` subagent (`model: "sonnet"` 明示、`output_path` 指定必須) を起動し、findings JSON が `ok: true` になるまで解除されない (マーカー自己申告では解除されない)
 - 設計原則（SOLID / YAGNI / 凝集度・結合度・コロケーション / 外界 DI）→ `~/.claude/rules/core/design.md`
 - テスト方針 (戦略 / ピラミッド / シナリオ網羅) → `~/.claude/rules/core/testing.md`
 - コミット規約 → `~/.claude/rules/core/commit.md` (subject 形式自体は commit-msg-guard hook が機械検証)
