@@ -76,7 +76,7 @@ mkdir -p "$SCRATCH_DIR"
 
 - 置き場所を `~/worktrees/` 固定 + リポジトリ名 prefix にするのは、**別リポジトリで同時に dev-impl を回してもディレクトリ名が衝突しないため**。Agent ツールには組み込みの `isolation: "worktree"` があるが、置き場所を指定できず統合前に自動クリーンアップされうるので、統合を親が握る本フローでは手動管理する
 - `SCRATCH_DIR` を worktree 外かつ run_id 配下に置くのは、(a) squash merge にレビュー成果物が混入しないため、(b) エスカレ停止後の再入時に親が同じ JSON を Read して統合を再開できるため
-- **前回 run の残骸の扱いは SKILL.md Step 0 の再入チェックに一本化する**。Step 0 を通過した時点で「取り込む」と判断された worktree は残っている (4p.4 の統合手順から再開する) ので、ここでは作らない。それでも同名が存在する場合は**同一 run 内の再試行** (フォールバック後の作り直し等) なので `git worktree remove --force` + `git branch -D` で掃除してから作り直してよい
+- **前回 run の残骸の扱いは SKILL.md Step 0 の再入チェックに一本化する**。Step 0 を通過した時点で「取り込む」と判断された worktree は残っている (4p.4 の統合手順から再開する) ので、ここでは作らない。それでも同名が存在する場合は**同一 run 内の再試行** (フォールバック後の作り直し等) なので掃除してから作り直してよい。掃除も下記「worktree 削除前チェック」を通す (`decision: discarded_stale`)
 - 依存パッケージのインストール (`npm ci` / `bun install` / `go mod download` 等) は worktree ごとに必要。**実行は implementer に任せる** (プロジェクトごとにコマンドが違うため、指示文で「必要ならセットアップコマンドを実行せよ」と伝える)
 - **git 管理外だが実行に必須のファイル** (`.env` / ローカル設定 / DB fixture / `.direnv` 等) は worktree に存在しない。メインの working tree に該当ファイルがあれば親が worktree へコピーし、何をコピーしたかを JSONL に記録する (コピーしないとセットアップやテストが実行できず、implementer が原因不明の失敗を報告する)
 - `run_elapsed_minutes` はバッチ開始時と各フェーズの統合前に計算する ([phase-execution.md](./phase-execution.md) の `## 4.1: run_elapsed_minutes 計算`)。上限超過ならバッチに着手せずエスカレ停止する (逐次モードの 4.1 に相当する評価点がここになるので、省くと time budget が並列モードで一度も評価されない)。`p1_fixes_in_phase` は各フェーズの統合時 (4p.4) にリセットする
@@ -231,14 +231,7 @@ fan-out 時に JSONL へ `event_type: impl_dispatch` (context に `phases` / `wo
 
 7. **状態更新**: TODO.md の該当フェーズを `- [x]` に更新し、JSONL に `event_type: impl_done` を記録する (context の `commit_sha` は**親の統合コミット SHA**。implementer の `worktree_commit_sha` とは別物)。implementer 報告の `design_decisions` / `open_questions` / `verification_skipped` は親が `event_type: design_decision` / `open_question` / `verification_skipped` として JSONL に転記する
 
-8. **後片付け**
-
-   ```bash
-   git worktree remove --force ~/worktrees/${REPO_NAME}-phase-${PHASE_ID}
-   git branch -D dev-impl/phase-${PHASE_ID}
-   ```
-
-   `--force` を付けるのは、implementer が入れた依存パッケージや生成物が worktree に未追跡で残っていると素の `remove` が `fatal: ... contains modified or untracked files` で失敗するため (`.gitignore` 済みのファイルだけなら素の remove でも成功するが、当てにしない)。順序も重要で、worktree を先に削除しないと `git branch -D` は `error: cannot delete branch ... used by worktree at ...` で失敗する。`SCRATCH_DIR` のレビュー JSON は worktree 外にあるので消えず、監査証跡として run のログディレクトリに残る。
+8. **後片付け**: 下記「worktree 削除前チェック」を `decision` の判定つきで実行してから削除する。統合後のここで leftover が出たら、それは **implementer の `git add` 漏れ**であり、squash merge にも入っていない = そのまま消すと実装が失われる。`SCRATCH_DIR` のレビュー JSON は worktree 外にあるので消えず、監査証跡として run のログディレクトリに残る
 
 9. **設計乖離の判定**: implementer 報告の `deviation_signals` を JSONL に転記した上で、SKILL.md Step 4.6 (P1 / P2 / P3 分類) を実行する。並列モードではこの転記が 4.6 の唯一の入力になる (逐次モードのように親が実装中に signals を観測できないため)。P2 で TODO.md を再生成する場合は、**バッチ内の残フェーズの統合をすべて終えてから**行う (再生成が統合待ちフェーズの見出しを書き換えると突合できなくなるため)。再生成後は Step 2 の wave 構築からやり直すが、**implementer が報告済みで未統合のフェーズは wave 再構築の対象から除外**し、既存 worktree の統合を先に完了させる (pending に戻すと worktree があるのに再実装してしまう)
 
@@ -246,12 +239,7 @@ fan-out 時に JSONL へ `event_type: impl_dispatch` (context に `phases` / `wo
 
 implementer の失敗・レビュー high 残存・マージ不能が起きたフェーズは、**並列を諦めて親が直営で実装し直す**。エスカレ停止するのは `design_overview_break` / `test_weakening_detected` / テストゲート 3 回不通過だけで、それ以外は停止せずここに落とす:
 
-1. worktree とブランチを削除して差分を捨てる (中途半端な実装を引き継がない)。フォールバック対象は未コミット差分や失敗した実装を抱えているため、`--force` と削除順序が必須:
-
-   ```bash
-   git worktree remove --force ~/worktrees/${REPO_NAME}-phase-${PHASE_ID}
-   git branch -D dev-impl/phase-${PHASE_ID}
-   ```
+1. worktree とブランチを削除して差分を捨てる (中途半端な実装を引き継がない)。下記「worktree 削除前チェック」を実行し、**捨てる内容を必ずログに残してから**削除する (フォールバック対象は失敗した実装を抱えているのが前提なので破棄自体は既定の動作だが、何が失われたかを後から追えるようにする)
 2. JSONL に `event_type: parallel_fallback` を記録する。implementer 報告の `reason` は下表で `parallel_fallback.reason` に変換する
 
    | implementer の reason | parallel_fallback.reason |
@@ -263,6 +251,41 @@ implementer の失敗・レビュー high 残存・マージ不能が起きた�
 3. そのフェーズを SKILL.md の 4.1 / 4.1.5 / 4.2 / 4.6 (逐次モード) で親が最初から実装する。**着手はバッチ内の他フェーズの統合をすべて終えた後**にする (先に直営実装を挟むと後続フェーズの worktree base とコミット順がずれる)
 
 `wave_fallbacks` が上限 (2 フェーズ / wave) を超えたら、以降の wave は並列モードを止めて全フェーズ逐次に切り替える (deps 宣言自体が信用できない状態のため)。JSONL に `event_type: parallel_disabled` (reason: `fallback_threshold`) を記録する。
+
+## worktree 削除前チェック
+
+worktree を削除する 3 箇所 (4p.1 の残骸掃除 / 4p.4 手順 8 の統合後削除 / 4p.5 手順 1 のフォールバック破棄) は、**必ずこの手順を通してから削除する**。無条件に `--force` で消すと、implementer が `git add` し忘れた実装ファイルを「ビルド生成物」と区別できずに失う。
+
+```bash
+WT=~/worktrees/${REPO_NAME}-phase-${PHASE_ID}
+LEFTOVER=$(git -C "$WT" status --porcelain --untracked-files=all)
+```
+
+`--untracked-files=all` はディレクトリ単位でまとめず個々のファイルを出し、`.gitignore` 済みのものは出さない。つまり **`$LEFTOVER` に現れる = git が追跡すべきなのに未コミット = コミット漏れの候補**であり、`node_modules/` のような無視対象の生成物はここに出てこない (実測確認済み)。
+
+### `$LEFTOVER` が空のとき
+
+そのまま削除する。**`--force` は付けない**:
+
+```bash
+git worktree remove "$WT"
+git branch -D dev-impl/phase-${PHASE_ID}
+```
+
+`.gitignore` 済みの生成物しか残っていない worktree は素の `remove` で成功する。あえて `--force` を使わないのは、チェックを飛ばしたり判定を誤ったりしても **git 自体が最後の安全網として削除を拒否する**ようにするため (`--force` を常用するとこの防御が効かなくなる)。削除順序は worktree → ブランチ。逆順だと `error: cannot delete branch ... used by worktree at ...` で失敗する。
+
+### `$LEFTOVER` が非空のとき
+
+まず一覧を 1 行テキストログと JSONL (`event_type: worktree_leftover`、context に `phase` / `files` / `decision`) に記録する。**沈黙して消さない**。その上で削除箇所ごとに次の分岐で処理する:
+
+| 削除箇所 | 扱い | decision |
+| --- | --- | --- |
+| 4p.4 手順 8 (統合後) | 中身を親が確認する。**ソースファイル (実装・テスト) が含まれていれば implementer のコミット漏れ**なので、`git -C "$WT" add -A && git -C "$WT" commit` でコミットし直し、4p.4 手順 2 の squash merge からやり直して統合に含める (手順 3〜7 も再実行する) | `reintegrated` |
+| 4p.4 手順 8 (統合後、上記の再統合後や生成物のみの場合) | 残るのが `.gitignore` 漏れの生成物だけなら、ファイル一覧をログに残して削除を続行する。`.gitignore` への追記は**このフェーズの実装にトレースできる場合のみ**行い、できなければ `open_question` として記録する (依頼スコープ外の設定変更を黙って入れない) | `discarded_artifacts` |
+| 4p.5 手順 1 (フォールバック破棄) | 破棄は既定の動作。**捨てる内容の一覧をログに残してから**削除する | `discarded_fallback` |
+| 4p.1 (同一 run 内の残骸掃除) | 同上。フォールバック後の作り直しなので捨ててよいが、記録は残す | `discarded_stale` |
+
+`discarded_*` で実際に削除するときだけ `git worktree remove --force "$WT"` を使う (未コミット差分がある状態では素の `remove` は `fatal: ... contains modified or untracked files` で失敗するため)。「捨てると判断した記録が JSONL にあること」が `--force` を使う条件になる。
 
 ## 状態管理の一元化
 
