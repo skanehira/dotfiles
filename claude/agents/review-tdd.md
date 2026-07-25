@@ -61,6 +61,7 @@ stat -f '%m %N' <file>   # macOS。Linux は `stat -c '%Y %n' <file>`
 
 - ❌ 設定値の assertion (`assert(config.enabled == true)`)
 - ❌ getter が setter の値を返すだけのトートロジー
+- ❌ テスト対象が存在しない / 実装から呼ばれない (未実装 API のスタブ呼び出し、どの本番コードパスからも到達しないデッドパスのテスト)
 - ✅ 入力 → 期待出力の assertion
 - ✅ ユーザーに見える振る舞いの assertion
 
