@@ -376,13 +376,16 @@ export function buildExemptions(
 }
 
 // review-tdd の応答テキストから findings JSON の絶対パスを取り出す。
-// 「応答は output_path 1行のみ」という契約だが、Claude Code の Agent ツールは応答末尾に
-// `agentId: xxx (use SendMessage...)` を区切りなしで連結し、さらに `<usage>` ブロックを
-// 付けることがあるため、素の trim では読めないパスになる。最初に現れる
-// 「行頭または空白直後から始まる絶対パスかつ .json で終わる」部分だけを拾う。
+// 「応答は output_path 1行のみ」という契約だが、実際の応答は素の trim では読めない:
+//   - Claude Code の Agent ツールが末尾に `agentId: xxx (use SendMessage...)` を
+//     区切りなしで連結し、`<usage>` ブロックを付けることがある
+//   - tool_response が文字列でない場合 handlePostAgent が JSON.stringify するため、
+//     パスが `"text":"/private/...` のように引用符直後に現れる
+// そこで最初に現れる「絶対パスかつ .json で終わる」部分だけを拾う。直前の文字は
+// 単語構成文字・ドット・ハイフン以外に限ることで `relative/path/x.json` の部分一致を防ぐ。
 // lazy 量指定子なので `...findings.jsonagentId: ...` からは `...findings.json` で止まる。
 export function extractReviewReportPath(text: string): string | null {
-  const match = text.match(/(?:^|\s)(\/\S+?\.json)/);
+  const match = text.match(/(?:^|[^\w.\-])(\/[^\s"]+?\.json)/);
   return match ? match[1] : null;
 }
 

@@ -1069,6 +1069,23 @@ Deno.test("extractReviewReportPath strips a trailing usage block appended after 
   assertEquals(extractReviewReportPath(response), "/tmp/scratchpad/findings.json");
 });
 
+Deno.test("extractReviewReportPath finds the path when the response was JSON-stringified into content blocks", () => {
+  const response = JSON.stringify({
+    content: [
+      {
+        type: "text",
+        text:
+          "/private/tmp/session/scratchpad/findings.jsonagentId: abc123 (use SendMessage...)",
+      },
+    ],
+  });
+
+  assertEquals(
+    extractReviewReportPath(response),
+    "/private/tmp/session/scratchpad/findings.json",
+  );
+});
+
 Deno.test("extractReviewReportPath returns null when the response contains no absolute json path", () => {
   const cases = [
     "",
