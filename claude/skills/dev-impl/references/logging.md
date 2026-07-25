@@ -26,7 +26,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
   "timestamp": "2026-06-30T10:00:00+09:00",
   "phase": "phase-3",
   "step": "architecture-guard",
-  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question",
+  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|wave_start|impl_dispatch|impl_report|impl_done|merge_conflict|parallel_fallback|parallel_disabled",
   "severity": "info|warn|error",
   "summary": "1 行サマリ (テキストログにも残る内容)",
   "context": {
@@ -106,6 +106,30 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 
 同一の判断・質問を後続フェーズで踏襲するだけの場合は再記録しない (初回のみ)。
 
+### 並列モードの event_type (Step 2 / Step 4)
+
+wave 実行 ([parallel-execution.md](./parallel-execution.md)) で使う 6 種。`phase` フィールドには wave 全体の事象なら `wave-<index>`、個別フェーズの事象ならそのフェーズ名を入れる:
+
+`phase` フィールドの表記は逐次モードと揃えて `phase-<識別子>` 形式 (例: `phase-4-a`) を使い、context 内の `phases` / `phase` は識別子のみ (例: `["2", "4-a"]`) を入れる。
+
+| event_type | severity | 記録タイミング | context |
+| --- | --- | --- | --- |
+| `wave_start` | info | 各 wave (バッチに分割した場合は各バッチ) の実行開始時に 1 件 | `wave_index` (1 始まり) / `phases` (フェーズ識別子の配列) / `batch_size` (このバッチの同時 implementer 数、1〜3。レポートの wave 見出し行に併記する) |
+| `impl_dispatch` | info | implementer の fan-out 直後 | `phases` / `worktrees` (worktree 絶対パスの配列) / `wave_base_sha` |
+| `impl_report` | info | implementer から SendMessage で報告を受領した時 | 報告 JSON 全文 + `wave_base_sha` + `worktree_path` (エスカレ後の再入で統合を再開するための証跡。SendMessage 本文は復元できない) |
+| `impl_done` | info | 1 フェーズの統合完了時 (親のコミット後) | `phase` / `summary` / `commit_sha` (**親の統合コミット SHA**。implementer の `worktree_commit_sha` とは別物) / `review_outputs` (親が確認したレビュー結果 JSON のパス配列、監査証跡) / `guard_loops` / `review_loops` (implementer 報告値。レポートのフェーズ行に出す) |
+| `merge_conflict` | warn | squash merge でコンフリクト発生時 | `phase` / `conflicted_files` / `resolved` (true = 親が解消、false = フォールバックへ) |
+| `parallel_fallback` | warn | 並列を諦めて親の逐次実装に切り替えた時 | `phase` / `reason` (`impl_failed` / `review_high_remaining` / `merge_unresolvable`。implementer 報告の reason からの変換表は parallel-execution.md の `### 4p.5: 逐次フォールバック`) / `implementer_report` |
+| `parallel_disabled` | warn | 並列モードを無効化した時 (run 中最大 2 回: Step 2 の起動時判定と、実行中の `fallback_threshold` 超過) | `reason` (`deps_missing` / `deps_unknown_ref` / `deps_cycle` / `fallback_threshold`) / `detail` |
+
+```json
+"context": {
+  "wave_index": 2,
+  "phases": ["2", "3"],
+  "batch_size": 2
+}
+```
+
 書き込みは `jq -nc --arg ... '{...}' >> $JSONL` で 1 行 1 エントリの append-only。`context` は event_type に応じて中身が変わる (`start` / `done` ではほぼ空でも良い)。
 
 両ログとも各ステップの「開始 / 完了 / 動的修正 / エスカレ」発生時に同期して書き込む。1 行ログ = summary のみ、JSONL = summary + context を構造化。
@@ -132,4 +156,26 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 [2026-06-30 10:08:05] phase-2 / commit / done
 ...
 [2026-06-30 10:30:00] all phases done (5/5). P1=1, P2=0
+```
+
+## 範例: 並列モードの実行ログ
+
+```
+[2026-06-30 10:00:00] dev-impl start (docs/DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md)
+[2026-06-30 10:00:02] waves built: [1] -> [2,3] -> [4-a] (parallel mode enabled)
+[2026-06-30 10:00:03] wave-1 / start (phases: 1, size=1 -> 逐次)
+[2026-06-30 10:04:30] phase-1 / commit / done
+[2026-06-30 10:04:31] wave-2 / start (phases: 2,3, size=2 -> 並列)
+[2026-06-30 10:04:35] wave-2 / worktree add / ~/worktrees/myapp-phase-2, ~/worktrees/myapp-phase-3
+[2026-06-30 10:04:40] wave-2 / impl_dispatch / implementer x2 (model: sonnet)
+[2026-06-30 10:12:10] phase-3 / implementer / done (review high=0, commit=a1b2c3d)
+[2026-06-30 10:14:55] phase-2 / implementer / done (review high=0, commit=e4f5g6h)
+[2026-06-30 10:15:00] phase-2 / merge --squash / clean
+[2026-06-30 10:15:40] phase-2 / test-gate (full) / green
+[2026-06-30 10:15:45] phase-2 / commit / done
+[2026-06-30 10:15:50] phase-3 / merge --squash / clean
+[2026-06-30 10:16:35] phase-3 / test-gate (full) / green
+[2026-06-30 10:16:40] phase-3 / commit / done
+[2026-06-30 10:16:45] wave-2 / worktree remove / done
+[2026-06-30 10:16:46] wave-3 / start (phases: 4-a, size=1 -> 逐次)
 ```

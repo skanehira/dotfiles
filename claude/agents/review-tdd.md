@@ -17,6 +17,7 @@ model: opus
 PHASE_CONTEXT:
   phase_name: <フェーズN: 名前>
   phase_start_sha: <SHA>
+  repo_dir: <検査対象リポジトリの絶対パス。省略時はカレントディレクトリ>
   related_source_files:
     - src/path/to/file.ts
     - src/path/to/file.test.ts
@@ -26,12 +27,15 @@ PHASE_CONTEXT:
   output_path: /tmp/review-tdd-<phase>.json
 ```
 
+`repo_dir` は dev-impl の並列モードのように git worktree を検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、ファイルの Read も `repo_dir` 基準の絶対パスで行う。**
+
 ### Step 1: 差分取得
 
 dev-impl はフェーズ末尾のテストゲート通過後 (Step 4.2e) までコミットしないため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff/log は常に空になる。working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
 
 ```bash
-{ git diff --name-only "${PHASE_START_SHA}" -- '*.ts' '*.tsx' '*.go' '*.rs' '*.py' '*.lua'; git ls-files --others --exclude-standard -- '*.ts' '*.tsx' '*.go' '*.rs' '*.py' '*.lua'; } | sort -u
+REPO_DIR="${REPO_DIR:-.}"
+{ git -C "$REPO_DIR" diff --name-only "${PHASE_START_SHA}" -- '*.ts' '*.tsx' '*.go' '*.rs' '*.py' '*.lua'; git -C "$REPO_DIR" ls-files --others --exclude-standard -- '*.ts' '*.tsx' '*.go' '*.rs' '*.py' '*.lua'; } | sort -u
 ```
 
 related_source_files が指定されていればそれを優先。それ以外はフェーズ差分から拾う。

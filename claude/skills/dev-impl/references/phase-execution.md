@@ -22,7 +22,7 @@ fi
 
 UI フェーズ判定 (`uiPhase`): `phase_tasks` / フェーズ名に UI キーワード (画面 / コンポーネント / page / component / style / CSS / レイアウト) が含まれる、または `related_source_files` にフロントエンド dir (`apps/web/`, `frontend/`, `src/components/`, `src/pages/` 等) が含まれる場合に true。**`product_mode: cli` の場合はキーワード判定を行わず常に false** (CLI 実装の「コマンド」「フラグ」等の語がキーワード誤爆するのを防ぐ)。
 
-実行前に `docs/.dev-impl/<run_id>/phase-<n>-context.md` (Step 4.1.5 で組み立て済み) を Read し、YAML フィールド `product_mode` / `phase_tasks` / `phase_name` / `related_source_files` の値を確認する。以下のコードの `$PRODUCT_MODE` / `$PHASE_TASKS` / `$PHASE_NAME` / `$RELATED_SOURCE_FILES` は、その Read した値をそのままシェル変数に代入したものを指す (例: `PHASE_NAME="フェーズ3: ユーザー認証"`)。YAML パーサーは使わず、Read した内容から手動で代入する。
+実行前に `docs/.dev-impl/<run_id>/phase-<識別子>-context.md` (Step 4.1.5 で組み立て済み) を Read し、YAML フィールド `product_mode` / `phase_tasks` / `phase_name` / `related_source_files` の値を確認する。以下のコードの `$PRODUCT_MODE` / `$PHASE_TASKS` / `$PHASE_NAME` / `$RELATED_SOURCE_FILES` は、その Read した値をそのままシェル変数に代入したものを指す (例: `PHASE_NAME="フェーズ3: ユーザー認証"`)。YAML パーサーは使わず、Read した内容から手動で代入する。
 
 ```bash
 # $PRODUCT_MODE / $PHASE_TASKS / $PHASE_NAME / $RELATED_SOURCE_FILES は上記の通り PHASE_CONTEXT から代入済みの前提
@@ -42,11 +42,14 @@ fi
 const guard = await Agent({
   description: "境界違反の機械検査",
   subagent_type: "architecture-guard",
-  prompt: `PHASE_CONTEXT: docs/.dev-impl/<run_id>/phase-<n>-context.md を Read。
-target_diff: working tree vs ${PHASE_START_SHA}
+  prompt: `PHASE_CONTEXT: docs/.dev-impl/<run_id>/phase-<識別子>-context.md を Read。
+target_diff: phase:${phaseName}
+PHASE_START_SHA: ${PHASE_START_SHA}
 git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。`
 })
 ```
+
+`target_diff` に渡せるのは `HEAD` / `working_tree` / `phase:<フェーズ名>` の 3 値のみ (`claude/agents/architecture-guard.md` の「入力」節)。それ以外の文字列は agent 側の分岐に該当せず未定義動作になる。並列モードでは加えて `repo_dir` (worktree の絶対パス) を渡す。
 
 ## 4.2d: review-adversarial スキップ述語
 
