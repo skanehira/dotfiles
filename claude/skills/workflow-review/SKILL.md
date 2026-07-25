@@ -93,30 +93,47 @@ const ctx = {
 
 `args.dimensions` (optional array, 例: `["tdd"]` のような観点名の配列) が指定されていれば、その観点の subagent だけを起動する (呼び出し側での絞り込み用)。未指定時 (手動 `/workflow-review` 実行時など) は 4 観点フル起動 (ただし adversarial は下記スキップ述語を満たせば自動的に外れる)。
 
-### Step 2.5: review-adversarial のスキップ判定
+### Step 2.5: 観点トリアージ
 
-dev-impl Step 4.2d と同じ機械述語を評価する (手動利用なので JSONL 記録はしない。Step 5 のサマリに `adversarial: skipped (trivial diff: N 行)` の形で表示する)。基準は Step 2 の `phase_start_sha` (= `HEAD`) に揃える (`--staged` 実行時に staged 差分が判定から漏れることや、ctx が使う基準と述語の基準がズレることを防ぐため。`$CHANGED` は porcelain の 2 文字ステータスプレフィックス付き出力ではなく `git diff --name-only` + `git ls-files --others` のプレーンなパス一覧を使う (プレフィックス付き出力にアンカー正規表現 `(^|/)tests?/` を当てると先頭一致が機能しない)):
+「実装内容に応じた観点選択」を機械述語で行う。dev-impl Step 4.2d の adversarial スキップ述語を全観点に一般化したもの (手動利用なので JSONL 記録はしない。Step 5 のサマリに `adversarial: skipped (trivial diff: N 行)` のように観点ごとの採否理由を表示する)。基準は Step 2 の `phase_start_sha` (= `HEAD`) に揃える (`--staged` 実行時に staged 差分が判定から漏れることや、ctx が使う基準と述語の基準がズレることを防ぐため)。`$CHANGED` は porcelain の 2 文字ステータスプレフィックス付き出力ではなく `git diff --name-only` + `git ls-files --others` のプレーンなパス一覧を使う (プレフィックス付き出力にアンカー正規表現 `(^|/)tests?/` を当てると先頭一致が機能しない)。
 
 ```bash
 CHANGED=$({ git diff --name-only HEAD; git ls-files --others --exclude-standard; } | sort -u)
+NEW_FILES=$(git ls-files --others --exclude-standard)
 TRACKED_LINES=$(git diff --shortstat HEAD | rg -o '[0-9]+' | tail -n +2 | paste -sd+ - | bc)
 UNTRACKED_LINES=$(git ls-files --others --exclude-standard -z | xargs -0 cat 2>/dev/null | wc -l)
 LINES=$(( ${TRACKED_LINES:-0} + ${UNTRACKED_LINES:-0} ))
+
 TEST_FILE_CHANGED=$(echo "$CHANGED" | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)' || true)
 TRACKED_CONTENT_CHANGED=$(git diff HEAD -U0 -- ':!*.md' ':!docs/' | rg '^[+-].*(#\[(test|cfg\(test\)|tokio::test|rstest)\]|func Test[A-Z]|\b(it|test|describe)\s*\(|def\s+test_|@pytest\.)' || true)
 UNTRACKED_CONTENT_CHANGED=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 -I{} rg -l '#\[(test|cfg\(test\)|tokio::test|rstest)\]|func Test[A-Z]|\b(it|test|describe)\s*\(|def\s+test_|@pytest\.' {} 2>/dev/null || true)
 TEST_CONTENT_CHANGED="${TRACKED_CONTENT_CHANGED}${UNTRACKED_CONTENT_CHANGED}"
+
+NON_DOC_CHANGED=$(echo "$CHANGED" | rg -v '(^|/)docs/|\.md$' || true)
+UI_CHANGED=$(echo "$CHANGED" | rg '\.(tsx|jsx|vue|svelte|css|scss)$|(^|/)(routes|pages|components)/' || true)
+CI_CHANGED=$(echo "$CHANGED" | rg '(^|/)\.github/workflows/|(^|/)\.gitlab-ci|Dockerfile|docker-compose|(^|/)\.circleci/' || true)
 ```
 
-テスト変更なし (`$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空) かつ変更総行数 ≤ 20 (または `.md`/`docs/` のみの差分) かつ CI・ビルド設定変更なしなら skip 可 (基準の詳細は dev-impl SKILL.md Step 4.2d 参照)。
+観点ごとの起動条件 (機械述語。満たさなければ pre-filter でその観点を候補から外す):
+
+| 観点 | 起動条件 |
+|---|---|
+| tdd | `$TEST_FILE_CHANGED` または `$TEST_CONTENT_CHANGED` が非空 (テストファイルの差分がある) |
+| quality | `$NON_DOC_CHANGED` が非空 (実装ファイル差分あり) かつ (`$NEW_FILES` が非空 または `$LINES` > 20) |
+| product_readiness | `$UI_CHANGED` が非空 (web UI 系差分がある) |
+| adversarial | テスト変更なし (`$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空) かつ `$LINES` ≤ 20 (または `.md`/`docs/` のみの差分) かつ `$CI_CHANGED` が空、の**すべてを満たさない**場合に起動 (= trivial diff でなければ起動) |
+
+pre-filter で候補になった観点をそのままメインループに渡し、**メインループが diff の内容を見て最終的にどの観点を実際に起動するかを選択し、「選択と根拠」を 1 行出力**する (自律モード規約と同型。事後にユーザがレビューで乖離に気付ける状態を保つ)。`args.dimensions` が指定されている場合はこの述語評価をスキップし、指定観点をそのまま使う。
 
 ### Step 3: subagent 並列起動
 
-Agent ツールを同一メッセージ内に複数 tool_use として並べて並列起動:
+`selectedDimensions` は Step 2.5 の pre-filter 候補からメインループが最終選択した観点の配列 (「選択と根拠」1 行出力の結果)。Agent ツールを同一メッセージ内に複数 tool_use として並べて並列起動:
 
 ```javascript
 const DIMENSIONS = ["tdd", "quality", "product_readiness", "adversarial"]
-const targetDimensions = args.dimensions?.length ? args.dimensions : DIMENSIONS
+// args.dimensions 指定時はそれを最優先。未指定なら Step 2.5 の pre-filter 候補から
+// メインループが diff 内容を見て最終選択する (選択と根拠を 1 行出力してから実行)。
+const targetDimensions = args.dimensions?.length ? args.dimensions : selectedDimensions
 
 const AGENT_TYPE = {
   tdd: "review-tdd",
