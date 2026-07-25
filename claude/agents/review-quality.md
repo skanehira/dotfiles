@@ -17,6 +17,7 @@ model: opus
 PHASE_CONTEXT:
   phase_name: <フェーズN: 名前>
   phase_start_sha: <SHA>
+  repo_dir: <検査対象リポジトリの絶対パス。省略時はカレントディレクトリ>
   related_source_files: [...]
   design_overview: |
     <DESIGN.md 関連節抜粋: 主要コンポーネント / レイヤ方針>
@@ -65,9 +66,12 @@ PHASE_CONTEXT:
 dev-impl はフェーズ末尾のテストゲート通過後 (Step 4.2e) までコミットしないため、コミット間 diff は常に空になる。working tree を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
 
 ```bash
-git diff "${PHASE_START_SHA}"
-git ls-files --others --exclude-standard
+REPO_DIR="${REPO_DIR:-.}"   # 入力の repo_dir
+git -C "$REPO_DIR" diff "${PHASE_START_SHA}"
+git -C "$REPO_DIR" ls-files --others --exclude-standard
 ```
+
+`repo_dir` は dev-impl の並列モードのように git worktree を検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、ソースの Read も `repo_dir` 基準の絶対パスで行う。**
 
 ### Step 2: rules + design Read
 

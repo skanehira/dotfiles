@@ -34,9 +34,12 @@
 ┌──────────────────────────▼─────────────────────────────────────┐
 │  /dev-impl — 実装ループ (model: sonnet、直接起動で切り替わる)  │
 │                                                                │
-│  POC_NEEDED 残存ガード → 各フェーズ:                           │
-│    メインループで TDD 実装 → architecture-guard →              │
-│    review-* 並列 (model: opus) → テストゲート → commit         │
+│  POC_NEEDED 残存ガード → TODO.md の deps 宣言で wave 構築 →    │
+│  wave サイズ 1: メインループで TDD 実装 →                      │
+│    architecture-guard → review-* 並列 (opus) → テスト → commit │
+│  wave サイズ 2+: implementer を worktree に fan-out (sonnet)。 │
+│    実装〜レビュー修正まで各自完結 → 親が squash merge →        │
+│    全テストゲート → commit (統合はフェーズごとに逐次)          │
 │  → ゴール達成判定 → HTML レポート                              │
 │                                                                │
 │  エスカレ (P3 等) でのみ停止。再開は /dev-impl 再実行          │
@@ -74,6 +77,7 @@ skills/
 |---|---|---|
 | dev-spec (設計ループ) | セッション継承 (最上位 tier 推奨) | 検証器が人間しかいないため、生成側を賢くする |
 | dev-impl (実装ループ) | `model: sonnet` (frontmatter) | テストゲート・レビュー fan-out という検証器が厚いため actor は下げられる |
+| dev-impl の implementer subagent (並列モード) | `model: sonnet` (呼び出し時明示) | 実行器。自分で起動する検証器 (guard=haiku の機械判定 / review-*=opus) より下位に保つ |
 | review-* subagent | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より賢く保つ。frontmatter も opus にして、呼び出し時の明示忘れで無音でセッション継承より下に落ちない防御とする |
 
 モデル指定はすべて alias (`opus` / `sonnet` / `haiku`) で書く (固定 ID 禁止。世代交代への自動追従のため)。
@@ -92,7 +96,7 @@ skills/
 | 並列化 | 単発 | 同一メッセージ内の複数 Agent tool_use で並列起動可 |
 | hook 適用 | parent の Stop/PostToolUse/UserPromptSubmit | parent の hooks は継承されない |
 
-subagent への委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」のためだけに行う。逐次依存する実装・修正・コミットは**メインループ直営** (CLAUDE.md「サブエージェントの使い方」)。
+subagent への委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」のためだけに行う。逐次依存する実装・修正・コミットは**メインループ直営** (CLAUDE.md「委譲の判断」)。dev-impl の並列モードが実装を implementer subagent に出すのはこの原則の例外ではなく「並列化」に当たるケースで、独立フェーズを worktree で分離して同時に進めるためのもの。git index を共有する統合 (merge / コミット) は並列化できないので親に残す。なお subagent の Bash は**呼び出しごとに cwd が親セッションのものへ戻る**ため、worktree で作業させる agent には作業ディレクトリを引数で渡し `git -C <path>` を使わせる (`cd` の状態は次の呼び出しに残らない)。
 
 ### skill = agent の wrapper の例
 
@@ -110,6 +114,7 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 | `fix-lsp-warnings` | `dev-impl` Step 4.2c / Agent ツールで直接起動 |
 | `review-*` (tdd / quality / product-readiness / adversarial) | `dev-impl` Step 4.2d (model: opus 明示) / `workflow-review` |
 | `review-tdd` (単一観点のみ) | `dev-impl-quick` ステップ 4 (model: opus 明示) |
+| `general-purpose` (implementer として) | `dev-impl` Step 4 の並列モード (model: sonnet 明示、worktree 分離) |
 
 ## スキル一覧
 
@@ -118,7 +123,7 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 | スキル | 説明 | 入力 | 出力 |
 |---|---|---|---|
 | [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、承認ゲートで実装ループへ引き渡す。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md |
-| [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (メインループ TDD → guard → review fan-out (敵対的レビュー含む) → テストゲート → commit)、完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須、承認スタンプは goals_sha 付き) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
+| [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (メインループ TDD → guard → review fan-out (敵対的レビュー含む) → テストゲート → commit)。TODO.md の全フェーズに依存宣言 `<!-- deps: ... -->` があれば並列モードになり、互いに独立なフェーズを worktree 分離した implementer (sonnet) に同時 fan-out する (最大 3、統合は親が逐次)。完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須、承認スタンプは goals_sha 付き) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
 | [dev-impl-quick](./dev-impl-quick/) | 軽量実装ループ。依頼文をタスク分解 → 1 件ずつ直営 TDD → テストゲート → review-tdd (単一観点、model: opus 明示) → タスク単位 commit。複数観点レビュー fan-out・進捗ログ・レポートは持たない | 依頼文または簡易タスクリスト (docs 不要) | タスク単位のコミット |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / ddd-modeling / analyzing-requirements / interview / verification-review / todo-generation)。

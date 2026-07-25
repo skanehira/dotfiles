@@ -44,8 +44,16 @@ UI/UX gap: <未実装画面数> 画面 / <未実装ナビ経路数> 経路 / fro
 - 最終成功 commit: <SHA>
 - 実装ノート: 設計判断 <X> 件 / 未解決の質問 <Y> 件 (詳細は HTML レポート)
 
+未統合 worktree (並列モードで停止した場合のみ。逐次モードでは「なし」):
+- 統合済みフェーズ: <このバッチで統合を終えたフェーズ識別子、無ければ「なし」>
+- 未統合フェーズ: <識別子> — worktree: <絶対パス> / ブランチ: dev-impl/phase-<識別子>
+- レビュー結果 JSON: ~/.claude/logs/dev-impl/<run_id>/reviews/phase-<識別子>/
+
 次のステップ:
 - 上記詳細を踏まえ DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md を見直す
 - (フェーズ実装やり直したい場合) git restore で working tree クリア後、dev-impl 再起動
+- (未統合 worktree がある場合) 中身を確認し、取り込むか捨てるかを決めてから dev-impl を再起動する
+  (Step 0 の再入チェックで選択を訊かれる。捨てる場合は
+   `git worktree remove --force <パス>` → `git branch -D dev-impl/phase-<識別子>` の順で削除)
 - (DESIGN 修正後) /dev-spec で TODO 再生成後、/dev-impl を再起動
 ```

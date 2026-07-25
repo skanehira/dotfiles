@@ -16,6 +16,7 @@ model: opus
 ```yaml
 phase_name: <フェーズN: 名前>        # TODO.md の該当節を自分で rg で切り出すキー
 phase_start_sha: <SHA>
+repo_dir: <検査対象リポジトリの絶対パス。省略時はカレントディレクトリ>
 docs_dir: docs/                      # TODO.md / DESIGN*.md を自力 Read (無ければレンズ C は対象なしとして skip)
 dev_server:                          # optional。レンズ A の Web UI 攻撃用
   url: <検出できた URL>
@@ -26,12 +27,15 @@ output_path: /tmp/review-adversarial-<phase>.json
 
 **禁止事項**: プロジェクト配下 (working tree) への Write / Edit は一切行わない。書き込みは `scratch_dir` と `output_path` のみ。
 
+`repo_dir` は dev-impl の並列モードのように git worktree を検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、攻撃対象コードの Read・実行も `repo_dir` 基準の絶対パスで行う。**
+
 ### Step 1: 差分取得
 
 `review-tdd` と同じ理由 (Step 4.2e までコミットしないためコミット間 diff は空) で working tree を基準にする:
 
 ```bash
-{ git diff --name-only "${PHASE_START_SHA}"; git ls-files --others --exclude-standard; } | sort -u
+REPO_DIR="${REPO_DIR:-.}"
+{ git -C "$REPO_DIR" diff --name-only "${PHASE_START_SHA}"; git -C "$REPO_DIR" ls-files --others --exclude-standard; } | sort -u
 ```
 
 ### Step 2: TODO.md 該当節の切り出し
