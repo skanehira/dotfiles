@@ -161,7 +161,7 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
 
 各フェーズ行クリックで `<details>` を toggle (JS は最小限)。
 
-**並列モードの表示**: `event_type: wave_start` があった run では、フェーズ行を wave 単位でグルーピングし、各グループの見出し行に `wave-<index> (phases: 2,3 / 並列 <batch_size> 体)` を出す (wave サイズ 1 フェーズは `(逐次)`)。並列実行されたフェーズは実装が同時進行しているため duration が重なる — 行の duration は implementer 起動から統合コミットまでの実時間をそのまま出し、wave 見出し行には `wave_start` の timestamp から**その wave の最後の `impl_done`** までを wave 全体の実時間として併記する。`guard_loops` / `review_loops` 列は並列フェーズでは `impl_done` の context の同名フィールド (implementer 報告値) を使う。`parallel_fallback` / `merge_conflict` が記録されたフェーズは status バッジを warn (amber) にし、詳細 `<details>` に reason を出す。`parallel_disabled` が記録されている run は、タイムライン冒頭に「並列モード無効 (reason: ...)」の 1 行を出す。
+**並列モードの表示**: `event_type: wave_start` があった run では、フェーズ行を wave 単位でグルーピングし、各グループの見出し行に `wave-<index> (phases: 2,3 / 並列 <batch_size> 体)` を出す (wave サイズ 1 フェーズは `(逐次)`)。並列実行されたフェーズは実装が同時進行しているため duration が重なる — 行の duration は implementer 起動から統合コミットまでの実時間をそのまま出し、wave 見出し行には `wave_start` の timestamp から**その wave の最後の `impl_done`** までを wave 全体の実時間として併記する。`guard_loops` / `review_loops` 列は並列フェーズでは `impl_done` の context の同名フィールド (implementer 報告値) を使う。`parallel_fallback` / `merge_conflict` / `worktree_leftover` が記録されたフェーズは status バッジを warn (amber) にし、詳細 `<details>` に reason (leftover なら `decision` とファイル一覧) を出す。**`worktree_leftover` は破棄された実装の唯一の記録になりうるので省略しない**。`parallel_disabled` が記録されている run は、タイムライン冒頭に「並列モード無効 (reason: ...)」の 1 行を出す。
 
 ## セクション 4: 動的修正の詳細 (P1 / P2 / P3)
 
@@ -360,7 +360,7 @@ function escape(s) {
 ## 生成プロセス (dev-impl 視点)
 
 1. JSONL を Read して entries 配列に
-2. entries を event_type で分類 (phases / decisions / review_low / design_decisions / open_questions / pocs / goals / waves)。JSONL 記録時点で重複排除済みのため、`design_decision_count` / `open_question_count` は分類後の配列の件数 (`.length`) をそのまま使う。`waves` には並列モードの 7 種 (`wave_start` / `impl_dispatch` / `impl_report` / `impl_done` / `merge_conflict` / `parallel_fallback` / `parallel_disabled`) を集め、セクション 3 のグルーピングに使う (1 件も無ければフラットなタイムラインになる)。**フェーズ完了数は `done` と `impl_done` の和**で数える (並列フェーズは `impl_done` でしか完了しないため、`done` だけで数えると集計から漏れる)
+2. entries を event_type で分類 (phases / decisions / review_low / design_decisions / open_questions / pocs / goals / waves)。JSONL 記録時点で重複排除済みのため、`design_decision_count` / `open_question_count` は分類後の配列の件数 (`.length`) をそのまま使う。`waves` には並列モードの 8 種 (`wave_start` / `impl_dispatch` / `impl_report` / `impl_done` / `merge_conflict` / `worktree_leftover` / `parallel_fallback` / `parallel_disabled`) を集め、セクション 3 のグルーピングに使う (1 件も無ければフラットなタイムラインになる)。**フェーズ完了数は `done` と `impl_done` の和**で数える (並列フェーズは `impl_done` でしか完了しないため、`done` だけで数えると集計から漏れる)
 3. 上記テンプレ各セクションを順に組み立て (template literal で文字列構築)
 4. 1 つの HTML 文字列にして Write
 5. `git add` + `git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"`

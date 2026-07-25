@@ -26,7 +26,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
   "timestamp": "2026-06-30T10:00:00+09:00",
   "phase": "phase-3",
   "step": "architecture-guard",
-  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|wave_start|impl_dispatch|impl_report|impl_done|merge_conflict|parallel_fallback|parallel_disabled",
+  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|wave_start|impl_dispatch|impl_report|impl_done|merge_conflict|worktree_leftover|parallel_fallback|parallel_disabled",
   "severity": "info|warn|error",
   "summary": "1 行サマリ (テキストログにも残る内容)",
   "context": {
@@ -119,6 +119,7 @@ wave 実行 ([parallel-execution.md](./parallel-execution.md)) で使う 6 種�
 | `impl_report` | info | implementer から SendMessage で報告を受領した時 | 報告 JSON 全文 + `wave_base_sha` + `worktree_path` (エスカレ後の再入で統合を再開するための証跡。SendMessage 本文は復元できない) |
 | `impl_done` | info | 1 フェーズの統合完了時 (親のコミット後) | `phase` / `summary` / `commit_sha` (**親の統合コミット SHA**。implementer の `worktree_commit_sha` とは別物) / `review_outputs` (親が確認したレビュー結果 JSON のパス配列、監査証跡) / `guard_loops` / `review_loops` (implementer 報告値。レポートのフェーズ行に出す) |
 | `merge_conflict` | warn | squash merge でコンフリクト発生時 | `phase` / `conflicted_files` / `resolved` (true = 親が解消、false = フォールバックへ) |
+| `worktree_leftover` | warn | worktree 削除前チェックで未コミットファイルを検出した時 (parallel-execution.md の `## worktree 削除前チェック`) | `phase` / `files` (`git status --porcelain` の行の配列) / `decision` (`reintegrated` = コミット漏れとして統合し直した / `discarded_artifacts` = 生成物として破棄 / `discarded_fallback` = フォールバックで破棄 / `discarded_stale` = 残骸として破棄) |
 | `parallel_fallback` | warn | 並列を諦めて親の逐次実装に切り替えた時 | `phase` / `reason` (`impl_failed` / `review_high_remaining` / `merge_unresolvable`。implementer 報告の reason からの変換表は parallel-execution.md の `### 4p.5: 逐次フォールバック`) / `implementer_report` |
 | `parallel_disabled` | warn | 並列モードを無効化した時 (run 中最大 2 回: Step 2 の起動時判定と、実行中の `fallback_threshold` 超過) | `reason` (`deps_missing` / `deps_unknown_ref` / `deps_cycle` / `fallback_threshold`) / `detail` |
 
