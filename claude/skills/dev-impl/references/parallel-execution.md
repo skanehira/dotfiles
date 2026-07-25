@@ -8,7 +8,7 @@
 | --- | --- |
 | **wave** | 同時に着手できるフェーズの集合。TODO.md の `deps` 宣言をトポロジカルソートした 1 層分 |
 | **識別子** | フェーズ見出しの `フェーズ` 直後からコロンまでの文字列 (`1` / `3` / `5-a`)。ブランチ名・worktree ディレクトリ名に埋め込むため半角英数字とハイフンのみ (定義は `../../dev-spec/references/todo-generation.md` の `#### フェーズ依存の宣言 (dev-impl の並列実行に使う)`) |
-| **implementer** | wave 内の 1 フェーズを専用 worktree で実装する subagent (`model: sonnet`)。実装 + guard + レビュー + 修正までを worktree 内で完結させる |
+| **implementer** | wave 内の 1 フェーズを専用 worktree で実装する subagent (`model: opus`)。実装 + guard + レビュー + 修正までを worktree 内で完結させる |
 | **統合** | 親 (メインセッション) が implementer の成果ブランチを squash merge し、全テストゲートを通してコミットするまでの一連の処理 |
 
 ## Step 2: wave の構築
@@ -94,7 +94,7 @@ PHASE_CONTEXT はメインの working tree 側 (`docs/.dev-impl/`) に置く。�
 
 ### 4p.3: implementer の fan-out (親)
 
-wave (バッチ) 内の全フェーズ分の Agent 呼び出しを**同一メッセージ内の複数 tool_use** として並列起動する。各呼び出しは `model: sonnet` を明示し、guard / review subagent を自分で起動できるよう Agent ツールを持つ `general-purpose` を `subagent_type` に指定する。
+wave (バッチ) 内の全フェーズ分の Agent 呼び出しを**同一メッセージ内の複数 tool_use** として並列起動する。各呼び出しは `model: opus` を明示し、guard / review subagent を自分で起動できるよう Agent ツールを持つ `general-purpose` を `subagent_type` に指定する。
 
 指示文テンプレート (`<...>` を実値で埋める):
 

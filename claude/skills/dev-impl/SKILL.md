@@ -2,7 +2,7 @@
 name: dev-impl
 description: 実装ループ。承認済みの DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md を入力に、TODO.md の全フェーズをレビュー・コミット込みで自律実装するオーケストレーター。人間の介入はエスカレ条件 (概要設計の破綻 P3 等) のみ。dev-spec の承認ゲート通過後にユーザーが直接起動する。エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「設計済み TODO で実装を自律実行」「残りタスクを自動で実装」などで起動。
 argument-hint: "[docs ディレクトリパス、省略時は docs/]"
-model: sonnet
+model: opus
 allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 ---
 
@@ -14,9 +14,9 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 
 ## モデル方針
 
-- 本スキルは frontmatter で `model: sonnet` を指定している。モデル切り替えが効くのは**ユーザーが `/dev-impl` を直接起動したターンだけ** (Skill ツール経由の起動では適用されない)。エスカレーションに回答した後の再開も `/dev-impl` の再実行で行う (TODO.md の `- [x]` 状態から途中再開できるため、再実行で override が再適用される)
-- 検証 subagent (review-*) は起動時に **`model: opus` を明示**する。原則は「実行器のモデル ≤ 検証器のモデル」。実装ループの actor を Sonnet に下げられるのは、テストゲート・レビュー fan-out という検証器が厚いため
-- 並列モード (Step 4) の implementer subagent は **`model: sonnet` を明示**する。implementer 自身が起動する検証 subagent は逐次モードと同じ (architecture-guard = haiku、review-* = opus) で、「実行器 ≤ 検証器」は維持される
+- 本スキルは frontmatter で `model: opus` を指定している。モデル切り替えが効くのは**ユーザーが `/dev-impl` を直接起動したターンだけ** (Skill ツール経由の起動では適用されない)。エスカレーションに回答した後の再開も `/dev-impl` の再実行で行う (TODO.md の `- [x]` 状態から途中再開できるため、再実行で override が再適用される)
+- 検証 subagent (review-*) は起動時に **`model: opus` を明示**する。原則は「実行器のモデル ≤ 検証器のモデル」で、実行器・検証器とも opus なので等号で満たされる
+- 並列モード (Step 4) の implementer subagent は **`model: opus` を明示**する。implementer 自身が起動する検証 subagent は逐次モードと同じ (architecture-guard = haiku、review-* = opus)。guard だけ haiku なのは、レイヤ境界違反の検出が機械的な判定でモデル性能に依存しないため
 
 ## 入力
 
@@ -166,7 +166,7 @@ Step 2 で構築した wave を先頭から順に処理する。**wave 内のフ
 | 1 (逐次モードは常にこちら) | 以下の 4.1 / 4.1.5 / 4.2 / 4.6 をメインループが直接実行する |
 | 2 以上 | [references/parallel-execution.md](./references/parallel-execution.md) の `## Step 4 (並列モード): wave の実行` 節を Read し、implementer subagent への fan-out で実行する |
 
-**並列モードの分担**: 各 implementer (`model: sonnet`) が専用 git worktree の中で「TDD 実装 → フェーズテスト green → architecture-guard → レビュー fan-out (`model: opus`) → fatal 修正」までを完結させ、親は「レビュー結果 JSON の独立確認 → squash merge → 全テストゲート → コミット → TODO.md 更新」だけを**フェーズごとに逐次**行う。レビューまで implementer 側に持たせても検証の独立性が落ちないのは、レビュー agent が実装者と別コンテキストの subagent だからである (実装者が自分の主張を検証者に渡すのではなく、検証者が差分を独立に読む構造は逐次モードと同じ)。ただし**完了判定は親が review 結果 JSON を自分で Read して行う** (implementer の `status: done` を完了根拠にしない)。
+**並列モードの分担**: 各 implementer (`model: opus`) が専用 git worktree の中で「TDD 実装 → フェーズテスト green → architecture-guard → レビュー fan-out (`model: opus`) → fatal 修正」までを完結させ、親は「レビュー結果 JSON の独立確認 → squash merge → 全テストゲート → コミット → TODO.md 更新」だけを**フェーズごとに逐次**行う。レビューまで implementer 側に持たせても検証の独立性が落ちないのは、レビュー agent が実装者と別コンテキストの subagent だからである (実装者が自分の主張を検証者に渡すのではなく、検証者が差分を独立に読む構造は逐次モードと同じ)。ただし**完了判定は親が review 結果 JSON を自分で Read して行う** (implementer の `status: done` を完了根拠にしない)。
 
 以下 4.1 / 4.1.5 / 4.2 / 4.6 は逐次モードの手順書きだが、並列モードでも実行主体と実行箇所を変えて全て適用される。対応は [references/parallel-execution.md](./references/parallel-execution.md) の `## Step 4 (並列モード): wave の実行` 冒頭の対応表を参照する (例: 4.2 の事前判定 `uiPhase` / `IS_NEOVIM_PLUGIN` は親が 4p.2 で算出して implementer の観点 gating に使い、4.2e は親が統合時 4p.4 で実行する)。
 
@@ -485,7 +485,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 - **review-adversarial**: Step 4.2d から `model: opus` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず TODO.md の完了主張に反証を試みる) で検査。機械スキップ述語 (Step 4.2d 参照) を満たせば skip 可。`test_weakened` / `skip_added` (confidence: high) は self-fix ループに乗せず即エスカレ判定に直結する (詳細は Step 4.2d ループ規則参照)
 - **review-spec-compliance**: Step 5.2 から `model: opus` 明示で起動する第三者受入監査 (mode: post-impl)。承認ハッシュの独立照合・自動系ゴール検証コマンドの独立再実行・成果物全体 ↔ 詳細設計の突合・検証コマンドの空虚性検査。PHASE_CONTEXT 抜粋は渡さず docs を自分で全文 Read させる (被監査者が編纂した入力を信用しない)。`PRODUCT_MODE=cli` では G_E2E 検証コマンドの実行もこの agent が担当する (review-product-readiness は起動しないため)
 - **security-guidance プラグイン**: セキュリティレビューはこのプラグイン (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review) に委譲。自作 subagent は持たない
-- **implementer (`general-purpose`)**: 並列モード (wave サイズ 2 フェーズ以上) で 1 フェーズを専用 worktree で実装する subagent。`model: sonnet` 明示。実装 + guard + レビュー + fatal 修正までを worktree 内で完結させ、結果を SendMessage で親に返す (指示文テンプレートは [references/parallel-execution.md](./references/parallel-execution.md) の `### 4p.3: implementer の fan-out (親)` 節)。guard / review agent には作業ディレクトリ (`repo_dir`) を渡す — subagent の Bash は呼び出しごとに cwd が親のものへ戻るため、渡さないと検査対象が worktree ではなく親リポジトリになり空差分で素通りする
+- **implementer (`general-purpose`)**: 並列モード (wave サイズ 2 フェーズ以上) で 1 フェーズを専用 worktree で実装する subagent。`model: opus` 明示。実装 + guard + レビュー + fatal 修正までを worktree 内で完結させ、結果を SendMessage で親に返す (指示文テンプレートは [references/parallel-execution.md](./references/parallel-execution.md) の `### 4p.3: implementer の fan-out (親)` 節)。guard / review agent には作業ディレクトリ (`repo_dir`) を渡す — subagent の Bash は呼び出しごとに cwd が親のものへ戻るため、渡さないと検査対象が worktree ではなく親リポジトリになり空差分で素通りする
 
 逐次モード (wave サイズ 1 フェーズ) のフェーズ TDD 実装・修正・テスト実行・コミットは**メインセッションが直接行う** (CLAUDE.md「委譲の判断」: 逐次依存する多段作業は subagent に出さない)。並列モードでも**統合 (squash merge / 全テストゲート / コミット / TODO.md 更新) は必ずメインセッションが行う** (git index を共有するため並列化できない)。
 

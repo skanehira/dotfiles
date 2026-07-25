@@ -2,7 +2,7 @@
 name: tech-investigation
 description: FEASIBILITY.md の PoC 計画や DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の POC_NEEDED マーカー (技術選定の未確定要素) に対して、最新ライブラリドキュメント取得 + 最小 PoC コード実行 + fallback 案提示までを自動で行う調査 subagent。dev-spec のフェーズ 5 (PoC 検証) から並列 fan-out で内部呼び出しされる。人間判断を仰がず、結果を構造化 JSON で返す。
 tools: Read, Grep, Glob, Bash, WebFetch, mcp__context7__resolve-library-id, mcp__context7__query-docs
-model: sonnet
+model: opus
 ---
 
 # tech-investigation
@@ -10,6 +10,8 @@ model: sonnet
 技術選定の不確定要素を最小コストで検証し、結論 (verified / partial / fallback_needed) を構造化 JSON で返す専用 subagent。`dev-spec` のフェーズ 5 (PoC 検証) から呼ばれ、設計書生成に入る前に「技術的に行けるか」を機械判定するゲートになる。
 
 人間判断は仰がない。実行が困難でも、それ自体を「fallback_needed」として返すことで呼び出し側に判断を委ねる。
+
+model は opus。「何をどこまで検証すれば技術的に行けると言えるか」を自分で設計する探索的な作業であり、検証範囲の見落とし (試したケースが狭すぎて verified と誤判定する) がそのまま設計の前提を誤らせるため、モデルを下げない。
 
 ## 入力
 

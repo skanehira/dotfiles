@@ -32,12 +32,12 @@
                            │ 承認ゲート = 人間が /dev-impl を起動
                            │ (Claude は自律的に越えられない)
 ┌──────────────────────────▼─────────────────────────────────────┐
-│  /dev-impl — 実装ループ (model: sonnet、直接起動で切り替わる)  │
+│  /dev-impl — 実装ループ (model: opus、直接起動で切り替わる)    │
 │                                                                │
 │  POC_NEEDED 残存ガード → TODO.md の deps 宣言で wave 構築 →    │
 │  wave サイズ 1: メインループで TDD 実装 →                      │
 │    architecture-guard → review-* 並列 (opus) → テスト → commit │
-│  wave サイズ 2+: implementer を worktree に fan-out (sonnet)。 │
+│  wave サイズ 2+: implementer を worktree に fan-out (opus)。   │
 │    実装〜レビュー修正まで各自完結 → 親が squash merge →        │
 │    全テストゲート → commit (統合はフェーズごとに逐次)          │
 │  → ゴール達成判定 → HTML レポート                              │
@@ -76,9 +76,11 @@ skills/
 | 対象 | モデル | 理由 |
 |---|---|---|
 | dev-spec (設計ループ) | セッション継承 (最上位 tier 推奨) | 検証器が人間しかいないため、生成側を賢くする |
-| dev-impl (実装ループ) | `model: sonnet` (frontmatter) | テストゲート・レビュー fan-out という検証器が厚いため actor は下げられる |
-| dev-impl の implementer subagent (並列モード) | `model: sonnet` (呼び出し時明示) | 実行器。自分で起動する検証器 (guard=haiku の機械判定 / review-*=opus) より下位に保つ |
-| review-* subagent | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より賢く保つ。frontmatter も opus にして、呼び出し時の明示忘れで無音でセッション継承より下に落ちない防御とする |
+| dev-impl (実装ループ) / dev-impl-quick (軽量実装ループ) | `model: opus` (frontmatter) | 実装の質がそのまま成果物の質になるため実行器を下げない。検証器 (テストゲート・レビュー fan-out) も opus なので「実行器 ≤ 検証器」は等号で満たされる |
+| dev-impl の implementer subagent (並列モード) | `model: opus` (呼び出し時明示) | 実行器。worktree 内で TDD 実装からレビュー修正までを担うため、逐次モードの actor と同じ tier に揃える |
+| review-* subagent | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。frontmatter も opus にして、呼び出し時の明示忘れで無音でセッション継承より下に落ちない防御とする |
+| tech-investigation subagent (dev-spec フェーズ 5 の PoC 検証) | `model: opus` (frontmatter + 呼び出し時明示) | 「何をどこまで検証すれば行けると言えるか」を自分で設計する探索的な調査。検証範囲の見落としが設計の前提を誤らせる |
+| architecture-guard subagent | `model: haiku` (frontmatter) | レイヤ境界違反の検出は機械的な判定でモデル性能に依存しない |
 
 モデル指定はすべて alias (`opus` / `sonnet` / `haiku`) で書く (固定 ID 禁止。世代交代への自動追従のため)。
 
@@ -114,7 +116,7 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 | `fix-lsp-warnings` | `dev-impl` Step 4.2c / Agent ツールで直接起動 |
 | `review-*` (tdd / quality / product-readiness / adversarial) | `dev-impl` Step 4.2d (model: opus 明示) / `workflow-review` |
 | `review-tdd` (単一観点のみ) | `dev-impl-quick` ステップ 4 (model: opus 明示) |
-| `general-purpose` (implementer として) | `dev-impl` Step 4 の並列モード (model: sonnet 明示、worktree 分離) |
+| `general-purpose` (implementer として) | `dev-impl` Step 4 の並列モード (model: opus 明示、worktree 分離) |
 
 ## スキル一覧
 
@@ -123,7 +125,7 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 | スキル | 説明 | 入力 | 出力 |
 |---|---|---|---|
 | [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、承認ゲートで実装ループへ引き渡す。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md |
-| [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (メインループ TDD → guard → review fan-out (敵対的レビュー含む) → テストゲート → commit)。TODO.md の全フェーズに依存宣言 `<!-- deps: ... -->` があれば並列モードになり、互いに独立なフェーズを worktree 分離した implementer (sonnet) に同時 fan-out する (最大 3、統合は親が逐次)。完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須、承認スタンプは goals_sha 付き) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
+| [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (メインループ TDD → guard → review fan-out (敵対的レビュー含む) → テストゲート → commit)。TODO.md の全フェーズに依存宣言 `<!-- deps: ... -->` があれば並列モードになり、互いに独立なフェーズを worktree 分離した implementer (opus) に同時 fan-out する (最大 3、統合は親が逐次)。完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須、承認スタンプは goals_sha 付き) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
 | [dev-impl-quick](./dev-impl-quick/) | 軽量実装ループ。依頼文をタスク分解 → 1 件ずつ直営 TDD → テストゲート → review-tdd (単一観点、model: opus 明示) → タスク単位 commit。複数観点レビュー fan-out・進捗ログ・レポートは持たない | 依頼文または簡易タスクリスト (docs 不要) | タスク単位のコミット |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / ddd-modeling / analyzing-requirements / interview / verification-review / todo-generation)。

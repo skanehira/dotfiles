@@ -2,7 +2,7 @@
 name: dev-impl-quick
 description: 軽量実装ループ。設計 docs 不要で、依頼文または簡易タスクリストを入力に、タスクごとに直営 TDD → テストゲート → review-tdd (単一観点レビュー) → コミットを回す。意味のないテスト (トートロジー・実装詳細依存) を検出する review-tdd 以外の複数観点レビュー fan-out・進捗ログ・レポート生成は持たない。「軽く実装して」「サクッと直して」「まとめて修正して」「docs なしで一括実装」「dev-impl だと重すぎるタスク」などで起動。大きい機能・新規プロダクトは /dev-spec → /dev-impl を使う。
 argument-hint: 依頼内容 (省略時は直前の会話のタスクを対象)
-model: sonnet
+model: opus
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, TaskCreate, TaskUpdate, AskUserQuestion
 ---
 
@@ -14,7 +14,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, TaskCreate, TaskUpdat
 
 ## モデル方針
 
-本スキルの actor は frontmatter で `model: sonnet` を指定している。検証器の `review-tdd` subagent は起動時に **`model: opus` を明示**する (原則: 実行器のモデル ≤ 検証器のモデル。`skills/README.md`「モデル方針」参照)。
+本スキルの actor は frontmatter で `model: opus` を指定している。検証器の `review-tdd` subagent は起動時に **`model: opus` を明示**する (原則: 実行器のモデル ≤ 検証器のモデル。`skills/README.md`「モデル方針」参照)。
 
 ## いつ使うか
 

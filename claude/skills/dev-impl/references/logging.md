@@ -166,7 +166,7 @@ wave 実行 ([parallel-execution.md](./parallel-execution.md)) で使う 8 種�
 [2026-06-30 10:04:30] phase-1 / commit / done
 [2026-06-30 10:04:31] wave-2 / start (phases: 2,3, size=2 -> 並列)
 [2026-06-30 10:04:35] wave-2 / worktree add / ~/worktrees/myapp-phase-2, ~/worktrees/myapp-phase-3
-[2026-06-30 10:04:40] wave-2 / impl_dispatch / implementer x2 (model: sonnet)
+[2026-06-30 10:04:40] wave-2 / impl_dispatch / implementer x2 (model: opus)
 [2026-06-30 10:12:10] phase-3 / implementer / done (review high=0, commit=a1b2c3d)
 [2026-06-30 10:14:55] phase-2 / implementer / done (review high=0, commit=e4f5g6h)
 [2026-06-30 10:15:00] phase-2 / merge --squash / clean
