@@ -20,6 +20,54 @@ assert(capabilities.open_close == true)
 // 「ドキュメントが開かれた時、サーバーはXXを行う」をテスト
 ```
 
+## 否定形・不在アサーション
+
+判定リトマス: **テスト対象を no-op に置き換えてもこのテストは通るか**。通るなら仕様を検証していない。
+
+```javascript
+// Bad: 「エラーが投げられない」だけ - parse が undefined を返す空実装でも通る
+expect(() => parse('1.2.3')).not.toThrow();
+
+// Good: 何が起きるかを assert する
+expect(parse('1.2.3')).toEqual({ major: 1, minor: 2, patch: 3 });
+```
+
+```javascript
+// Bad: 「エラーが表示されない」だけ - 画面が空でも通る
+render(<Form email="valid@example.com" />);
+expect(screen.queryByText('メールアドレスの形式が不正です')).toBeNull();
+
+// Good: 正常系で「何が表示されるか」を assert する
+render(<Form email="valid@example.com" />);
+expect(screen.getByRole('button', { name: '送信' })).toBeEnabled();
+```
+
+正当な否定形の例（testing.md の条件 (a)(b)(c) をすべて満たす）:
+
+```javascript
+// (a) 仕様: 未入力時は送信できない
+it('does not call onSubmit when the form is empty', async () => {
+  const handleSubmit = vi.fn();
+  render(<Form value="" onSubmit={handleSubmit} />);
+
+  const button = screen.getByRole('button', { name: '送信' });
+  expect(button).toBeDisabled();        // (b) no-op に置き換えたら落ちる正の assertion
+  await userEvent.click(button);
+
+  expect(handleSubmit).not.toHaveBeenCalled();
+});
+
+// (c) 対になる正の振る舞いを隣接テストで pin する
+it('calls onSubmit with the entered value when the form is filled', async () => {
+  const handleSubmit = vi.fn();
+  render(<Form value="hello" onSubmit={handleSubmit} />);
+
+  await userEvent.click(screen.getByRole('button', { name: '送信' }));
+
+  expect(handleSubmit).toHaveBeenCalledWith('hello');
+});
+```
+
 ## アサーション
 
 文字列は完全一致:

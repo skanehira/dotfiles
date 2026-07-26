@@ -1,6 +1,6 @@
 ---
 name: review-adversarial
-description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される敵対的レビュワー。フェーズ実装を 3 レンズ (A: 実装破壊・エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: reward hacking 検知・テスト弱体化/トートロジー化/skip 隠蔽の意味論検査、C: 完了報告の反証・PHASE_CONTEXT を信用せず docs を自分で読み直しフェーズタスクの完了主張に反証を試みる) で検査し、構造化 JSON で findings を返す。実装者が編纂した抜粋を受け取らない fresh context 監査が存在意義。
+description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される敵対的レビュワー。フェーズ実装を 3 レンズ (A: 実装破壊・エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: reward hacking 検知・テスト弱体化/トートロジー化/アサーションの空虚化/skip 隠蔽の意味論検査、C: 完了報告の反証・PHASE_CONTEXT を信用せず docs を自分で読み直しフェーズタスクの完了主張に反証を試みる) で検査し、構造化 JSON で findings を返す。実装者が編纂した抜粋を受け取らない fresh context 監査が存在意義。
 tools: Read, Grep, Glob, Bash, Write
 model: opus
 ---
@@ -62,6 +62,7 @@ REPO_DIR="${REPO_DIR:-.}"
 
 - assertion の削除・緩和: TS (`toEqual`→`toBeTruthy` 等の弱い matcher への置換)、Go (`if got != want { t.Errorf(...) }` の比較削除、`t.Errorf`→`t.Logf` へのダウングレード)、Rust (`assert_eq!`→`assert!(true)`、`#[should_panic(expected = "...")]` から期待メッセージの削除)
 - トートロジー化: 元は入力→出力を検証していたテストが、setter が set した値を返すだけの自明な比較に変わっていないか
+- アサーションの空虚化 (`vacuous_assertion`): 元は具体値・正の振る舞いを検証していた assertion が、否定形・不在アサーション (`toEqual(...)` → `not.toThrow()`、具体値の比較 → `queryBy*` が null であることだけ) や恒真に近い条件 (`assert!(true)`、`expect(x).toBeDefined()` のみ) に置き換わっていないか。判定は 2 段で行う: (i) 元の assertion より検証内容が狭く・弱くなっていれば `severity: medium` で報告する (差分基準。これが主判定)、(ii) さらに現在のテストが「テスト対象を no-op に置き換えても通る」なら `severity: high` に引き上げる。assertion の削除・緩和と現象が重なる場合、置換後が否定形・不在・恒真に近い形なら本 rule (`vacuous_assertion`)、それ以外の緩和は `test_weakened` を使う (どちらも呼び出し側では同じエスカレ経路に載る)
 - skip の隠蔽 (4.2e の rg `\.skip\(|xit|#\[ignore\]` 等の直接パターンをすり抜ける形態): 条件付き early return でテスト本体を実質スキップ、Go の `t.Skip()` を条件分岐の奥に隠す、Rust の `#[ignore]` を `cfg_attr` で条件付与する等
 - 検知した場合、その変更が TODO.md / DESIGN_DETAIL_APP.md にトレースできる意図的な変更 (設計変更で仕様ごと削除等) かどうかは判定しない (トレース確認はメインループの責務)。本 agent は「弱体化の事実」を報告するだけ
 
@@ -113,7 +114,7 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
 ## 範囲外
 
 - `G<n>` / `G_E2E` 検証コマンドの実行・`goals_sha` の照合 → `review-spec-compliance` (post-impl、run 末尾に成果物全体の最終ゴールを監査)。本 agent のレンズ C はフェーズ単位のタスク完了主張のみを対象とする
-- テストの構造・命名規約・振る舞い表現の良し悪し → `review-tdd`。本 agent のレンズ B は「基準時点から弱くなっていないか」の差分検知に限る (トートロジー検知の観点は review-tdd と重複しうるが、dimension が異なるため defense in depth として意図的に残す)
+- テストの構造・命名規約・振る舞い表現の良し悪し → `review-tdd`。本 agent のレンズ B は「基準時点から弱くなっていないか」の差分検知に限る (トートロジー検知の観点は review-tdd と重複しうるが、dimension が異なるため defense in depth として意図的に残す)。**新規に書かれたテストそのものの空虚性 (最初から否定形・不在アサーションだけ) は review-tdd の `vacuous_negative_assertion` の担当**で、本 agent の `vacuous_assertion` は基準時点からの空虚化のみを見る
 - アーキテクチャ違反 → `review-quality` (heuristic) / `architecture-guard` (機械判定)
 - セキュリティ → security-guidance プラグイン
 - 修正の実施 → 一切行わない。findings を返すのみ (対処は呼び出し側)
