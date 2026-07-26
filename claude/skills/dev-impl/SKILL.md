@@ -266,7 +266,7 @@ gating された観点の review agent を**同一メッセージ内の複数 Ag
 3. fatal あり → **メインループで TDD 修正** → **gating された全観点を再レビュー** (fix は別観点を壊しうるため、fatal だった観点だけに絞らない)
 4. self-fix 3 回でも fatal 残存 → `review_loop_exceeded` でエスカレ停止
 5. 修正中に `design_overview_break` を検知 → 即エスカレ停止 (commit しない)
-6. review-adversarial の `test_weakened` / `skip_added` (confidence: high) は上記の self-fix ループに乗せない。弱体化を actor 自身に直させると骨抜きの温床になるため、4.2e と同じトレース確認 (TODO.md / DESIGN_DETAIL_APP.md に意図的な変更としてトレースできるか) をメインループが行い、トレース不能なら `test_weakening_detected` でエスカレ停止する
+6. review-adversarial の `test_weakened` / `vacuous_assertion` / `skip_added` (confidence: high) は上記の self-fix ループに乗せない。弱体化を actor 自身に直させると骨抜きの温床になるため、4.2e と同じトレース確認 (TODO.md / DESIGN_DETAIL_APP.md に意図的な変更としてトレースできるか) をメインループが行い、トレース不能なら `test_weakening_detected` でエスカレ停止する
 7. review-adversarial の `working_tree_polluted` を検知したら、メインループが `git status --porcelain` で実際の汚染有無を確認し、汚染があれば restore する
 
 severity: low/medium の findings は修正せず JSONL に `event_type: review_low` で記録する。
@@ -292,7 +292,7 @@ severity: low/medium の findings は修正せず JSONL に `event_type: review_
 | 検査 agent が結果を返せない (未検証をパス扱いにしない)                                                           | `guard_agent_failed` / `review_agent_failed` |
 | テストゲート 3 回不通過                                                                                          | `tests_failing_before_commit`                |
 | `design_overview_break` 検知 (実装・修正中いずれでも、commit 前に停止)                                           | `design_overview_break` (P3)                 |
-| テストファイル削除 / skip 追加が設計にトレースできない (4.2e の機械検知 / 4.2d の review-adversarial 検知の両方) | `test_weakening_detected`                    |
+| テストファイル削除 / skip 追加 / assertion の弱体化・空虚化が設計にトレースできない (4.2e の機械検知 / 4.2d の review-adversarial 検知の両方) | `test_weakening_detected`                    |
 
 #### Step 4.6: 設計乖離の判定 (P1 / P2 / P3)
 
@@ -482,7 +482,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 - **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.2b、haiku)
 - **fix-lsp-warnings**: Lua/Neovim の LSP 警告修正 (Step 4.2c)
 - **review-tdd / review-quality / review-product-readiness**: Step 4.2d から `model: opus` 明示で並列起動 (観点 gating・起動条件は Step 4.2d 参照)。review-quality は rules 準拠 + アーキテクチャ heuristic を統合。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査 (Step 5.2 の G_E2E 判定も担当)
-- **review-adversarial**: Step 4.2d から `model: opus` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず TODO.md の完了主張に反証を試みる) で検査。機械スキップ述語 (Step 4.2d 参照) を満たせば skip 可。`test_weakened` / `skip_added` (confidence: high) は self-fix ループに乗せず即エスカレ判定に直結する (詳細は Step 4.2d ループ規則参照)
+- **review-adversarial**: Step 4.2d から `model: opus` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・アサーションの空虚化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず TODO.md の完了主張に反証を試みる) で検査。機械スキップ述語 (Step 4.2d 参照) を満たせば skip 可。`test_weakened` / `vacuous_assertion` / `skip_added` (confidence: high) は self-fix ループに乗せず即エスカレ判定に直結する (詳細は Step 4.2d ループ規則参照)
 - **review-spec-compliance**: Step 5.2 から `model: opus` 明示で起動する第三者受入監査 (mode: post-impl)。承認ハッシュの独立照合・自動系ゴール検証コマンドの独立再実行・成果物全体 ↔ 詳細設計の突合・検証コマンドの空虚性検査。PHASE_CONTEXT 抜粋は渡さず docs を自分で全文 Read させる (被監査者が編纂した入力を信用しない)。`PRODUCT_MODE=cli` では G_E2E 検証コマンドの実行もこの agent が担当する (review-product-readiness は起動しないため)
 - **security-guidance プラグイン**: セキュリティレビューはこのプラグイン (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review) に委譲。自作 subagent は持たない
 - **implementer (`general-purpose`)**: 並列モード (wave サイズ 2 フェーズ以上) で 1 フェーズを専用 worktree で実装する subagent。`model: opus` 明示。実装 + guard + レビュー + fatal 修正までを worktree 内で完結させ、結果を SendMessage で親に返す (指示文テンプレートは [references/parallel-execution.md](./references/parallel-execution.md) の `### 4p.3: implementer の fan-out (親)` 節)。guard / review agent には作業ディレクトリ (`repo_dir`) を渡す — subagent の Bash は呼び出しごとに cwd が親のものへ戻るため、渡さないと検査対象が worktree ではなく親リポジトリになり空差分で素通りする
