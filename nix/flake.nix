@@ -34,6 +34,19 @@
       url = "github:ogulcancelik/herdr";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # neovim HEAD (master) の nightly ビルド。packages.nix の neovim をこれで置き換える。
+    # `nix flake update neovim-nightly-overlay` で neovim だけを独立して更新できる。
+    #
+    # 他の input と違い nixpkgs.follows を **付けない**。upstream が pin して検証済みの
+    # nixpkgs でビルドするため。実測 (2026-07) では follows で root の nixpkgs (overlay の
+    # pin より約 1 ヶ月古い) に揃えると要ビルド derivation が 15 → 24 に増え、かつ upstream
+    # が検証していない組み合わせになる。代償として nixpkgs ツリーを 2 本持つ。
+    #
+    # nix-community.cachix.org に neovim の成果物は publish されていない (実測 2026-07:
+    # darwin / linux とも narinfo が 404、overlay の CI run は 2026-05 以降すべて failure)。
+    # よって substituter を足しても効かず、rev を上げるたびに手元でビルドが走る
+    # (実測 3 分 34 秒 / 依存の初回 DL 込み)。rev が変わらない限り drs で再ビルドはしない。
+    neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
   };
 
   outputs =
