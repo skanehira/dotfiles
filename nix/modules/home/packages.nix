@@ -117,7 +117,13 @@ let
 
   # エディタ / TUI
   editors = with pkgs; [
-    neovim # nixpkgs-unstable の stable release (cache.nixos.org でキャッシュ済)
+    # neovim HEAD (master) の nightly ビルド (v0.13.0-nightly 系)。binary cache が無く
+    # 更新時は手元でビルドする (経緯と実測値は flake.nix の input 定義のコメント)。
+    # wrapNeovim されない素の neovim-unwrapped なので python3 / ruby provider は付かない。
+    # overlay 経由の pkgs.neovim ではなく packages.default を直参照する (overlay 適用時に
+    # treesitter の hash mismatch が起きうると upstream README が注意している)。
+    # 更新: nix flake update neovim-nightly-overlay
+    inputs.neovim-nightly-overlay.packages.${pkgs.stdenv.hostPlatform.system}.default
     # vime.vim (neovim の日本語 IME プラグイン) が FFI で叩く libanthy。全 OS 共通で nix 管理。
     # nixpkgs の anthy は 9100h だが anthy-unicode と ABI 互換なので vime から使える。
     anthy
