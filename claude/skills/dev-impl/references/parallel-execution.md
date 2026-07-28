@@ -92,6 +92,8 @@ PHASE_CONTEXT はメインの working tree 側 (`docs/.dev-impl/`) に置く。�
 
 続けて各フェーズの**事前判定と観点 gating を親が確定する**。[phase-execution.md](./phase-execution.md) の `## 4.2: 事前判定` で `uiPhase` / `IS_NEOVIM_PLUGIN` を算出し、SKILL.md 4.2d の gating 表 (最終フェーズの定義は上記「Step 2」節) で起動すべきレビュー観点のリストを決めて、4p.3 の指示文に実値で埋め込む。implementer には gating の判断をさせない。
 
+review-quality の追加起動条件 `$CONSUMABLE_CHANGED` は差分ベースの述語だが、この時点ではフェーズの差分がまだ存在しない。並列モードでは代わりに **`phase_tasks` / `related_source_files` に消費型資源 (ローテーション有効な refresh token・nonce・ワンタイムコード・べき等キー・使い捨て署名 URL) を示す語が現れるか**で親が判定し、該当すれば review-quality を起動観点に加える。
+
 ### 4p.3: implementer の fan-out (親)
 
 wave (バッチ) 内の全フェーズ分の Agent 呼び出しを**同一メッセージ内の複数 tool_use** として並列起動する。各呼び出しは `model: opus` を明示し、guard / review subagent を自分で起動できるよう Agent ツールを持つ `general-purpose` を `subagent_type` に指定する。

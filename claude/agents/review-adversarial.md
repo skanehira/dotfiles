@@ -47,7 +47,8 @@ REPO_DIR="${REPO_DIR:-.}"
 #### レンズ A: 実装破壊 (エッジケース攻撃)
 
 1. Step 1 の差分から公開インターフェース (関数・API エンドポイント・CLI コマンド) を洗い出す
-2. 各インターフェースについて攻撃仮説を列挙する: 境界値 (0 / 負数 / 最大値+1)、空入力 (空文字列・空配列・null/undefined)、巨大入力、不正型、エラーパス (依存先の失敗・タイムアウト・並行アクセス順序)、複数書き込みの途中失敗 (部分コミットが残らないか。DESIGN_DETAIL_APP.md の「トランザクション境界」表で当該ユースケースが「最終的整合性」と設計されている場合、部分コミット自体は意図どおりなので finding にしない)
+2. 各インターフェースについて攻撃仮説を列挙する: 境界値 (0 / 負数 / 最大値+1)、空入力 (空文字列・空配列・null/undefined)、巨大入力、不正型、エラーパス (依存先の失敗・タイムアウト・並行アクセス順序)、複数書き込みの途中失敗 (部分コミットが残らないか。DESIGN_DETAIL_APP.md の「トランザクション境界」表で当該ユースケースが「最終的整合性」と設計されている場合、部分コミット自体は意図どおりなので finding にしない)、消費型資源の二重使用 (下記)
+   - **消費型資源の二重使用** (`consumable_resource_reuse`): 一度使うと無効化される資源 (ローテーション有効な refresh token・ワンタイムコード・nonce・使い捨て署名 URL・べき等キー等) を消費するインターフェースに対し、(a) 並行 2 呼び出しで同時に消費させる、(b) 消費が成功した直後に旧値でもう 1 回逐次で消費させる、の 2 通りを攻撃する。外部サービスへ実際にリクエストを飛ばさず、依存を fake に差し替えて「同じ資源値で 2 回消費が試行されたか」を観測する (外部の実資源を焼き切らないため)。2 回目の消費が試行される場合は finding とし、`message` にどちらの経路 (並行 / 逐次) かと、観測した資源値の重複を記載する
 3. `scratch_dir` 配下にスタンドアロンの攻撃スクリプトを作成して実行する。**プロジェクトのテストスイートには追加しない**。実行方法は縮退順で選ぶ:
    - 対象を直接 import/require できる → `scratch_dir/attack-N.{ts,go,rs,py,lua}` を書いて `npx tsx` / `go run` / `cargo script` 等で実行
    - import 不能 (ビルド前提・依存解決不能等) → CLI 直叩き、または `dev_server` があれば `curl` / HTTP 経由で攻撃
@@ -96,7 +97,7 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
       "line": 42,
       "severity": "high|medium|low",
       "confidence": "high|medium|low",
-      "rule": "edge_case_failure|error_path_unhandled|attack_not_executable|working_tree_polluted|test_weakened|skip_added|tautological_test|vacuous_assertion|goal_refuted|phase_task_unimplemented|partial_commit_detected",
+      "rule": "edge_case_failure|error_path_unhandled|consumable_resource_reuse|attack_not_executable|working_tree_polluted|test_weakened|skip_added|tautological_test|vacuous_assertion|goal_refuted|phase_task_unimplemented|partial_commit_detected",
       "message": "具体的な指摘 (攻撃入力 / 観測出力を含む)",
       "repro_command": "npx tsx /tmp/review-adversarial-phase-3/attack-1.ts   # レンズ A の finding のみ",
       "fix_proposal": "推奨修正"
@@ -115,7 +116,7 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
 
 - `G<n>` / `G_E2E` 検証コマンドの実行・`goals_sha` の照合 → `review-spec-compliance` (post-impl、run 末尾に成果物全体の最終ゴールを監査)。本 agent のレンズ C はフェーズ単位のタスク完了主張のみを対象とする
 - テストの構造・命名規約・振る舞い表現の良し悪し → `review-tdd`。本 agent のレンズ B は「基準時点から弱くなっていないか」の差分検知に限る (トートロジー検知の観点は review-tdd と重複しうるが、dimension が異なるため defense in depth として意図的に残す)。**新規に書かれたテストそのものの空虚性 (最初から否定形・不在アサーションだけ) は review-tdd の `vacuous_negative_assertion` の担当**で、本 agent の `vacuous_assertion` は基準時点からの空虚化のみを見る
-- アーキテクチャ違反 → `review-quality` (heuristic) / `architecture-guard` (機械判定)
+- アーキテクチャ違反 → `review-quality` (heuristic) / `architecture-guard` (機械判定)。消費型資源の多重使用は両者で扱うが、**排他・truth source・エラー分岐の構造をコード上で判定するのが `review-quality`、実際に 2 回消費させて観測するのが本 agent** という分担 (dimension が異なるため defense in depth として重複を許容する)
 - セキュリティ → security-guidance プラグイン
 - 修正の実施 → 一切行わない。findings を返すのみ (対処は呼び出し側)
 

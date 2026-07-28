@@ -109,6 +109,10 @@ TRACKED_CONTENT_CHANGED=$(git diff HEAD -U0 -- ':!*.md' ':!docs/' | rg '^[+-].*(
 UNTRACKED_CONTENT_CHANGED=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 -I{} rg -l '#\[(test|cfg\(test\)|tokio::test|rstest)\]|func Test[A-Z]|\b(it|test|describe)\s*\(|def\s+test_|@pytest\.' {} 2>/dev/null || true)
 TEST_CONTENT_CHANGED="${TRACKED_CONTENT_CHANGED}${UNTRACKED_CONTENT_CHANGED}"
 
+TRACKED_CONSUMABLE=$(git diff HEAD -U0 -- ':!*.md' ':!docs/' | rg -i '^[+-].*(refresh[_-]?token|\bnonce\b|one[_-]?time|idempotenc|\botp\b|presigned)' || true)
+UNTRACKED_CONSUMABLE=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 -I{} rg -li 'refresh[_-]?token|\bnonce\b|one[_-]?time|idempotenc|\botp\b|presigned' {} 2>/dev/null || true)
+CONSUMABLE_CHANGED="${TRACKED_CONSUMABLE}${UNTRACKED_CONSUMABLE}"
+
 NON_DOC_CHANGED=$(echo "$CHANGED" | rg -v '(^|/)docs/|\.md$' || true)
 UI_CHANGED=$(echo "$CHANGED" | rg '\.(tsx|jsx|vue|svelte|css|scss)$|(^|/)(routes|pages|components)/' || true)
 CI_CHANGED=$(echo "$CHANGED" | rg '(^|/)\.github/workflows/|(^|/)\.gitlab-ci|Dockerfile|docker-compose|(^|/)\.circleci/' || true)
@@ -119,9 +123,11 @@ CI_CHANGED=$(echo "$CHANGED" | rg '(^|/)\.github/workflows/|(^|/)\.gitlab-ci|Doc
 | 観点 | 起動条件 |
 |---|---|
 | tdd | `$TEST_FILE_CHANGED` または `$TEST_CONTENT_CHANGED` が非空 (テストファイルの差分がある) |
-| quality | `$NON_DOC_CHANGED` が非空 (実装ファイル差分あり) かつ (`$NEW_FILES` が非空 または `$LINES` > 20) |
+| quality | `$NON_DOC_CHANGED` が非空 (実装ファイル差分あり) かつ (`$NEW_FILES` が非空 または `$LINES` > 20 または `$CONSUMABLE_CHANGED` が非空) |
 | product_readiness | `$UI_CHANGED` が非空 (web UI 系差分がある) |
 | adversarial | テスト変更なし (`$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空) かつ `$LINES` ≤ 20 (または `.md`/`docs/` のみの差分) かつ `$CI_CHANGED` が空、の**すべてを満たさない**場合に起動 (= trivial diff でなければ起動) |
+
+`$CONSUMABLE_CHANGED` は消費すると無効化される資源 (ローテーション有効な refresh token・nonce・ワンタイムコード・べき等キー・使い捨て署名 URL) を扱う差分の検知で、行数が小さくても quality を起動させるためにある。この種の差分は 1 行の変更でも多重消費・恒久エラー分岐の漏れで復帰不能障害になるため、行数ゲートの例外とする。
 
 pre-filter で候補になった観点をそのままメインループに渡し、**メインループが diff の内容を見て最終的にどの観点を実際に起動するかを選択し、「選択と根拠」を 1 行出力**する (自律モード規約と同型。事後にユーザがレビューで乖離に気付ける状態を保つ)。`args.dimensions` が指定されている場合はこの述語評価をスキップし、指定観点をそのまま使う。
 
