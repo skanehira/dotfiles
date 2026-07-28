@@ -58,6 +58,11 @@ PHASE_CONTEXT:
 - **DESIGN との整合**: DESIGN.md の主要コンポーネント名・責務、DESIGN_DETAIL_APP.md の採用パターン (Repository / UseCase / Adapter 等) と差分が一致するか。違反は P2 (詳細設計の不足) シグナルとして fix_proposal を出す
 - **Clean Architecture / DDD 補足**: アプリケーション層の直接 ORM 呼び出し、domain entity の DI 不能なグローバル参照、aggregate root を介さない集約内 entity 操作
 - **トランザクション境界**: 複数 Repository への書き込みが DESIGN_DETAIL_APP.md の「トランザクション境界」表どおり単一 tx で括られているか。判定基準: 表に単一 tx と書かれたユースケースで、同一ユースケース内の複数 Repository 呼び出しが同じ tx / コネクションオブジェクトを DI 経由で共有していない (各呼び出しが独立に commit している = auto-commit) 場合は finding
+- **消費型資源の多重使用**: 一度使うと無効化される資源 (ローテーション有効な refresh token・ワンタイムコード・nonce・使い捨て署名 URL・べき等キー等) を消費する非同期処理を差分から洗い出し、次の 3 点を検査する。該当する資源が差分に無ければ本項目は対象外
+  - **single-flight 排他** (`consumable_resource_reuse`): 並行呼び出しが同一資源を 2 回以上消費しないか。in-flight Promise の共有・mutex・キュー等の排他が無く、複数の呼び出し元 (データ取得 hook の同時マウント、フォーカス復帰時の一斉再検証、ポーリング) から同時に呼ばれうるなら finding。「実際には同時に呼ばれない」は呼び出し元を列挙して裏付けが取れる場合のみ非 finding とする
+  - **stale snapshot 参照** (`stale_snapshot_read`): 資源の最新値を React state の closure など**レンダー時点のスナップショット**から読んでいないか。消費・更新後もスナップショットは古いままなので、同一ハンドラ内の逐次 2 回目の呼び出しが旧値を再使用する。truth source はインスタンスフィールド / ref / storage など非スナップショットに置き、更新は同期的に反映されている必要がある
+  - **コンテキスト間の同期** (`cross_context_state_desync`): 複数タブ・複数プロセスが共有する永続 state (localStorage・ファイル・共有 DB 行) をローカルにキャッシュしている場合、他コンテキストによる更新を取り込む経路 (storage イベント・使用直前の再読込・ロック) があるか。無ければ、他コンテキストが資源を消費した後にこちらが旧値で消費する finding
+- **恒久エラー分岐の網羅性** (`error_taxonomy_incomplete`): 回復不能エラーを個別エラーコードの列挙で分岐している箇所で、同族の恒久エラーが分岐から漏れて無効な永続 state (失効トークン等) が残置され、再試行・リロードでも復帰できない経路がないか。判定の目安: catch 節が特定コード 1 つだけを特別扱いして残りを一律 rethrow している場合、rethrow 側に「再試行しても直らない」エラーが混ざらないかを外部 API の例外仕様で確認する。恒久エラーが混ざるなら、リカバリ動線 (state 破棄 → 再認証等) に載らないので finding
 
 ## 検査手順
 
@@ -103,7 +108,7 @@ git -C "$REPO_DIR" ls-files --others --exclude-standard
       "line": 25,
       "severity": "high|medium|low",
       "confidence": "high|medium|low",
-      "rule": "srp|ocp|lsp|isp|dip|yagni|naming|cohesion|coupling|colocation|god_component|prop_drilling|feature_envy|shotgun_surgery|scope_creep|minimal_impl|spec_explicit|io_di|use_effect_misuse|function_size|file_size|class_size|responsibility_mix|over_abstraction|under_abstraction|design_mismatch|repository_bypass|domain_global|aggregate_internal_access|transaction_boundary_violation|...",
+      "rule": "srp|ocp|lsp|isp|dip|yagni|naming|cohesion|coupling|colocation|god_component|prop_drilling|feature_envy|shotgun_surgery|scope_creep|minimal_impl|spec_explicit|io_di|use_effect_misuse|function_size|file_size|class_size|responsibility_mix|over_abstraction|under_abstraction|design_mismatch|repository_bypass|domain_global|aggregate_internal_access|transaction_boundary_violation|consumable_resource_reuse|stale_snapshot_read|cross_context_state_desync|error_taxonomy_incomplete|...",
       "message": "具体的な指摘",
       "evidence": "該当箇所のコード引用、または判定に使ったコマンドと出力",
       "fix_proposal": "推奨修正"

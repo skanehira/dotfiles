@@ -51,7 +51,9 @@ git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_
 
 `target_diff` に渡せるのは `HEAD` / `working_tree` / `phase:<フェーズ名>` の 3 値のみ (`claude/agents/architecture-guard.md` の「入力」節)。それ以外の文字列は agent 側の分岐に該当せず未定義動作になる。並列モードでは加えて `repo_dir` (worktree の絶対パス) を渡す。
 
-## 4.2d: review-adversarial スキップ述語
+## 4.2d: 観点 gating 述語
+
+review-adversarial のスキップ述語と、review-quality を最終フェーズ以外でも起動させる条件を算出する。
 
 ```bash
 CHANGED=$({ git diff --name-only "${PHASE_START_SHA}"; git ls-files --others --exclude-standard; } | sort -u)
@@ -73,9 +75,14 @@ TEST_CONTENT_CHANGED="${TRACKED_CONTENT_CHANGED}${UNTRACKED_CONTENT_CHANGED}"
 NON_DOC_CHANGED=$(echo "$CHANGED" | rg -v '\.md$|(^|/)docs/' || true)
 # 条件3: CI・ビルド/テスト設定の変更があるか
 CI_FILES_CHANGED=$(echo "$CHANGED" | rg '\.github/|config|package\.json|Cargo\.toml|go\.mod|Makefile|justfile|deno\.json' || true)
+# review-quality の追加起動条件: 消費すると無効化される資源 (ローテーション有効な refresh token・
+# nonce・ワンタイムコード・べき等キー・使い捨て署名 URL) を扱う差分か
+TRACKED_CONSUMABLE=$(git diff "${PHASE_START_SHA}" -U0 -- ':!*.md' ':!docs/' | rg -i '^[+-].*(refresh[_-]?token|\bnonce\b|one[_-]?time|idempotenc|\botp\b|presigned)' || true)
+UNTRACKED_CONSUMABLE=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 -I{} rg -li 'refresh[_-]?token|\bnonce\b|one[_-]?time|idempotenc|\botp\b|presigned' {} 2>/dev/null || true)
+CONSUMABLE_CHANGED="${TRACKED_CONSUMABLE}${UNTRACKED_CONSUMABLE}"
 ```
 
-判定条件テーブルと skip/実行の遷移規則は SKILL.md 側の 4.2d を参照。
+判定条件テーブル (review-adversarial の skip/実行の遷移規則、`$CONSUMABLE_CHANGED` による review-quality の起動) は SKILL.md 側の 4.2d を参照。
 
 ## 4.2e: テスト弱体化検知コマンド
 

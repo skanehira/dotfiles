@@ -240,11 +240,11 @@ deviation_signals (設計と*矛盾する*変更) とは別に、以下は**設�
 
 **`PRODUCT_MODE=cli` では review-product-readiness を一切起動しない** (`uiPhase` が常に `false` のため UI を触るフェーズの行は発火せず、最終フェーズの「全観点フル」からも product-readiness を除外する。cli の G_E2E は Step 5.2 で review-spec-compliance が担当する)。
 
-review-quality (rules 準拠 + アーキテクチャ heuristic 統合) は最終フェーズのみ (機械判定可能な境界違反は毎フェーズ architecture-guard が担保するため)。
+review-quality (rules 準拠 + アーキテクチャ heuristic 統合) は最終フェーズのみ (機械判定可能な境界違反は毎フェーズ architecture-guard が担保するため)。**ただし `$CONSUMABLE_CHANGED` が非空のフェーズ (消費すると無効化される資源 — ローテーション有効な refresh token・nonce・ワンタイムコード・べき等キー・使い捨て署名 URL — を扱う差分) では最終フェーズでなくても起動する**。この種のコードは多重消費・恒久エラー分岐の漏れが復帰不能障害に直結し、architecture-guard の境界検査では検知できないため、最終フェーズまで持ち越さない。
 
 **review-adversarial のスキップ述語 (機械判定、actor の裁量では skip しない):**
 
-算出コマンド (`$CHANGED` / `$LINES` / `$TEST_FILE_CHANGED` / `$TEST_CONTENT_CHANGED` / `$NON_DOC_CHANGED` / `$CI_FILES_CHANGED`) は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: review-adversarial スキップ述語` 節を Read してから実行する (この節を読まず近似コマンドで代替すると、untracked ファイルや言語別インラインテストの検知漏れにより review-adversarial を不当に skip するリスクがある)。判定条件は以下の表に従う。
+算出コマンド (`$CHANGED` / `$LINES` / `$TEST_FILE_CHANGED` / `$TEST_CONTENT_CHANGED` / `$NON_DOC_CHANGED` / `$CI_FILES_CHANGED` / `$CONSUMABLE_CHANGED`) は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 観点 gating 述語` 節を Read してから実行する (この節を読まず近似コマンドで代替すると、untracked ファイルや言語別インラインテストの検知漏れにより review-adversarial を不当に skip するリスクがある)。判定条件は以下の表に従う。
 
 | # | 条件                                                                                                                                              | 意図                                                                                                                                                 |
 | - | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
