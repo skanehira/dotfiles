@@ -9,9 +9,10 @@ split_vertical = ["prefix+v", "prefix+backslash"]
 detach = ["prefix+q", "prefix+d"]
 navigate_workspace_up = "k"
 navigate_workspace_down = "j"
-# WezTerm 側で cmd+ctrl+[ / ] を "\x13{" / "\x13}" (prefix + キー) として送出している
-previous_workspace = "prefix+{"
-next_workspace = "prefix+}"
+# mac は WezTerm 側で cmd+ctrl+[ / ] を "\x13{" / "\x13}" (prefix + キー) として送出、
+# Windows は cmd キーが無いので alt+ctrl+[ / ] を herdr 側で直接バインドする
+previous_workspace = ["prefix+{", "alt+ctrl+["]
+next_workspace = ["prefix+}", "alt+ctrl+]"]
 
 [ui]
 show_agent_labels_on_pane_borders = false
