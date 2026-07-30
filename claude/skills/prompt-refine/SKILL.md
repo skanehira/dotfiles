@@ -21,6 +21,7 @@ system prompt に記載されている自分のモデル ID を見て、下表�
 | モデル ID パターン                  | 読む reference                               |
 | ----------------------------------- | -------------------------------------------- |
 | `claude-fable-5` 系 / mythos 系     | `references/fable-5.md`                      |
+| `claude-opus-5` 系                  | `references/opus-5.md`                       |
 | `claude-opus-4` 系 (4.8 等)         | `references/opus-4-8.md`                     |
 | `claude-sonnet-5` 系                | `references/sonnet-5.md`                     |
 | 上記以外 (haiku 等、専用ページなし) | `references/general.md` (汎用フォールバック) |
@@ -68,6 +69,7 @@ reference は「そのモデルで起こりがちな挙動のズレ」を列挙�
 
 ```bash
 curl -fsSL https://platform.claude.com/docs/ja/build-with-claude/prompt-engineering/prompting-claude-fable-5.md > references/fable-5.md
+curl -fsSL https://platform.claude.com/docs/ja/build-with-claude/prompt-engineering/prompting-claude-opus-5.md > references/opus-5.md
 curl -fsSL https://platform.claude.com/docs/ja/build-with-claude/prompt-engineering/prompting-claude-opus-4-8.md > references/opus-4-8.md
 curl -fsSL https://platform.claude.com/docs/ja/build-with-claude/prompt-engineering/prompting-claude-sonnet-5.md > references/sonnet-5.md
 curl -fsSL https://platform.claude.com/docs/ja/build-with-claude/prompt-engineering/claude-prompting-best-practices.md > references/general.md
