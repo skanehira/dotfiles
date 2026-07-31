@@ -2,10 +2,11 @@ local utils = require('utils')
 local nmap = utils.keymaps.nmap
 
 local docker = {
-  'skanehira/denops-docker.vim',
+  'skanehira/docker.nvim',
   config = function()
-    nmap('gdc', '<Cmd>new | DockerContainers<CR>', {})
-    nmap('gdi', '<Cmd>new | DockerImages<CR>', {})
+    nmap('gdc', '<Cmd>Docker containers<CR>', {})
+    nmap('gdi', '<Cmd>Docker images<CR>', {})
+    nmap('gdv', '<Cmd>Docker volumes<CR>', {})
   end
 }
 
