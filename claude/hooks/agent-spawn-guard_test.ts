@@ -18,6 +18,36 @@ Deno.test("validateAgentSpawn_with_managed_agent_missing_model_denies_and_names_
   );
 });
 
+Deno.test("validateAgentSpawn_with_implementer_missing_model_denies_and_names_opus", () => {
+  const result = validateAgentSpawn({
+    subagent_type: "dev-impl-implementer",
+    prompt: "mode: implement\nrepo_dir: /tmp/x",
+  });
+
+  assertEquals(result.ok, false);
+  assertEquals(
+    result.reason,
+    "[agent-spawn-guard] dev-impl-implementer の起動に model が指定されていません。" +
+      "未指定だと agent 定義ではなく親のセッションモデルを継承します。" +
+      'model: "opus" を明示してください。',
+  );
+});
+
+Deno.test("validateAgentSpawn_with_lsp_fixer_missing_model_denies_and_names_haiku", () => {
+  const result = validateAgentSpawn({
+    subagent_type: "fix-lsp-warnings",
+    prompt: "対象: src/foo.lua",
+  });
+
+  assertEquals(result.ok, false);
+  assertEquals(
+    result.reason,
+    "[agent-spawn-guard] fix-lsp-warnings の起動に model が指定されていません。" +
+      "未指定だと agent 定義ではなく親のセッションモデルを継承します。" +
+      'model: "haiku" を明示してください。',
+  );
+});
+
 Deno.test("validateAgentSpawn_with_managed_agent_and_explicit_model_allows", () => {
   const result = validateAgentSpawn({
     subagent_type: "architecture-guard",

@@ -24,7 +24,9 @@
 
 /** skill 側の方針で model が固定されている agent (skills/dev-impl/SKILL.md「モデル方針」)。 */
 export const MANDATED_MODEL: Record<string, string> = {
+  "dev-impl-implementer": "opus",
   "architecture-guard": "haiku",
+  "fix-lsp-warnings": "haiku",
   "review-adversarial": "sonnet",
   "review-tdd": "opus",
   "review-quality": "opus",
