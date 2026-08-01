@@ -8,7 +8,7 @@
 - [セクション 1: Header](#セクション-1-header)
 - [セクション 2: 全体サマリ](#セクション-2-全体サマリ)
 - [セクション 3: フェーズタイムライン](#セクション-3-フェーズタイムライン)
-- [セクション 4: 動的修正の詳細 (P1 / P2 / P3)](#セクション-4-動的修正の詳細-p1-p2-p3)
+- [セクション 4: 動的修正の詳細 (P1 / P2 / P3)](#セクション-4-動的修正の詳細-p1--p2--p3)
 - [セクション 4.5: レビュー残課題 (low/medium)](#セクション-45-レビュー残課題-lowmedium)
 - [セクション 4.6: 実装ノート — 設計判断](#セクション-46-実装ノート--設計判断)
 - [セクション 4.7: 実装ノート — 未解決の質問](#セクション-47-実装ノート--未解決の質問)
@@ -61,7 +61,7 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
 }
 ```
 
-ダークモードは今は対応しない (将来 `@media (prefers-color-scheme: dark)` を追加余地)。
+ダークモードは対応しない。
 
 ## HTML 骨組み
 
@@ -112,7 +112,7 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
 
 ## セクション 2: 全体サマリ
 
-サマリカードを横並びに 5 枚 (Tailwind grid):
+サマリカードを横並びに 8 枚 (Tailwind grid):
 
 | ラベル | 値 | 色 |
 |---|---|---|
@@ -123,8 +123,28 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
 | ゴール達成 | `${achieved}/${total_goals} (手動待 ${pending})` | goal |
 | 設計判断 | `${design_decision_count} 件` | note (indigo) |
 | 未解決の質問 | `${open_question_count} 件` | 0 件なら gray、1 件以上なら amber |
+| subagent 起動 | `${run_spawns} 回 (${spawns_per_phase} / フェーズ)` | 上限 (フェーズ数 × 8) の 80% 超なら amber |
 
 エスカレ停止時は P3 カードを赤強調 + 「停止理由」を見出し直下に出す。
+
+サマリカードの下に **subagent 起動の内訳表**を出す (`event_type: spawn` を agent × model で集計)。コストの多くが subagent 側にあるため、フェーズ単価の事後分析にこの内訳が要る:
+
+```html
+<table class="w-full text-sm mt-4">
+  <thead class="text-left" style="color: var(--fg-muted);">
+    <tr><th>agent</th><th>model</th><th>起動回数</th><th>フェーズあたり</th></tr>
+  </thead>
+  <tbody>
+    ${spawn_breakdown.map(s => `
+      <tr class="border-t" style="border-color: var(--border);">
+        <td class="py-1 font-mono">${s.agent}</td>
+        <td class="py-1 font-mono">${s.model}</td>
+        <td class="py-1 font-mono">${s.count}</td>
+        <td class="py-1 font-mono">${s.per_phase}</td>
+      </tr>`).join("")}
+  </tbody>
+</table>
+```
 
 ## セクション 3: フェーズタイムライン
 
@@ -133,16 +153,16 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
   <h2 class="text-lg font-semibold">フェーズタイムライン</h2>
   <table class="w-full text-sm">
     <thead class="text-left" style="color: var(--fg-muted);">
-      <tr><th>phase</th><th>duration</th><th>guard loops</th><th>review loops</th><th>commit</th><th>status</th></tr>
+      <tr><th>phase</th><th>duration</th><th>fix rounds</th><th>spawns</th><th>commit</th><th>status</th></tr>
     </thead>
     <tbody>
       ${phases.map(p => `
         <tr class="border-t cursor-pointer" style="border-color: var(--border);" onclick="this.nextElementSibling.querySelector('details').open = !this.nextElementSibling.querySelector('details').open">
           <td class="py-2 font-mono">${p.name}</td>
           <td class="py-2 font-mono">${p.duration}</td>
-          <td class="py-2 font-mono">${p.guard_loops}/3</td>
-          <td class="py-2 font-mono">${p.review_loops}/3</td>
-          <td class="py-2 font-mono"><a href="...">${p.commit_sha.slice(0,7)}</a></td>
+          <td class="py-2 font-mono">${p.phase_fix_round}/3</td>
+          <td class="py-2 font-mono">${p.phase_spawns}/24</td>
+          <td class="py-2 font-mono">${p.commit_sha.slice(0,7)}</td>
           <td class="py-2">${p.status_badge}</td>
         </tr>
         <tr><td colspan="6">
@@ -161,7 +181,7 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
 
 各フェーズ行クリックで `<details>` を toggle (JS は最小限)。
 
-**並列モードの表示**: `event_type: wave_start` があった run では、フェーズ行を wave 単位でグルーピングし、各グループの見出し行に `wave-<index> (phases: 2,3 / 並列 <batch_size> 体)` を出す (wave サイズ 1 フェーズは `(逐次)`)。並列実行されたフェーズは実装が同時進行しているため duration が重なる — 行の duration は implementer 起動から統合コミットまでの実時間をそのまま出し、wave 見出し行には `wave_start` の timestamp から**その wave の最後の `impl_done`** までを wave 全体の実時間として併記する。`guard_loops` / `review_loops` 列は並列フェーズでは `impl_done` の context の同名フィールド (implementer 報告値) を使う。`parallel_fallback` / `merge_conflict` / `worktree_leftover` が記録されたフェーズは status バッジを warn (amber) にし、詳細 `<details>` に reason (leftover なら `decision` とファイル一覧) を出す。**`worktree_leftover` は破棄された実装の唯一の記録になりうるので省略しない**。`parallel_disabled` が記録されている run は、タイムライン冒頭に「並列モード無効 (reason: ...)」の 1 行を出す。
+**並列モードの表示**: `event_type: wave_start` があった run では、フェーズ行を wave 単位でグルーピングし、各グループの見出し行に `wave-<index> (phases: 2,3 / 並列 <batch_size> 体)` を出す (wave サイズ 1 フェーズは `(逐次)`)。並列実行されたフェーズは実装が同時進行しているため duration が重なる — 行の duration は implementer 起動から統合コミットまでの実時間をそのまま出し、wave 見出し行には `wave_start` の timestamp から**その wave の最後の `impl_done`** までを wave 全体の実時間として併記する。`fix rounds` / `spawns` 列は `impl_done` の context の `phase_fix_round` / `phase_spawns` を使う (逐次・並列で同じ)。`parallel_fallback` / `merge_conflict` / `worktree_leftover` が記録されたフェーズは status バッジを warn (amber) にし、詳細 `<details>` に reason (leftover なら `decision` とファイル一覧) を出す。**`worktree_leftover` は破棄された実装の唯一の記録になりうるので省略しない**。`parallel_disabled` が記録されている run は、タイムライン冒頭に「並列モード無効 (reason: ...)」の 1 行を出す。
 
 ## セクション 4: 動的修正の詳細 (P1 / P2 / P3)
 
