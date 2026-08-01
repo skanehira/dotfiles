@@ -47,7 +47,7 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 
 ## 進捗ログ (2 系統)
 
-起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` と `START_SHA=$(git rev-parse HEAD)` (run 全体の開始 SHA。フェーズごとに再代入される `PHASE_START_SHA` とは別スコープ) を発行し、**リアルタイム監視用の 1 行テキストログ** (`~/.claude/logs/dev-impl.log`) と**事後振り返り用の構造化 JSONL** (`~/.claude/logs/dev-impl/${run_id}/decisions.jsonl`) を並走させる。各ステップの「開始 / 完了 / 動的修正 / エスカレ」発生時に両方へ同期して書き込む (1 行ログ = summary のみ、JSONL = summary + context を構造化)。終了時に JSONL から HTML レポート (Step 7) を生成する。`START_SHA` は Step 5.2 の監査 agent 呼び出しと Step 6 / エスカレ通知のテンプレート (references/notification-template.md) から参照される。
+起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` と `START_SHA=$(git rev-parse HEAD)` (run 全体の開始 SHA。フェーズごとに再代入される `PHASE_START_SHA` とは別スコープ) を発行し、**リアルタイム監視用の 1 行テキストログ** (`~/.claude/logs/dev-impl.log`) と**事後振り返り用の構造化 JSONL** (`~/.claude/logs/dev-impl/${run_id}/decisions.jsonl`) を並走させる。各ステップの「開始 / 完了 / 動的修正 / エスカレ」発生時に両方へ同期して書き込む (1 行ログ = summary のみ、JSONL = summary + context を構造化)。終了時に JSONL から HTML レポート (Step 7) を生成する。`START_SHA` は Step 5.2 の監査 agent 呼び出しと Step 6 / エスカレ通知のテンプレート (references/goal-audit.md, references/notification-template.md) から参照される。
 
 書式・JSONL スキーマ・書き込みコマンド・実行ログの範例は [references/logging.md](./references/logging.md) を Read して従う。
 
@@ -162,12 +162,7 @@ deps 抽出コマンドとトポロジカル層 (Kahn 法) への分割手順は
 
 各フェーズ開始時に `p1_fixes_in_phase` を 0 にリセットする。`p2_fixes_total` と `goal_loop` は dev-impl 実行中通して保持し、**再入時は Step 0 で decisions.jsonl から復元した値を初期値にする** (リセットしない)。
 
-`run_elapsed_minutes` は各フェーズ開始時 (Step 4.1) に**下記コマンドで**計算する。記憶で近似すると date コマンドの macOS/Linux 分岐が崩れ、time budget (`time_budget_exceeded`) が機能しなくなる。
-
-```bash
-RUN_START_EPOCH=$(date -j -f '%Y%m%d-%H%M%S' "$run_id" +%s 2>/dev/null || date -d "${run_id:0:8} ${run_id:9:2}:${run_id:11:2}:${run_id:13:2}" +%s)
-run_elapsed_minutes=$(( ($(date +%s) - RUN_START_EPOCH) / 60 ))
-```
+`run_elapsed_minutes` は各フェーズ開始時 (Step 4.1) に計算する (macOS/Linux 両対応)。算出コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.1: run_elapsed_minutes 計算` 節を Read してから実行する (この節を読まず近似コマンドで代替すると、date コマンドの macOS/Linux 分岐が崩れ time budget (`time_budget_exceeded`) が機能しなくなるリスクがある)。
 
 フェーズ内のループカウンタ (architecture-guard 修正ループ最大 3 / レビュー self-fix ループ最大 3) と findings / deviation_signals の集約も**メインセッションが管理する** (Step 4.2)。各フェーズ開始時に 0 リセットし、カウンタの現在値と集約結果は都度 1 行テキストログ + JSONL に書き出して外部化する (コンテキストが長くなり compaction をまたいでも、ログから状態を復元できるように)。
 
@@ -206,28 +201,9 @@ PHASE_CONTEXT の YAML テンプレートと抜粋ロジック (design 節の抜
 
 ##### 事前判定
 
-`IS_NEOVIM_PLUGIN` は LSP 警告修正ステップ 4.2c の要否、`uiPhase` は 4.2d の観点 gating に使う。**`PRODUCT_MODE=cli` の場合は `uiPhase` を判定せず常に `false` 固定**とする (CLI 実装の「コマンド」「フラグ」等の語がキーワード判定に誤爆するのを防ぐ)。
+判定基準: `IS_NEOVIM_PLUGIN` は init.lua / lua ディレクトリ / plugin/*.lua の有無で決まる (LSP 警告修正ステップ 4.2c の要否)。`uiPhase` は `phase_tasks` / フェーズ名の UI キーワード、または `related_source_files` のフロントエンド dir 有無で決まる (4.2d の観点 gating に使う)。**`PRODUCT_MODE=cli` の場合は `uiPhase` を判定せず常に `false` 固定**とする (CLI 実装の「コマンド」「フラグ」等の語がキーワード判定に誤爆するのを防ぐ)。
 
-先に `docs/.dev-impl/<run_id>/phase-<識別子>-context.md` (Step 4.1.5 で組み立て済み) を Read し、YAML フィールド `product_mode` / `phase_tasks` / `phase_name` / `related_source_files` の値をシェル変数に手動代入する (YAML パーサーは使わない。例: `PHASE_NAME="フェーズ3: ユーザー認証"`)。
-
-```bash
-# Lua/Neovim プラグイン判定
-if test -f init.lua || test -d lua || ls plugin/*.lua >/dev/null 2>&1; then
-  IS_NEOVIM_PLUGIN=true
-else
-  IS_NEOVIM_PLUGIN=false
-fi
-
-# UI フェーズ判定 ($PRODUCT_MODE / $PHASE_TASKS / $PHASE_NAME / $RELATED_SOURCE_FILES は上記で代入済み)
-if [ "$PRODUCT_MODE" = "cli" ]; then
-  uiPhase=false
-elif echo "$PHASE_TASKS $PHASE_NAME" | rg -qi '画面|コンポーネント|page|component|style|CSS|レイアウト' \
-  || echo "$RELATED_SOURCE_FILES" | rg -q 'apps/web/|frontend/|src/components/|src/pages/'; then
-  uiPhase=true
-else
-  uiPhase=false
-fi
-```
+実行コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2: 事前判定` 節を Read してから実行する。
 
 ##### 4.2a: TDD 実装 (メインループ)
 
@@ -250,19 +226,7 @@ deviation_signals (設計と*矛盾する*変更) とは別に、以下は**設�
 
 ##### 4.2b: 境界検査 (architecture-guard subagent、最大 3 修正ループ)
 
-```javascript
-const guard = await Agent({
-  description: "境界違反の機械検査",
-  subagent_type: "architecture-guard",
-  model: "haiku",
-  prompt: `PHASE_CONTEXT: docs/.dev-impl/<run_id>/phase-<識別子>-context.md を Read。
-target_diff: phase:${phaseName}
-PHASE_START_SHA: ${PHASE_START_SHA}
-git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。`
-})
-```
-
-`target_diff` に渡せるのは `HEAD` / `working_tree` / `phase:<フェーズ名>` の 3 値のみ (`claude/agents/architecture-guard.md` の「入力」節)。それ以外の文字列は agent 側の分岐に該当せず未定義動作になる。並列モードでは加えて `repo_dir` (worktree の絶対パス) を渡す。
+`architecture-guard` を起動する。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2b: architecture-guard 呼び出し` 節を Read してから実行する (PHASE_CONTEXT の path と target_diff を渡す。`model: "haiku"` の明示を含む)。
 
 - `ok: false` (high/medium 違反 or `diff_command_failed`) → **メインループで TDD 修正** → guard 再実行。3 回修正しても残存なら `guard_loop_exceeded` でエスカレ停止
 - low のみ → 警告ログだけ残して通過
@@ -292,40 +256,11 @@ review-quality (rules 準拠 + アーキテクチャ heuristic 統合) は最終
 
 **review-adversarial のスキップ述語 (機械判定、actor の裁量では skip しない):**
 
-述語の算出は**下記コマンドをそのまま実行する**。記憶で近似コマンドに置き換えると、untracked ファイルや言語別インラインテストの検知漏れにより review-adversarial を不当に skip する。
-
-```bash
-CHANGED=$({ git diff --name-only "${PHASE_START_SHA}"; git ls-files --others --exclude-standard; } | sort -u)
-# LINES は tracked (コミット済との差分) + untracked (新規ファイル) の合算。dev-impl は 4.2e まで
-# コミットしないため、フェーズの新規実装ファイルは常に untracked であり、tracked 差分だけでは
-# 大規模な新規実装を「変更 0 行」と誤判定してしまう
-TRACKED_LINES=$(git diff --shortstat "${PHASE_START_SHA}" | rg -o '[0-9]+' | tail -n +2 | paste -sd+ - | bc)
-UNTRACKED_LINES=$(git ls-files --others --exclude-standard -z | xargs -0 cat 2>/dev/null | wc -l)
-LINES=$(( ${TRACKED_LINES:-0} + ${UNTRACKED_LINES:-0} ))
-# テストコードへの変更検知は「ファイル名」と「差分内容」の 2 層、かつ tracked/untracked 両方を見る
-# (Rust のインラインテストは src ファイル内に書かれるためファイル名 glob では検知できず、
-# その内容層も git diff だけでは untracked ファイルを見ないため、両方を欠くと検知が完全に抜ける)。
-# 内容層は .md / docs/ を除外する (ドキュメント散文中の `test(` 等の字句引用による誤検知を防ぐため)
-TEST_FILE_CHANGED=$(echo "$CHANGED" | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)' || true)
-TRACKED_CONTENT_CHANGED=$(git diff "${PHASE_START_SHA}" -U0 -- ':!*.md' ':!docs/' | rg '^[+-].*(#\[(test|cfg\(test\)|tokio::test|rstest)\]|func Test[A-Z]|\b(it|test|describe)\s*\(|def\s+test_|@pytest\.)' || true)
-UNTRACKED_CONTENT_CHANGED=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 -I{} rg -l '#\[(test|cfg\(test\)|tokio::test|rstest)\]|func Test[A-Z]|\b(it|test|describe)\s*\(|def\s+test_|@pytest\.' {} 2>/dev/null || true)
-TEST_CONTENT_CHANGED="${TRACKED_CONTENT_CHANGED}${UNTRACKED_CONTENT_CHANGED}"
-# 条件2: .md/docs 以外の変更ファイルが無いか (無ければ行数不問で skip 可)
-NON_DOC_CHANGED=$(echo "$CHANGED" | rg -v '\.md$|(^|/)docs/' || true)
-# 条件3: CI・ビルド/テスト設定の変更があるか
-CI_FILES_CHANGED=$(echo "$CHANGED" | rg '\.github/|config|package\.json|Cargo\.toml|go\.mod|Makefile|justfile|deno\.json' || true)
-# review-quality の追加起動条件: 消費すると無効化される資源 (ローテーション有効な refresh token・
-# nonce・ワンタイムコード・べき等キー・使い捨て署名 URL) を扱う差分か
-TRACKED_CONSUMABLE=$(git diff "${PHASE_START_SHA}" -U0 -- ':!*.md' ':!docs/' | rg -i '^[+-].*(refresh[_-]?token|\bnonce\b|one[_-]?time|idempotenc|\botp\b|presigned)' || true)
-UNTRACKED_CONSUMABLE=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 -I{} rg -li 'refresh[_-]?token|\bnonce\b|one[_-]?time|idempotenc|\botp\b|presigned' {} 2>/dev/null || true)
-CONSUMABLE_CHANGED="${TRACKED_CONSUMABLE}${UNTRACKED_CONSUMABLE}"
-```
-
-判定条件は以下の表に従う。
+算出コマンド (`$CHANGED` / `$LINES` / `$TEST_FILE_CHANGED` / `$TEST_CONTENT_CHANGED` / `$NON_DOC_CHANGED` / `$CI_FILES_CHANGED` / `$CONSUMABLE_CHANGED`) は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 観点 gating 述語` 節を Read してから実行する (この節を読まず近似コマンドで代替すると、untracked ファイルや言語別インラインテストの検知漏れにより review-adversarial を不当に skip するリスクがある)。判定条件は以下の表に従う。
 
 | # | 条件                                                                                                                                              | 意図                                                                                                                                                 |
 | - | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空                                                                                        | テスト変更時はレンズ B 必須。ファイル名 + 差分内容の 2 層、tracked/untracked 両方で判定 (言語別の具体パターンは上記の実コマンドが正) |
+| 1 | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空                                                                                        | テスト変更時はレンズ B 必須。ファイル名 + 差分内容の 2 層、tracked/untracked 両方で判定 (言語別の具体パターンは phase-execution.md の実コマンドが正) |
 | 2 | `$LINES` ≤ 20 (`$NON_DOC_CHANGED` が空、つまり `.md` / `docs/` のみの差分なら行数不問で skip 可)                                                  | typo・軽微修正の機械近似                                                                                                                             |
 | 3 | `$CI_FILES_CHANGED` が空 (CI・ビルド/テスト設定 `.github/`, `*config*`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, `justfile`, `deno.json` 等の変更なし) | 検証器設定の改変は必ず監査                                                                                                                           |
 | 4 | 最終フェーズでない                                                                                                                                | 最終フェーズは全観点フル                                                                                                                             |
@@ -354,12 +289,7 @@ severity: low/medium の findings は修正せず JSONL に `event_type: review_
 
 - 失敗 → 修正して再実行。3 回試みても緑にならなければ `tests_failing_before_commit` でエスカレ停止
 
-続けて**テスト弱体化の機械検知**を行う (reward hacking 対策。review-tdd の LLM 判定に頼らず、編集権限の外で機械判定する)。**下記コマンドをそのまま実行する** — 記憶で近似すると言語別 skip/ignore パターンを取りこぼす。
-
-```bash
-git diff ${PHASE_START_SHA} --diff-filter=D --name-only -- '*test*' '*spec*'   # テストファイルの削除
-git diff ${PHASE_START_SHA} -U0 | rg '^\+.*\.(skip|only)\s*\(|^\+\s*(xit|xdescribe|xtest)\b|^\+.*#\[ignore\]'   # skip/only/ignore の追加
-```
+続けて**テスト弱体化の機械検知**を行う (reward hacking 対策。review-tdd の LLM 判定に頼らず、編集権限の外で機械判定する)。検知コマンド (テストファイル削除の検出 + skip/only/ignore 追加の検出) は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2e: テスト弱体化検知コマンド` 節を Read してから実行する (この節を読まず近似コマンドで代替すると、言語別 skip/ignore パターンの見落としにより test_weakening 検知が漏れるリスクがある)。
 
 ヒットした場合、その削除・skip が TODO.md / DESIGN_DETAIL_APP.md にトレースできる意図的な変更 (設計変更で仕様ごと削除等) か確認し、トレースできなければ `test_weakening_detected` でエスカレ停止する (パス扱いしない)。
 
@@ -428,55 +358,7 @@ DESIGN.md の「ゴール」セクションを Read してゴール一覧を抽�
 
 #### Step 5.2: 第三者監査の並列起動
 
-自動系ゴールの検証は**メインループが自分で実行しない** (実装者本人による自己判定を避ける)。`PRODUCT_MODE=cli` の場合は `review-spec-compliance` (mode: post-impl、G_E2E も自動系ゴールとして実行) を単独起動する。`webapp` / `unknown` の場合は `review-spec-compliance` と `review-product-readiness` (G_E2E) を**同一メッセージ内の複数 Agent tool_use として並列起動**する。
-
-**prompt は下記をそのまま使う。**`docs は自分で全文 Read すること` の指示、`output_path` / `holdout_enabled` / `product_mode` のいずれかを欠くと第三者監査の独立性が落ちるため、記憶で近似の prompt を組み立てない。
-
-**cli の場合** (review-spec-compliance が G_E2E も担当、review-product-readiness は起動しない):
-
-```javascript
-Agent({
-  description: "受入基準と成果物全体の第三者監査 (G_E2E 含む)",
-  subagent_type: "review-spec-compliance",
-  model: "opus",
-  prompt: `mode: post-impl
-product_mode: cli
-docs_dir: docs/
-approved_stamp: "<TODO.md 1 行目をそのまま>"
-run_start_sha: ${START_SHA}
-decisions_jsonl: ~/.claude/logs/dev-impl/${run_id}/decisions.jsonl
-output_path: /tmp/review-spec-compliance-${run_id}.json
-holdout_enabled: false
-docs は自分で全文 Read すること。product_mode: cli のため G_E2E も自動系ゴールとして自分で実行し goal_results に含めること (他 agent は起動しない)。
-作業結果 (output_path のパス) は必ず最終メッセージで親に返すこと。`
-})
-```
-
-**webapp / unknown の場合** (2 体並列):
-
-```javascript
-// 1 体目: 受入監査 (自動系ゴールの独立再実行 + 設計突合 + 改変検知)
-Agent({
-  description: "受入基準と成果物全体の第三者監査",
-  subagent_type: "review-spec-compliance",
-  model: "opus",
-  prompt: `mode: post-impl
-product_mode: webapp
-docs_dir: docs/
-approved_stamp: "<TODO.md 1 行目をそのまま>"
-run_start_sha: ${START_SHA}
-decisions_jsonl: ~/.claude/logs/dev-impl/${run_id}/decisions.jsonl
-output_path: /tmp/review-spec-compliance-${run_id}.json
-holdout_enabled: false
-docs は自分で全文 Read すること。G_E2E は実行しないこと (別 agent が担当)。
-作業結果 (output_path のパス) は必ず最終メッセージで親に返すこと。`
-})
-
-// 2 体目: G_E2E 実機検証 (Web プロダクトのみ)
-Agent({ subagent_type: "review-product-readiness", model: "opus", prompt: `<dev_server 情報 + DESIGN_DETAIL_APP.md の UX 設計>` })
-```
-
-`holdout_enabled` は現時点でデフォルト無効。TODO.md に書かれていないエッジケースを review-spec-compliance が能動的に生成・検証する PoC 機能で (`claude/agents/review-spec-compliance.md` 参照)、効果測定後に有効化を検討する。
+自動系ゴールの検証は**メインループが自分で実行しない** (実装者本人による自己判定を避ける)。`PRODUCT_MODE=cli` の場合は `review-spec-compliance` (mode: post-impl、G_E2E も自動系ゴールとして実行) を単独起動する。`webapp` / `unknown` の場合は `review-spec-compliance` と `review-product-readiness` (G_E2E) を**同一メッセージ内の複数 Agent tool_use として並列起動**する。起動する agent はすべて `model: opus` を明示する。起動コードは [references/goal-audit.md](./references/goal-audit.md) の `## 5.2: 監査 agent の並列起動` 節を Read してから実行する (この節を読まず近似の prompt で起動すると、`docs は自分で全文 Read すること` 等の指示や `output_path` / `holdout_enabled` / `product_mode` の欠落により第三者監査の独立性が落ちる)。
 
 **G_E2E の判定**:
 - **webapp / unknown**: review-product-readiness が判定。ナビ系 findings (`nav_unreachable` 等) の severity: high が 0 件 → achieved、1 件以上 → unmet。**dev_server が推定できない場合は判定不能** = `verification_skipped` を記録して手動 pending に落とす (achieved 扱いにしない)
