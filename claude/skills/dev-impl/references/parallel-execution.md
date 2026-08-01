@@ -79,7 +79,7 @@ mkdir -p "$SCRATCH_DIR"
 - **前回 run の残骸の扱いは SKILL.md Step 0 の再入チェックに一本化する**。Step 0 を通過した時点で「取り込む」と判断された worktree は残っている (4p.4 の統合手順から再開する) ので、ここでは作らない。それでも同名が存在する場合は**同一 run 内の再試行** (フォールバック後の作り直し等) なので掃除してから作り直してよい。掃除も下記「worktree 削除前チェック」を通す (`decision: discarded_stale`)
 - 依存パッケージのインストール (`npm ci` / `bun install` / `go mod download` 等) は worktree ごとに必要。**実行は implementer に任せる** (プロジェクトごとにコマンドが違うため、指示文で「必要ならセットアップコマンドを実行せよ」と伝える)
 - **git 管理外だが実行に必須のファイル** (`.env` / ローカル設定 / DB fixture / `.direnv` 等) は worktree に存在しない。メインの working tree に該当ファイルがあれば親が worktree へコピーし、何をコピーしたかを JSONL に記録する (コピーしないとセットアップやテストが実行できず、implementer が原因不明の失敗を報告する)
-- `run_elapsed_minutes` はバッチ開始時と各フェーズの統合前に計算する ([phase-execution.md](./phase-execution.md) の `## 4.1: run_elapsed_minutes 計算`)。上限超過ならバッチに着手せずエスカレ停止する (逐次モードの 4.1 に相当する評価点がここになるので、省くと time budget が並列モードで一度も評価されない)。`p1_fixes_in_phase` は各フェーズの統合時 (4p.4) にリセットする
+- `run_elapsed_minutes` はバッチ開始時と各フェーズの統合前に計算する (SKILL.md「発散上限」節の算出コマンド)。上限超過ならバッチに着手せずエスカレ停止する (逐次モードの 4.1 に相当する評価点がここになるので、省くと time budget が並列モードで一度も評価されない)。`p1_fixes_in_phase` は各フェーズの統合時 (4p.4) にリセットする
 
 ### 4p.2: PHASE_CONTEXT と観点 gating の確定 (親)
 
@@ -90,7 +90,7 @@ wave 内の各フェーズについて、SKILL.md Step 4.1.5 と [phase-context.
 
 PHASE_CONTEXT はメインの working tree 側 (`docs/.dev-impl/`) に置く。この dir は `.gitignore` 済みで worktree 内には存在しないため、implementer と、implementer が起動する検査 subagent には**絶対パス**で渡す (相対パスでは worktree 内で解決できない)。
 
-続けて各フェーズの**事前判定と観点 gating を親が確定する**。[phase-execution.md](./phase-execution.md) の `## 4.2: 事前判定` で `uiPhase` / `IS_NEOVIM_PLUGIN` を算出し、SKILL.md 4.2d の gating 表 (最終フェーズの定義は上記「Step 2」節) で起動すべきレビュー観点のリストを決めて、4p.3 の指示文に実値で埋め込む。implementer には gating の判断をさせない。
+続けて各フェーズの**事前判定と観点 gating を親が確定する**。SKILL.md 4.2「事前判定」のコマンドで `uiPhase` / `IS_NEOVIM_PLUGIN` を算出し、SKILL.md 4.2d の gating 表 (最終フェーズの定義は上記「Step 2」節) で起動すべきレビュー観点のリストを決めて、4p.3 の指示文に実値で埋め込む。implementer には gating の判断をさせない。
 
 review-quality の追加起動条件 `$CONSUMABLE_CHANGED` は差分ベースの述語だが、この時点ではフェーズの差分がまだ存在しない。並列モードでは代わりに **`phase_tasks` / `related_source_files` に消費型資源 (ローテーション有効な refresh token・nonce・ワンタイムコード・べき等キー・使い捨て署名 URL) を示す語が現れるか**で親が判定し、該当すれば review-quality を起動観点に加える。
 
@@ -132,7 +132,8 @@ wave (バッチ) 内の全フェーズ分の Agent 呼び出しを**同一メッ
 4. <IS_NEOVIM_PLUGIN が true の場合のみ> fix-lsp-warnings を起動する (対象はフェーズ差分ファイルのみ)。
    失敗しても継続してよいが、警告が残ったまま進んだ場合は報告の verification_skipped に含める
 5. レビューを起動する。観点は <gating で決まった観点リスト> で、
-   同一メッセージ内の複数 tool_use として並列起動し、各呼び出しに model: opus を明示する。
+   同一メッセージ内の複数 tool_use として並列起動し、各呼び出しに model を明示する
+   (review-adversarial は sonnet、それ以外の review-* は opus。SKILL.md「モデル方針」の表が正)。
    各 agent に repo_dir: <worktree の絶対パス> と phase_start_sha: <WAVE_BASE_SHA> を必ず渡す
    (repo_dir を落とすと guard と同じ理由でレビューが空差分を見て無検出通過する)。
    output_path は <SCRATCH_DIR>/review-<観点>.json とする
@@ -223,7 +224,7 @@ fan-out 時に JSONL へ `event_type: impl_dispatch` (context に `phases` / `wo
 
    **`git merge --abort` は使わない** — squash merge は `.git/MERGE_HEAD` を作らないため、衝突後に実行しても `fatal: There is no merge to abort` で失敗し衝突状態も解消されない。`git restore --staged --worktree .` 単独で working tree がクリーンに戻る。
 
-3. **テスト弱体化の機械検知**: [phase-execution.md](./phase-execution.md) の `## 4.2e: テスト弱体化検知コマンド` を、`${PHASE_START_SHA}` を `${MERGE_BASE_SHA}` に置き換えて実行する。ヒットしたら SKILL.md 4.2e と同じトレース確認を行い、トレース不能なら `test_weakening_detected` でエスカレ停止する
+3. **テスト弱体化の機械検知**: SKILL.md 4.2e の検知コマンドを、`${PHASE_START_SHA}` を `${MERGE_BASE_SHA}` に置き換えて実行する。ヒットしたら SKILL.md 4.2e と同じトレース確認を行い、トレース不能なら `test_weakening_detected` でエスカレ停止する
 
 4. **全テストゲート**: 全テストスイートを Bash で実行し exit code 0 を確認する。フェーズ単体では green でも、他フェーズとの統合で壊れることがあるためここが本番。失敗したら**親が直営 TDD で修正**する (implementer には差し戻さない — 原因が複数フェーズの結合部にあるため)。3 回試みても緑にならなければ `tests_failing_before_commit` でエスカレ停止
 

@@ -161,6 +161,7 @@ stdout に `output_path` の絶対パスを 1 行だけ出す。
 const guardResult = await Agent({
   description: "Clean Arch / DDD 境界の検査",
   subagent_type: "architecture-guard",
+  model: "haiku",
   prompt: `target_diff: phase:phase-3
 PHASE_START_SHA: ${phaseStartSha}
 design_path: docs/DESIGN.md

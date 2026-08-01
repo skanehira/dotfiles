@@ -128,6 +128,7 @@ PoC コードは「**マーカー scope だけを検証する最小コード**�
 const investigationResult = await Agent({
   description: "POC_NEEDED マーカーの自動調査",
   subagent_type: "tech-investigation",
+  model: "opus",
   prompt: `marker: id=react-19-suspense, scope=async-data-loading, risk=high, blocker=true
 context_paths: docs/FEASIBILITY.md
 output_path: /tmp/tech-investigation-react-19-suspense.json
