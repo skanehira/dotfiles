@@ -141,15 +141,21 @@ const DIMENSIONS = ["tdd", "quality", "product_readiness", "adversarial"]
 // メインループが diff 内容を見て最終選択する (選択と根拠を 1 行出力してから実行)。
 const targetDimensions = args.dimensions?.length ? args.dimensions : selectedDimensions
 
+// model は必ず明示する。未指定だと agent 定義の frontmatter ではなく
+// 親のセッションモデルを継承し、最上位 tier のセッションでは全 agent がその単価で走る。
 const AGENT_TYPE = {
-  tdd: "review-tdd",
-  quality: "review-quality",
-  product_readiness: "review-product-readiness",
-  adversarial: "review-adversarial",
+  tdd: { type: "review-tdd", model: "opus" },
+  quality: { type: "review-quality", model: "opus" },
+  product_readiness: { type: "review-product-readiness", model: "opus" },
+  adversarial: { type: "review-adversarial", model: "sonnet" },
 }
 
 const reviews = await Promise.all(
-  targetDimensions.map(d => Agent({ subagent_type: AGENT_TYPE[d], prompt: reviewPromptFor(d, ctx) }))
+  targetDimensions.map(d => Agent({
+    subagent_type: AGENT_TYPE[d].type,
+    model: AGENT_TYPE[d].model,
+    prompt: reviewPromptFor(d, ctx),
+  }))
 )
 ```
 

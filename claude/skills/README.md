@@ -77,9 +77,10 @@ skills/
 | 対象 | モデル | 理由 |
 |---|---|---|
 | dev-spec (設計ループ) | セッション継承 (最上位 tier 推奨) | 検証器が人間しかいないため、生成側を賢くする |
-| dev-impl (実装ループ) / dev-impl-quick (軽量実装ループ) | `model: opus` (frontmatter) | 実装の質がそのまま成果物の質になるため実行器を下げない。検証器 (テストゲート・レビュー fan-out) も opus なので「実行器 ≤ 検証器」は等号で満たされる |
+| dev-impl (実装ループ) / dev-impl-quick (軽量実装ループ) | `model: opus` (frontmatter) | 実装の質がそのまま成果物の質になるため実行器を下げない |
 | dev-impl の implementer subagent (並列モード) | `model: opus` (呼び出し時明示) | 実行器。worktree 内で TDD 実装からレビュー修正までを担うため、逐次モードの actor と同じ tier に揃える |
-| review-* subagent | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。frontmatter も opus にして、呼び出し時の明示忘れで無音でセッション継承より下に落ちない防御とする |
+| review-tdd / review-quality / review-product-readiness / review-spec-compliance subagent | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。frontmatter も opus にして、呼び出し時の明示忘れで無音でセッション継承より下に落ちない防御とする |
+| review-adversarial subagent | `model: sonnet` (frontmatter + 呼び出し時明示) | 唯一の例外。同一セッション内の直接比較で opus と sonnet の 1 spawn あたり単価がほぼ同一 ($2.55 / $2.51) だったのに対し、high 検出は sonnet が 6 倍 (0.90 件/spawn vs 0.15 件/spawn) だった。「実際に壊して確かめる」作業様式では、同じ予算でターンを多く回せることが検出力に直結する。**検出力の実測が「実行器 ≤ 検証器」の代理指標に優先する**という判断。high 検出件数が opus 時 (0.29 件/spawn) を下回り続けたら opus に戻す |
 | tech-investigation subagent (dev-spec フェーズ 5 の PoC 検証) | `model: opus` (frontmatter + 呼び出し時明示) | 「何をどこまで検証すれば行けると言えるか」を自分で設計する探索的な調査。検証範囲の見落としが設計の前提を誤らせる |
 | architecture-guard subagent | `model: haiku` (frontmatter) | レイヤ境界違反の検出は機械的な判定でモデル性能に依存しない |
 
@@ -115,7 +116,8 @@ subagent への委譲は「並列化」と「親コンテキストの保護 (巨
 | `tech-investigation` | `dev-spec` フェーズ 5 (PoC 検証、並列 fan-out) |
 | `architecture-guard` | `dev-impl` Step 4.2b |
 | `fix-lsp-warnings` | `dev-impl` Step 4.2c / Agent ツールで直接起動 |
-| `review-*` (tdd / quality / product-readiness / adversarial) | `dev-impl` Step 4.2d (model: opus 明示) / `workflow-review` |
+| `review-*` (tdd / quality / product-readiness) | `dev-impl` Step 4.2d (model: opus 明示) / `workflow-review` |
+| `review-adversarial` | `dev-impl` Step 4.2d (model: sonnet 明示) / `workflow-review` |
 | `review-tdd` (単一観点のみ) | `dev-impl-quick` ステップ 4 (model: opus 明示) |
 | `general-purpose` (implementer として) | `dev-impl` Step 4 の並列モード (model: opus 明示、worktree 分離) |
 
