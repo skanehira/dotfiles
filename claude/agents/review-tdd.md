@@ -1,13 +1,13 @@
 ---
 name: review-tdd
-description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 4 観点レビュー subagent の一つ (テスト品質)。フェーズ実装差分とテストファイルを見て、テストが振る舞いを表現しているか (否定形・不在アサーションだけの空虚テスト検出を含む)・命名規約・AAA パターン・アサーション規約・モックの過剰使用・テスト独立性を判定し、構造化 JSON で findings を返す。RED→GREEN→REFACTOR の順序判定は行わない (実装ループが自律遵守する)。
+description: dev-impl の Review ステップ (Step 4.2c) または workflow-review から並列起動される 4 観点レビュー subagent の一つ (テスト品質)。フェーズ実装差分とテストファイルを見て、テストが振る舞いを表現しているか (否定形・不在アサーションだけの空虚テスト検出を含む)・命名規約・AAA パターン・アサーション規約・モックの過剰使用・テスト独立性を判定し、構造化 JSON で findings を返す。RED→GREEN→REFACTOR の順序判定は行わない (実装ループが自律遵守する)。
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
 
 # review-tdd
 
-`dev-impl` の Review ステップ (Step 4.2d) から `review-quality` / `review-product-readiness` と**並列起動**されるテスト品質専用 reviewer。
+`dev-impl` の Review ステップ (Step 4.2c) から `review-quality` / `review-product-readiness` と**並列起動**されるテスト品質専用 reviewer。
 
 判定するのは書かれたテストの**質**であって、書かれた順序ではない。RED→GREEN→REFACTOR の順序は実装ループが `rules/core/tdd.md` に従い自律遵守する領分で、本 agent は事後に順序を推定しない (mtime も commit 履歴も REFACTOR による test 再編集と区別できないため)。
 

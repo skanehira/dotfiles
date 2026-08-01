@@ -13,7 +13,7 @@ allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion
 
 - **本体ロジック**: `claude/agents/review-{tdd,quality,product-readiness,adversarial}.md` (subagent × 4。quality は rules 準拠とアーキテクチャ heuristic を統合済み。adversarial は実装破壊・reward hacking 検知・完了報告の反証の 3 レンズ)
 - **本 skill**: ユーザー向けエントリポイント。差分検出と PHASE_CONTEXT 組み立て、subagent 並列起動、結果集約・整形表示
-- **dev-impl (実装ループ) は本 skill を呼ばない** (dev-impl 本体が Step 4.2d で review subagent を観点 gating 付きで直接起動する)。本 skill は手動レビュー用
+- **dev-impl (実装ループ) は本 skill を呼ばない** (dev-impl 本体が Step 4.2c で review subagent を観点 gating 付きで直接起動する)。本 skill は手動レビュー用
 - **観点拡張**: 観点を増やしたい場合は `claude/agents/review-<観点>.md` を追加して本 skill の起動リストに加える
 
 skill / agent 責務分担の詳細は `skills/README.md` 参照。
@@ -95,7 +95,7 @@ const ctx = {
 
 ### Step 2.5: 観点トリアージ
 
-「実装内容に応じた観点選択」を機械述語で行う。dev-impl Step 4.2d の adversarial スキップ述語を全観点に一般化したもの (手動利用なので JSONL 記録はしない。Step 5 のサマリに `adversarial: skipped (trivial diff: N 行)` のように観点ごとの採否理由を表示する)。基準は Step 2 の `phase_start_sha` (= `HEAD`) に揃える (`--staged` 実行時に staged 差分が判定から漏れることや、ctx が使う基準と述語の基準がズレることを防ぐため)。`$CHANGED` は porcelain の 2 文字ステータスプレフィックス付き出力ではなく `git diff --name-only` + `git ls-files --others` のプレーンなパス一覧を使う (プレフィックス付き出力にアンカー正規表現 `(^|/)tests?/` を当てると先頭一致が機能しない)。
+「実装内容に応じた観点選択」を機械述語で行う。dev-impl Step 4.2c の adversarial スキップ述語を全観点に一般化したもの (手動利用なので JSONL 記録はしない。Step 5 のサマリに `adversarial: skipped (trivial diff: N 行)` のように観点ごとの採否理由を表示する)。基準は Step 2 の `phase_start_sha` (= `HEAD`) に揃える (`--staged` 実行時に staged 差分が判定から漏れることや、ctx が使う基準と述語の基準がズレることを防ぐため)。`$CHANGED` は porcelain の 2 文字ステータスプレフィックス付き出力ではなく `git diff --name-only` + `git ls-files --others` のプレーンなパス一覧を使う (プレフィックス付き出力にアンカー正規表現 `(^|/)tests?/` を当てると先頭一致が機能しない)。
 
 ```bash
 CHANGED=$({ git diff --name-only HEAD; git ls-files --others --exclude-standard; } | sort -u)
@@ -249,4 +249,4 @@ AskUserQuestion({
 - subagent: `review-tdd` / `review-quality` / `review-product-readiness` / `review-adversarial` (本体ロジック)
 - セキュリティレビュー: `security-guidance@claude-plugins-official` プラグイン (本 skill の外、Edit/Write pattern 検知 + Stop hook LLM diff review)
 - 連携 skill: `workflow-commit` (修正後のコミット)
-- 上位: なし (dev-impl は本 skill を経由せず Step 4.2d で review subagent を直接起動する)
+- 上位: なし (dev-impl は本 skill を経由せず Step 4.2c で review subagent を直接起動する)

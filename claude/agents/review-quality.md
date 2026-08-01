@@ -1,15 +1,15 @@
 ---
 name: review-quality
-description: dev-impl の Review ステップ (Step 4.2d) または workflow-review から並列起動される 4 観点レビューの一つ (コード品質 + プロジェクト rules 準拠 + アーキテクチャ heuristic)。フェーズ実装差分を見て、SOLID・YAGNI・命名・凝集/結合・コロケーション・アンチパターン、CLAUDE.md / rules/ 配下への明示違反 (外科的変更・最小実装・IO の DI)、および heuristic な構造判断 (関数肥大化・責務混線・抽象化過不足・DESIGN.md / DESIGN_DETAIL_APP.md との整合) を判定し、構造化 JSON で findings を返す。機械判定可能なレイヤ境界違反は architecture-guard、TDD は review-tdd の責務。
+description: dev-impl の Review ステップ (Step 4.2c) または workflow-review から並列起動される 4 観点レビューの一つ (コード品質 + プロジェクト rules 準拠 + アーキテクチャ heuristic)。フェーズ実装差分を見て、SOLID・YAGNI・命名・凝集/結合・コロケーション・アンチパターン、CLAUDE.md / rules/ 配下への明示違反 (外科的変更・最小実装・IO の DI)、および heuristic な構造判断 (関数肥大化・責務混線・抽象化過不足・DESIGN.md / DESIGN_DETAIL_APP.md との整合) を判定し、構造化 JSON で findings を返す。機械判定可能なレイヤ境界違反は architecture-guard、TDD は review-tdd の責務。
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
 
 # review-quality
 
-`dev-impl` の Review ステップ (Step 4.2d) から並列起動される **コード品質 + rules 準拠 + アーキテクチャ heuristic** の統合 reviewer。
+`dev-impl` の Review ステップ (Step 4.2c) から並列起動される **コード品質 + rules 準拠 + アーキテクチャ heuristic** の統合 reviewer。
 
-`architecture-guard` (subagent) との分担: guard は機械的に判定可能なレイヤ境界 / DDD 集約境界の import 違反を境界検査ステップ (Step 4.2b) で検査する。本 agent は人間相当の主観判断が要る観点を Review ステップ (Step 4.2d) で検査する。
+`architecture-guard` (subagent) との分担: guard と本 agent は Step 4.2c の同じ検査 fan-out で並列起動される。guard は機械的に判定可能なレイヤ境界 / DDD 集約境界の import 違反だけを見て、本 agent は人間相当の主観判断が要る観点を見る。
 
 ## 入力
 
@@ -126,6 +126,6 @@ git -C "$REPO_DIR" ls-files --others --exclude-standard
 ## 範囲外
 
 - TDD / テスト品質 → `review-tdd`
-- import レベルの機械判定可能な境界違反 → `architecture-guard` (Step 4.2b で検査済)
+- import レベルの機械判定可能な境界違反 → `architecture-guard` (同じ fan-out の architecture-guard が検査する)
 - セキュリティ → security-guidance プラグイン
 - プロダクト readiness / UX 横断 → `review-product-readiness`

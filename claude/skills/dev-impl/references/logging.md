@@ -3,7 +3,7 @@
 書式・スキーマ・書き込みコマンドのリファレンス。dev-impl 実行開始時に Read する。
 
 
-### 1 行テキストログ (リアルタイム監視)
+## 1 行テキストログ (リアルタイム監視)
 
 `~/.claude/logs/dev-impl.log` に追記:
 
@@ -15,9 +15,9 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] <message>" >> "$LOG"
 
 メッセージには「フェーズ名 + ステップ名 + 結果」を含める (例: `phase-3 / architecture-guard / violations=2 (loop 1/3)`)。
 
-### 構造化 JSONL ログ (事後振り返り)
+## 構造化 JSONL ログ (事後振り返り)
 
-dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.claude/logs/dev-impl/${run_id}/decisions.jsonl` に追記する。終了時にこの JSONL から HTML レポート (後述 Step 7) を生成する。
+dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.claude/logs/dev-impl/${run_id}/decisions.jsonl` に追記する。終了時にこの JSONL から HTML レポート (SKILL.md の Step 7) を生成する。
 
 各エントリのスキーマ:
 
@@ -26,7 +26,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
   "timestamp": "2026-06-30T10:00:00+09:00",
   "phase": "phase-3",
   "step": "architecture-guard",
-  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|wave_start|impl_dispatch|impl_report|impl_done|merge_conflict|worktree_leftover|parallel_fallback|parallel_disabled",
+  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|spawn|fix_dispatch|run_facts_updated|impl_dispatch|impl_report|impl_done|wave_start|merge_conflict|worktree_leftover|parallel_fallback|parallel_disabled",
   "severity": "info|warn|error",
   "summary": "1 行サマリ (テキストログにも残る内容)",
   "context": {
@@ -40,7 +40,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 }
 ```
 
-`event_type: review_low` の場合 (Step 4.2 参照)、`severity` は常に `info` (fatal ではない軽微な指摘のため)。`context` には `phaseFindings` を severity: low/medium に絞った上で dimension ごとにまとめて入れる:
+`event_type: review_low` の場合 (Step 4.2d 参照)、`severity` は常に `info` (fatal ではない軽微な指摘のため)。`context` には**各検査 agent の結果 JSON (`output_path`) の findings** を severity: low/medium に絞った上で dimension ごとにまとめ、加えて結果 JSON のパス一覧 (`result_paths`) を入れる。**転記は `jq` で結果 JSON から直接行い、main のコンテキストを経由させない** (Step 4.2d の射影は `{severity, rule, file, line}` までで、`message` は main が読まないため):
 
 ```json
 "context": {
@@ -48,8 +48,6 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
     "tdd": [{ "file": "...", "line": 12, "severity": "low", "message": "..." }],
     "quality": [],
     "architecture": [],
-    "rules": [{ "file": "...", "line": 5, "severity": "medium", "message": "..." }],
-    "product_readiness": [],
     "adversarial": []
   }
 }
@@ -67,7 +65,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 
 `event_type: goal_check` の判定主体は review-spec-compliance (自動系) / review-product-readiness (G_E2E) であり、メインループは集約して記録するだけ (Step 5.2〜5.3)。
 
-`event_type: verification_skipped` で review-adversarial をスキップした場合 (Step 4.2d のスキップ述語参照)、`context` には判定に使った値をそのまま入れる:
+`event_type: verification_skipped` で review-adversarial をスキップした場合 (Step 4.2c のスキップ述語参照)、`context` には判定に使った値をそのまま入れる:
 
 ```json
 "context": {
@@ -106,19 +104,31 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 
 同一の判断・質問を後続フェーズで踏襲するだけの場合は再記録しない (初回のみ)。
 
-### 並列モードの event_type (Step 2 / Step 4)
+## subagent 起動とフェーズ完了の event_type (Step 4、逐次・並列共通)
 
-wave 実行 ([parallel-execution.md](./parallel-execution.md)) で使う 8 種。`phase` フィールドは wave 全体の事象なら `wave-<index>` (例: `wave-2`)、個別フェーズの事象なら逐次モードと揃えて `phase-<識別子>` 形式 (例: `phase-4-a`) を使う。context 内の `phases` / `phase` は識別子のみ (例: `["2", "4-a"]`) を入れる。
+1 フェーズは最小構成でも implementer 1 + architecture-guard 1 + review 1〜4 の subagent を起動する。全 spawn を記録して事後にフェーズ単価と突合できるようにする (上限は SKILL.md Step 3 の `phase_spawns` / `run_spawns`)。
+
+| event_type | severity | 記録タイミング | context |
+| --- | --- | --- | --- |
+| `impl_report` | info | implementer から報告を受領した時 | 報告要約 JSON + `report_path` (+ 並列モードでは `wave_base_sha` / `worktree_path`)。**全文を転記する場合は `jq` で `report_path` から直接 JSONL へ流し込み、main のコンテキストには載せない** |
+| `impl_done` | info | **1 フェーズの完了時** (SKILL.md 4.2e のコミット後。逐次・並列とも**フェーズ完了はこのイベントだけ**で表す。`done` はステップ単位の完了に使い、フェーズ完了には使わない) | `phase` / `summary` / `commit_sha` (並列モードでは**main の統合コミット SHA**。implementer の worktree コミットとは別物) / `review_outputs` (main が確認した検査結果 JSON のパス配列、監査証跡) / `phase_fix_round` (このフェーズで回した修正ラウンド数、0〜3) / `phase_spawns` |
+| `spawn` | info | Agent ツールで subagent を起動した直後 (**例外なく全て**) | `phase` / `agent` (`dev-impl-implementer` / `architecture-guard` / `review-*` / `fix-lsp-warnings`) / `model` (`opus` / `sonnet` / `haiku`) / `mode` (implementer のみ: `implement` / `fix`) / `phase_spawns` (このフェーズの累計、起動後の値) / `run_spawns` (run 全体の累計) |
+| `fix_dispatch` | warn | 修正ラウンド (SKILL.md 4.2d) で `mode: fix` の implementer を起動した時 | `phase` / `phase_fix_round` (このラウンドの番号、1〜3) / `findings_paths` (渡した結果 JSON のパス配列) / `fatal_summary` (`{severity, rule, file, line}` の射影配列。**findings の本文は入れない**) |
+| `run_facts_updated` | info | RUN_FACTS.md への追記後 (SKILL.md 4.2e のコミット後) | `phase` / `sections` (更新した節名の配列: `commands` / `artifacts` / `design_decisions` / `pitfalls`) / `bytes` (更新後のファイルサイズ。4KB 上限の監視用) |
+
+`spawn` を全件記録するのは、`phase_spawns` の上限判定を「記憶」ではなくログから復元できる状態に保つため (compaction をまたいでもカウンタが失われない)。
+
+## 並列モード固有の event_type (Step 2 / Step 4)
+
+wave 実行 ([parallel-execution.md](./parallel-execution.md)) でのみ使う 6 種 (`impl_report` / `impl_done` は逐次・並列共通なので上表にある)。`phase` フィールドは wave 全体の事象なら `wave-<index>` (例: `wave-2`)、個別フェーズの事象なら逐次モードと揃えて `phase-<識別子>` 形式 (例: `phase-4-a`) を使う。context 内の `phases` / `phase` は識別子のみ (例: `["2", "4-a"]`) を入れる。
 
 | event_type | severity | 記録タイミング | context |
 | --- | --- | --- | --- |
 | `wave_start` | info | 各 wave (バッチに分割した場合は各バッチ) の実行開始時に 1 件 | `wave_index` (1 始まり) / `phases` (フェーズ識別子の配列) / `batch_size` (このバッチの同時 implementer 数、1〜3。レポートの wave 見出し行に併記する) |
 | `impl_dispatch` | info | implementer の fan-out 直後 | `phases` / `worktrees` (worktree 絶対パスの配列) / `wave_base_sha` |
-| `impl_report` | info | implementer から SendMessage で報告を受領した時 | 報告 JSON 全文 + `wave_base_sha` + `worktree_path` (エスカレ後の再入で統合を再開するための証跡。SendMessage 本文は復元できない) |
-| `impl_done` | info | 1 フェーズの統合完了時 (親のコミット後) | `phase` / `summary` / `commit_sha` (**親の統合コミット SHA**。implementer の `worktree_commit_sha` とは別物) / `review_outputs` (親が確認したレビュー結果 JSON のパス配列、監査証跡) / `guard_loops` / `review_loops` (implementer 報告値。レポートのフェーズ行に出す) |
 | `merge_conflict` | warn | squash merge でコンフリクト発生時 | `phase` / `conflicted_files` / `resolved` (true = 親が解消、false = フォールバックへ) |
 | `worktree_leftover` | warn | worktree 削除前チェックで未コミットファイルを検出した時 (parallel-execution.md の `## worktree 削除前チェック`) | `phase` / `files` (`git status --porcelain` の行の配列) / `decision` (`reintegrated` = コミット漏れとして統合し直した / `discarded_artifacts` = 生成物として破棄 / `discarded_fallback` = フォールバックで破棄 / `discarded_stale` = 残骸として破棄) |
-| `parallel_fallback` | warn | 並列を諦めて親の逐次実装に切り替えた時 | `phase` / `reason` (`impl_failed` / `review_high_remaining` / `merge_unresolvable`。implementer 報告の reason からの変換表は parallel-execution.md の `### 4p.5: 逐次フォールバック`) / `implementer_report` |
+| `parallel_fallback` | warn | 並列を諦めて親の逐次実装に切り替えた時 | `phase` / `reason` (`impl_failed` / `review_high_remaining` / `merge_unresolvable`。reason の変換表は parallel-execution.md の `### 4p.6: 逐次フォールバック`) / `implementer_report` |
 | `parallel_disabled` | warn | 並列モードを無効化した時 (run 中最大 2 回: Step 2 の起動時判定と、実行中の `fallback_threshold` 超過) | `reason` (`deps_missing` / `deps_unknown_ref` / `deps_cycle` / `fallback_threshold`) / `detail` |
 
 ```json
@@ -129,32 +139,38 @@ wave 実行 ([parallel-execution.md](./parallel-execution.md)) で使う 8 種�
 }
 ```
 
-書き込みは `jq -nc --arg ... '{...}' >> $JSONL` で 1 行 1 エントリの append-only。`context` は event_type に応じて中身が変わる (`start` / `done` ではほぼ空でも良い)。
+`event_type: start` (run 開始時の 1 件) の `context` には **`repo_root` (`git rev-parse --show-toplevel` の絶対パス)** と `start_sha` を必ず入れる。`~/.claude/logs/dev-impl/` は全プロジェクト共通のディレクトリなので、これが無いと SKILL.md Step 0 の「同一プロジェクトで未完了の run があるか」を機械判定できない。
+
+書き込みは `jq -nc --arg ... '{...}' >> $JSONL` で 1 行 1 エントリの append-only。`context` は event_type に応じて中身が変わる (`done` ではほぼ空でも良い)。
 
 両ログとも各ステップの「開始 / 完了 / 動的修正 / エスカレ」発生時に同期して書き込む。1 行ログ = summary のみ、JSONL = summary + context を構造化。
 
 ## 範例: typical な実行ログ
 
 ```
-[2026-06-30 10:00:00] dev-impl start (docs/DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md)
-[2026-06-30 10:00:01] phase-1 / start
-[2026-06-30 10:01:23] phase-1 / implement (main) / done
-[2026-06-30 10:01:30] phase-1 / architecture-guard / violations=0
-[2026-06-30 10:01:31] phase-1 / fix-lsp-warnings / skipped (not a neovim plugin)
-[2026-06-30 10:02:45] phase-1 / review (dims: tdd) / pass
-[2026-06-30 10:02:48] phase-1 / test-gate / green
-[2026-06-30 10:02:50] phase-1 / commit / done
-[2026-06-30 10:02:51] phase-2 / start
-[2026-06-30 10:05:12] phase-2 / implement (main) / done
-[2026-06-30 10:05:20] phase-2 / design_decision / retry デフォルト 3 回を採用 (設計に記述なし)
-[2026-06-30 10:05:25] phase-2 / architecture-guard / violations=2 (loop 1/3)
-[2026-06-30 10:06:40] phase-2 / fix (main) / done
-[2026-06-30 10:06:50] phase-2 / architecture-guard / violations=0
-[2026-06-30 10:08:00] phase-2 / review (dims: tdd) / pass
-[2026-06-30 10:08:03] phase-2 / test-gate / green
-[2026-06-30 10:08:05] phase-2 / commit / done
+[2026-06-30 10:00:00] dev-impl start (repo=/Users/x/dev/foo, docs/DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md)
+[2026-06-30 10:00:01] phase-1 / start (RUN_FACTS.md 新規作成、gate コマンド検証 green)
+[2026-06-30 10:00:05] phase-1 / spawn dev-impl-implementer (opus, mode=implement) [1/24]
+[2026-06-30 10:03:10] phase-1 / impl_report (status=done, files=2, tests 12 passed)
+[2026-06-30 10:03:12] phase-1 / fix-lsp-warnings / skipped (not a neovim plugin)
+[2026-06-30 10:03:15] phase-1 / spawn architecture-guard (haiku) + review-tdd (opus) [3/24]
+[2026-06-30 10:05:40] phase-1 / 検査 / guard violations=0, review (dims: tdd) fatal=0
+[2026-06-30 10:05:55] phase-1 / test-gate / green
+[2026-06-30 10:06:00] phase-1 / commit + run_facts_updated + impl_done
+[2026-06-30 10:06:01] phase-2 / start
+[2026-06-30 10:06:05] phase-2 / spawn dev-impl-implementer (opus, mode=implement) [1/24]
+[2026-06-30 10:09:12] phase-2 / impl_report (status=done, files=3, tests 18 passed)
+[2026-06-30 10:09:14] phase-2 / design_decision / retry デフォルト 3 回を採用 (設計に記述なし)
+[2026-06-30 10:09:20] phase-2 / spawn architecture-guard (haiku) + review-tdd (opus) [3/24]
+[2026-06-30 10:11:25] phase-2 / 検査 / guard violations=2 (fatal)
+[2026-06-30 10:11:30] phase-2 / fix_dispatch (round 1/3) → spawn dev-impl-implementer (opus, mode=fix) [4/24]
+[2026-06-30 10:13:40] phase-2 / impl_report (status=done, mode=fix)
+[2026-06-30 10:13:45] phase-2 / spawn architecture-guard (haiku) + review-tdd (opus) [6/24]
+[2026-06-30 10:15:50] phase-2 / 検査 / guard violations=0, review fatal=0
+[2026-06-30 10:16:03] phase-2 / test-gate / green
+[2026-06-30 10:16:05] phase-2 / commit + run_facts_updated + impl_done
 ...
-[2026-06-30 10:30:00] all phases done (5/5). P1=1, P2=0
+[2026-06-30 10:45:00] all phases done (5/5). P1=1, P2=0, run_spawns=22
 ```
 
 ## 範例: 並列モードの実行ログ
