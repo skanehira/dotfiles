@@ -56,6 +56,15 @@
             "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/commit-msg-guard.ts"
           }
         ]
+      },
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --allow-env $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/agent-spawn-guard.ts"
+          }
+        ]
       }
     ],
     "SessionEnd": [
@@ -186,5 +195,6 @@
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "model": "opusplan"
 }
