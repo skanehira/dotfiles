@@ -2,6 +2,8 @@
 
 `dev-impl/SKILL.md` の Step 4 (各フェーズの実行) 各節から参照される実行コマンドの詳細。判断基準・観点 gating・ループ規則・エスカレ条件は SKILL.md 本体にあるので、そちらを先に読んでから該当節だけをここで参照する。
 
+本ファイル中のシェル変数の前提: `$REPO_DIR` は作業ディレクトリの絶対パス (逐次モードは main のリポジトリ、並列モードは worktree)、`$PHASE_START_SHA` は SKILL.md 4.1 で記録した SHA、`$RESULT_JSON` は検査 agent が `output_path` に書いた結果 JSON のパス。JavaScript 風の `${...}` は Agent 呼び出しに埋める実値を表す。
+
 ## 4.1: run_elapsed_minutes 計算
 
 ```bash
@@ -36,23 +38,93 @@ else
 fi
 ```
 
-## 4.2b: architecture-guard 呼び出し
+## 4.2a: implementer の起動
 
 ```javascript
-const guard = await Agent({
-  description: "境界違反の機械検査",
-  subagent_type: "architecture-guard",
-  model: "haiku",
-  prompt: `PHASE_CONTEXT: docs/.dev-impl/<run_id>/phase-<識別子>-context.md を Read。
-target_diff: phase:${phaseName}
-PHASE_START_SHA: ${PHASE_START_SHA}
-git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。`
+await Agent({
+  description: `フェーズ${phaseId} の実装`,
+  subagent_type: "dev-impl-implementer",
+  model: "opus",                       // 未指定は agent-spawn-guard hook が deny する
+  run_in_background: false,            // main はここで待つ (待ちを 1h TTL の main に集約するのが本構造の要点)
+  prompt: `mode: implement
+phase_context_path: ${absPhaseContextPath}
+repo_dir: ${absRepoDir}
+report_path: ${absScratchDir}/impl-report.json
+
+最終メッセージは report_path の絶対パス 1 行だけにせよ。要約や解説を書くな (要約は SendMessage で送ること)。`
 })
 ```
 
-`target_diff` に渡せるのは `HEAD` / `working_tree` / `phase:<フェーズ名>` の 3 値のみ (`claude/agents/architecture-guard.md` の「入力」節)。それ以外の文字列は agent 側の分岐に該当せず未定義動作になる。並列モードでは加えて `repo_dir` (worktree の絶対パス) を渡す。
+## 4.2d: 修正ラウンドの implementer 起動
 
-## 4.2d: 観点 gating 述語
+`mode: fix` は上記 4.2a の呼び出しに加えて `findings_paths` を渡す:
+
+```javascript
+  prompt: `mode: fix
+phase_context_path: ${absPhaseContextPath}
+repo_dir: ${absRepoDir}
+report_path: ${absScratchDir}/impl-report-fix-${round}.json
+findings_paths:
+${fatalResultPaths.map(p => `  - ${p}`).join("\n")}
+
+最終メッセージは report_path の絶対パス 1 行だけにせよ。要約や解説を書くな。`
+```
+
+すべて**絶対パス**で渡す。subagent の Bash は呼び出しごとに cwd が親のものへ戻るため、相対パスは並列モードの worktree で解決できない。
+
+TDD の順序・フェーズスコープのテストのみ実行・コミット禁止・`docs/` 編集禁止・報告 JSON スキーマ・停止条件は `claude/agents/dev-impl-implementer.md` に常駐しているので**指示文で繰り返さない** (spawn ごとの prompt 固定費になるため)。
+
+## 4.2c: 検査 fan-out の起動
+
+**起動前に未追跡ファイルを intent-to-add する** (これをしないと新規実装だけのフェーズが全 agent に空差分として見える):
+
+```bash
+git -C "$REPO_DIR" ls-files -z --others --exclude-standard \
+  | xargs -0 -r git -C "$REPO_DIR" add -N
+```
+
+gating で決まった観点 + architecture-guard を**同一メッセージ内の複数 Agent tool_use** として並列起動する。全呼び出しに共通で付ける末尾指示:
+
+```text
+最終メッセージは output_path の絶対パス 1 行だけにせよ。findings 本文や要約を書くな。
+```
+
+```javascript
+// 毎フェーズ必須
+{ subagent_type: "architecture-guard", model: "haiku", run_in_background: false,
+  prompt: `target_diff: phase:${phaseName}
+design_path: ${absDocsDir}/DESIGN.md
+design_detail_path: ${absDocsDir}/DESIGN_DETAIL_APP.md
+PHASE_START_SHA: ${phaseStartSha}
+repo_dir: ${absRepoDir}
+output_path: ${absScratchDir}/guard.json
+git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。` }
+
+// スキップ述語を満たさなければ実行
+{ subagent_type: "review-adversarial", model: "sonnet",
+  prompt: `phase_name: ${phaseName}
+phase_start_sha: ${phaseStartSha}
+repo_dir: ${absRepoDir}
+docs_dir: ${absDocsDir}
+dev_server: ${devServerOrNull}
+scratch_dir: ${absScratchDir}
+output_path: ${absScratchDir}/review-adversarial.json` }   // PHASE_CONTEXT は渡さない
+
+// gating に応じて review-tdd / review-quality / review-product-readiness を同様に (model: opus)
+//   共通で渡す: PHASE_CONTEXT の絶対パス / phase_name / phase_start_sha / repo_dir / output_path
+```
+
+`target_diff` に渡せるのは `HEAD` / `working_tree` / `phase:<フェーズ名>` の 3 値のみ (`claude/agents/architecture-guard.md` の「入力」節)。それ以外の文字列は agent 側の分岐に該当せず未定義動作になる。
+
+**結果の読み方** (SKILL.md「main のコンテキスト規律」):
+
+```bash
+jq -c '{ok, skip_reason, dimension, findings: [(.findings // .violations)[]? | {severity, rule, file, line}]}' "$RESULT_JSON"
+```
+
+`message` / `fix_proposal` は main では読まない (修正する implementer が JSON を自分で Read する)。
+
+## 4.2c: 観点 gating 述語の算出コマンド
 
 review-adversarial のスキップ述語と、review-quality を最終フェーズ以外でも起動させる条件を算出する。
 
@@ -83,7 +155,7 @@ UNTRACKED_CONSUMABLE=$(git ls-files --others --exclude-standard -z -- ':!*.md' '
 CONSUMABLE_CHANGED="${TRACKED_CONSUMABLE}${UNTRACKED_CONSUMABLE}"
 ```
 
-判定条件テーブル (review-adversarial の skip/実行の遷移規則、`$CONSUMABLE_CHANGED` による review-quality の起動) は SKILL.md 側の 4.2d を参照。
+判定条件テーブル (review-adversarial の skip/実行の遷移規則、`$CONSUMABLE_CHANGED` による review-quality の起動) は SKILL.md 側の 4.2c を参照。
 
 ## 4.2e: テスト弱体化検知コマンド
 
