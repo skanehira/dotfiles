@@ -8,7 +8,7 @@
 
 | 規模 | 入口 | 中身 |
 |---|---|---|
-| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → (承認ゲート) → `/dev-impl` | 設計ループ (要件〜PoC 検証〜設計書〜TODO) → 実装ループ (全フェーズ自律実装)。プロダクトモード (cli/webapp) は省略時タスク説明から推論 |
+| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → (承認ゲート) → `/dev-impl` | 設計ループ (要件〜PoC 検証〜設計書〜TODO) → 実装ループ (全フェーズ自律実装)。プロダクトモード (cli/webapp) は省略時タスク説明から推論。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
 | **M: 1 機能・リファクタの一括委任 (docs 不要)** | `/dev-impl-quick` | 軽量実装ループ。タスク分解 → 直営 TDD → テストゲート → review-tdd (単一観点) → タスク単位コミット。複数観点レビュー fan-out・ログ・レポートは持たない |
 | **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-tdd` を自分で起動する |
 | **S: バグ修正・typo** | 直接依頼 | スキル不要。remind-rules hook が既定の品質を守る |
@@ -58,6 +58,7 @@ skills/
 ├── workflow-debate/
 ├── workflow-review/
 ├── demo-site-builder/
+├── fullstack-app-builder/     # フルスタック scaffold (手順は references/)
 ├── saas-pricing-design/
 ├── utility-*/                 # 単発ユーティリティ群
 └── README.md
@@ -144,6 +145,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | スキル | 説明 |
 |---|---|
 | [demo-site-builder](./demo-site-builder/) | React 19 + Vite + TS + Tailwind v4 でモバイル向け静的 SPA デモを TDD 構築 → Cloudflare Workers デプロイ |
+| [fullstack-app-builder](./fullstack-app-builder/) | skanehira/fullstack-worker-template (React 19 + Hono + Cloudflare D1/Drizzle + Cognito) から scaffold + ローカル環境構築。Stripe / 認証の要否をヒアリングで取捨し、docs/PRODUCT_SPEC.md 経由で `/dev-spec` → `/dev-impl` へ引き渡す (機能実装は行わない) |
 | [saas-pricing-design](./saas-pricing-design/) | SaaS の料金プランをコスト構造から逆算して設計 (Numbers 互換 Excel 生成 + 実機検証) |
 
 ### ユーティリティ

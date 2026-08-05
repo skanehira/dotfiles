@@ -1,6 +1,6 @@
 ---
 name: demo-site-builder
-description: React 19 + Vite+ + TypeScript + Tailwind v4 のモバイル向け静的 SPA デモサイトを TDD で構築し、Cloudflare Workers へデプロイするワークフロー。localStorage でフロントのみ完結するデモに特化。「デモサイトを作りたい」「モバイル向け静的デモ」「SPA を作って Cloudflare にデプロイ」「静的プロトタイプを公開」「localStorage でフロントだけ完結」などで起動。
+description: React 19 + Vite+ + TypeScript + Tailwind v4 のモバイル向け静的 SPA デモサイトを TDD で構築し、Cloudflare Workers へデプロイするワークフロー。localStorage でフロントのみ完結するデモに特化。「デモサイトを作りたい」「モバイル向け静的デモ」「SPA を作って Cloudflare にデプロイ」「静的プロトタイプを公開」「localStorage でフロントだけ完結」などで起動。バックエンド・DB・ログイン・決済が必要なら fullstack-app-builder を使う。
 ---
 
 # Demo Site Builder
@@ -15,7 +15,7 @@ description: React 19 + Vite+ + TypeScript + Tailwind v4 のモバイル向け�
 - `https://<project>.<subdomain>.workers.dev` で即座に公開
 - GitHub Actions による push → 自動デプロイ
 
-バックエンドや DB が必要になったら、このスキルは起点として使い、後から Hono / Cloudflare D1 等で拡張する。
+バックエンドや DB (API・ログイン・決済) が必要なら、このスキルではなく `fullstack-app-builder` を使う (`skanehira/fullstack-worker-template` 起点で Hono + Cloudflare D1 + Cognito が同梱されている)。
 
 ## 前提条件（依存コマンド）
 
