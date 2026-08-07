@@ -169,6 +169,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [utility-reviewing-skills](./utility-reviewing-skills/) | スキルをベストプラクティスに基づいてレビュー |
 | [utility-self-improving](./utility-self-improving/) | 過去セッション履歴から繰り返し指摘を抽出し設定を改善 |
 | [utility-doc-reading](./utility-doc-reading/) | 知識プロファイルを参照しながらドキュメント読解を支援 |
+| [utility-dev-impl-measure](./utility-dev-impl-measure/) | dev-impl の改修効果を before/after で計測 (手順の正は `~/.claude/handoff/dev-impl-refactor/MEASUREMENT.md`) |
 | [utility-pdf-compress](./utility-pdf-compress/) | PDF のロスレス圧縮 |
 | [transcribing-meeting-minutes](./transcribing-meeting-minutes/) | 会議録音をローカル文字起こしし、時刻根拠付きの議事録を作成 |
 | [llm-feature-design](./llm-feature-design/) | アプリに組み込む LLM 機能のプロンプトと周辺構造を設計 (回答範囲の制限 / 非信頼テキストと injection 対策 / グラウンディング / ガードレール / 評価)。規範は references/ から遅延参照し、逐語引用と出典は references/evidence.md に分離 |
