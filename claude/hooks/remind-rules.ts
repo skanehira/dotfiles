@@ -121,7 +121,7 @@ export const DOC_REMINDER =
 3. 概念の追加・削除・置換を含むなら、局所 Edit でなく全文を読み直して書き直す
 編集後に:
 4. 固有名の閉包チェック — 新出の用語・コマンド・ファイルに定義・生成者・消費者を書いたか。削除した概念の参照残骸を rg で掃いたか
-5. 大きめの改訂なら /utility-doc-audit で fresh context の監査を実行する
+5. 監査判定 — 概念の追加・削除・置換 / 節構成の変更 / 新規文書の作成 / 変更 30 行超 (diff の追加 + 削除行) のいずれかなら /utility-doc-audit を実行する。該当しなければ「監査スキップ: <理由>」を 1 行出力してスキップする (明示的な監査依頼は基準に関わらず実行)
 詳細 → @rules/core/documentation.md`;
 
 export type ReminderTier = "full" | "short";
