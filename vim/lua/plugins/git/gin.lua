@@ -111,7 +111,7 @@ local gin_config = function()
   })
 
   nmap('gs', '<Cmd>GinStatus<CR>')
-  nmap('gl', '<Cmd>GinLog<CR>')
+  nmap('gl', '<Cmd>GinLog --oneline<CR>')
   nmap('gm', '<Cmd>GinBlame %<CR>')
   nmap('gb', '<Cmd>GinBranch<CR>')
   nmap('gu', '<Cmd>GinBrowse ++yank --permalink --no-browser<CR>')
