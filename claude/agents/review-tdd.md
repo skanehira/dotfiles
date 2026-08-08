@@ -1,7 +1,7 @@
 ---
 name: review-tdd
 description: dev-impl の Review ステップ (Step 4.2c) または workflow-review から並列起動される 4 観点レビュー subagent の一つ (テスト品質)。フェーズ実装差分とテストファイルを見て、テストが振る舞いを表現しているか (否定形・不在アサーションだけの空虚テスト検出を含む)・命名規約・AAA パターン・アサーション規約・モックの過剰使用・テスト独立性を判定し、構造化 JSON で findings を返す。RED→GREEN→REFACTOR の順序判定は行わない (実装ループが自律遵守する)。
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash, SendMessage
 model: opus
 ---
 
