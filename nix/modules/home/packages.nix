@@ -104,6 +104,7 @@ let
     nix-output-monitor # nom: drs / nix build の進捗を見やすく可視化
     mdbook
     fd
+    stripe-cli
   ];
 
   # メディア / ファイル
