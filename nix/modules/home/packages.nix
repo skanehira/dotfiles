@@ -165,7 +165,7 @@ let
   lspServers =
     with pkgs;
     [
-      typescript-language-server # ts_ls
+      typescript-go # tsgo (`tsgo --lsp --stdio`)
       lua-language-server # lua_ls
       vscode-langservers-extracted # eslint + jsonls (1 パッケージで両方提供)
       graphql-language-service-cli # graphql (graphql-lsp バイナリ)
