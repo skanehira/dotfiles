@@ -25,7 +25,8 @@
       "Bash(git log *)",
       "Bash(git show *)",
       "Bash(gh *)",
-      "WebFetch(domain:*)"
+      "WebFetch(domain:*)",
+      "mcp__chrome-devtools"
     ],
     "deny": [],
     "defaultMode": "plan"
