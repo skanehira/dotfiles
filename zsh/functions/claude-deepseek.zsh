@@ -3,8 +3,7 @@
 #   ccds      DeepSeek モードに切替 (1Password から API キーを取得)
 #   ccds off  Anthropic に戻す
 #
-# alias と export はシェルプロセスローカルなので、他のシェル・
-# launchd の無人実行 (utility-self-improving) には影響しない。
+# alias と export はシェルプロセスローカルなので、他のシェルには影響しない。
 ccds() {
   local settings="$GHQ_ROOT/github.com/skanehira/dotfiles/claude/settings.deepseek.json"
 

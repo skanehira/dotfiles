@@ -1,6 +1,6 @@
 ---
 name: utility-self-improving
-description: 過去セッション履歴 (~/.claude/archive/) からユーザーが繰り返し指摘したパターン (3 回以上観測) を抽出し、dotfiles の Claude 設定 (CLAUDE.md/rules/skills/agents/hooks) を改善する Draft PR を作成する。launchd からの週次無人実行も想定。「自己改善」「過去履歴から改善を抽出」「最近の指摘を rules に反映したい」「ハーネスを継続改善」などで起動。引数で解析期間 (日数、省略時は直近 7 日) を指定可能。
+description: 過去セッション履歴 (~/.claude/archive/) からユーザーが繰り返し指摘したパターン (3 回以上観測) を抽出し、dotfiles の Claude 設定 (CLAUDE.md/rules/skills/agents/hooks) を改善する Draft PR を作成する。「自己改善」「過去履歴から改善を抽出」「最近の指摘を rules に反映したい」「ハーネスを継続改善」などで起動。引数で解析期間 (日数、省略時は直近 7 日) を指定可能。
 allowed-tools: Read, Edit, Write, Glob, Bash, Agent
 ---
 
@@ -23,7 +23,7 @@ Claude Code を日常的に使うなかで、ユーザーが**繰り返し**指�
 - `日数` 省略時: 直近 **7 日**
 - 例: `/utility-self-improving 14` で直近 14 日、`/utility-self-improving 30` で直近 30 日
 
-なぜ 7 日か: launchd で週次自動実行する運用 (毎週日曜 05:00) に合わせて、観測対象を直近 7 日に絞る。Mac Studio で `claude -p` が定期的に起動して、その週分の指摘を解析・PR 化する。手動で実行する場合は、観測閾値 (3 セッション以上) を満たすかどうかは履歴の濃さ次第なので、引数で `14` や `30` に広げてよい。
+なぜ 7 日か: 1 週間分の指摘をまとめて解析する粒度に合わせている。観測閾値 (3 セッション以上) を満たすかどうかは履歴の濃さ次第なので、引数で `14` や `30` に広げてよい。
 
 引数の解析:
 
@@ -58,7 +58,7 @@ subagent はそれぞれ fresh context で起動するため、main セッショ
 
 ## 進捗ログの記録 (実行中の状況可視化)
 
-launchd や `claude -p` 経由で実行される場合、`stdout` は完了時に 1 度だけ書かれるため、実行中の状況がほぼ見えない。これを補うため、**`~/.claude/logs/self-improving-progress.log`** に主要マイルストーンを追記する。
+`claude -p` 経由で実行される場合、`stdout` は完了時に 1 度だけ書かれるため、実行中の状況がほぼ見えない。これを補うため、**`~/.claude/logs/self-improving-progress.log`** に主要マイルストーンを追記する。
 
 ### 書き込みルール
 
@@ -88,7 +88,15 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [<role>] <message>" >> "$PROGRESS_LOG"
 
 ### 失敗時の書き込み
 
-例外発生・中断時にも `[<role>] FAILED: <理由>` を書く。これがあれば「どこで止まったか」が `tail -f` で即わかる。
+例外発生・中断時にも `[<role>] FAILED: <理由>` を書く。これがあれば「どこで止まったか」が即わかる。
+
+### 進捗の確認
+
+実行中の状況は別ペインで追う:
+
+```bash
+tail -f ~/.claude/logs/self-improving-progress.log
+```
 
 ## 処理フロー
 
@@ -263,7 +271,7 @@ main session は **最終応答の markdown サマリ** に rule_audit を含め
 ```
 
 これにより:
-- 観察結果は MEMORY.md と最終サマリ (`~/.claude/logs/self-improving.log`) の 2 箇所で確認できる
+- 観察結果は MEMORY.md と最終応答のサマリの 2 箇所で確認できる
 - 差分ゼロの PR が積み上がらない
 - 整理 (削除・統合) の判断と作業は人間が必要なときに MEMORY.md を見て手作業で行う
 
