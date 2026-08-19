@@ -8,7 +8,7 @@
 
 | 規模 | 入口 | 中身 |
 |---|---|---|
-| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → (承認ゲート) → `/dev-impl` | 設計ループ (要件〜PoC 検証〜設計書〜TODO) → 実装ループ (全フェーズ自律実装)。プロダクトモード (cli/webapp) は省略時タスク説明から推論。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
+| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → (承認ゲート) → GitHub issue → `/dev-impl` | 設計ループ (要件〜PoC 検証〜設計書〜TODO〜issue 生成) → 実装ループ (issue を依存順に 1 件ずつ自律実装)。プロダクトモード (cli/webapp) は省略時タスク説明から推論。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
 | **M: 1 機能・リファクタの一括委任 (docs 不要)** | `/dev-impl-quick` | 軽量実装ループ。タスク分解 → 直営 TDD → テストゲート → review-tdd (単一観点) → タスク単位コミット。複数観点レビュー fan-out・ログ・レポートは持たない |
 | **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-tdd` を自分で起動する |
 | **S: バグ修正・typo** | 直接依頼 | スキル不要。remind-rules hook が既定の品質を守る |
@@ -22,10 +22,11 @@
 │  1 user-story → 2 ui-sketch (webapp のみ) → 3 usecase          │
 │      → 4 feasibility → 5 ★PoC 検証 (tech-investigation 並列)  │
 │      → 6 ddd-modeling → 7 DESIGN/DETAIL 生成 → 8 interview     │
-│      → 9 検証手順補完 → 10 TODO 生成 → 11 ★承認ゲート          │
+│      → 9 検証手順補完 → 10 TODO 生成 → 10.5 設計整合監査       │
+│      → 11 ★承認ゲート → 12 GitHub issue 生成                   │
 │                                                                │
 │  Feedback: 設計 = 人間承認 / 技術実現性 = PoC 実行結果         │
-│  クイックモード: 7〜11 のみ (不確実性があれば 4〜5 を通す)     │
+│  クイックモード: 7〜12 のみ (不確実性があれば 4〜5 を通す)     │
 │  プロダクトモード: cli は 2 ui-sketch をスキップし CLI I/F     │
 │  仕様をフェーズ 7 内で設計 (DESIGN.md にスタンプで記録)        │
 └──────────────────────────┬─────────────────────────────────────┘
@@ -34,16 +35,14 @@
 ┌──────────────────────────▼─────────────────────────────────────┐
 │  /dev-impl — 実装ループ (model: opus、直接起動で切り替わる)    │
 │                                                                │
-│  POC_NEEDED 残存ガード → TODO.md の deps 宣言で wave 構築 →    │
-│  フェーズごとに (wave サイズによらず同じ骨格):                 │
-│    PHASE_CONTEXT + RUN_FACTS 組み立て →                        │
+│  POC_NEEDED 残存ガード → open issue の Depends on で着手順決定 │
+│  issue 1 件ずつ (並列化しない):                                │
+│    in-progress を貼る → issue 本文から PHASE_CONTEXT 組み立て →│
 │    implementer subagent で TDD 実装 (葉、opus) → 親が待つ →    │
 │    guard + review-* を親が fan-out (1 回の待ち) →              │
 │    fatal あれば implementer(mode: fix) 再 spawn (最大 3) →     │
-│    親が全テストゲート → commit → RUN_FACTS 追記                │
-│  wave サイズ 2+ は implementer を worktree に分離して同時起動、 │
-│    統合時に squash merge (統合はフェーズごとに逐次)            │
-│  → ゴール達成判定 → HTML レポート                              │
+│    親が全テストゲート → commit → issue を close                │
+│  → ゴール達成判定 (未達は新規 issue) → HTML レポート           │
 │                                                                │
 │  エスカレ (P3 等) でのみ停止。再開は /dev-impl 再実行          │
 └────────────────────────────────────────────────────────────────┘
@@ -54,7 +53,7 @@
 ```
 skills/
 ├── dev-spec/                  # 設計ループ (フェーズ手順は references/)
-├── dev-impl/                  # 実装ループ (旧 workflow-autopilot)
+├── dev-impl/                  # 実装ループ (GitHub issue 駆動・逐次)
 ├── dev-impl-quick/            # 軽量実装ループ (docs 不要)
 ├── workflow-commit/
 ├── workflow-create-draft-pr/
@@ -81,7 +80,7 @@ skills/
 |---|---|---|
 | dev-spec (設計ループ) | セッション継承 (最上位 tier 推奨) | 検証器が人間しかいないため、生成側を賢くする |
 | dev-impl (実装ループ) / dev-impl-quick (軽量実装ループ) | `model: opus` (frontmatter) | 実装の質がそのまま成果物の質になるため実行器を下げない |
-| dev-impl-implementer subagent (逐次・並列とも、`mode: implement` / `mode: fix`) | `model: opus` (frontmatter + 呼び出し時明示) | 実行器。実装の質がそのまま成果物の質になるため下げない。`agent-spawn-guard` hook が呼び出し時の model 未指定を deny する |
+| dev-impl-implementer subagent (`mode: implement` / `mode: fix`) | `model: opus` (frontmatter + 呼び出し時明示) | 実行器。実装の質がそのまま成果物の質になるため下げない。`agent-spawn-guard` hook が呼び出し時の model 未指定を deny する |
 | review-tdd / review-quality / review-product-readiness / review-spec-compliance subagent | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。frontmatter も opus にして、呼び出し時の明示忘れで無音でセッション継承より下に落ちない防御とする |
 | review-adversarial subagent | `model: sonnet` (frontmatter + 呼び出し時明示) | 唯一の例外。同一セッション内の直接比較で opus と sonnet の 1 spawn あたり単価がほぼ同一 ($2.55 / $2.51) だったのに対し、high 検出は sonnet が 6 倍 (0.90 件/spawn vs 0.15 件/spawn) だった。「実際に壊して確かめる」作業様式では、同じ予算でターンを多く回せることが検出力に直結する。**検出力の実測が「実行器 ≤ 検証器」の代理指標に優先する**という判断。high 検出件数が opus 時 (0.29 件/spawn) を下回り続けたら opus に戻す |
 | tech-investigation subagent (dev-spec フェーズ 5 の PoC 検証) | `model: opus` (frontmatter + 呼び出し時明示) | 「何をどこまで検証すれば行けると言えるか」を自分で設計する探索的な調査。検証範囲の見落としが設計の前提を誤らせる |
@@ -105,11 +104,11 @@ skills/
 
 subagent への委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」のためだけに行う。逐次依存する実装・修正・コミットは**メインループ直営** (CLAUDE.md「委譲の判断」)。
 
-**dev-impl だけがこの原則の明示的な例外**で、wave サイズ 1 の逐次フェーズも実装を `dev-impl-implementer` subagent に出す。根拠は「フェーズを 100 本単位で回すとメインループのコンテキストが単調増加し、平均 475k トークン × 1 万リクエストになる」という実測で、詳細は `dev-impl/SKILL.md` の「フェーズ実装を subagent に委譲する理由」にある。この例外は dev-impl に閉じており、他のスキル・plan mode・直接依頼では従来どおり直営で実装する。
+**dev-impl だけがこの原則の明示的な例外**で、issue 1 件ずつの逐次実装であっても `dev-impl-implementer` subagent に出す。根拠は「フェーズを 100 本単位で回すとメインループのコンテキストが単調増加し、平均 475k トークン × 1 万リクエストになる」という実測で、詳細は `dev-impl/SKILL.md` の「フェーズ実装を subagent に委譲する理由」にある。この例外は dev-impl に閉じており、他のスキル・plan mode・直接依頼では従来どおり直営で実装する。
 
 例外の前提は **implementer が葉である** (子 subagent を起動しない) こと。子を待つ subagent は 5 分 TTL のキャッシュを失効させるため、レビューの起動と待機は 1 時間 TTL の親に置く。葉性は `agents/dev-impl-implementer.md` の `tools` から `Agent` を除いて構造的に強制する (subagent には親の hooks が届かず、指示文では違反を検出できないため)。
 
-git index を共有する統合 (merge / コミット) は並列化できないので親に残す。なお subagent の Bash は**呼び出しごとに cwd が親セッションのものへ戻る**ため、worktree で作業させる agent には作業ディレクトリを引数で渡し `git -C <path>` を使わせる (`cd` の状態は次の呼び出しに残らない)。
+git index を共有する操作 (コミット) は並列化できないので親に残す。なお subagent の Bash は**呼び出しごとに cwd が親セッションのものへ戻る**ため、作業ディレクトリは引数で絶対パスを渡し `git -C <path>` を使わせる (`cd` の状態は次の呼び出しに残らない)。
 
 ### skill = agent の wrapper の例
 
@@ -136,8 +135,8 @@ git index を共有する統合 (merge / コミット) は並列化できない�
 
 | スキル | 説明 | 入力 | 出力 |
 |---|---|---|---|
-| [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、承認ゲートで実装ループへ引き渡す。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md |
-| [dev-impl](./dev-impl/) | 実装ループ。TODO.md 全フェーズを自律実装 (implementer subagent で TDD → guard + review を親が fan-out (敵対的レビュー含む) → fatal は implementer(mode: fix) で修正 → テストゲート → commit)。TODO.md の全フェーズに依存宣言 `<!-- deps: ... -->` があれば並列モードになり、互いに独立なフェーズを worktree 分離した implementer に同時 fan-out する (最大 3、統合は親が逐次)。完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (必須、承認スタンプは goals_sha 付き) | 各フェーズのコミット + `docs/dev-impl-reports/<run_id>.html` |
+| [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、設計整合監査 → 承認ゲート → GitHub issue 生成まで通して実装ループへ引き渡す。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (承認スタンプ付き) + `ready` ラベル付きの GitHub issue 群 |
+| [dev-impl](./dev-impl/) | 実装ループ。dev-spec が作った GitHub issue を `Depends on #N` の順に 1 件ずつ自律実装 (implementer subagent で TDD → guard + review を親が fan-out (敵対的レビュー含む) → fatal は implementer(mode: fix) で修正 → テストゲート → commit → issue を close)。並列化はしない。完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | GitHub issue (必須) + DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (承認スタンプは goals_sha 付き) | issue ごとのコミット + `docs/dev-impl-reports/<run_id>.html` |
 | [dev-impl-quick](./dev-impl-quick/) | 軽量実装ループ。依頼文をタスク分解 → 1 件ずつ直営 TDD → テストゲート → review-tdd (単一観点、model: opus 明示) → タスク単位 commit。複数観点レビュー fan-out・進捗ログ・レポートは持たない | 依頼文または簡易タスクリスト (docs 不要) | タスク単位のコミット |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / ddd-modeling / analyzing-requirements / interview / verification-review / todo-generation)。
