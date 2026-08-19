@@ -91,6 +91,12 @@ CLAUDE.md「委譲の判断」は**逐次実装の subagent 委譲を禁止**し
 
 未完了 run が無ければ通常起動 (新規 run_id 発行) で Step 1 へ。
 
+#### needs-human で駐車中の issue の再開
+
+`needs-human` ラベルの open issue があれば、**着手する前に**その issue 番号・停止理由 (issue コメントに記録済み) をユーザーに提示し、AskUserQuestion で「解決した (ready に戻して着手する) / まだ (駐車したまま他の issue を進める) / 中止」を確認する。
+
+「解決した」を選ばれた場合だけ、`gh issue edit <N> --add-label ready --remove-label needs-human` でラベルを戻す。**Claude の判断で勝手に外さない** — 駐車の解除は人間の回答が入ったことの証拠であり、ここを自動化すると停止条件が実質無効になる。
+
 ### Step 1: 前提ドキュメントの確認
 
 1. `docs/DESIGN.md` を Read
@@ -622,7 +628,14 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
 停止時の処理:
 
-1. 当該 issue の変更は**コミットしない** (緑状態でないため。working tree は残す)。issue のラベルは `in-progress` のままにする (再実行時に Step 2 が再開対象として拾うため)
+1. 当該 issue の変更は**コミットしない** (緑状態でないため。working tree は残す)。**issue のラベルを停止理由で振り分ける**:
+
+   | 停止理由 | ラベル | 再開のしかた |
+   | --- | --- | --- |
+   | 再実行で解決しうるもの (`phase_fix_exceeded` / `impl_failed` / `guard_agent_failed` / `review_agent_failed` / `spawn_budget_exceeded` / `tests_failing_before_commit` / `time_budget_exceeded`) | `in-progress` のまま | `/dev-impl` の再実行で Step 2 が再開対象として拾う |
+   | 人間の判断が要るもの (P3 / `design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing` / `poc_marker_unresolved` / `acceptance_criteria_change` / `test_weakening_detected` / `verification_tampered` / `dependency_blocked`) | **`needs-human` を貼り `in-progress` を外す** | 人間が対応した後、次の `/dev-impl` 起動時に Step 0 が確認してラベルを `ready` に戻す |
+
+   人間の判断が要る側で `in-progress` のままにしてはならない。**再実行がそのまま同じ状態から再開してしまい、人間が何もしていないのに前進したように見える**ため。
 2. 停止理由を `~/.claude/logs/dev-impl.log` と JSONL (`event_type: p3_escalate`) と stdout 全てに詳細出力
 3. HTML レポート (Step 7) を生成 → コミット (停止時もレポートだけは残す)
 4. ユーザに通知 (通知内容もログ・review agent の出力から裏付けが取れる事実のみを記載する)。テンプレートは [references/notification-template.md](./references/notification-template.md) の `## エスカレ停止通知` 節を Read し、全フィールドを埋めて出力する (Read せず記憶から近似文面を出すと、最終成功 commit SHA や完了フェーズ数など裏付け必須フィールドが欠落し停止理由の追跡性が落ちる)。
