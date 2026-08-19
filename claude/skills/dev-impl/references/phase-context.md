@@ -6,7 +6,7 @@ PHASE_CONTEXT は、フェーズを実装する implementer と検査する suba
 
 ```yaml
 product_mode: <cli|webapp|unknown>       # Step 1 で DESIGN.md スタンプから判定した PRODUCT_MODE
-phase_name: <フェーズN: 名前>            # issue タイトルから (12.4 が固定した形式)
+phase_name: <フェーズN: 名前>            # issue タイトルから (12.4.2 が固定した形式)
 phase_start_sha: <SHA>                   # Step 4.1 で記録
 phase_tasks: |                           # issue 本文の実装指示セクション
   <issue 本文の ## ゴール / ## DoD / ## 非スコープ / ## 実装タスク を awk で抽出>
