@@ -33,19 +33,53 @@ const FORMAT_GUIDE = `subject は "<emoji> <type>: <subject>" 形式にしてく
   Object.entries(TYPE_TO_EMOJI).map(([t, e]) => `${t}=${e}`).join(" ")
 }`;
 
-// 検証できない (= 検証対象のメッセージを持たない) commit オプション
+// git 自体のグローバルオプション (-C <path> / -c <k>=<v>) は commit の前に置かれる。
+// worktree を跨ぐ作業では `git -C <path> commit` が常用されるため、ここを取りこぼすと検証が素通りする
+const GIT_COMMIT_PATTERN = /(^|[;&|]\s*|&&\s*)git\s+(?:-[Cc]\s+\S+\s+)*commit\b/;
+
+// 検証できない (= 検証対象のメッセージを持たない) commit オプション。
+// commit サブコマンド以降にのみ適用する (git 自体の -C/-c と区別するため)
 const UNVERIFIABLE_COMMIT_PATTERN = /\s(--amend|--no-edit|-F|--file|-C|-c|--reuse-message)\b/;
 
-export function extractCommitSubject(command: string): string | null {
-  if (!/(^|[;&|]\s*|&&\s*)git\s+commit\b/.test(command)) return null;
-  if (UNVERIFIABLE_COMMIT_PATTERN.test(command)) return null;
+/** heredoc 本文の [開始, 終了) の一覧。本文の文字列は書き出されるだけで実行されない */
+function heredocBodyRanges(command: string): [number, number][] {
+  const ranges: [number, number][] = [];
+  for (const start of command.matchAll(/<<-?\s*'?([A-Za-z_][A-Za-z0-9_]*)'?/g)) {
+    const bodyStart = command.indexOf("\n", start.index);
+    if (bodyStart === -1) continue;
+    const rest = command.slice(bodyStart + 1);
+    const end = rest.search(new RegExp(`^[ \\t]*${start[1]}[ \\t]*$`, "m"));
+    ranges.push([bodyStart + 1, end === -1 ? command.length : bodyStart + 1 + end]);
+  }
+  return ranges;
+}
 
+export function extractCommitSubject(command: string): string | null {
+  // heredoc 本文の中のマッチは対象外にする。単に「最初の heredoc より後ろなら無視」に
+  // すると、heredoc を書いたあとに本物のコミットを打つ形が素通りする回避路になるため、
+  // 本文の範囲を求めて範囲外の最初のマッチを採用する
+  const bodies = heredocBodyRanges(command);
+  let commitEnd = -1;
+  for (const m of command.matchAll(new RegExp(GIT_COMMIT_PATTERN, "g"))) {
+    const at = m.index ?? 0;
+    if (!bodies.some(([s, e]) => at >= s && at < e)) {
+      commitEnd = at + m[0].length;
+      break;
+    }
+  }
+  if (commitEnd === -1) return null;
+  const afterCommit = command.slice(commitEnd);
+  if (UNVERIFIABLE_COMMIT_PATTERN.test(afterCommit)) return null;
+
+  // 抽出は afterCommit に限定する。コマンド全体を検索すると、同じコマンドの前段で
+  // 書き出した無関係な heredoc の 1 行目を subject と誤認する
+  //
   // HEREDOC 形式 (-m "$(cat <<'EOF' ... EOF)") を先に見る
-  const heredoc = command.match(/<<\s*'?EOF'?\n([\s\S]*?)\nEOF/);
+  const heredoc = afterCommit.match(/<<\s*'?EOF'?\n([\s\S]*?)\nEOF/);
   if (heredoc) return heredoc[1].split("\n")[0];
 
-  const inline = command.match(/\s-m\s+"([^"]*)"/) ??
-    command.match(/\s-m\s+'([^']*)'/);
+  const inline = afterCommit.match(/\s-m\s+"([^"]*)"/) ??
+    afterCommit.match(/\s-m\s+'([^']*)'/);
   if (inline) return inline[1].split("\n")[0];
 
   return null;

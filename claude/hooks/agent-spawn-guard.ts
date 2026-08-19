@@ -53,9 +53,13 @@ const REQUIRED_FIELDS: Record<string, string[]> = {
   ],
 };
 
-const TEMPLATE_HINT =
-  " skills/dev-impl/references/goal-audit.md の `## 5.2: 監査 agent の並列起動` " +
-  "にある完全なテンプレートを Read して、そのまま使ってください。";
+/** テンプレートの所在をモードごとに示す。 */
+const TEMPLATE_HINT: Record<string, string> = {
+  "post-impl": " skills/dev-impl/references/goal-audit.md の `## 5.2: 監査 agent の並列起動` " +
+    "にある完全なテンプレートを Read して、そのまま使ってください。",
+  "pre-approval": " skills/dev-impl/references/goal-audit.md の `## 5.2: 監査 agent の並列起動` " +
+    "にある完全なテンプレートを Read して、そのまま使ってください。",
+};
 
 export type AgentSpawnInput = {
   subagent_type?: string;
@@ -69,17 +73,12 @@ export type SpawnValidation = {
 };
 
 /**
- * 本 hook 自身の deny 文を取り除く。deny 文には不足フィールド名が列挙されるため、
- * 取り除かないと「deny 文を prompt に貼り戻すだけで通る」迂回路が生まれる。
+ * `key:` 形式のフィールドは値が空でないことまで確認する (キーだけ並べても満たさない)。
+ *
+ * 行頭アンカーが「deny 文を prompt に貼り戻すだけで通る」迂回路も同時に塞いでいる。
+ * deny 文は `[agent-spawn-guard]` で始まる 1 行なので、その中に `approved_stamp:` が
+ * 列挙されていても行頭には来ず、フィールドが満たされたとは判定されない。
  */
-function stripGuardMessages(prompt: string): string {
-  return prompt
-    .split("\n")
-    .filter((line) => !line.trimStart().startsWith("[agent-spawn-guard]"))
-    .join("\n");
-}
-
-/** `key:` 形式のフィールドは値が空でないことまで確認する (キーだけ並べても満たさない)。 */
 function hasField(prompt: string, field: string): boolean {
   if (!field.endsWith(":")) return prompt.includes(field);
   const key = field.slice(0, -1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -89,19 +88,16 @@ function hasField(prompt: string, field: string): boolean {
 }
 
 function validateSpecCompliancePrompt(rawPrompt: string): SpawnValidation {
-  const prompt = stripGuardMessages(rawPrompt);
-  const mode = prompt.includes("mode: post-impl")
-    ? "post-impl"
-    : prompt.includes("mode: pre-approval")
-    ? "pre-approval"
-    : null;
+  const prompt = rawPrompt;
+  const mode = Object.keys(REQUIRED_FIELDS).find((m) => prompt.includes(`mode: ${m}`)) ?? null;
 
   if (mode === null) {
     return {
       ok: false,
       reason:
-        "[agent-spawn-guard] review-spec-compliance の prompt に `mode: post-impl` " +
-        "または `mode: pre-approval` がありません。監査の種別が決まらないため起動できません。",
+        "[agent-spawn-guard] review-spec-compliance の prompt に `mode: post-impl` / " +
+        "`mode: pre-approval` のいずれもありません。" +
+        "監査の種別が決まらないため起動できません。",
     };
   }
 
@@ -112,7 +108,7 @@ function validateSpecCompliancePrompt(rawPrompt: string): SpawnValidation {
     ok: false,
     reason:
       `[agent-spawn-guard] review-spec-compliance (mode: ${mode}) の prompt に必須項目が不足しています: ` +
-      `${missing.join(", ")}。${TEMPLATE_HINT}`,
+      `${missing.join(", ")}。${TEMPLATE_HINT[mode]}`,
   };
 }
 

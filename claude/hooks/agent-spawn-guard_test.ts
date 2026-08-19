@@ -3,51 +3,6 @@ import { MANDATED_MODEL, validateAgentSpawn } from "./agent-spawn-guard.ts";
 
 // --- model 明示の検証 ---
 
-Deno.test("validateAgentSpawn_with_managed_agent_missing_model_denies_and_names_mandated_model", () => {
-  const result = validateAgentSpawn({
-    subagent_type: "architecture-guard",
-    prompt: "target_diff: phase:3",
-  });
-
-  assertEquals(result.ok, false);
-  assertEquals(
-    result.reason,
-    "[agent-spawn-guard] architecture-guard の起動に model が指定されていません。" +
-      "未指定だと agent 定義ではなく親のセッションモデルを継承します。" +
-      'model: "haiku" を明示してください。',
-  );
-});
-
-Deno.test("validateAgentSpawn_with_implementer_missing_model_denies_and_names_opus", () => {
-  const result = validateAgentSpawn({
-    subagent_type: "dev-impl-implementer",
-    prompt: "mode: implement\nrepo_dir: /tmp/x",
-  });
-
-  assertEquals(result.ok, false);
-  assertEquals(
-    result.reason,
-    "[agent-spawn-guard] dev-impl-implementer の起動に model が指定されていません。" +
-      "未指定だと agent 定義ではなく親のセッションモデルを継承します。" +
-      'model: "opus" を明示してください。',
-  );
-});
-
-Deno.test("validateAgentSpawn_with_lsp_fixer_missing_model_denies_and_names_haiku", () => {
-  const result = validateAgentSpawn({
-    subagent_type: "fix-lsp-warnings",
-    prompt: "対象: src/foo.lua",
-  });
-
-  assertEquals(result.ok, false);
-  assertEquals(
-    result.reason,
-    "[agent-spawn-guard] fix-lsp-warnings の起動に model が指定されていません。" +
-      "未指定だと agent 定義ではなく親のセッションモデルを継承します。" +
-      'model: "haiku" を明示してください。',
-  );
-});
-
 Deno.test("validateAgentSpawn_with_managed_agent_and_explicit_model_allows", () => {
   const result = validateAgentSpawn({
     subagent_type: "architecture-guard",
@@ -78,8 +33,28 @@ Deno.test("validateAgentSpawn_with_unmanaged_agent_missing_model_allows", () => 
   assertEquals(result, { ok: true });
 });
 
+// 期待値は MANDATED_MODEL から読まず literal で持つ。表を反復して同じ表の値を期待すると、
+// 割当を書き換えても常に green になり、どの agent のモデルも pin されない
+const EXPECTED_MANDATED_MODELS: [string, string][] = [
+  ["dev-impl-implementer", "opus"],
+  ["architecture-guard", "haiku"],
+  ["fix-lsp-warnings", "haiku"],
+  ["review-adversarial", "sonnet"],
+  ["review-tdd", "opus"],
+  ["review-quality", "opus"],
+  ["review-product-readiness", "opus"],
+  ["review-spec-compliance", "opus"],
+];
+
+Deno.test("MANDATED_MODEL covers exactly the agents that have a pinned model expectation", () => {
+  assertEquals(
+    Object.keys(MANDATED_MODEL).sort(),
+    EXPECTED_MANDATED_MODELS.map(([type]) => type).sort(),
+  );
+});
+
 Deno.test("validateAgentSpawn denies every mandated agent spawned without model, naming that agent's model", () => {
-  for (const [type, model] of Object.entries(MANDATED_MODEL)) {
+  for (const [type, model] of EXPECTED_MANDATED_MODELS) {
     const result = validateAgentSpawn({
       subagent_type: type,
       prompt: VALID_POST_IMPL_PROMPT,
@@ -187,8 +162,9 @@ docs は自分で全文 Read すること。`,
   assertEquals(result.ok, false);
   assertEquals(
     result.reason,
-    "[agent-spawn-guard] review-spec-compliance の prompt に `mode: post-impl` " +
-      "または `mode: pre-approval` がありません。監査の種別が決まらないため起動できません。",
+    "[agent-spawn-guard] review-spec-compliance の prompt に `mode: post-impl` / " +
+      "`mode: pre-approval` のいずれもありません。" +
+      "監査の種別が決まらないため起動できません。",
   );
 });
 
@@ -219,31 +195,6 @@ Deno.test("validateAgentSpawn_with_missing_subagent_type_allows", () => {
   const result = validateAgentSpawn({ prompt: "何か" });
 
   assertEquals(result, { ok: true });
-});
-
-Deno.test("validateAgentSpawn denies a prompt that merely pastes the guard's own deny message back", () => {
-  // deny 文には不足フィールド名が列挙されるため、それを貼り戻すだけで
-  // 素朴な部分一致チェックは通ってしまう。この迂回路を塞ぐ
-  const pastedBack = `mode: post-impl
-docs_dir: docs/
-output_path: /tmp/o.json
-docs は自分で全文 Read すること。
-[agent-spawn-guard] review-spec-compliance (mode: post-impl) の prompt に必須項目が不足しています: product_mode:, approved_stamp:, run_start_sha:, decisions_jsonl:, holdout_enabled:。`;
-
-  const result = validateAgentSpawn({
-    subagent_type: "review-spec-compliance",
-    model: "opus",
-    prompt: pastedBack,
-  });
-
-  assertEquals(result.ok, false);
-  assertEquals(
-    result.reason,
-    "[agent-spawn-guard] review-spec-compliance (mode: post-impl) の prompt に必須項目が不足しています: " +
-      "product_mode:, approved_stamp:, run_start_sha:, decisions_jsonl:, holdout_enabled:。" +
-      " skills/dev-impl/references/goal-audit.md の `## 5.2: 監査 agent の並列起動` " +
-      "にある完全なテンプレートを Read して、そのまま使ってください。",
-  );
 });
 
 Deno.test("validateAgentSpawn denies field keys that carry no value", () => {

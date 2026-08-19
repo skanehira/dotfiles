@@ -40,6 +40,63 @@ Deno.test("extractCommitSubject returns null for non-commit or unverifiable comm
   }
 });
 
+Deno.test("extractCommitSubject returns inline -m message when git carries global options before commit", () => {
+  const cases: [string, string][] = [
+    ['git -C /tmp/repo commit -m "🐛 fix: resolve crash"', "🐛 fix: resolve crash"],
+    ["git -c user.name=probe commit -m '✨ feat: add login'", "✨ feat: add login"],
+    [
+      'git -C /tmp/repo -c user.name=probe -c user.email=p@e.com commit -m "📝 docs: update readme"',
+      "📝 docs: update readme",
+    ],
+    ['cd /tmp/repo && git -C /tmp/repo commit -m "✅ test: add cases"', "✅ test: add cases"],
+  ];
+  for (const [cmd, expected] of cases) {
+    assertEquals(extractCommitSubject(cmd), expected, cmd);
+  }
+});
+
+Deno.test("extractCommitSubject returns null when the commit subcommand itself reuses another message", () => {
+  const cases = [
+    "git commit -C HEAD~1",
+    "git commit -c HEAD~1",
+    "git commit --reuse-message=HEAD",
+    "git -C /tmp/repo commit --amend --no-edit",
+    // -m を持つ形。この 1 ケースだけが afterCommit に対する検証節を pin する
+    // (他は -m を持たないため、検証節を外しても関数末尾の return null に落ちて同じ結果になる)
+    'git commit --amend -m "🐛 fix: reword"',
+  ];
+  for (const cmd of cases) {
+    assertEquals(extractCommitSubject(cmd), null, cmd);
+  }
+});
+
+Deno.test("extractCommitSubject returns null when the git commit line only appears inside a heredoc body", () => {
+  // ファイルに書き出すスクリプトの中身であって、実行されるコミットではない。
+  // ここを subject とみなすと、コミットでないコマンドが deny される
+  const command = [
+    "cat > /tmp/probe.sh <<'EOF'",
+    'cd /tmp/repo && git -C /tmp/repo commit -m "update stuff"',
+    "EOF",
+  ].join("\n");
+
+  assertEquals(extractCommitSubject(command), null);
+});
+
+Deno.test("extractCommitSubject reads the commit message, not an unrelated heredoc written earlier in the same command", () => {
+  // ファイルを heredoc で書き出してからコミットする複合コマンド。
+  // 抽出をコマンド全体に対して行うと、書き出した本文の 1 行目を subject と誤認する
+  const command = [
+    "cat > docs/TODO.md <<'EOF'",
+    "# TODO: cclog",
+    "",
+    "## 実装タスク",
+    "EOF",
+    'cd repo && git add -A && git commit -m "📝 docs: cclog の設計と TODO を追加する"',
+  ].join("\n");
+
+  assertEquals(extractCommitSubject(command), "📝 docs: cclog の設計と TODO を追加する");
+});
+
 Deno.test("validateCommitSubject accepts conventional subjects with matching emoji", () => {
   const cases = [
     "✨ feat: add user authentication",
