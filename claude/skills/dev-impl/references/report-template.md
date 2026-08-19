@@ -184,7 +184,9 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
 
 ## セクション 4: 動的修正の詳細 (P1 / P2 / P3)
 
-JSONL から `event_type` が `p1_fix | p2_fix | p3_escalate` のエントリだけ抽出して時系列で表示。
+JSONL から `event_type` が `p1_fix | p2_fix | p3_escalate | phase_added` のエントリだけ抽出して時系列で表示。
+
+`phase_added` は run の途中でフェーズと issue が増えたことを表す (P1 / P2 の設計乖離、または Step 5.5 のゴール未達に由来する)。**当初の TODO に無かった作業がどれだけ発生したかは、人間が計画の精度を振り返る材料になる**ので、動的修正と並べて出す。カードには `context` の `phase` / `issue_number` / `origin` (`p1` / `p2` / `goal_unmet`) を表示する。
 
 各エントリカード:
 
