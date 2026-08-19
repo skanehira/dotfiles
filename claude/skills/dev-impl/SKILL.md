@@ -1,6 +1,6 @@
 ---
 name: dev-impl
-description: 実装ループ。承認済みの DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md を入力に、TODO.md の全フェーズをレビュー・コミット込みで自律実装するオーケストレーター。人間の介入はエスカレ条件 (概要設計の破綻 P3 等) のみ。dev-spec の承認ゲート通過後にユーザーが直接起動する。エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「設計済み TODO で実装を自律実行」「残りタスクを自動で実装」などで起動。
+description: 実装ループ。/dev-spec が作成した GitHub issue を入力に、依存順に 1 件ずつレビュー・コミット込みで自律実装するオーケストレーター。実装の指示は issue 本文 (ゴール / DoD / 参照 docs / 変更想定ファイル / 非スコープ) から取り、完了したら close する。人間の介入はエスカレ条件 (概要設計の破綻 P3 等) のみ。dev-spec の承認ゲート通過後にユーザーが直接起動する。エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
 argument-hint: "[docs ディレクトリパス、省略時は docs/]"
 model: opus
 allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
@@ -28,16 +28,16 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 | review-tdd / review-quality / review-product-readiness (4.2c) | `opus` | 設計意図とテストの対応づけなど、規約の機械照合に還元されない判断を含む |
 | review-spec-compliance (5.2) | `opus` | 承認ハッシュ照合と成果物 ↔ 詳細設計の突合を伴う受入監査 |
 
-- **review-adversarial が `sonnet` である理由**: 同一セッション・同一フェーズ群での直接比較 (2026-08 のセッションログ実測) で、opus は 20 spawn・$2.55/spawn で high 3 件 (0.15 件/spawn)、sonnet は 21 spawn・$2.51/spawn で high 19 件 (0.90 件/spawn) だった。**1 spawn あたりの金額はほぼ同一で、単価が 1/5 の sonnet は同じ予算で 3.8 倍のターンを回せるため、実際に壊して確かめる本 agent の作業様式と噛み合う**。sonnet の findings は空虚ではなく、TOCTOU 並行削除を実際に再現し修正前ロジックで 20/20 再現するところまで確認する等、実行証拠を伴っていた。この 1 点で CLAUDE.md の原則「実行器のモデル ≤ 検証器のモデル」を満たさなくなるが、当該原則は「検証が実行より弱いと骨抜きになる」ことを避けるための代理指標であり、**検出力の実測が代理指標に優先する**。切り替え後は high 検出件数の推移を監視し、opus 時の 0.15 件/spawn を下回り続けるようなら opus に戻す。
+- **review-adversarial が `sonnet` である理由**: 同一セッション・同一フェーズ群での直接比較 (2026-08 のセッションログ実測) で、opus は 20 spawn・2.55 ドル/spawn で high 3 件 (0.15 件/spawn)、sonnet は 21 spawn・2.51 ドル/spawn で high 19 件 (0.90 件/spawn) だった。**1 spawn あたりの金額はほぼ同一で、単価が 1/5 の sonnet は同じ予算で 3.8 倍のターンを回せるため、実際に壊して確かめる本 agent の作業様式と噛み合う**。sonnet の findings は空虚ではなく、TOCTOU 並行削除を実際に再現し修正前ロジックで 20/20 再現するところまで確認する等、実行証拠を伴っていた。この 1 点で CLAUDE.md の原則「実行器のモデル ≤ 検証器のモデル」を満たさなくなるが、当該原則は「検証が実行より弱いと骨抜きになる」ことを避けるための代理指標であり、**検出力の実測が代理指標に優先する**。切り替え後は high 検出件数の推移を監視し、opus 時の 0.15 件/spawn を下回り続けるようなら opus に戻す。
 
 ### フェーズ実装を subagent に委譲する理由 (CLAUDE.md の原則に対する dev-impl 限定の例外)
 
-CLAUDE.md「委譲の判断」は**逐次実装の subagent 委譲を禁止**している (固定費と報告往復で総トークン・時間とも増えるため)。dev-impl はこの原則の**唯一の例外**で、逐次フェーズ (wave サイズ 1) の実装も implementer subagent に出す。CLAUDE.md 本体は変更しないので、他のタスクでは従来どおりメインループ直営で実装する。
+CLAUDE.md「委譲の判断」は**逐次実装の subagent 委譲を禁止**している (固定費と報告往復で総トークン・時間とも増えるため)。dev-impl はこの原則の**唯一の例外**で、issue 1 件ずつの逐次実装であっても implementer subagent に出す。CLAUDE.md 本体は変更しないので、他のタスクでは従来どおりメインループ直営で実装する。
 
 例外にする根拠は、dev-impl だけが持つ「フェーズを 100 本単位で回す」性質にある (実測値はいずれも 2026-07 の dev-impl 実行 7 セッション):
 
 - メインループ直営では**フェーズ境界でコンテキストが一度も下がらず単調増加する**。実測で 160k → 286k → … → 980k → 自動圧縮 106k と推移し、平均コンテキストは 443,863〜515,258 トークンに収束した。cache read 48.7 億トークンの実体は「平均 475k × 10,247 リクエスト」であり、1 リクエストの単価ではなく**往復回数 × 常駐コンテキスト**が支配的だった
-- 委譲の固定費はフェーズ 1 本あたりで見れば小さい (U0 spike 実測: implementer 1 spawn $6.39、検査 3 観点 $1.83、修正 1 ラウンド $2.96 の計 $11.18)。単発タスクなら固定費が勝つが、フェーズ数だけ常駐コンテキストが積み上がる dev-impl では逆転する
+- 委譲の固定費はフェーズ 1 本あたりで見れば小さい (U0 spike 実測: implementer 1 spawn 6.39 ドル、検査 3 観点 1.83 ドル、修正 1 ラウンド 2.96 ドル の計 11.18 ドル)。単発タスクなら固定費が勝つが、フェーズ数だけ常駐コンテキストが積み上がる dev-impl では逆転する
 - **待ちを親に集約できる。** main の cache write は全量 1 時間 TTL、subagent は全量 5 分 TTL (ハーネス仕様、スキルから制御不可)。子を待つ subagent は 5 分超のギャップでキャッシュを失効させる (実測: 失効 62 件のうち 32 件がこれ)。実装を葉の subagent に閉じ込め、レビューの起動と待機を 1 時間 TTL の main に置くことで、同じ待ち時間でもキャッシュが生き残る
 
 **implementer は葉であること (子 subagent を起動しないこと) が例外の前提条件**。葉の agent は実測で失効ゼロだった (architecture-guard 975 ギャップ / review-quality 55 / review-spec-compliance 165 のいずれも 0 件)。葉性は指示文ではなく `claude/agents/dev-impl-implementer.md` の `tools` から `Agent` を除くことで構造的に強制する (subagent には親の hooks が届かないため、指示文では違反を検出できない)。
@@ -75,7 +75,7 @@ CLAUDE.md「委譲の判断」は**逐次実装の subagent 委譲を禁止**し
 - `event_type: start` の `context.repo_root` が現在の `git rev-parse --show-toplevel` と一致する (このディレクトリは全プロジェクト共通なので、パスで絞らないと他プロジェクトの run を拾う)
 - 完了イベント (Step 6 の完了サマリ出力時に記録する `done`) が無い (最後が `p3_escalate` 等)
 
-1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値を復元する — 再実行のたびにカウンタが 0 に戻ると発散上限 (Step 3) が実質無効化されるため。`event_type: parallel_disabled` が記録されていればその無効化も引き継ぐ (deps が信用できないと判定した run を再開して再び並列モードに戻さない)
+1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値を復元する — 再実行のたびにカウンタが 0 に戻ると発散上限 (Step 3) が実質無効化されるため。
 2. **working tree の突合**: `git status --porcelain` が非クリーンなら前回停止時の残骸。**逐次モードでも implementer が main の working tree で直接編集するため、停止時の未コミット実装はここに残る**。内容を確認し、AskUserQuestion で「続きとして取り込む / `git restore` で捨ててフェーズをやり直す」を確認する (再入時 1 回だけの人間確認)
    - 何が実装されたかは `~/.claude/logs/dev-impl/<前回の run_id>/reviews/phase-<識別子>/impl-report.json` に残っているので、判断材料としてこれを `jq` で読む (`summary` / `files_changed` / `test_result`)
    - 捨てる場合は 3 段階で行う。**`git reset` + `git restore` だけでは実装ファイルが残る** — 新規実装フェーズの成果物は全て未追跡で、intent-to-add (`git add -N`、Step 4.2c) 済みのファイルも `git reset` 後は未追跡に戻るだけでディスクに残り、`git restore` は未追跡ファイルを削除しないため (実測確認済み):
@@ -87,7 +87,6 @@ CLAUDE.md「委譲の判断」は**逐次実装の subagent 委譲を禁止**し
      ```
 
      `git clean -fd` は**必ずパスを指定する** (無条件だと `docs/.dev-impl/` や他の作業ファイルまで消える)。対象パスは前回 run の `impl-report.json` の `files_changed` から取る。
-3. **worktree の突合**: `git worktree list` に `dev-impl/phase-*` ブランチの worktree が残っていれば、前回 run の並列モードの残骸。上と同じ AskUserQuestion で「そのフェーズの実装として取り込む (parallel-execution.md の `### 4p.4: 検査` から再開) / worktree ごと捨ててフェーズをやり直す」を確認する
 4. **TODO チェックの突合**: 最終フェーズコミット (decisions.jsonl の直近フェーズ done イベントの SHA) 以降に `- [x]` 化されたタスクがあれば、そのフェーズは「チェック済みだが未コミット」= 未完了として pending に戻す (`- [x]` は実行器の自己申告なので、コミットと突き合わせて初めて完了扱いにする)
 
 未完了 run が無ければ通常起動 (新規 run_id 発行) で Step 1 へ。
@@ -104,11 +103,24 @@ CLAUDE.md「委譲の判断」は**逐次実装の subagent 委譲を禁止**し
 run 全体で保持する `PRODUCT_MODE` を DESIGN.md のスタンプから判定する (以降のステップすべてがこの値を参照する):
 
 ```bash
-PRODUCT_MODE=$(rg -o -m1 '<!-- product-mode: (cli|webapp) -->' -r '$1' docs/DESIGN.md || echo unknown)
+PRODUCT_MODE=$(sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DESIGN.md | head -1)
+PRODUCT_MODE=${PRODUCT_MODE:-unknown}
 ```
 
 - `cli` / `webapp`: dev-spec がスタンプを書いた新形式 docs
 - `unknown` (スタンプ不在、旧形式 docs): 後方互換のため、UI 系判定は従来どおり `dev_server` 推定 (references/phase-context.md) にフォールバックする
+
+#### GitHub の前提条件
+
+**実装対象は GitHub issue** なので、docs の確認と同時に次を解決する。1 つでも失敗したらエスカレ停止し、「`/dev-spec` を先に実行して issue を作ってください」と案内する:
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+OPEN=$(gh issue list --repo "$REPO_SLUG" --state open --limit 200 --json number --jq 'length')
+```
+
+`OPEN` が 0 で、かつ closed issue も 0 件なら **issue が未生成**である (`/dev-spec` のフェーズ 12 が走っていない)。`OPEN` が 0 で closed が 1 件以上なら**全 issue 完了済み**なので、Step 5 (ゴール達成判定) から再開する。
 
 #### 不在時の挙動
 
@@ -136,8 +148,8 @@ PRODUCT_MODE=$(rg -o -m1 '<!-- product-mode: (cli|webapp) -->' -r '$1' docs/DESI
 GOALS_SHA=$(
   {
     rg --no-filename '^- G[0-9]+:|^G[0-9]+:|^- G_E2E:|^G_E2E:' docs/DESIGN.md
-    rg --no-filename 'G[0-9]+ 検証|G_E2E 検証' docs/DESIGN_DETAIL_APP.md docs/DESIGN_DETAIL_INFRA.md
-  } | shasum -a 256 | awk '{print $1}'
+    rg --no-filename '^- G[0-9]+ 検証|^G[0-9]+ 検証|^- G_E2E 検証|^G_E2E 検証' docs/DESIGN_DETAIL_APP.md docs/DESIGN_DETAIL_INFRA.md
+  } | shasum -a 256 | cut -d' ' -f1
 )
 ```
 
@@ -155,25 +167,29 @@ rg -n '<!-- POC_NEEDED: .* -->' docs/DESIGN.md docs/DESIGN_DETAIL_APP.md docs/DE
 | `blocker=false` のみ | テキストログに `[dev-impl] POC_NEEDED ${id} pending (non-blocker)`、JSONL に `event_type: poc_pending` (context に id / scope / risk) を記録して Step 2 へ (実装中に検証が必要になったら `tech-investigation` subagent を `model: "opus"` 明示で個別に呼ぶ。HTML レポートのセクション 5 がこのエントリを表示する) |
 | `blocker=true` あり  | **エスカレ停止** (`poc_marker_unresolved`)。「未解決の blocker マーカーが残っています。`/dev-spec` のフェーズ 5 (PoC 検証) で解決してから `/dev-impl` を再実行してください」とユーザー通知                                                                                                  |
 
-### Step 2: フェーズ抽出 + wave 構築
+### Step 2: issue の抽出と着手順の決定
 
-TODO.md から `### フェーズN: ...` の見出しを順に抽出してフェーズ一覧を作る。
+**実装の単位は GitHub issue** であり、TODO.md は参照しない (issue はフェーズ 12 が TODO.md から転記したもので、実装中の状態の原本は GitHub の側にある)。
 
-未完了 (`- [ ]` が残っている) フェーズを `pending` 状態でリスト化する。すでに全タスクが `- [x]` になっているフェーズは skip。抽出コマンド例: `rg -n '^### フェーズ' docs/TODO.md`。
+```bash
+gh issue list --repo "$REPO_SLUG" --state open  --limit 200 --json number,title,labels,body > /tmp/dev-impl-open.json
+gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq '[.[].number]' > /tmp/dev-impl-closed.json
+```
 
-続けて**フェーズ見出しの依存宣言 (`<!-- deps: ... -->`) から wave (同時に着手できるフェーズの集合) を構築する**。
+着手対象の決め方:
 
-**並列モードの可否判定**: 以下をすべて満たす場合のみ並列モードを有効にする。1 つでも欠ければ全フェーズを逐次モードで実行し、JSONL に `event_type: parallel_disabled` (context に `reason`) を記録する:
+| 条件 | 扱い |
+| --- | --- |
+| `needs-human` ラベルが付いている | **着手しない。** 駐車中の issue であり、ラベルを外すのは人間の回答を得た後 |
+| `ready` ラベル | 着手可能な候補 |
+| `in-progress` ラベル | 前回の run が中断したもの。**そのまま再開する** (Step 0 の再入チェックで復元した状態を使う) |
+| ラベルが無い open issue | フェーズ 12 が作成直後に落ちた未完成の issue。`issue_incomplete` でエスカレ停止し、`/dev-spec` の再実行 (12.3 の突き合わせが冪等に貼り直す) を案内する |
 
-| 条件 | 満たさない場合の reason |
-| ---- | ---- |
-| 全 pending フェーズの見出しに `<!-- deps: ... -->` がある (依存なしは `none` と明示) | `deps_missing` (旧形式 TODO.md。dev-spec で再生成すれば並列化できる) |
-| 全 deps の参照先が実在するフェーズ識別子である | `deps_unknown_ref` |
-| deps が DAG である (循環なし・前方参照なし) | `deps_cycle` |
+候補のうち、本文の `## 依存` にある **`Depends on #N` の参照先がすべて closed になっているものだけが着手可能**。複数あれば issue 番号の昇順で 1 件選ぶ。
 
-deps 抽出コマンドとトポロジカル層 (Kahn 法) への分割手順は [references/parallel-execution.md](./references/parallel-execution.md) の `## Step 2: wave の構築` 節を Read して従う (この節を読まず近似の判定で並列化すると、依存のあるフェーズを同時実行してマージ不能な差分を作るリスクがある)。
+**並列化はしない。** 1 件実装して close し、次の判定に戻る、を繰り返す。フェーズを同時に走らせる wave / worktree fan-out は持たない。
 
-逐次モードでは wave サイズを常に 1 フェーズとして Step 4 を実行する。
+着手可能な issue が 1 件も無いのに open issue が残っている場合は、依存が循環しているか、依存先が `needs-human` で駐車している。どちらかを判別して `dependency_blocked` でエスカレ停止する (JSONL の `context` に残りの issue 番号と各々の未解決依存を残す)。
 
 ### Step 3: ループ全体の状態管理
 
@@ -189,15 +205,12 @@ deps 抽出コマンドとトポロジカル層 (Kahn 法) への分割手順は
 | `test_gate_retry` (現フェーズの 4.2e テストゲート再試行回数) | 3 (回)                                       | `tests_failing_before_commit` でエスカレ停止    |
 | `phase_spawns` (現フェーズの累計 subagent 起動数) | 24 (回)                                                | `spawn_budget_exceeded` でエスカレ停止          |
 | `run_spawns` (run 全体の累計 subagent 起動数)   | pending フェーズ数 × 8 (回)                               | 同上                                            |
-| `concurrent_implementers` (並列モードの同時 implementer 数) | 3 (フェーズ数)                                            | wave をこの数ずつのバッチに分割して順に実行     |
-| `wave_fallbacks` (現 wave 内で逐次フォールバックしたフェーズ数) | 2 (フェーズ数)                                        | 以降の wave の並列モードを止めて全フェーズ逐次に切り替え (`parallel_disabled`、reason: `fallback_threshold`) |
 
 スコープ別のリセット時点:
 
 | スコープ | カウンタ | リセット時点 |
 | --- | --- | --- |
-| フェーズ | `p1_fixes_in_phase` / `phase_fix_round` / `test_gate_retry` / `phase_spawns` | **そのフェーズの Step 4.1 (最初の subagent を起動する前)**。並列モードでは 4p.2 (PHASE_CONTEXT 組み立て時) — 4p.3 の implementer 起動より前でなければ implementer の 1 spawn が予算に計上されない |
-| wave (バッチ) | `wave_fallbacks` | 各 wave (バッチ) の開始時 = 4p.1。`parallel_fallback` を記録するたびに +1 する |
+| issue | `p1_fixes_in_phase` / `phase_fix_round` / `test_gate_retry` / `phase_spawns` | **その issue の Step 4.1 (最初の subagent を起動する前)** |
 | run 全体 | `p2_fixes_total` / `goal_loop` / `run_spawns` / `run_elapsed_minutes` | リセットしない。**再入時は Step 0 で decisions.jsonl から復元した値を初期値にする** |
 
 `run_elapsed_minutes` は各フェーズ開始時 (Step 4.1) に計算する (macOS/Linux 両対応)。算出コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.1: run_elapsed_minutes 計算` 節を Read してから実行する (この節を読まず近似コマンドで代替すると、date コマンドの macOS/Linux 分岐が崩れ time budget (`time_budget_exceeded`) が機能しなくなるリスクがある)。
@@ -207,9 +220,9 @@ deps 抽出コマンドとトポロジカル層 (Kahn 法) への分割手順は
 **spawn 予算の意図**:
 
 - 1 フェーズは最小構成でも implementer 1 + architecture-guard 1 + review 1〜4 の subagent を起動する。フェーズ数だけ積み上がるため、上限を機械ゲートとして置く
-- 根拠: 並列モードを最も使ったセッションは 129 spawn でフェーズ単価が最悪 ($116.4 / フェーズ、subagent が全体の 66.8%) だった (2026-07 の実測)
+- 根拠: subagent を最も使ったセッションは 129 spawn でフェーズ単価が最悪 (116.4 ドル / フェーズ、subagent が全体の 66.8%) だった (2026-07 の実測)
 - `phase_spawns` の上限 24 の内訳 (最悪ケース): implementer 1 + 検査 5 (guard 1 + review 最大 4) + (fix 1 + 検査 5) × 3 ラウンド = 24
-- 中央値の想定は 4 (implementer 1 + guard 1 + review 2)。`run_spawns` の上限係数 8 はこの中央値に修正ラウンド 1 回分を見込んだ値で、**フェーズが追加される (P1/P2 動的修正・Step 5.5) たびに「その時点の pending フェーズ数 × 8」で再計算する**
+- 中央値の想定は 4 (implementer 1 + guard 1 + review 2)。`run_spawns` の上限係数 8 はこの中央値に修正ラウンド 1 回分を見込んだ値で、**issue が追加される (P1/P2 動的修正・Step 5.5) たびに「その時点の open issue 数 × 8」で再計算する**
 - 全 spawn を JSONL に `event_type: spawn` (context に `agent` / `model` / `phase`) で記録し、事後にフェーズ単価と突合できるようにする
 
 ### main のコンテキスト規律
@@ -224,22 +237,27 @@ deps 抽出コマンドとトポロジカル層 (Kahn 法) への分割手順は
 | テスト出力は失敗時のみ | 失敗時の末尾 30 行まで。成功時は exit code だけ |
 | subagent の最終メッセージを短くさせる | 検査 agent・implementer の呼び出し prompt に「最終メッセージは `output_path` (implementer は `report_path`) の絶対パス 1 行だけにせよ。要約や解説を書くな」を必ず含める。**agent 定義側に同じ規定があっても守られないことがある** (実測: `architecture-guard.md` は「stdout には output_path のみ」と規定しているが Markdown レポート全文が返り、1 ラウンドで約 2,250 トークンが main に流入した) |
 
-例外 (main が実物を読んでよい場面): 4.2e のテスト弱体化のトレース確認、Step 4.6 の P2 判定での DESIGN_DETAIL 参照、並列モードの squash merge コンフリクト解消。
+例外 (main が実物を読んでよい場面): 4.2e のテスト弱体化のトレース確認、Step 4.6 の P2 判定での DESIGN_DETAIL 参照。
 
-### Step 4: 各フェーズの実行
+### Step 4: 各 issue の実行
 
-Step 2 で構築した wave を先頭から順に処理する。**wave 内のフェーズは互いに独立** (deps 上の依存が無い) なので同時に実装でき、wave 同士は逐次に処理する。
+Step 2 で選んだ issue を 1 件実装し、close してから Step 2 に戻る。**同時に複数の issue を走らせない。** implementer は main の working tree で直接編集し、統合の手順は無い (main がそのままコミットする)。
 
-**実行の骨格は wave サイズによらず同一**で、main が「組み立て → implementer 起動 → 待つ → 検査 fan-out 起動 → 待つ → 修正ラウンド → コミット」を回す。wave サイズが変えるのは「同時に走る implementer の数」と「作業場所」だけ:
+骨格は「issue に `in-progress` を貼る → PHASE_CONTEXT を組み立てる → implementer 起動 → 待つ → 検査 fan-out 起動 → 待つ → 修正ラウンド → テストゲート → コミット → issue を close」。
 
-| wave サイズ (フェーズ数) | implementer の作業場所 | 統合 |
-| --- | --- | --- |
-| 1 (逐次モード) | main の working tree で直接編集 | 統合なし。main がそのままコミット (4.2e) |
-| 2 以上 (並列モード) | `~/worktrees/<repo名>-phase-<識別子>` (フェーズごとに 1 つ) | squash merge → 全テストゲート → コミット。手順は [references/parallel-execution.md](./references/parallel-execution.md) の `## Step 4 (並列モード): wave の実行` |
+**PHASE_CONTEXT の実装指示は issue 本文から組み立てる。** `## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` をそのまま使う (節名は dev-spec のフェーズ 12 が固定している)。設計の抜粋が必要な場合だけ `## 参照すべき docs` が指す節を docs から読む。
 
-worktree を wave サイズ 2 以上に限るのは、worktree が並列実行の隔離装置だからである。逐次フェーズで使うと worktree 作成・依存インストール (`npm ci` 等)・git 管理外ファイル (`.env` 等) のコピーという固定費だけがフェーズ数だけ積み上がる。
+着手時と完了時の GitHub 操作:
 
-**wave サイズによらず main が行うこと** (implementer には渡さない): PHASE_CONTEXT と RUN_FACTS の組み立て、事前判定と観点 gating の確定、検査 fan-out の起動と待機、fatal 判定、全テストゲート、テスト弱体化の機械検知、コミット、TODO.md 更新、decisions.jsonl への書き込み、Step 4.6 の P1/P2/P3 判定。
+```bash
+gh issue edit <N> --repo "$REPO_SLUG" --add-label in-progress --remove-label ready
+# ... 実装 ...
+# 完了コミットの本文に `Fixes #<N>` を入れる (マージ不要でそのままブランチにコミットする運用なので、
+# 自動クローズが効かない場合は明示的に閉じる)
+gh issue close <N> --repo "$REPO_SLUG" --comment "DoD がすべて通過したため close する"
+```
+
+**main が行うこと** (implementer には渡さない): PHASE_CONTEXT と RUN_FACTS の組み立て、事前判定と観点 gating の確定、検査 fan-out の起動と待機、fatal 判定、全テストゲート、テスト弱体化の機械検知、コミット、issue のラベル操作と close、decisions.jsonl への書き込み、Step 4.6 の P1/P2/P3 判定。
 
 **完了判定は main が自分で行う。** implementer の `status: done` を完了根拠にせず、次の 2 つを main が確認する:
 
@@ -261,7 +279,6 @@ SCRATCH_DIR=~/.claude/logs/dev-impl/${run_id}/reviews/phase-<識別子>
 mkdir -p "$SCRATCH_DIR"
 ```
 
-並列モードでも同じパス規則を使う ([references/parallel-execution.md](./references/parallel-execution.md) の `### 4p.1`)。
 
 #### Step 4.1.5: PHASE_CONTEXT の組み立て
 
@@ -330,7 +347,7 @@ implementer 側の規約 (TDD の順序、フェーズスコープのテスト�
 
 **報告が読めない場合**: `report_path` が不在・`jq` でパース不能・必須フィールド (`status` / `summary` / `files_changed` / `test_result`) の欠落はいずれも `impl_failed` として扱い、`phase_fix_round += 1` して `mode: implement` で再起動する (fix ではない — 何が実装されたか分からないため)。3 回で `phase_fix_exceeded` でエスカレ停止する。検査 agent の `guard_agent_failed` / `review_agent_failed` と同じく、**パス扱いにしない**。
 
-- implementer が応答しないまま `run_elapsed_minutes` が 30 分進んだら打ち切る (`impl_failed`)。並列モードでは [references/parallel-execution.md](./references/parallel-execution.md) の `### 4p.6: 逐次フォールバック` に落とす
+- implementer が応答しないまま `run_elapsed_minutes` が 30 分進んだら打ち切る (`impl_failed`)。その issue を `needs-human` で駐車して次の issue に移る
 
 ##### 実装ノートの受け取り (design_decision / open_question)
 
@@ -386,7 +403,7 @@ review-quality (rules 準拠 + アーキテクチャ heuristic 統合) は最終
 | 3 | `$CI_FILES_CHANGED` が空 (CI・ビルド/テスト設定 `.github/`, `*config*`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, `justfile`, `deno.json` 等の変更なし) | 検証器設定の改変は必ず監査                                                                                                                           |
 | 4 | 最終フェーズでない                                                                                                                                | 最終フェーズは全観点フル                                                                                                                             |
 
-全条件が真の場合のみ skip 可 (skip は権利であって義務ではない。1 つでも「実行」と出れば actor はスキップできない)。**並列モードでは本述語を評価せず review-adversarial を常に実行する** (フェーズが同時に進み互いの実装を見られない分、統合前の独立監査を差分規模に関わらず必須にする)。skip 時は JSONL に `event_type: verification_skipped`、`context: {target: "review-adversarial", changed_files: $CHANGED, changed_lines: $LINES, criteria_result: {...}}` を記録する (Step 5.6 の未検証項目集約に自動合流させ、沈黙スキップを構造的に不可能にするため)。
+全条件が真の場合のみ skip 可 (skip は権利であって義務ではない。1 つでも「実行」と出れば actor はスキップできない)。skip 時は JSONL に `event_type: verification_skipped`、`context: {target: "review-adversarial", changed_files: $CHANGED, changed_lines: $LINES, criteria_result: {...}}` を記録する (Step 5.6 の未検証項目集約に自動合流させ、沈黙スキップを構造的に不可能にするため)。
 
 述語は各修正ラウンドの fan-out 直前に評価するが、遷移は **skip → 実行 の一方向のみ許可する** (一度「実行」と判定されたら以降のラウンドでは再評価せず必ず実行し続ける。「実行 → skip」への降格は禁止)。初回評価で skip だった場合のみ、次のラウンドで再評価する。これにより、初回 skip 後の修正でテストが追加・弱体化されるケースを取りこぼさない。
 
@@ -464,7 +481,7 @@ implementer 報告 (`mode: implement` / `mode: fix` 双方) の `deviation_signa
 1. `p1_fixes_in_phase += 1`。`p1_fixes_in_phase > 2` なら本シグナルを P2 (design_detail_gap) として扱い、P2 動的修正フローに切り替える (以降のステップは実行しない)
 2. TODO.md の該当フェーズ周辺を Edit
 3. ログに「P1 fix: <変更内容の 1 行サマリ>」を残す (JSONL は `event_type: p1_fix`)
-4. 残タスクが当該フェーズ内なら継続、フェーズを跨ぐ追加なら新フェーズを挿入して以降のループに含める (挿入する見出しには `<!-- deps: ... -->` を必ず付ける。判定基準は `../dev-spec/references/todo-generation.md` の「フェーズ依存の宣言」)
+4. 残タスクが当該フェーズ内なら継続、フェーズを跨ぐ追加なら新フェーズを挿入して以降のループに含める (挿入する見出しには `<!-- deps: ... -->` と `<!-- goals: ... -->` を必ず付け、メタ情報 5 項目 (ゴール / DoD / 参照 docs / 変更想定ファイル / 非スコープ) も書く。判定基準は `../dev-spec/references/todo-generation.md` の「フェーズ依存の宣言」「対応ゴールの宣言」「各フェーズが持つメタ情報」)
 
 ##### P2 動的修正
 
@@ -472,7 +489,7 @@ implementer 報告 (`mode: implement` / `mode: fix` 双方) の `deviation_signa
 2. DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側 (境界基準: 変更に IaC・コンソール操作・環境設定変更が要るなら INFRA) のセクションを Edit
 3. **受入基準ガード**: Edit 直後に goals_sha を再計算 (Step 1 のコマンド) し、承認スタンプの値と照合する。不一致 = 受入基準 (ゴール / 検証手順行) を触った P2 であり、実装者による自己適用は禁止。Edit を revert せず `acceptance_criteria_change` でエスカレ停止する (「受入基準の変更が必要になった。dev-spec フェーズ 9 → 11 で再承認せよ」と通知。実装ガイド・スキーマ等の追記はハッシュ対象外なので通過する)
 4. `../dev-spec/references/todo-generation.md` を Read し、その手順に従ってメインループで TODO.md を再生成する (差分更新モード)
-5. Step 2 のフェーズ抽出 + wave 構築 (`rg -n '^### フェーズ' docs/TODO.md`) を再実行してフェーズ一覧と wave を更新する。既に `- [x]` 済みのタスクはそのまま完了扱いを維持し、再生成で新規追加された未完了タスクだけを pending に加える
+5. Step 2 の issue 抽出を再実行して着手対象を更新する。closed の issue はそのまま完了扱いを維持する
 6. ログに「P2 fix: <更新セクション>」を残す (JSONL は `event_type: p2_fix`)
 7. 当該フェーズの再実行 (Step 4.2 から) か次フェーズへ進むかを判定: 再生成後の TODO.md で **当該フェーズ内に新規の未完了タスク (`- [ ]`) が追加されていれば Step 4.2 から再実行**、既存タスクが全て完了済みのまま (詳細設計の記述を補っただけで実装側の追加作業が無い) なら次フェーズへ進む
 8. ユーザに対する通知は「DESIGN_DETAIL_APP.md (または _INFRA.md) / TODO.md を更新しました (詳細はログ参照)」程度 (dev-impl は止まらない)
@@ -529,7 +546,7 @@ findings ごとの分岐:
 
 それ以外:
 
-1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing`) ごとに TODO.md に新規フェーズを追加 (例: `### フェーズN+1: ゴール G2 達成タスク <!-- deps: <先行が必要なフェーズ識別子、無ければ none> -->`)。**deps 宣言を必ず付ける** (欠けると Step 2 の wave 構築が `deps_missing` で並列モードを落とすため。判定基準は `../dev-spec/references/todo-generation.md` の「フェーズ依存の宣言」)
+1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing`) ごとに **GitHub issue を新規作成する** (`gh issue create --label ready`)。本文の節構造は dev-spec のフェーズ 12 と同じ (`## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` / `## 依存`) にし、**`## DoD` には未達を検出した検証コマンドをそのまま入れる**。あわせて `docs/TODO.md` にも同じフェーズを追記する (issue の生成元と実体が食い違わないようにするため。判定基準は `../dev-spec/references/todo-generation.md` の「各フェーズが持つメタ情報」)
    - フェーズ内容は「G2 が未達。検証コマンド `<cmd>` が exit code != 0。失敗ログ: `<evidence>`。これを満たす実装を追加する」(findings 由来は `message` + `fix_proposal` を使う)
    - JSONL に `event_type: phase_added` で記録
 2. Step 4 のフェーズループに戻る (新規追加フェーズだけが pending)
@@ -605,7 +622,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
 停止時の処理:
 
-1. 当該フェーズの変更は**コミットしない** (緑状態でないため。working tree は残す)。並列モードで実行中だった場合は **worktree とブランチも削除せず残す** (未統合の実装を消さないため。詳細は [references/parallel-execution.md](./references/parallel-execution.md) の `## エスカレ停止時の worktree の扱い`)
+1. 当該 issue の変更は**コミットしない** (緑状態でないため。working tree は残す)。issue のラベルは `in-progress` のままにする (再実行時に Step 2 が再開対象として拾うため)
 2. 停止理由を `~/.claude/logs/dev-impl.log` と JSONL (`event_type: p3_escalate`) と stdout 全てに詳細出力
 3. HTML レポート (Step 7) を生成 → コミット (停止時もレポートだけは残す)
 4. ユーザに通知 (通知内容もログ・review agent の出力から裏付けが取れる事実のみを記載する)。テンプレートは [references/notification-template.md](./references/notification-template.md) の `## エスカレ停止通知` 節を Read し、全フィールドを埋めて出力する (Read せず記憶から近似文面を出すと、最終成功 commit SHA や完了フェーズ数など裏付け必須フィールドが欠落し停止理由の追跡性が落ちる)。
@@ -613,7 +630,6 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 ## 既存プロジェクトでの注意
 
 - 既存のコミット history と dev-impl のコミット粒度を混ぜたくない場合は、dev-impl 起動前に専用の作業ブランチを切ることを推奨 (dev-impl 自体は起動ブランチの切替を行わない)
-- 並列モードでは `dev-impl/phase-<識別子>` という一時ブランチと `~/worktrees/<repo名>-phase-<識別子>` の worktree を作り、統合後に削除する。起動ブランチは切り替わらず、コミットも起動ブランチにのみ積まれる。同名の残骸があると worktree 作成に失敗するため、`git worktree list` に前回 run の残骸が無いか起動前に確認する
 - `bypassPermissions` モード推奨 (途中で permission prompt が出ると dev-impl が止まるため)
 - launchd / cron などからヘッドレス実行する場合は `claude -p` 経由で、`--allowedTools` に `Bash,Read,Edit,Write,Glob,Grep,Agent,Skill` を渡す。**headless では AskUserQuestion を使わない** (答える人間がいないため、質問した時点でループが死ぬ)。エスカレ時は停止理由を stdout と JSONL に出力し、darwin なら `terminal-notifier` で通知して終了する。Step 0 の再入確認 (working tree の扱い) も headless では確認せず「そのまま停止を継続」とし、人間の対話セッションでの再開を待つ
 
@@ -621,6 +637,8 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
 - 設計の合意 (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md 生成) → `/dev-spec`
 - TODO.md の初期生成 → `/dev-spec` (フェーズ 10)
+- GitHub issue の初期生成 → `/dev-spec` (フェーズ 12)。dev-impl は既にある issue を実装するだけで、着手対象の issue を自分では作らない (例外は Step 5 のゴール未達対応)
+- 並列実装 → 行わない (issue を 1 件ずつ逐次に処理する)
 - git push → ユーザー手動
 - ブランチ切替・PR 作成 → ユーザー手動 (or `/workflow-create-draft-pr`)
 - 動作検証 (実 UI / API テスト) → ユーザーが DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の検証手順に従って実施
@@ -634,16 +652,16 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 - **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.2c の fan-out に毎フェーズ含める、haiku)
 - **fix-lsp-warnings**: Lua/Neovim の LSP 警告修正 (Step 4.2b、haiku)。修正する agent なので検査 fan-out には混ぜず単独・逐次で走らせる
 - **review-tdd / review-quality / review-product-readiness**: Step 4.2c から `model: opus` 明示で並列起動 (観点 gating・起動条件は Step 4.2c 参照)。review-quality は rules 準拠 + アーキテクチャ heuristic を統合。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査 (Step 5.2 の G_E2E 判定も担当)
-- **review-adversarial**: Step 4.2c から `model: sonnet` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・アサーションの空虚化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず TODO.md の完了主張に反証を試みる) で検査。機械スキップ述語 (Step 4.2c 参照) を満たせば skip 可。`test_weakened` / `vacuous_assertion` / `skip_added` (confidence: high) は修正ラウンドに乗せず即エスカレ判定に直結する (詳細は Step 4.2d)
+- **review-adversarial**: Step 4.2c から `model: sonnet` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・アサーションの空虚化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず issue 本文の完了主張に反証を試みる) で検査。機械スキップ述語 (Step 4.2c 参照) を満たせば skip 可。`test_weakened` / `vacuous_assertion` / `skip_added` (confidence: high) は修正ラウンドに乗せず即エスカレ判定に直結する (詳細は Step 4.2d)
 
 - **review-spec-compliance**: Step 5.2 から `model: opus` 明示で起動する第三者受入監査 (mode: post-impl)。承認ハッシュの独立照合・自動系ゴール検証コマンドの独立再実行・成果物全体 ↔ 詳細設計の突合・検証コマンドの空虚性検査。PHASE_CONTEXT 抜粋は渡さず docs を自分で全文 Read させる (被監査者が編纂した入力を信用しない)。`PRODUCT_MODE=cli` では G_E2E 検証コマンドの実行もこの agent が担当する (review-product-readiness は起動しないため)
 - **security-guidance プラグイン**: セキュリティレビューはこのプラグイン (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review) に委譲。自作 subagent は持たない
 
 **空虚テスト検出の分担**: review-tdd の `vacuous_negative_assertion` は**新規に書かれたテストそのものの空虚性**を、review-adversarial レンズ B の `vacuous_assertion` は**基準時点 (PHASE_START_SHA) からの空虚化**を見る。同一フェーズで両者が同種の指摘を上げることがあるが、検査している次元が違うため統合しない (統合するとどちらか一方の次元が検査されなくなる)。
 
-**全ての subagent に作業ディレクトリ (`repo_dir`) を絶対パスで渡す。** subagent の Bash は呼び出しごとに cwd が親のものへ戻るため、渡さないと検査対象・編集対象が意図したディレクトリ (並列モードの worktree) ではなく親リポジトリになり、空差分で素通りする。
+**全ての subagent に作業ディレクトリ (`repo_dir`) を絶対パスで渡す。** subagent の Bash は呼び出しごとに cwd が親のものへ戻るため、渡さないと検査対象・編集対象が意図したディレクトリにならず、空差分で素通りする。
 
-**統合 (squash merge / 全テストゲート / コミット / TODO.md 更新 / RUN_FACTS 更新 / decisions.jsonl) は wave サイズによらず必ず main が行う** (git index を共有するため並列化できず、commit-msg-guard hook も親にしか効かない)。
+**全テストゲート / コミット / issue のラベル操作と close / RUN_FACTS 更新 / decisions.jsonl は必ず main が行う** (commit-msg-guard hook は親にしか効かないため)。
 
 ### 内部呼び出し (skill)
 
