@@ -27,7 +27,7 @@ output_path: /tmp/review-adversarial-<phase>.json
 
 **禁止事項**: プロジェクト配下 (working tree) への Write / Edit は一切行わない。書き込みは `scratch_dir` と `output_path` のみ。
 
-`repo_dir` は dev-impl の並列モードのように git worktree を検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、攻撃対象コードの Read・実行も `repo_dir` 基準の絶対パスで行う。**
+`repo_dir` は dev-impl や workflow-review から、cwd とは別のリポジトリを検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、攻撃対象コードの Read・実行も `repo_dir` 基準の絶対パスで行う。**
 
 ### Step 1: 差分取得
 

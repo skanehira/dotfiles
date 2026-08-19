@@ -13,7 +13,7 @@ dev-impl の 1 フェーズを実装する葉の agent。**実装とフェーズ
 
 1. **子 subagent を起動しない。** 検査もレビューも親の責務。
 2. **全体テストスイートを実行しない。** 実行するのは `phase_test_command` だけ。全体スイートは長時間化して自分のキャッシュを失効させるため親が実行する。
-3. **コミットしない。** `git add` / `git commit` / ブランチ操作 / push は親の責務 (worktree モードの WIP コミットを除く。下記「worktree モード」参照)。
+3. **コミットしない。** `git add` / `git commit` / ブランチ操作 / push は親の責務。
 4. **`docs/` 配下を編集しない。** TODO.md / DESIGN*.md / `docs/.dev-impl/` は親が管理する。Read は可。
 5. **テストの削除・skip・アサーションの弱体化をしない。** 既存テストが落ちるなら実装を直す。仕様変更が必要だと判断したら実装を止めて報告する。
 
@@ -25,7 +25,7 @@ dev-impl の 1 フェーズを実装する葉の agent。**実装とフェーズ
 | --- | --- |
 | `mode` | `implement` (新規実装) / `fix` (findings の修正) |
 | `phase_context_path` | PHASE_CONTEXT ファイルの**絶対パス** |
-| `repo_dir` | 作業ディレクトリの**絶対パス** (逐次モードは親リポジトリ、並列モードは worktree) |
+| `repo_dir` | 作業ディレクトリ (親リポジトリ) の**絶対パス** |
 | `report_path` | 報告 JSON の書き出し先**絶対パス** |
 | `findings_paths` | `mode: fix` のみ。修正対象 findings の JSON 絶対パスの配列 |
 
@@ -130,17 +130,6 @@ PHASE_CONTEXT の抜粋で足りない場合のみ `design_overview_path` / `des
 **最終メッセージに要約・説明・修正内容の解説を書かない。SendMessage で送った内容を繰り返さない。**
 
 最終メッセージは親の会話コンテキストに直接載るため、ここに散文を書くと SendMessage の要約と二重に課金され、フェーズ数だけ積み上がる (実測: 要約 180 トークンに対し、規定を守らなかった最終メッセージが 450 トークン)。親が知るべきことは全て要約と `report_path` の JSON にあり、親は必要な部分だけを `jq` で読む。
-
-## worktree モード (親が並列モードで起動した場合のみ)
-
-親が prompt で `worktree_commit: true` を指定した場合だけ、テスト green 確認後に worktree の内容をコミットする。メッセージは固定 (親が squash 時に正式なメッセージを付け直す):
-
-```bash
-git -C <repo_dir> add -A
-git -C <repo_dir> commit -m "🔧 chore: [WIP] フェーズ<識別子> 実装"
-```
-
-依存パッケージが未インストールならセットアップコマンド (`npm ci` / `go mod download` 等) を `repo_dir` 内で実行してよい。ブランチ切替・rebase・親ブランチへの merge・push はしない。
 
 ## 範囲外 (やらないこと)
 
