@@ -352,8 +352,13 @@ end
 -- context が無い場合の挙動:
 --   - カーソル行にスタック済みコメントがあれば、それを編集モードで開く
 --   - 無ければ即送信モード
+--
+-- base_args の --allow-dangerously-skip-permissions は bypassPermissions を
+-- Shift+Tab のサイクルに追加するだけで有効化はしない。settings.json の
+-- defaultMode (plan) のまま起動し、プラン承認後に手動で落とせる。
+-- 有効化まで行う --dangerously-skip-permissions は plan mode を経由できない
 function M.open_claude(args, context)
-  local base_args = ''
+  local base_args = '--allow-dangerously-skip-permissions'
   if args and args ~= "" then
     args = base_args .. " " .. args
   else

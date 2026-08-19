@@ -28,7 +28,6 @@
       "WebFetch(domain:*)",
       "mcp__chrome-devtools"
     ],
-    "deny": [],
     "defaultMode": "plan"
   },
   "fallbackModel": [
