@@ -8,7 +8,7 @@
 
 | 規模 | 入口 | 中身 |
 |---|---|---|
-| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → (承認ゲート) → GitHub issue → `/dev-impl` | 設計ループ (要件〜PoC 検証〜設計書〜TODO〜issue 生成) → 実装ループ (issue を依存順に 1 件ずつ自律実装)。プロダクトモード (cli/webapp) は省略時タスク説明から推論。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
+| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → (承認ゲート) → GitHub issue → `/dev-impl` | 設計ループ (要件〜PoC 検証〜設計書〜TODO〜issue 生成) → 実装ループ (issue を依存順に 1 件ずつ自律実装)。issue はユースケース単位の親 issue にフェーズ issue がぶら下がる 2 階層で、親を見れば進捗を俯瞰できる。プロダクトモード (cli/webapp) は省略時タスク説明から推論。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
 | **M: 1 機能・リファクタの一括委任 (docs 不要)** | `/dev-impl-quick` | 軽量実装ループ。タスク分解 → 直営 TDD → テストゲート → review-tdd (単一観点) → タスク単位コミット。複数観点レビュー fan-out・ログ・レポートは持たない |
 | **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-tdd` を自分で起動する |
 | **S: バグ修正・typo** | 直接依頼 | スキル不要。remind-rules hook が既定の品質を守る |
@@ -24,6 +24,7 @@
 │      → 6 ddd-modeling → 7 DESIGN/DETAIL 生成 → 8 interview     │
 │      → 9 検証手順補完 → 10 TODO 生成 → 10.5 設計整合監査       │
 │      → 11 ★承認ゲート → 12 GitHub issue 生成                   │
+│         (UC 単位の親 issue + フェーズ子 issue の 2 階層)       │
 │                                                                │
 │  Feedback: 設計 = 人間承認 / 技術実現性 = PoC 実行結果         │
 │  クイックモード: 7〜12 のみ (不確実性があれば 4〜5 を通す)     │
@@ -42,6 +43,7 @@
 │    guard + review-* を親が fan-out (1 回の待ち) →              │
 │    fatal あれば implementer(mode: fix) 再 spawn (最大 3) →     │
 │    親が全テストゲート → commit → issue を close                │
+│    (子が揃った UC 親 issue も自動 close)                       │
 │  → ゴール達成判定 (未達は新規 issue) → HTML レポート           │
 │                                                                │
 │  エスカレ (P3 等) でのみ停止。再開は /dev-impl 再実行          │
@@ -135,8 +137,8 @@ git index を共有する操作 (コミット) は並列化できないので親
 
 | スキル | 説明 | 入力 | 出力 |
 |---|---|---|---|
-| [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、設計整合監査 → 承認ゲート → GitHub issue 生成まで通して実装ループへ引き渡す。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (承認スタンプ付き) + `ready` ラベル付きの GitHub issue 群 |
-| [dev-impl](./dev-impl/) | 実装ループ。dev-spec が作った GitHub issue を `Depends on #N` の順に 1 件ずつ自律実装 (implementer subagent で TDD → guard + review を親が fan-out (敵対的レビュー含む) → fatal は implementer(mode: fix) で修正 → テストゲート → commit → issue を close)。並列化はしない。完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | GitHub issue (必須) + DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (承認スタンプは goals_sha 付き) | issue ごとのコミット + `docs/dev-impl-reports/<run_id>.html` |
+| [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜設計書〜TODO 生成を対話実行し、設計整合監査 → 承認ゲート → GitHub issue 生成まで通して実装ループへ引き渡す。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (承認スタンプ付き) + GitHub issue 群 (`ready` のフェーズ issue + `uc-tracking` の UC 親 issue) |
+| [dev-impl](./dev-impl/) | 実装ループ。dev-spec が作った GitHub issue を `Depends on #N` の順に 1 件ずつ自律実装 (implementer subagent で TDD → guard + review を親が fan-out (敵対的レビュー含む) → fatal は implementer(mode: fix) で修正 → テストゲート → commit → issue を close)。並列化はしない。子が全て closed になった UC 親 issue は自動で close する。完了時に第三者受入監査 (review-spec-compliance がゴール検証を独立再実行 + 成果物↔設計突合)、HTML レポート。P1/P2 は動的修正、P3 で停止 | GitHub issue (必須) + DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md (承認スタンプは goals_sha 付き) | issue ごとのコミット + `docs/dev-impl-reports/<run_id>.html` |
 | [dev-impl-quick](./dev-impl-quick/) | 軽量実装ループ。依頼文をタスク分解 → 1 件ずつ直営 TDD → テストゲート → review-tdd (単一観点、model: opus 明示) → タスク単位 commit。複数観点レビュー fan-out・進捗ログ・レポートは持たない | 依頼文または簡易タスクリスト (docs 不要) | タスク単位のコミット |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / ddd-modeling / analyzing-requirements / interview / verification-review / todo-generation)。

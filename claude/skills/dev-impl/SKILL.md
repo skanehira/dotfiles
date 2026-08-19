@@ -123,9 +123,12 @@ PRODUCT_MODE=${PRODUCT_MODE:-unknown}
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel)
 REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-OPEN=$(gh issue list --repo "$REPO_SLUG" --state open   --limit 200 --json number --jq 'length')
-CLOSED=$(gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq 'length')
+NOT_UC='[.[] | select((.labels | map(.name) | index("uc-tracking")) | not)] | length'
+OPEN=$(gh issue list --repo "$REPO_SLUG" --state open   --limit 200 --json number,labels --jq "$NOT_UC")
+CLOSED=$(gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number,labels --jq "$NOT_UC")
 ```
+
+**`uc-tracking` ラベルの issue は数に入れない。** これは `/dev-spec` のフェーズ 12 が作るユースケース単位の**親 issue** であり、実装対象ではない (詳細は Step 2)。除外しないと、親が残っているだけで「まだ未完了の issue がある」と誤判定する。親 issue が 1 件も無いリポジトリ (フラット構造) でもこのフィルタは無害に通る。
 
 `OPEN` が 0 で、かつ closed issue も 0 件なら **issue が未生成**である (`/dev-spec` のフェーズ 12 が走っていない)。`OPEN` が 0 で closed が 1 件以上なら**全 issue 完了済み**なので、Step 5 (ゴール達成判定) から再開する。
 
@@ -183,20 +186,23 @@ gh issue list --repo "$REPO_SLUG" --state open  --limit 200 --json number,title,
 gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq '[.[].number]' > /tmp/dev-impl-closed.json
 ```
 
+取得した open issue には UC 親 issue も混ざる。下の表の 1 行目 (`uc-tracking`) で先に除外してから着手判定に入る。
+
 着手対象の決め方:
 
 | 条件 | 扱い |
 | --- | --- |
+| `uc-tracking` ラベルが付いている | **着手対象外。** ユースケース単位の親 issue (俯瞰用) であり、実装の実体を持たない。ラベル判定はこの行を**最初に**適用する (親はライフサイクルラベルを持たないため、次行以降の「ラベルが無い open issue」に流すと未完成と誤判定する) |
 | `needs-human` ラベルが付いている | **着手しない。** 駐車中の issue であり、ラベルを外すのは人間の回答を得た後 |
 | `ready` ラベル | 着手可能な候補 |
 | `in-progress` ラベル | 前回の run が中断したもの。**Step 0 が decisions.jsonl から run 記録を復元できた場合だけそのまま再開する。** 対応する run 記録が無い (別マシン・別クローン・ログ削除後) 場合は未着手とみなし、`gh issue edit <N> --add-label ready --remove-label in-progress` でラベルを戻してから通常フローで着手する |
-| ラベルが無い open issue | フェーズ 12 が作成直後に落ちた未完成の issue。`issue_incomplete` でエスカレ停止し、`/dev-spec` の再実行 (12.3 の突き合わせが冪等に貼り直す) を案内する |
+| ラベルが無い open issue (`uc-tracking` でもない) | フェーズ 12 が作成直後に落ちた未完成の issue。`issue_incomplete` でエスカレ停止し、`/dev-spec` の再実行 (12.3 の突き合わせが冪等に貼り直す) を案内する |
 
 候補のうち、本文の `## 依存` にある **`Depends on #N` の参照先がすべて closed になっているものだけが着手可能**。複数あれば issue 番号の昇順で 1 件選ぶ。
 
 **並列化はしない。** 1 件実装して close し、次の判定に戻る、を繰り返す。フェーズを同時に走らせる wave / worktree fan-out は持たない。
 
-着手可能な issue が 1 件も無いのに open issue が残っている場合は、依存が循環しているか、依存先が `needs-human` で駐車している。どちらかを判別して `dependency_blocked` でエスカレ停止する (JSONL の `context` に残りの issue 番号と各々の未解決依存を残す)。
+着手可能な issue が 1 件も無いのに open issue (`uc-tracking` を除く) が残っている場合は、依存が循環しているか、依存先が `needs-human` で駐車している。どちらかを判別して `dependency_blocked` でエスカレ停止する (JSONL の `context` に残りの issue 番号と各々の未解決依存を残す)。
 
 ### Step 3: ループ全体の状態管理
 
@@ -211,7 +217,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq 
 | `phase_fix_round` (現フェーズの検査 → 修正の周回数) | 3 (回)                                                | `phase_fix_exceeded` でエスカレ停止 (context に guard 由来 / review 由来の内訳を残す) |
 | `test_gate_retry` (現フェーズの 4.2e テストゲート再試行回数) | 3 (回)                                       | `tests_failing_before_commit` でエスカレ停止    |
 | `phase_spawns` (現フェーズの累計 subagent 起動数) | 24 (回)                                                | `spawn_budget_exceeded` でエスカレ停止          |
-| `run_spawns` (run 全体の累計 subagent 起動数)   | open issue 数 × 8 (回)                                    | 同上                                            |
+| `run_spawns` (run 全体の累計 subagent 起動数)   | open issue 数 × 8 (回)。**母数の「open issue 数」は `uc-tracking` を除いた実装対象の件数**    | 同上                                            |
 
 スコープ別のリセット時点:
 
@@ -263,6 +269,8 @@ gh issue edit <N> --repo "$REPO_SLUG" --add-label in-progress --remove-label rea
 # 自動クローズが効かない場合は明示的に閉じる)
 gh issue close <N> --repo "$REPO_SLUG" --comment "DoD がすべて通過したため close する"
 ```
+
+**子を close したら、その親 (UC 追跡 issue) が完了したかを確認して閉じる** (下記「親 issue の自動 close」)。
 
 **main が行うこと** (implementer には渡さない): PHASE_CONTEXT と RUN_FACTS の組み立て、事前判定と観点 gating の確定、検査 fan-out の起動と待機、fatal 判定、全テストゲート、テスト弱体化の機械検知、コミット、issue のラベル操作と close、decisions.jsonl への書き込み、Step 4.6 の P1/P2/P3 判定。
 
@@ -393,7 +401,12 @@ guard を review と同じ fan-out に入れるのは、待ちを 2 回から 1 
 | UI を触るフェーズ (`uiPhase == true`) | 上記 + review-product-readiness (dev_server が無ければ skip)                     |
 | **最後の issue** | 全観点フル (tdd / quality / product-readiness / adversarial)                                        |
 
-**「最後の issue」とは、その issue を close した時点で他に open issue が 1 件も残らないもの**を指す (issue 駆動では着手順を番号昇順で決めるだけなので、着手前に「最後かどうか」は分からない。検査 fan-out を起動する 4.2c の時点で `gh issue list --state open --json number --jq 'length'` を引き、自分以外に open が無ければ最後と判定する)。
+**「最後の issue」とは、その issue を close した時点で他に open issue が 1 件も残らないもの**を指す (issue 駆動では着手順を番号昇順で決めるだけなので、着手前に「最後かどうか」は分からない。検査 fan-out を起動する 4.2c の時点で次を引き、自分以外に open が無ければ最後と判定する)。**`uc-tracking` (UC 親 issue) は数に入れない** — 親は実装対象ではないので、残っていても「最後のフェーズ」であることは変わらない:
+
+```bash
+gh issue list --repo "$REPO_SLUG" --state open --limit 200 --json number,labels \
+  --jq '[.[] | select((.labels | map(.name) | index("uc-tracking")) | not)] | length'
+```
 
 **review-tdd をテスト差分の有無で gating する理由**: review-tdd が判定するのは「書かれたテストの質」なので、テストに差分が無いフェーズには判定対象が存在しない。テストを伴わない実装だけが積まれた場合は、行数 20 超で review-adversarial のスキップ述語が発火せず (下表 #2)、レンズ C (完了主張の反証) がテスト不在を検出するため取りこぼさない。
 
@@ -410,7 +423,7 @@ review-quality (rules 準拠 + アーキテクチャ heuristic 統合) は最後
 | 1 | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空                                                                                        | テスト変更時はレンズ B 必須。ファイル名 + 差分内容の 2 層、tracked/untracked 両方で判定 (言語別の具体パターンは phase-execution.md の実コマンドが正) |
 | 2 | `$LINES` ≤ 20 (`$NON_DOC_CHANGED` が空、つまり `.md` / `docs/` のみの差分なら行数不問で skip 可)                                                  | typo・軽微修正の機械近似                                                                                                                             |
 | 3 | `$CI_FILES_CHANGED` が空 (CI・ビルド/テスト設定 `.github/`, `*config*`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, `justfile`, `deno.json` 等の変更なし) | 検証器設定の改変は必ず監査                                                                                                                           |
-| 4 | 最後の issue でない (自分以外に open issue が残る)                                                                                                | 最後の issue は全観点フル                                                                                                                            |
+| 4 | 最後の issue でない (自分以外に open issue が残る。`uc-tracking` の親は数えない)                                                                  | 最後の issue は全観点フル                                                                                                                            |
 
 全条件が真の場合のみ skip 可 (skip は権利であって義務ではない。1 つでも「実行」と出れば actor はスキップできない)。skip 時は JSONL に `event_type: verification_skipped`、`context: {target: "review-adversarial", changed_files: $CHANGED, changed_lines: $LINES, criteria_result: {...}}` を記録する (Step 5.6 の未検証項目集約に自動合流させ、沈黙スキップを構造的に不可能にするため)。
 
@@ -470,6 +483,29 @@ bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
 3. **RUN_FACTS.md を更新する** (書式と規則は [references/phase-context.md](./references/phase-context.md) の `## RUN_FACTS.md`)。implementer 報告の `report_path` から `jq` で引いて「完了フェーズの成果物」「累積 design_decisions」「既知の落とし穴」に追記する。**この更新がフェーズ間の文脈再注入を代替する**ので省略しない (省略すると次フェーズの implementer がプロジェクトの作り方を探索し直す)。追記後にファイルサイズを測り、**4096 バイトを超えていたら最新 3 フェーズ以外の「完了フェーズの成果物」行を要約に畳む**。JSONL に `event_type: run_facts_updated` (context に `sections` / `bytes`) を記録する
 4. **JSONL に `event_type: impl_done` を記録する** (context: `phase` / `summary` / `commit_sha` / `phase_fix_round` / `phase_spawns` / `review_outputs`)。これが issue 完了の唯一のイベントで、`prev_phase_summary` (次フェーズの PHASE_CONTEXT) と HTML レポートのフェーズタイムラインがこれを読む
 5. implementer 報告の `verification_skipped` / `design_decisions` / `open_questions` / `spec_lookups` を `report_path` から `jq` で JSONL に転記する (`verification_skipped` は Step 5.6 の未検証項目集約に合流する)
+6. **親 issue の自動 close** を行う (下記)
+
+###### 親 issue の自動 close
+
+`/dev-spec` のフェーズ 12 が作る `uc-tracking` の親 issue は、そのユースケースを実現する子 (フェーズ issue) が全て closed になった時点で完了する。**GitHub は子が open のままでも親の close を止めない**ので、判定は dev-impl が行う。子を 1 件 close するたびに、open の親を全件見て閉じられるものを閉じる (親は数件なので毎回全件確認で十分。冪等):
+
+```bash
+for PARENT in $(gh issue list --repo "$REPO_SLUG" --state open --limit 200 \
+                  --label uc-tracking --json number --jq '.[].number'); do
+  SUBS=$(gh api "repos/$REPO_SLUG/issues/$PARENT/sub_issues" --jq '[.[].state]')
+  TOTAL=$(printf '%s' "$SUBS" | jq 'length')
+  REMAIN=$(printf '%s' "$SUBS" | jq '[.[] | select(. == "open")] | length')
+  if [ "$TOTAL" -gt 0 ] && [ "$REMAIN" -eq 0 ]; then
+    gh issue close "$PARENT" --repo "$REPO_SLUG" \
+      --comment "このユースケースの全フェーズ (sub-issue) が完了したため close する"
+  fi
+done
+```
+
+2 点を外さない:
+
+- **`TOTAL -gt 0` の条件を省かない。** sub-issue が 1 件も紐付いていない親も `REMAIN` は 0 になるため、条件が無いと「まだ子が作られていない親」を完了扱いで閉じてしまう
+- **判定に親の `sub_issues_summary` を使わない。** このフィールドは**遅延反映**するので、close 直後は古い件数を返す (実測)。`/sub_issues` 一覧の `state` は即時整合なのでこちらを引く
 
 ##### フェーズ内エスカレ条件まとめ
 
@@ -569,7 +605,17 @@ findings ごとの分岐:
 
 それ以外:
 
-1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing`) ごとに **GitHub issue を新規作成する** (`gh issue create --label ready`)。本文の節構造は dev-spec のフェーズ 12 と同じ (`## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` / `## 依存` / `## 対応ゴール`) にし、**`## DoD` には未達を検出した検証コマンドをそのまま入れる**。`## 対応ゴール` にはその未達ゴールの識別子を書く。あわせて `docs/TODO.md` にも同じフェーズを追記する (issue の生成元と実体が食い違わないようにするため。判定基準は `../dev-spec/references/todo-generation.md` の「各フェーズが持つメタ情報」)
+1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing`) ごとに **GitHub issue を新規作成する** (`gh issue create --label ready`)。本文の節構造は dev-spec のフェーズ 12 と同じ (`## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` / `## 依存` / `## 対応ゴール`) にし、**`## DoD` には未達を検出した検証コマンドをそのまま入れる**。`## 対応ゴール` にはその未達ゴールの識別子を書く。あわせて `docs/TODO.md` にも同じフェーズを追記する (issue の生成元と実体が食い違わないようにするため。判定基準は `../dev-spec/references/todo-generation.md` の「各フェーズが持つメタ情報」)。
+
+   **親 issue がある構成 (`uc-tracking` の issue が 1 件以上ある) では、新規 issue も親へ紐付ける。** 追記する TODO.md のフェーズ見出しに `<!-- ucs: ... -->` を書き、その UC の親 (未達ゴールが特定の UC に属さないなら「横断: UC に属さないフェーズ」) を引き当てて sub-issue にする。**親が既に closed なら `gh issue reopen` してから紐付ける** (閉じた親にぶら下げると、そのユースケースがまだ未完であることが俯瞰から消える):
+
+   ```bash
+   gh issue reopen "$PARENT_NUM" --repo "$REPO_SLUG" --comment "未達ゴールの対応 issue を追加したため再オープンする"
+   CHILD_ID=$(gh api "repos/$REPO_SLUG/issues/$NEW_NUM" --jq .id)
+   gh api "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues" -F sub_issue_id="$CHILD_ID"
+   ```
+
+   紐付けの API 仕様 (numeric id・`-F`・二重紐付けの 422) は `../dev-spec/SKILL.md` の 12.4.3 に従う
    - フェーズ内容は「G2 が未達。検証コマンド `<cmd>` が exit code != 0。失敗ログ: `<evidence>`。これを満たす実装を追加する」(findings 由来は `message` + `fix_proposal` を使う)
    - JSONL に `event_type: phase_added` で記録
 2. Step 4 のフェーズループに戻る (新規追加フェーズだけが pending)

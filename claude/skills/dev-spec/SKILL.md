@@ -71,7 +71,7 @@ sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DESIGN.md | head -
 | 10   | TODO.md 生成         | `references/todo-generation.md`        | docs/TODO.md                                                           | 実行           | 実行       |
 | 10.5 | 設計整合監査         | (本ファイル下記)                       | 監査 findings (修正は 7〜10 へ差し戻し)                                | 実行           | 実行       |
 | 11   | 承認ゲート           | (本ファイル下記)                       | 承認スタンプ                                                           | 実行           | 実行       |
-| 12   | GitHub issue 生成    | (本ファイル下記)                       | `ready` ラベル付きの issue 群                                          | 実行           | 実行       |
+| 12   | GitHub issue 生成    | (本ファイル下記)                       | フェーズ子 issue 群 (`ready`) + UC 親 issue 群 (`uc-tracking`)         | 実行           | 実行       |
 
 **フェーズ 12 はモードに関係なく常に実行する。** 実装ループ (`/dev-impl`) は issue を入力にとるので、issue が無いと次に進めない。進捗表示 (`📍 設計ループ [n/N]`) の分母は 12 とする (フェーズ 10.5 は 10 の一部として数えない)。
 
@@ -97,7 +97,7 @@ rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
 
 タスク説明: `$ARGUMENTS` の残り部分があればそれを使用。なければ事前の会話から推論し、それも不明なら「どのようなタスクの設計を行いますか?」と質問する。
 
-**引き渡し先は常に `/dev-impl` で、経路の選択肢は無い。** 承認ゲート (フェーズ 11) を通ると、フェーズ 12 が TODO.md の各フェーズを GitHub issue に転記し、`/dev-impl` がその issue を依存順に 1 件ずつ実装する。**実装中の状態の原本は GitHub issue** (ラベルと open/closed) で、TODO.md は監査と承認の対象かつ issue の生成元として残る。
+**引き渡し先は常に `/dev-impl` で、経路の選択肢は無い。** 承認ゲート (フェーズ 11) を通ると、フェーズ 12 が TODO.md の各フェーズを GitHub issue に転記し (ユースケース単位の親 issue に sub-issue として紐付ける)、`/dev-impl` がそのフェーズ issue を依存順に 1 件ずつ実装する。**実装中の状態の原本は GitHub issue** (ラベルと open/closed) で、TODO.md は監査と承認の対象かつ issue の生成元として残る。
 
 **既存の docs から復元できる項目は質問しない。** `docs/DESIGN.md` があればプロダクトモードはスタンプから復元する (0.2 の手順)。再開時に確定済みの項目を訊き直さないための優先順である。
 
@@ -239,7 +239,7 @@ DESIGN.md の「未解決の論点 (Open Issues)」に項目があれば続け�
 
 **承認は GitHub への書き込みの承認を兼ねる。** 承認直後にフェーズ 12 が issue を作成するため、選択肢の説明文でそれを明示し、ユーザーが副作用を認識したうえで承認できる状態にする。
 
-**説明文を埋める前に 12.1 の前提条件チェックを実行する。** リポジトリ・`gh` 認証が解決できない環境で承認だけ取得すると、承認スタンプを書いた後にフェーズ 12 が停止し、「承認済みだが issue が無い」という中途半端な状態になる。解決できなければ承認を求めず、12.1 の案内を出して終了する。`<n>` は `docs/TODO.md` のフェーズ数 (`rg -c '^### フェーズ' docs/TODO.md`) とする。
+**説明文を埋める前に 12.1 の前提条件チェックを実行する。** リポジトリ・`gh` 認証が解決できない環境で承認だけ取得すると、承認スタンプを書いた後にフェーズ 12 が停止し、「承認済みだが issue が無い」という中途半端な状態になる。解決できなければ承認を求めず、12.1 の案内を出して終了する。`<n>` は `docs/TODO.md` のフェーズ数 (`rg -c '^### フェーズ' docs/TODO.md`)、`<m>` は 12.0 が階層ありと判定した場合の親 issue 数 (`rg -o '<!-- ucs: ([^ ]+) -->' -r '$1' docs/TODO.md | sort -u | wc -l`) とする。フラット判定なら `<m>` の記述ごと省く。
 
 ```javascript
 AskUserQuestion({
@@ -247,7 +247,7 @@ AskUserQuestion({
     question: "設計成果物を確認してください。実装ループへ進んでよいですか?",
     header: "設計承認",
     options: [
-      { label: "承認", description: "承認すると <owner/name> に issue を <n> 件作成します (フェーズ 12)。その後 /dev-impl の起動方法を案内して終了" },
+      { label: "承認", description: "承認すると <owner/name> に issue を <n> 件 (+ UC 親 issue <m> 件) 作成します (フェーズ 12)。その後 /dev-impl の起動方法を案内して終了" },
       { label: "修正", description: "修正内容を指示して該当フェーズへ戻る" },
       { label: "中止", description: "ここで終了 (成果物は残る。issue は作成しない)" }
     ],
@@ -277,7 +277,8 @@ GOALS_SHA=$(
 2. フェーズ 12 を実行してから次を表示する。
 
 ```
-✓ 設計が承認され、issue を <n> 件作成しました (ready: <a> 件 / needs-human: <b> 件)。
+✓ 設計が承認され、フェーズ issue を <n> 件作成しました (ready: <a> 件 / needs-human: <b> 件)。
+  ユースケース単位の親 issue <m> 件にひも付けています (親を見れば進捗を俯瞰できます)。
 
 実装ループは以下のいずれかで開始してください:
 
@@ -290,7 +291,8 @@ B: このセッションで続行
    このまま /dev-impl とタイプ。このターンだけ Opus に切り替わる。
    (エスカレーション回答後の再開も /dev-impl の再実行で行う)
 
-dev-impl は issue を依存順に 1 件ずつ実装して close する。
+dev-impl はフェーズ issue を依存順に 1 件ずつ実装して close する (親 issue は実装対象にせず、
+子が全て closed になった時点で自動で close する)。
 needs-human が付いた issue は着手せず、最初にユーザーへ質問を出す。
 ```
 
@@ -299,6 +301,27 @@ needs-human が付いた issue は着手せず、最初にユーザーへ質問�
 `docs/TODO.md` の各フェーズを GitHub issue に写す。**新しい内容を書かない — TODO.md からの機械的な転記に徹する。**
 
 理由: DoD 設計を fresh context で検査するのはフェーズ 10.5 の `pre-approval` 監査だけである。ここで本文を創作すると、監査後・承認後になり第三者検査を素通りする。転記中に「情報が足りない」と気づいたら、issue に書き足すのではなく**フェーズ 10 へ戻って TODO.md を直し、10.5 から再実行する**。
+
+### 12.0 issue の階層
+
+issue は 2 階層で作る。
+
+| 階層 | 何を表すか | タイトル | ラベル | 誰が使うか |
+| --- | --- | --- | --- | --- |
+| **親** | ユースケース 1 件 (`docs/USECASES.md` の `## UC-<n>:` 見出し) | `UC-<n>: <ユースケース名>` | `uc-tracking` のみ | **人間**が進捗を俯瞰する。GitHub が子の完了数を進捗バーで表示する |
+| **子** | TODO.md のフェーズ 1 件 | `フェーズ<識別子>: <名前>` | `ready` / `needs-human` | `/dev-impl` が 1 件ずつ実装して close する |
+
+紐付けは GitHub ネイティブの **sub-issues** (REST API) で行う。`ucs: none` のフェーズ (基盤構築・インフラ構築・品質保証など) は、固定タイトル **`横断: UC に属さないフェーズ`** の親 1 件にまとめる。
+
+**親は俯瞰専用であり、着手順・スコープには一切関与しない。** 着手順は子の `Depends on #N`、実装範囲は子の非スコープが決める。親にライフサイクルラベル (`ready` / `in-progress` / `needs-human`) を付けない — 付けると `/dev-impl` が親を実装対象として拾ってしまう。
+
+**階層を作るかの判定** (以下が偽なら親を作らず、従来どおりフェーズ issue のみのフラット構造で生成する):
+
+```bash
+test -f docs/USECASES.md && rg -q '<!-- ucs: ' docs/TODO.md
+```
+
+`docs/USECASES.md` が無い経路 (クイックモードはフェーズ 3 を通らない) と、`ucs` 宣言を持たない旧形式の承認済み TODO.md が正当に存在する。**このとき親を作らないのは仕様であり、エラーではない。** 判定結果 (階層あり / フラット) は 12.6 の報告に 1 行で書く。
 
 ### 12.1 前提条件 (**11.2 の承認を求める前に実行する**)
 
@@ -319,7 +342,10 @@ REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 gh label create ready        --force --color 0E8A16 --description "着手可能。依存が解決済みで DoD が判定可能"
 gh label create in-progress  --force --color 1D76DB --description "dev-impl が実装中"
 gh label create needs-human  --force --color D93F0B --description "人間の判断待ちで駐車中"
+gh label create uc-tracking  --force --color 5319E7 --description "ユースケース単位の親 issue。実装対象ではない"
 ```
+
+`uc-tracking` は 12.0 の判定がフラットだった場合も作ってよい (使わないだけで害はない)。
 
 ### 12.3 既存 issue との突き合わせ (冪等)
 
@@ -327,9 +353,9 @@ gh label create needs-human  --force --color D93F0B --description "人間の判�
 gh issue list --repo "$REPO_SLUG" --state all --limit 200 --json number,title,state,labels
 ```
 
-**ライフサイクルラベル**とは `ready` / `in-progress` / `needs-human` の 3 つ (12.2 で作るもの) を指す。
+**ライフサイクルラベル**とは `ready` / `in-progress` / `needs-human` の 3 つ (12.2 で作るもの) を指す。`uc-tracking` はこれに含めない。
 
-各フェーズについて、既存 issue を次のとおり分類する:
+各フェーズ (子 issue) について、既存 issue を次のとおり分類する:
 
 | 既存 issue の状態 | 判定 | 動作 |
 | --- | --- | --- |
@@ -338,6 +364,8 @@ gh issue list --repo "$REPO_SLUG" --state all --limit 200 --json number,title,st
 | タイトル一致・ラベルあり・**本文が現在の TODO.md 転記内容と一致** | 最新 | スキップする |
 | タイトル一致・ラベルあり・**本文が不一致** | **設計が改訂された** | `gh issue edit <番号> --body-file` で貼り直す (下記) |
 | closed | 完了済み | スキップする (再オープンしない)。ただし**本文が現在の TODO.md 転記内容と不一致なら、その issue 番号を 12.6 の報告に列挙する** — フェーズ 10 へ戻って直した改訂が、既に完了した issue には届かないことを人間が把握できるようにするため |
+
+親 issue (タイトルが `UC-<n>:` または `横断: UC に属さないフェーズ`、ラベル `uc-tracking`) も同じ表で扱う。ただし**親には「ラベル無しの open = 未完成」の行を適用しない** (親はライフサイクルラベルを持たないため)。判定材料は `uc-tracking` の有無とタイトル一致のみとする。
 
 **本文の一致確認を省かない。** フェーズ 12 の冒頭で「情報が足りなければフェーズ 10 へ戻って TODO.md を直し 10.5 から再実行する」と定めているが、タイトル一致だけでスキップすると**その修正が issue に届かない**。修正した DoD が実装者に渡らなければ、戻った意味が消える。
 
@@ -349,9 +377,59 @@ cmp -s /tmp/issue-current.md /tmp/issue-body.md || \
 
 比較にコマンド置換 (`$(...)`) を使わない — 末尾改行を捨てるため差分を取りこぼす (`rules/core/verification.md`)。
 
+**紐付け済みの sub-issue も取得して対応表を seed する。** 中断後の再実行で子を二重に紐付けようとすると 422 で落ちる (12.4.3)。既存の各親について次を引き、「その親に紐付け済みの子 issue 番号」の集合を作っておく:
+
+```bash
+gh api "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues" --jq '[.[].number]'
+```
+
 **`in-progress` の issue の本文を書き換えたときは、issue コメントで改訂を告知する。** `/dev-impl` が古い DoD で作業している可能性があるため、再開時に気付けるようにする。
 
 ### 12.4 issue の生成
+
+**親 → 子の順に作る。** 子を作った直後に親へ紐付けるため、先に親の issue 番号が確定している必要がある。
+
+#### 12.4.1 親 issue (12.0 の判定が「階層あり」のときだけ)
+
+`docs/TODO.md` に現れる `ucs` の値を集めて、必要な親を決める:
+
+```bash
+rg -o '<!-- ucs: ([^ ]+) -->' -r '$1' docs/TODO.md | sort -u
+```
+
+`UC-<n>` の各値について `docs/USECASES.md` の該当節から親 issue を 1 件、`none` が 1 つでもあれば「横断」の親を 1 件作る。**`ucs` に現れない UC の親は作らない** (どのフェーズも実装しない UC の空の親を残さないため。UC の取りこぼし自体はフェーズ 10 のセルフレビューが検出する)。
+
+本文も TODO.md / USECASES.md からの転記に徹する:
+
+```markdown
+## ユースケース
+<USECASES.md の該当 UC の「概要」表をそのまま>
+
+## 詳細
+docs/USECASES.md 「UC-<n>: <名前>」
+
+## 進捗
+このユースケースを実現するフェーズを sub-issue として紐付けている。実装は各 sub-issue で行う。
+```
+
+「横断」の親の本文は次の固定文とする (転記元が無いため):
+
+```markdown
+## 概要
+特定のユースケースに属さないフェーズ (基盤構築・インフラ構築・品質保証・UI/UX 仕上げなど) をまとめる追跡用 issue。
+
+## 進捗
+実装は各 sub-issue で行う。
+```
+
+作成してタイトル → 親番号の対応表に入れる (`gh issue create` が返すのは URL なので番号を取り出す):
+
+```bash
+PARENT_URL=$(gh issue create --repo "$REPO_SLUG" --title "$PARENT_TITLE" --body-file /tmp/parent-body.md --label uc-tracking)
+PARENT_NUM=$(printf '%s' "$PARENT_URL" | grep -o '[0-9]*$')
+```
+
+#### 12.4.2 子 issue (フェーズ)
 
 **TODO.md のフェーズ出現順に 1 件ずつ作る。** deps は前方参照が禁止されている (`references/todo-generation.md`「フェーズ依存の宣言」) ため、出現順に作れば依存先の issue 番号は**常に確定済み**になる。識別子 → issue 番号の対応表を作りながら進める。
 
@@ -406,13 +484,34 @@ G1, G2                          <!-- goals: none なら本節を省略 -->
 | 依存 | `<!-- deps: 2,3 -->` | **`Depends on #<issue番号>`** に変換 (対応表を引く。`none` なら「依存なし」と書く) |
 | 対応ゴール | `<!-- goals: G1,G2 -->` | `G1, G2` と本文に書く (`none` なら省略) |
 
+`<!-- ucs: ... -->` は**本文に書かない**。親子関係は sub-issue の紐付け (12.4.3) が表現するため、本文に重複して書くと二重管理になる。
+
 タイトルは `フェーズ<識別子>: <名前>` (TODO.md の見出しから HTML コメントを除いたもの) をそのまま使う。12.3 の突き合わせがタイトル一致で行われるため、**整形して変えない**。
 
 **TODO.md の全フェーズ共通節も各 issue に転記する。** `## 実装タスク` より前にフェーズ横断の規約 (「DoD ブロックの実行方法」等) がある場合、それを `## DoD` の直後に `### <節名>` として埋め込む。**実装者が読むのは issue だけ**で TODO.md 冒頭は届かないため、転記しないと規約が失われる (実測: DoD ブロックを `bash -e` で流す前提・`cmd && exit 1 || exit 0` の禁止といった、DoD の解釈に必須の規約が全フェーズ共通節にしか無かった)。共通節が無ければ本項はスキップする。
 
+#### 12.4.3 親への紐付け (sub-issues)
+
+子 issue を 1 件作ったら、その `ucs` が指す親 (`none` なら「横断」の親) へ即座に紐付ける。**紐付けに使うのは REST の numeric id であり、issue 番号でも node ID でもない**:
+
+```bash
+CHILD_ID=$(gh api "repos/$REPO_SLUG/issues/$ISSUE_NUM" --jq .id)
+gh api "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues" -F sub_issue_id="$CHILD_ID"
+```
+
+実測で確認した API の挙動 (この 3 点を外すと落ちる):
+
+| 項目 | 挙動 |
+| --- | --- |
+| パラメータの型 | `-F` (integer として送る) が必須。`-f` (文字列) は `is not of type integer` で HTTP 422。id は `gh api repos/.../issues/<番号> --jq .id` で取る (`gh issue view --json id` が返すのは `I_kwDO...` 形式の node ID で、これは使えない) |
+| 二重紐付け | HTTP 422 (`Issue may not contain duplicate sub-issues and Sub issue may only have one parent`)。**12.3 で seed した「紐付け済み子番号」の集合に入っていればスキップする** — このエラーは「単一親制約の違反」とメッセージが共通なので、事後に握りつぶすと本当の設計エラーを見逃す |
+| 親の進捗表示 | 親の `sub_issues_summary` (completed / total) は**遅延反映**する。機械判定には使わず、判定が要る場面では `/sub_issues` の一覧 (`state` は即時整合) を引く |
+
+**紐付けに失敗したら停止する。** 子だけが宙に浮くと、その issue は親の俯瞰から漏れたまま実装される。12.6 で成功を報告しない。
+
 ### 12.5 ラベルの付与
 
-**ラベルは issue の作成前に決める** (12.4 のスニペットの `$LABEL`)。判定は 1 行で機械的に行う:
+**ラベルは issue の作成前に決める** (12.4.2 のスニペットの `$LABEL`)。判定は 1 行で機械的に行う:
 
 ```bash
 rg -q 'DoD \(未定義\):' <該当フェーズの本文> && LABEL=needs-human || LABEL=ready
@@ -422,9 +521,15 @@ rg -q 'DoD \(未定義\):' <該当フェーズの本文> && LABEL=needs-human ||
 
 例外は 1 つだけ: **`DoD (未定義): <理由>` が書かれているフェーズ**は `needs-human` を貼り、理由を issue コメントに転記する。`ready` と併記しない (`/dev-impl` は `ready` の issue を着手対象にするため、両方付けると駐車したはずの issue が実装される)。
 
+**親 issue には `uc-tracking` だけを付ける** (12.4.1 で作成時に付与済み)。ライフサイクルラベルを足さない。
+
 ### 12.6 結果の報告
 
-作成件数 (`ready` / `needs-human` / スキップした既存 issue) を数え、11.3 の案内文に埋める。
+次を数えて 11.3 の案内文に埋める:
+
+- 子 issue の作成件数 (`ready` / `needs-human` / スキップした既存 issue)
+- 親 issue の作成件数 (12.0 がフラット判定なら「親 issue なし (USECASES.md または ucs 宣言が無いため)」と 1 行で書く)
+- 12.3 で検出した「closed だが本文が不一致」の issue 番号
 
 ## 完了条件
 
@@ -434,6 +539,7 @@ rg -q 'DoD \(未定義\):' <該当フェーズの本文> && LABEL=needs-human ||
 - [ ] フェーズ 10.5 の設計整合監査が実行された (high findings は解消、または未解消のまま人間判断に添付)
 - [ ] 承認時: TODO.md 先頭に承認スタンプ (goals_sha 付き) が書き込まれた
 - [ ] TODO.md の全フェーズが issue 化され、ラベル (`ready` または `needs-human`) が付いた
+- [ ] (USECASES.md と ucs 宣言がある場合) UC 単位の親 issue が作られ、全フェーズ issue がいずれかの親に sub-issue として紐付いた
 
 ## 参照ルール
 
