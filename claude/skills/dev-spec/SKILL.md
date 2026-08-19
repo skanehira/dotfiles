@@ -373,7 +373,7 @@ cmp -s /tmp/issue-current.md /tmp/issue-body.md || \
 
 **対応表は 12.3 の出力で seed してから作成に入る。** 中断後の再実行では先行フェーズが「作成済み」でスキップされるため、seed しないと `Depends on #<issue番号>` を解決できず依存が空になる (`/dev-impl` の Step 2 が着手順を決められず、依存先が未完成のまま実装に入る)。12.3 で取得した `number,title` から、既存 issue のフェーズ識別子 → 番号を先に全件入れておく。
 
-`gh issue create` が返すのは**番号ではなく URL** なので、番号を取り出してから対応表に入れる (そのまま埋めると `Depends on <URL>` になり wave 構築が依存を読めない):
+`gh issue create` が返すのは**番号ではなく URL** なので、番号を取り出してから対応表に入れる (そのまま埋めると `Depends on <URL>` になり、`/dev-impl` の Step 2 が依存を読めない):
 
 ```bash
 # ラベルは 12.5 の判定で先に決めておく ("$LABEL" = ready または needs-human)
