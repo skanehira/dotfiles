@@ -553,7 +553,7 @@ implementer 報告 (`mode: implement` / `mode: fix` 双方) の `deviation_signa
 1. `p1_fixes_in_phase += 1`。`p1_fixes_in_phase > 2` なら本シグナルを P2 (design_detail_gap) として扱い、P2 動的修正フローに切り替える (以降のステップは実行しない)
 2. TODO.md の該当フェーズ周辺を Edit
 3. ログに「P1 fix: <変更内容の 1 行サマリ>」を残す (JSONL は `event_type: p1_fix`)
-4. 残タスクが当該フェーズ内なら継続、フェーズを跨ぐ追加なら新フェーズを挿入して以降のループに含める (挿入する見出しには `<!-- deps: ... -->` と `<!-- goals: ... -->` を必ず付け、**`docs/USECASES.md` がある構成では `<!-- ucs: ... -->` も付ける**。メタ情報 5 項目 (ゴール / DoD / 参照 docs / 変更想定ファイル / 非スコープ) も書く。判定基準は `../dev-spec/references/todo-generation.md` の「フェーズ依存の宣言」「対応ゴールの宣言」「対応ユースケースの宣言」「各フェーズが持つメタ情報」)。`ucs` を落とすと、次に `/dev-spec` を再実行したときフェーズ 10.5 の監査が `phase_meta_missing` (high) で差し戻す
+4. 残タスクが当該フェーズ内なら継続。**フェーズを跨ぐ追加なら新フェーズを TODO.md に挿入し、続けて「新フェーズの issue 化」を実行する** (下記の共通手順。TODO.md への挿入だけで終えると Step 2 に現れず永久に実装されない)。挿入する見出しには `<!-- deps: ... -->` と `<!-- goals: ... -->` を必ず付け、**`docs/USECASES.md` がある構成では `<!-- ucs: ... -->` も付ける**。メタ情報 5 項目 (ゴール / DoD / 参照 docs / 変更想定ファイル / 非スコープ) も書く (判定基準は `../dev-spec/references/todo-generation.md` の「フェーズ依存の宣言」「対応ゴールの宣言」「対応ユースケースの宣言」「各フェーズが持つメタ情報」)。`ucs` を落とすと、次に `/dev-spec` を再実行したときフェーズ 10.5 の監査が `phase_meta_missing` (high) で差し戻す
 
 ##### P2 動的修正
 
@@ -561,10 +561,61 @@ implementer 報告 (`mode: implement` / `mode: fix` 双方) の `deviation_signa
 2. DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側 (境界基準: 変更に IaC・コンソール操作・環境設定変更が要るなら INFRA) のセクションを Edit
 3. **受入基準ガード**: Edit 直後に goals_sha を再計算 (Step 1 のコマンド) し、承認スタンプの値と照合する。不一致 = 受入基準 (ゴール / 検証手順行) を触った P2 であり、実装者による自己適用は禁止。Edit を revert せず `acceptance_criteria_change` でエスカレ停止する (「受入基準の変更が必要になった。dev-spec フェーズ 9 → 11 で再承認せよ」と通知。実装ガイド・スキーマ等の追記はハッシュ対象外なので通過する)
 4. `../dev-spec/references/todo-generation.md` を Read し、その手順に従ってメインループで TODO.md を再生成する (差分更新モード)。**フェーズ見出しの `deps` / `goals` / (USECASES.md がある構成では) `ucs` の宣言を落とさない** — 再生成で `ucs` が消えると、次の `/dev-spec` 実行でフェーズ 12.0 がフラット判定に落ち、親 issue が作られなくなる
-5. Step 2 の issue 抽出を再実行して着手対象を更新する。closed の issue はそのまま完了扱いを維持する
+5. **再生成でフェーズが増えていたら、増えた分に「新フェーズの issue 化」を実行する** (下記の共通手順)。再生成前後のフェーズ見出しを `rg -o '^### フェーズ[^:]*' docs/TODO.md` で比較して差分を取る。そのうえで Step 2 の issue 抽出を再実行して着手対象を更新する。closed の issue はそのまま完了扱いを維持する
 6. ログに「P2 fix: <更新セクション>」を残す (JSONL は `event_type: p2_fix`)
 7. 当該フェーズの再実行 (Step 4.2 から) か次フェーズへ進むかを判定: 再生成後の TODO.md で **当該フェーズ内に新規の未完了タスク (`- [ ]`) が追加されていれば Step 4.2 から再実行**、既存タスクが全て完了済みのまま (詳細設計の記述を補っただけで実装側の追加作業が無い) なら次フェーズへ進む
 8. ユーザに対する通知は「DESIGN_DETAIL_APP.md (または _INFRA.md) / TODO.md を更新しました (詳細はログ参照)」程度 (dev-impl は止まらない)
+
+##### 新フェーズの issue 化 (P1 / P2 / Step 5.5 の共通手順)
+
+**TODO.md にフェーズを追加しただけでは、そのフェーズは永久に実装されない。** 着手対象の抽出は Step 2 が GitHub issue からしか行わないため、issue の無いフェーズは Step 2 に現れない。TODO.md にフェーズを足したら、**同じターンで必ず**次を行う。
+
+1. **issue を作る。** 本文の節構造・タイトル形式は `/dev-spec` のフェーズ 12.4.2 と同じ (`## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` / `## 依存` / `## 対応ゴール`)。ラベルは `ready`。メタ情報の書き方の判定基準は `../dev-spec/references/todo-generation.md` の「各フェーズが持つメタ情報」
+
+   ```bash
+   NEW_URL=$(gh issue create --repo "$REPO_SLUG" --title "フェーズ<識別子>: <名前>" \
+               --body-file /tmp/new-phase-body.md --label ready)
+   NEW_NUM=$(printf '%s' "$NEW_URL" | grep -o '[0-9]*$')
+   ```
+
+   `## 依存` の `Depends on #N` は、追加フェーズの `deps` が指す識別子を issue 番号に変換して書く (対応表は `gh issue list --state all --json number,title` のタイトルから引く)
+
+2. **親 issue がある構成なら紐付ける** (下記「紐付けの差集合」)
+3. **JSONL に `event_type: phase_added` を記録する**
+4. **Step 2 の issue 抽出を再実行**して、追加したフェーズを着手対象に含める
+
+**紐付けの差集合**
+
+判定と引き当ては **`--state all`** で行う。Step 5 に到達した時点では 4.2e の sweep が親を全て close 済みなので、既定の open だけを見ると常に 0 件になり、紐付けの分岐が丸ごと死ぬ:
+
+```bash
+PARENTS=$(gh issue list --repo "$REPO_SLUG" --state all --limit 200 \
+            --label uc-tracking --json number,title)
+[ "$(printf '%s' "$PARENTS" | jq 'length')" -gt 0 ] || : # 0 件ならフラット構成。紐付けは行わない
+```
+
+**紐付ける対象は「今作った issue」ではなく、`uc-tracking` を除く全 issue のうち、どの親にも紐付いていないものの差集合とする** (`/dev-spec` の 12.4.3 と同じ考え方)。こうしておくと、**前回の run が issue 作成後・紐付け前に落ちて宙に浮いた子を、次の run が自動で回収する** — 自分が作った issue だけを見ると、その子は誰にも拾われないまま残る。
+
+```bash
+# 紐付け済みの子
+gh issue list --repo "$REPO_SLUG" --state all --limit 200 --label uc-tracking --json number --jq '.[].number' |
+  while read -r P; do gh api --paginate "repos/$REPO_SLUG/issues/$P/sub_issues?per_page=100" --jq '.[].number'; done | sort -u > /tmp/linked.txt
+# 実装対象の全 issue
+gh issue list --repo "$REPO_SLUG" --state all --limit 200 --json number,labels \
+  --jq '.[] | select((.labels | map(.name) | index("uc-tracking")) | not) | .number' | sort -u > /tmp/all-children.txt
+comm -13 /tmp/linked.txt /tmp/all-children.txt   # 未紐付けの子 = これから紐付ける対象
+```
+
+各対象の紐付け先の親は、TODO.md の該当フェーズ見出しの `<!-- ucs: ... -->` が決める (`none` なら「横断: UC に属さないフェーズ」)。その値に対応する親のタイトル (`UC-<n>: <名前>` / `横断: UC に属さないフェーズ`) で `$PARENTS` を引いて `$PARENT_NUM` を得る。
+
+**親が closed なら先に reopen する。** 閉じた親にぶら下げると、そのユースケースが未完に戻ったことが俯瞰から消える:
+
+```bash
+[ "$(gh issue view "$PARENT_NUM" --repo "$REPO_SLUG" --json state -q .state)" = "CLOSED" ] && \
+  gh issue reopen "$PARENT_NUM" --repo "$REPO_SLUG" --comment "フェーズが追加されたため再オープンする"
+```
+
+`gh issue reopen` を無条件で打たない (open な親に打つと不要な通知とコメントが残る)。紐付け本体のコマンドと API 仕様 (numeric id を `-F` で渡す・二重紐付けの 422・`replace_parent`) は `../dev-spec/SKILL.md` の 12.4.3 に従う。
 
 ##### P3 検出時
 
@@ -620,28 +671,15 @@ findings ごとの分岐:
 
 それ以外:
 
-1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing`) ごとに **GitHub issue を新規作成する** (`gh issue create --label ready`)。本文の節構造は dev-spec のフェーズ 12 と同じ (`## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` / `## 依存` / `## 対応ゴール`) にし、**`## DoD` には未達を検出した検証コマンドをそのまま入れる**。`## 対応ゴール` にはその未達ゴールの識別子を書く。あわせて `docs/TODO.md` にも同じフェーズを追記する (issue の生成元と実体が食い違わないようにするため。判定基準は `../dev-spec/references/todo-generation.md` の「各フェーズが持つメタ情報」)。
+1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing`) ごとに **`docs/TODO.md` にフェーズを追記し、Step 4.6 の「新フェーズの issue 化」を実行する** (issue 作成・親への紐付け・`phase_added` の記録・Step 2 の再抽出まで、手順はすべてそこに集約してある)。本ステップ固有の中身は次のとおり:
 
-   **親 issue がある構成では、新規 issue も親へ紐付ける。** 判定と引き当ては `--state all` で行う — Step 5 に到達した時点では 4.2e の sweep が親を全て close 済みなので、既定の open だけを見ると常に 0 件になり、この分岐が丸ごと死ぬ:
+   - **`## DoD`**: 未達を検出した検証コマンドをそのまま入れる
+   - **`## 対応ゴール`**: その未達ゴールの識別子を書く
+   - **フェーズ内容**: 「G2 が未達。検証コマンド `<cmd>` が exit code != 0。失敗ログ: `<evidence>`。これを満たす実装を追加する」(findings 由来は `message` + `fix_proposal` を使う)
+   - **`<!-- ucs: ... -->` の決め方**: **未達ゴール (`G<n>`) から UC への対応表はどの成果物にも無い**ので TODO.md から引く — そのゴールを `goals` に含むフェーズの `ucs` を採り、複数あって一致しなければ `none` (横断) に倒す
 
-   ```bash
-   PARENTS=$(gh issue list --repo "$REPO_SLUG" --state all --limit 200 \
-               --label uc-tracking --json number,title)
-   [ "$(printf '%s' "$PARENTS" | jq 'length')" -gt 0 ] || : # 0 件ならフラット構成。以降の紐付けは行わない
-   ```
+   TODO.md への追記を省かない (issue の生成元と実体が食い違わないようにするため。判定基準は `../dev-spec/references/todo-generation.md` の「各フェーズが持つメタ情報」)。
 
-   紐付け先の親は、追記する TODO.md のフェーズ見出しに書く `<!-- ucs: ... -->` が決める。**未達ゴール (`G<n>`) から UC への対応表はどの成果物にも無い**ので、TODO.md から引く: そのゴールを `goals` に含むフェーズの `ucs` を採り、複数あって一致しなければ `none` (横断) に倒す。`ucs` が決まったら、対応する親のタイトル (`UC-<n>: <名前>` / `横断: UC に属さないフェーズ`) で `$PARENTS` を引いて `$PARENT_NUM` を得る。
-
-   ```bash
-   NEW_NUM=$(printf '%s' "$NEW_ISSUE_URL" | grep -o '[0-9]*$')   # gh issue create が返す URL から
-   # 親が closed なら先に reopen する (閉じた親にぶら下げると、そのユースケースが未完に戻ったことが俯瞰から消える)
-   [ "$(gh issue view "$PARENT_NUM" --repo "$REPO_SLUG" --json state -q .state)" = "CLOSED" ] && \
-     gh issue reopen "$PARENT_NUM" --repo "$REPO_SLUG" --comment "未達ゴールの対応 issue を追加したため再オープンする"
-   ```
-
-   `gh issue reopen` を無条件で打たない (open な親に打つと不要な通知とコメントが残る)。紐付け本体のコマンドと API 仕様 (numeric id を `-F` で渡す・二重紐付けの 422・`replace_parent`) は `../dev-spec/SKILL.md` の 12.4.3 に従う
-   - フェーズ内容は「G2 が未達。検証コマンド `<cmd>` が exit code != 0。失敗ログ: `<evidence>`。これを満たす実装を追加する」(findings 由来は `message` + `fix_proposal` を使う)
-   - JSONL に `event_type: phase_added` で記録
 2. Step 4 のフェーズループに戻る (新規追加フェーズだけが pending)
 3. 完了後、Step 5.1 に戻って再判定 (Step 5.2 の監査 agent も**再起動**する。前回結果の使い回しは不可 — 修正が別の乖離を生んでいないかを再監査する)
 
