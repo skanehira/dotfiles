@@ -26,7 +26,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
   "timestamp": "2026-06-30T10:00:00+09:00",
   "phase": "phase-3",
   "step": "architecture-guard",
-  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|spawn|fix_dispatch|run_facts_updated|impl_dispatch|impl_report|impl_done|wave_start|merge_conflict|worktree_leftover|parallel_fallback|parallel_disabled",
+  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|spawn|fix_dispatch|run_facts_updated|impl_dispatch|impl_report|impl_done",
   "severity": "info|warn|error",
   "summary": "1 行サマリ (テキストログにも残る内容)",
   "context": {
@@ -104,40 +104,19 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 
 同一の判断・質問を後続フェーズで踏襲するだけの場合は再記録しない (初回のみ)。
 
-## subagent 起動とフェーズ完了の event_type (Step 4、逐次・並列共通)
+## subagent 起動と issue 完了の event_type (Step 4)
 
 1 フェーズは最小構成でも implementer 1 + architecture-guard 1 + review 1〜4 の subagent を起動する。全 spawn を記録して事後にフェーズ単価と突合できるようにする (上限は SKILL.md Step 3 の `phase_spawns` / `run_spawns`)。
 
 | event_type | severity | 記録タイミング | context |
 | --- | --- | --- | --- |
-| `impl_report` | info | implementer から報告を受領した時 | 報告要約 JSON + `report_path` (+ 並列モードでは `wave_base_sha` / `worktree_path`)。**全文を転記する場合は `jq` で `report_path` から直接 JSONL へ流し込み、main のコンテキストには載せない** |
-| `impl_done` | info | **1 フェーズの完了時** (SKILL.md 4.2e のコミット後。逐次・並列とも**フェーズ完了はこのイベントだけ**で表す。`done` はステップ単位の完了に使い、フェーズ完了には使わない) | `phase` / `summary` / `commit_sha` (並列モードでは**main の統合コミット SHA**。implementer の worktree コミットとは別物) / `review_outputs` (main が確認した検査結果 JSON のパス配列、監査証跡) / `phase_fix_round` (このフェーズで回した修正ラウンド数、0〜3) / `phase_spawns` |
+| `impl_report` | info | implementer から報告を受領した時 | 報告要約 JSON + `report_path`。**全文を転記する場合は `jq` で `report_path` から直接 JSONL へ流し込み、main のコンテキストには載せない** |
+| `impl_done` | info | **1 issue の完了時** (SKILL.md 4.2e のコミット後。**issue 完了はこのイベントだけ**で表す。`done` はステップ単位の完了に使い、issue 完了には使わない) | `phase` / `summary` / `commit_sha` / `review_outputs` (main が確認した検査結果 JSON のパス配列、監査証跡) / `phase_fix_round` (このフェーズで回した修正ラウンド数、0〜3) / `phase_spawns` |
 | `spawn` | info | Agent ツールで subagent を起動した直後 (**例外なく全て**) | `phase` / `agent` (`dev-impl-implementer` / `architecture-guard` / `review-*` / `fix-lsp-warnings`) / `model` (`opus` / `sonnet` / `haiku`) / `mode` (implementer のみ: `implement` / `fix`) / `phase_spawns` (このフェーズの累計、起動後の値) / `run_spawns` (run 全体の累計) |
 | `fix_dispatch` | warn | 修正ラウンド (SKILL.md 4.2d) で `mode: fix` の implementer を起動した時 | `phase` / `phase_fix_round` (このラウンドの番号、1〜3) / `findings_paths` (渡した結果 JSON のパス配列) / `fatal_summary` (`{severity, rule, file, line}` の射影配列。**findings の本文は入れない**) |
 | `run_facts_updated` | info | RUN_FACTS.md への追記後 (SKILL.md 4.2e のコミット後) | `phase` / `sections` (更新した節名の配列: `commands` / `artifacts` / `design_decisions` / `pitfalls`) / `bytes` (更新後のファイルサイズ。4KB 上限の監視用) |
 
 `spawn` を全件記録するのは、`phase_spawns` の上限判定を「記憶」ではなくログから復元できる状態に保つため (compaction をまたいでもカウンタが失われない)。
-
-## 並列モード固有の event_type (Step 2 / Step 4)
-
-wave 実行 ([parallel-execution.md](./parallel-execution.md)) でのみ使う 6 種 (`impl_report` / `impl_done` は逐次・並列共通なので上表にある)。`phase` フィールドは wave 全体の事象なら `wave-<index>` (例: `wave-2`)、個別フェーズの事象なら逐次モードと揃えて `phase-<識別子>` 形式 (例: `phase-4-a`) を使う。context 内の `phases` / `phase` は識別子のみ (例: `["2", "4-a"]`) を入れる。
-
-| event_type | severity | 記録タイミング | context |
-| --- | --- | --- | --- |
-| `wave_start` | info | 各 wave (バッチに分割した場合は各バッチ) の実行開始時に 1 件 | `wave_index` (1 始まり) / `phases` (フェーズ識別子の配列) / `batch_size` (このバッチの同時 implementer 数、1〜3。レポートの wave 見出し行に併記する) |
-| `impl_dispatch` | info | implementer の fan-out 直後 | `phases` / `worktrees` (worktree 絶対パスの配列) / `wave_base_sha` |
-| `merge_conflict` | warn | squash merge でコンフリクト発生時 | `phase` / `conflicted_files` / `resolved` (true = 親が解消、false = フォールバックへ) |
-| `worktree_leftover` | warn | worktree 削除前チェックで未コミットファイルを検出した時 (parallel-execution.md の `## worktree 削除前チェック`) | `phase` / `files` (`git status --porcelain` の行の配列) / `decision` (`reintegrated` = コミット漏れとして統合し直した / `discarded_artifacts` = 生成物として破棄 / `discarded_fallback` = フォールバックで破棄 / `discarded_stale` = 残骸として破棄) |
-| `parallel_fallback` | warn | 並列を諦めて親の逐次実装に切り替えた時 | `phase` / `reason` (`impl_failed` / `review_high_remaining` / `merge_unresolvable`。reason の変換表は parallel-execution.md の `### 4p.6: 逐次フォールバック`) / `implementer_report` |
-| `parallel_disabled` | warn | 並列モードを無効化した時 (run 中最大 2 回: Step 2 の起動時判定と、実行中の `fallback_threshold` 超過) | `reason` (`deps_missing` / `deps_unknown_ref` / `deps_cycle` / `fallback_threshold`) / `detail` |
-
-```json
-"context": {
-  "wave_index": 2,
-  "phases": ["2", "3"],
-  "batch_size": 2
-}
-```
 
 `event_type: start` (run 開始時の 1 件) の `context` には **`repo_root` (`git rev-parse --show-toplevel` の絶対パス)** と `start_sha` を必ず入れる。`~/.claude/logs/dev-impl/` は全プロジェクト共通のディレクトリなので、これが無いと SKILL.md Step 0 の「同一プロジェクトで未完了の run があるか」を機械判定できない。
 
@@ -173,24 +152,3 @@ wave 実行 ([parallel-execution.md](./parallel-execution.md)) でのみ使う 6
 [2026-06-30 10:45:00] all phases done (5/5). P1=1, P2=0, run_spawns=22
 ```
 
-## 範例: 並列モードの実行ログ
-
-```
-[2026-06-30 10:00:00] dev-impl start (docs/DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md)
-[2026-06-30 10:00:02] waves built: [1] -> [2,3] -> [4-a] (parallel mode enabled)
-[2026-06-30 10:00:03] wave-1 / start (phases: 1, size=1 -> 逐次)
-[2026-06-30 10:04:30] phase-1 / commit / done
-[2026-06-30 10:04:31] wave-2 / start (phases: 2,3, size=2 -> 並列)
-[2026-06-30 10:04:35] wave-2 / worktree add / ~/worktrees/myapp-phase-2, ~/worktrees/myapp-phase-3
-[2026-06-30 10:04:40] wave-2 / impl_dispatch / implementer x2 (model: opus)
-[2026-06-30 10:12:10] phase-3 / implementer / done (review high=0, commit=a1b2c3d)
-[2026-06-30 10:14:55] phase-2 / implementer / done (review high=0, commit=e4f5g6h)
-[2026-06-30 10:15:00] phase-2 / merge --squash / clean
-[2026-06-30 10:15:40] phase-2 / test-gate (full) / green
-[2026-06-30 10:15:45] phase-2 / commit / done
-[2026-06-30 10:15:50] phase-3 / merge --squash / clean
-[2026-06-30 10:16:35] phase-3 / test-gate (full) / green
-[2026-06-30 10:16:40] phase-3 / commit / done
-[2026-06-30 10:16:45] wave-2 / worktree remove / done
-[2026-06-30 10:16:46] wave-3 / start (phases: 4-a, size=1 -> 逐次)
-```

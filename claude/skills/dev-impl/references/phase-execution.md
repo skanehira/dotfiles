@@ -2,7 +2,7 @@
 
 `dev-impl/SKILL.md` の Step 4 (各フェーズの実行) 各節から参照される実行コマンドの詳細。判断基準・観点 gating・ループ規則・エスカレ条件は SKILL.md 本体にあるので、そちらを先に読んでから該当節だけをここで参照する。
 
-本ファイル中のシェル変数の前提: `$REPO_DIR` は作業ディレクトリの絶対パス (逐次モードは main のリポジトリ、並列モードは worktree)、`$PHASE_START_SHA` は SKILL.md 4.1 で記録した SHA、`$RESULT_JSON` は検査 agent が `output_path` に書いた結果 JSON のパス。JavaScript 風の `${...}` は Agent 呼び出しに埋める実値を表す。
+本ファイル中のシェル変数の前提: `$REPO_DIR` は作業ディレクトリ (main のリポジトリ) の絶対パス、`$PHASE_START_SHA` は SKILL.md 4.1 で記録した SHA、`$RESULT_JSON` は検査 agent が `output_path` に書いた結果 JSON のパス。JavaScript 風の `${...}` は Agent 呼び出しに埋める実値を表す。
 
 ## 4.1: run_elapsed_minutes 計算
 
@@ -70,7 +70,7 @@ ${fatalResultPaths.map(p => `  - ${p}`).join("\n")}
 最終メッセージは report_path の絶対パス 1 行だけにせよ。要約や解説を書くな。`
 ```
 
-すべて**絶対パス**で渡す。subagent の Bash は呼び出しごとに cwd が親のものへ戻るため、相対パスは並列モードの worktree で解決できない。
+すべて**絶対パス**で渡す。subagent の Bash は呼び出しごとに cwd が親のものへ戻るため、相対パスは意図したディレクトリで解決できない。
 
 TDD の順序・フェーズスコープのテストのみ実行・コミット禁止・`docs/` 編集禁止・報告 JSON スキーマ・停止条件は `claude/agents/dev-impl-implementer.md` に常駐しているので**指示文で繰り返さない** (spawn ごとの prompt 固定費になるため)。
 

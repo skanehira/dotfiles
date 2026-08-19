@@ -7,7 +7,7 @@ PHASE_CONTEXT は、フェーズを実装する implementer と検査する suba
 ```yaml
 product_mode: <cli|webapp|unknown>       # Step 1 で DESIGN.md スタンプから判定した PRODUCT_MODE
 phase_name: <フェーズN: 名前>            # TODO.md の見出しから
-phase_start_sha: <SHA>                   # Step 4.1 で記録 (並列モードでは wave 開始時点の WAVE_BASE_SHA)
+phase_start_sha: <SHA>                   # Step 4.1 で記録
 phase_tasks: |                           # TODO.md の該当フェーズセクション全文
   <TODO.md 該当部分を rg / awk で抽出>
 
@@ -55,7 +55,7 @@ dev_server:                              # review-product-readiness (Step 4.2c) 
 - `phase_tasks`: TODO.md を Read して `### フェーズN:` から次フェーズ見出しまでを切り出し
 - `design_overview` / `design_detail`: フェーズ名から推測した key term (例: 「認証」「ユーザー登録」「CI」「デプロイ」) で DESIGN / DETAIL_APP / DETAIL_INFRA を grep、ヒット節とその前後を抜粋。**抜粋は必須、全文フォールバックは禁止** (1 フェーズにつき implementer + 最大 4 検査 subagent がそれぞれ Read するため、全文だとコストが大きい)。抜粋の目安上限は 1 ファイルあたり 4KB、超える場合は該当節の見出し + 要約のみ残す。抜粋に加えて「このフェーズに関連しそうな DESIGN / DETAIL_APP / DETAIL_INFRA の見出し一覧」を必ず列挙し、抜粋に本文が無い見出しが必要になったら subagent が `*_path` を自分で Read する (抜粋漏れを silent にしない。Read した subagent は報告の `spec_lookups` に記録し、親が抜粋精度を事後に確認できるようにする)
 - `related_source_files`: フェーズ名 / phase_tasks から推測したキーワードで Glob (`src/**/*<key>*`) + git diff で過去フェーズで触ったファイル
-- `prev_phase_summary`: decisions.jsonl の直前フェーズの `event_type: impl_done` エントリ summary を引く。**並列モード (wave サイズ 2 フェーズ以上) では wave 内の他フェーズはまだ実装されていないため参照できない**。wave 開始時点で統合済みの最後のフェーズの summary を入れる (詳細は [parallel-execution.md](./parallel-execution.md) の `### 4p.2`)
+- `prev_phase_summary`: decisions.jsonl の直前 issue の `event_type: impl_done` エントリ summary を引く
 
 ### repo_state
 
