@@ -22,7 +22,7 @@ Clean Architecture と DDD の**境界違反だけ**を検出する専用 review
 - `design_path`: 概要設計書のパス (デフォルト `docs/DESIGN.md`)。レイヤ定義と aggregate 一覧を抽出する
 - `design_detail_path`: アプリ詳細設計書のパス (デフォルト `docs/DESIGN_DETAIL_APP.md`)。実装ガイドに記載されたディレクトリ構造を読む (レイヤ境界検査に必要なのはアプリ側のみ。INFRA 側は読まない)
 - `output_path`: 検出結果 JSON の書き出し先 (デフォルト `/tmp/architecture-guard-result.json`)
-- `repo_dir`: 検査対象リポジトリの**絶対パス** (省略時はカレントディレクトリ)。dev-impl の並列モードのように git worktree を検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、設計書のパスも `repo_dir` 基準の絶対パスに解決する**
+- `repo_dir`: 検査対象リポジトリの**絶対パス** (省略時はカレントディレクトリ)。dev-impl や workflow-review から、cwd とは別のリポジトリを検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、設計書のパスも `repo_dir` 基準の絶対パスに解決する**
 
 ## 出力
 

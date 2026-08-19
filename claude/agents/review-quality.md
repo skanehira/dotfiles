@@ -76,7 +76,7 @@ git -C "$REPO_DIR" diff "${PHASE_START_SHA}"
 git -C "$REPO_DIR" ls-files --others --exclude-standard
 ```
 
-`repo_dir` は dev-impl の並列モードのように git worktree を検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、ソースの Read も `repo_dir` 基準の絶対パスで行う。**
+`repo_dir` は dev-impl や workflow-review から、cwd とは別のリポジトリを検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、ソースの Read も `repo_dir` 基準の絶対パスで行う。**
 
 ### Step 2: rules + design Read
 

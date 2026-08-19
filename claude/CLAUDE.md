@@ -67,7 +67,7 @@ autopilot・一括委任 (「全部やって」「のこりを実装して」)�
 | 検証器 | subagent | `opus` (呼び出し時明示) | review-* の観点別レビュー |
 | 調査 (複数ファイル・複数観点 / 巨大出力) | subagent fan-out (Explore 等) | `opus` を明示 | コードベース横断調査、ログ・セッション履歴の解析 |
 | 実装 (連続コンテキスト必要) | メインループ直営 | セッションモデル | TDD の RED→GREEN→REFACTOR |
-| 実装 (自己完結 × 並列可) | subagent fan-out | `opus` を明示 | 独立ファイル群の一括変換、dev-impl 並列モードの implementer |
+| 実装 (自己完結 × 並列可) | subagent fan-out | `opus` を明示 | 独立ファイル群の一括変換 |
 | 機械実行 | subagent | `haiku` | E2E テスト実行、コミット実行、architecture-guard の境界検査 |
 
 Agent ツールの `model` は**未指定だと親のセッションモデルを継承する**。最上位 tier のセッションでは委譲しても安くならないため、調査・実装の fan-out では必ず model を明示する。
