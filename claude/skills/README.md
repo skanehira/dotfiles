@@ -44,6 +44,7 @@
 │    fatal あれば implementer(mode: fix) 再 spawn (最大 3) →     │
 │    親が全テストゲート → commit → issue を close                │
 │    (子が揃った UC 親 issue も自動 close)                       │
+│  P1/P2 の設計乖離でフェーズが増えたら issue 化して同ループへ   │
 │  → ゴール達成判定 (未達は新規 issue) → HTML レポート           │
 │                                                                │
 │  エスカレ (P3 等) でのみ停止。再開は /dev-impl 再実行          │
