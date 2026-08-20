@@ -4,11 +4,14 @@
 
 本ファイル中のシェル変数の前提: `$REPO_DIR` は作業ディレクトリ (main のリポジトリ) の絶対パス、`$PHASE_START_SHA` は SKILL.md 4.1 で記録した SHA、`$RESULT_JSON` は検査 agent が `output_path` に書いた結果 JSON のパス。JavaScript 風の `${...}` は Agent 呼び出しに埋める実値を表す。
 
-## 4.1: run_elapsed_minutes 計算
+## 4.2a: subagent の応答待ち時間
+
+subagent が応答しないまま 30 分経過したかの判定に使う (SKILL.md 4.2a / 4.2c)。**run 全体の経過時間は計測しない** — 経過時間で run を打ち切る基準は無い。
 
 ```bash
-RUN_START_EPOCH=$(date -j -f '%Y%m%d-%H%M%S' "$run_id" +%s 2>/dev/null || date -d "${run_id:0:8} ${run_id:9:2}:${run_id:11:2}:${run_id:13:2}" +%s)
-run_elapsed_minutes=$(( ($(date +%s) - RUN_START_EPOCH) / 60 ))
+SPAWN_EPOCH=$(date +%s)          # Agent を起動した直後に記録する
+# ... 応答を待つ ...
+waited_minutes=$(( ($(date +%s) - SPAWN_EPOCH) / 60 ))
 ```
 
 ## 4.2: 事前判定
