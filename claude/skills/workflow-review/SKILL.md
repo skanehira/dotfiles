@@ -169,7 +169,7 @@ const reviews = await Promise.all(
 - tdd: `rules/core/tdd.md`, `rules/core/testing.md`
 - quality: `rules/core/design.md` + 拡張子別 (`rules/frontend/react/*.md` 等) + design_overview / design_detail (DESIGN 整合チェック用)
 - product_readiness: design_overview の「ゴール」(G_E2E 含む) と design_detail の「UX 設計」を必ず含める + `dev_server` (start_command と URL) を渡す。CLI / API のみなら本 dimension は no-op で素通り
-- adversarial: design 抜粋は渡さない (fresh context 監査のため)。`phase_name` (= ctx.phase_name、既定 `"working-tree-review"`) / `phase_start_sha` (= Step 1 の基準 SHA) / `docs_dir` (docs/ が存在すれば) / `dev_server` / `scratch_dir` (`/tmp/review-adversarial-working-tree/`) / `output_path` を渡す。review-adversarial.md の入力仕様は phase_name を TODO.md 該当節の切り出しキーとして要求するため必須 (`docs_dir` が無い場合はレンズ C は対象なしとして agent 側が skip する)
+- adversarial: design 抜粋は渡さない (fresh context 監査のため)。`mode: full` (本 skill はユーザーが明示的に依頼するレビューなので常に 3 レンズ実施。dev-impl のようなフェーズ単位の縮退はしない) / `phase_name` (= ctx.phase_name、既定 `"working-tree-review"`) / `phase_start_sha` (= Step 1 の基準 SHA) / `docs_dir` (docs/ が存在すれば) / `dev_server` / `scratch_dir` (`/tmp/review-adversarial-working-tree/`) / `output_path` を渡す。review-adversarial.md の入力仕様は phase_name を TODO.md 該当節の切り出しキーとして要求するため必須 (`docs_dir` が無い場合はレンズ C は対象なしとして agent 側が skip する)
 
 ### Step 4: 集約
 
