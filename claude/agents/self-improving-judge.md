@@ -114,8 +114,8 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [judge] <message>" >> "$PROGRESS_LOG"
       "name": "依頼スコープを超えた論点・情報を勝手に出す",
       "observation_count": 3,
       "target_file": "claude/CLAUDE.md",
-      "target_section": "## 全タスク共通",
-      "anchor": "前提は明示し、複数解釈があるなら勝手に選ばず提示する",
+      "target_section": "## 対話の作法",
+      "anchor": "回答はユーザが知っておくべき点を簡潔に",
       "proposed_addition": "- 依頼スコープを超えた論点・情報・代替案を勝手に提示しない。依頼に含まれない論点を出す前に、それが依頼の中で必要か確認する",
       "treatment_strength": "advice",
       "observation_pattern": "依頼されていない関連話題・派生論点・代替案について Claude が自発的に言及した結果、ユーザーから「依頼していない」「なぜそれが論点になるのか」と指摘される",
@@ -156,9 +156,9 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [judge] <message>" >> "$PROGRESS_LOG"
   "rule_audit": {
     "duplicates": [
       {
-        "description": "「最小実装」の概念が CLAUDE.md と rules/core/design.md に重複",
-        "files": ["claude/CLAUDE.md:28", "claude/rules/core/design.md:24-30"],
-        "suggested_action": "rules/core/design.md に集約し、CLAUDE.md は @import 参照のみにする",
+        "description": "「最小実装」の概念が rules/core/implementation.md と rules/core/design.md に重複",
+        "files": ["claude/rules/core/implementation.md", "claude/rules/core/design.md"],
+        "suggested_action": "rules/core/design.md に集約し、implementation.md からは参照のみにする",
         "previously_reported": true
       }
     ],

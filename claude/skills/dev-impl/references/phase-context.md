@@ -39,6 +39,8 @@ related_rules_paths:                     # rules/core + 言語別 rules
   - $HOME/.claude/rules/core/tdd.md
   - $HOME/.claude/rules/core/design.md
   - $HOME/.claude/rules/core/testing.md
+  - $HOME/.claude/rules/core/implementation.md
+  - $HOME/.claude/rules/core/verification.md
   - <言語別 rules があれば追加>
 prev_phase_summary: |                    # 直前フェーズの 1-3 行要約
   <decisions.jsonl から拾う or null>
