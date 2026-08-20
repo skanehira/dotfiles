@@ -380,7 +380,7 @@ implementer 報告の `design_decisions` (設計が沈黙・あいまいな箇�
 
 ##### 4.2c: 検査 fan-out (main が起動して待つ)
 
-**fan-out の直前に、未追跡ファイルを intent-to-add する**:
+**fan-out の直前に、未追跡ファイルを intent-to-add する。初回だけでなく 4.2d の再 fan-out でも毎回実行する** (修正ラウンドが新規作成したファイルは、実行しないと以後どのラウンドの検査からも見えないままになる。実測: fix ラウンドが作った 5 ファイル — マイグレーション 1 本と web 層 3 ファイルを含む — が後続 4 ラウンドの全観点で不可視だった):
 
 ```bash
 git ls-files -z --others --exclude-standard | xargs -0 -r git add -N
