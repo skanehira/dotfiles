@@ -235,9 +235,9 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq 
 **spawn 予算の意図**:
 
 - 1 フェーズは最小構成でも implementer 1 + architecture-guard 1 + review 1〜4 の subagent を起動する。フェーズ数だけ積み上がるため、上限を機械ゲートとして置く
-- 根拠: subagent を最も使ったセッションは 129 spawn でフェーズ単価が最悪 (116.4 ドル / フェーズ、subagent が全体の 66.8%) だった (2026-07 の実測)
-- `phase_spawns` の上限 24 の内訳 (最悪ケース): implementer 1 + 検査 5 (guard 1 + review 最大 4) + (fix 1 + 検査 5) × 3 ラウンド = 24
-- 中央値の想定は 4 (implementer 1 + guard 1 + review 2)。`run_spawns` の上限係数 8 はこの中央値に修正ラウンド 1 回分を見込んだ値で、**issue が追加される (P1/P2 動的修正・Step 5.5) たびに「その時点の open issue 数 × 8」で再計算する**
+- 根拠: subagent を最も使ったセッションは 129 spawn でフェーズ単価が最悪 (116.4 ドル / フェーズ、subagent が全体の 66.8%) だった (2026-07 の実測)。2026-08 の実測でも、4 フェーズで 66 spawn (11.0 / フェーズ) のうち 53 がレビュー系で、全体コストの 35% を占めていた
+- `phase_spawns` の上限 24 の内訳 (最悪ケース = 最後の issue): implementer 1 + 初回検査 5 (guard 1 + review 最大 4) + (fix 1 + 再検査 最大 5) × 3 ラウンド = 24。再検査は 4.2d 手順 5 のとおり「fatal を出した観点 + guard」に絞るため通常は 2〜3 に収まるが、全観点が同時に fatal を出す最悪ケースを上限に据える (上限は安全網であって想定値ではない)
+- 中央値の想定は 4 (implementer 1 + guard 1 + review-adversarial 1 + review-tdd 1)。`run_spawns` の上限係数 8 はこの中央値に修正ラウンド 1 回分 (fix 1 + 再検査 2〜3) を見込んだ値で、**issue が追加される (P1/P2 動的修正・Step 5.5) たびに「その時点の open issue 数 × 8」で再計算する**
 - 上限の母数となる「open issue 数」は、本スキルを通じて一貫して **`uc-tracking` を除いた実装対象の件数**を指す (親 issue は実装しないので予算を消費しない)
 - 全 spawn を JSONL に `event_type: spawn` (context に `agent` / `model` / `phase`) で記録し、事後にフェーズ単価と突合できるようにする
 
@@ -397,12 +397,23 @@ guard を review と同じ fan-out に入れるのは、待ちを 2 回から 1 
 
 **観点 gating (トークン削減の要):**
 
+**gating はフェーズごとに 1 回だけ確定する。** 4.2c の初回 fan-out の直前に下表と述語を評価し、決まった観点の集合 (review-adversarial の `mode` を含む) を JSONL に `event_type: gating_decided` で記録する。**4.2d の再 fan-out はこの記録された集合の部分集合しか起動できない** (毎ラウンド評価し直すと、判定が揺れて仕様外の観点が起動する。実測で review-quality が「最後の issue のみ」の規定に反して 3 フェーズで起動していた)。記録する `context` は `{gating_set: [...], adversarial_mode: "...", basis: {uiPhase, test_diff, consumable, is_last_issue}}`。
+
 | タイミング        | 実行観点                                                                                            |
 | ----------------- | --------------------------------------------------------------------------------------------------- |
-| 毎フェーズ        | architecture-guard (gating 対象外、常に実行) + review-adversarial (下記スキップ述語で skip 可)       |
+| 毎フェーズ        | architecture-guard (gating 対象外、常に実行) + review-adversarial (`mode` は下表で決める。下記スキップ述語で skip 可) |
 | テスト差分があるフェーズ (`$TEST_FILE_CHANGED` または `$TEST_CONTENT_CHANGED` が非空) | 上記 + review-tdd                              |
 | UI を触るフェーズ (`uiPhase == true`) | 上記 + review-product-readiness (dev_server が無ければ skip)                     |
 | **最後の issue** | 全観点フル (tdd / quality / product-readiness / adversarial)                                        |
+
+**review-adversarial の mode 決定** (`claude/agents/review-adversarial.md` の「モード」節が受け側の規定):
+
+| 条件 | mode |
+| --- | --- |
+| `$CONSUMABLE_CHANGED` が非空 (消費型資源を扱う差分) / 最後の issue / `PHASE_START_SHA` 比の差分に認証・認可・セッションの処理を含む | `full` (レンズ A + B + C) |
+| 上記以外 | `weakening_only` (レンズ B のみ。docs を読まず攻撃も実行しない) |
+
+`weakening_only` で未実行になったレンズ A/C は、agent が返す `skipped_lenses` を Step 5.6 の未検証項目集約にそのまま合流させる (モード縮退を沈黙させない)。**mode の判定根拠は `gating_decided` の `basis` に残す。**
 
 **「最後の issue」とは、その issue を close した時点で他に open issue が 1 件も残らないもの**を指す (issue 駆動では着手順を番号昇順で決めるだけなので、着手前に「最後かどうか」は分からない。検査 fan-out を起動する 4.2c の時点で次を引き、自分以外に open が無ければ最後と判定する)。**`uc-tracking` (親 issue) は数に入れない** — 親は実装対象ではないので、残っていても「最後のフェーズ」であることは変わらない:
 
@@ -445,10 +456,19 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
    - `output_path` の JSON が実在しない、`jq` でパースできない
    - **スキーマ不適合**: architecture-guard は `ok` が読めない、review-* は `findings` が配列として読めない
    - architecture-guard が `skip_reason: "diff_command_failed"` を返した (差分が取れておらず検査が成立していない。**修正ラウンドに乗せない** — 実装を直しても解消しない性質のため)
-2. **fatal の定義**: review-* の severity: high、または architecture-guard の `violations` のうち severity が high / medium のもの。fatal 0 件 → 4.2e へ
+2. **fatal の定義**: review-* の severity: high、または architecture-guard の `violations` のうち severity が high / medium のもの。fatal 0 件 → 4.2e へ。
+
+   **main は agent が付けた severity を変更しない (昇格も降格もしない)。** 修正ラウンドを起こすのは上記の fatal だけで、medium / low を「重要そうだから」と high 扱いにして新ラウンドを起こすことはしない。過小評価は agent 側の severity 基準 (各 agent 定義の「severity の判定基準」節) を直して解決する問題であり、実行時の裁量で埋めるとラウンド数が判定基準なしに増える (実測で 9 ラウンド中 2 ラウンド以上が裁量昇格のみで起動していた)。
+
+   ただし **fatal が 1 件以上あって既に fix を起動する場合に限り、同じフェーズの medium を `findings_paths` に同梱してよい** (相乗り。追加の spawn を生まないため無料)。相乗りさせた medium は修正されたかを再検証せず、残れば `review_low` として記録する。
 3. fatal あり → `phase_fix_round += 1` する。**この時点で `phase_fix_round > 3` なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)
 4. **`mode: fix` の `dev-impl-implementer` を `model: "opus"` 明示で起動**する。渡すのは `findings_paths` (fatal を含む結果 JSON の絶対パスの配列) / `phase_context_path` / `repo_dir` / `report_path`。main は findings の本文を読まないし、修正内容を指示しない (fixer が JSON を自分で Read する)。**fixer が直す対象は「review-* の high」と「architecture-guard の high/medium」**で、fatal の定義と一致させてある (guard の medium が誰にも直されず空回りするのを防ぐため)
-5. 修正完了後、**gating された全観点 + architecture-guard を再 fan-out する** (修正は別観点を壊しうるため、fatal だった観点だけに絞らない)。4.2c に戻る
+5. 修正完了後、**再 fan-out は「fatal を出した観点 + architecture-guard」に絞る**。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は `gating_decided` に記録した集合の部分集合でなければならない。次の 2 つだけが例外的に追加される:
+
+   - **fix 差分がテストに触れた場合は review-adversarial を必ず追加する** (`mode: weakening_only` で足りる)。判定は fix 差分に対して `$TEST_CONTENT_CHANGED` を再算出する (算出コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 観点 gating 述語の算出コマンド` 節)。修正の過程でテストが弱体化されるのはレンズ B が守る対象そのもので、ここに穴を作らない。既に adversarial が `full` で起動していたフェーズでは `full` のまま再実行する
+   - review-adversarial のスキップ述語が「skip → 実行」に転じた場合 (既存規定どおり、降格は禁止)
+
+   「修正が別観点を壊す」リスクは、最後の issue の全観点フル検査と Step 5 の第三者監査 (`review-spec-compliance`) で受け止める。4.2c に戻る
 6. 修正中に `design_overview_break` を検知 → 即エスカレ停止 (commit しない)
 7. review-adversarial の `test_weakened` / `vacuous_assertion` / `skip_added` (confidence: high) は**修正ラウンドに乗せない**。弱体化を実装者自身に直させると骨抜きの温床になるため、4.2e と同じトレース確認 (TODO.md / DESIGN_DETAIL_APP.md に意図的な変更としてトレースできるか) を main が行い、トレース不能なら `test_weakening_detected` でエスカレ停止する。`dev-impl-implementer` 側もこれらの finding を渡されたら修正せず `test_weakening_suspected` で停止する規約になっている (二重の歯止め)
 8. review-adversarial の `working_tree_polluted` を検知したら、main が `git status --porcelain` で実際の汚染有無を確認し、汚染があれば restore する
@@ -738,6 +758,7 @@ Step 5 のゴール判定後、`docs/POST_MVP.md` に **「UI/UX gap」セクシ
 - 手動 pending のゴール
 - implementer 報告の `verification_skipped` (Step 4.2e 手順 5 で転記済みのもの)
 - `full_test_command` が Bash の 600 秒上限でタイムアウトした実行 (Step 4.2e)
+- review-adversarial を `mode: weakening_only` で起動したフェーズの未実行レンズ (agent の返す `skipped_lenses` = A / C。攻撃によるエッジケース検査とフェーズ完了主張の反証が行われていない。Step 4.2c の mode 決定に従った縮退であって異常ではないが、検査済みと区別する)
 
 ##### status 判定
 
