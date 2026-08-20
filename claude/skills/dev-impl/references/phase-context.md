@@ -35,13 +35,13 @@ repo_state: <greenfield|existing>        # 下記「repo_state」参照。relate
 related_source_files:                    # subagent が Read すべき既存ファイル一覧
   - <Glob で抽出した関連ファイル path>
 
-related_rules_paths:                     # rules/core + 言語別 rules
+related_rules_paths:                     # rules/core (固定) + 言語別 rules (下表の機械判定で決まる)
   - $HOME/.claude/rules/core/tdd.md
   - $HOME/.claude/rules/core/design.md
   - $HOME/.claude/rules/core/testing.md
   - $HOME/.claude/rules/core/implementation.md
   - $HOME/.claude/rules/core/verification.md
-  - <言語別 rules があれば追加>
+  - <言語別 rules。下記「言語別 rules の選択」の表で決める>
 prev_phase_summary: |                    # 直前フェーズの 1-3 行要約
   <decisions.jsonl から拾う or null>
 poc_results:                             # dev-spec フェーズ 5 が FEASIBILITY.md「PoC 結果」に記録した内容から抽出。FEASIBILITY.md が無い場合は空配列
@@ -51,6 +51,22 @@ dev_server:                              # review-product-readiness (Step 4.2c) 
   url: <検出できた URL>
   start_command: <package.json の dev/start script>
 ```
+
+## 言語別 rules の選択
+
+`related_rules_paths` の言語別 rules は「あれば追加」ではなく、`related_source_files` の拡張子から機械的に決める (判断を挟むと毎回抜ける。実測で React プロジェクトのフェーズに `rules/frontend/react/` が一度も渡っていなかった):
+
+```bash
+EXTS=$(printf '%s\n' $RELATED_SOURCE_FILES | rg -o '\.[a-z]+$' | sort -u)
+```
+
+| `related_source_files` に含まれる拡張子 (または条件) | 追加する rules |
+| --- | --- |
+| `.tsx` / `.jsx`、または `uiPhase == true` | `$HOME/.claude/rules/frontend/react/components.md` / `hooks.md` / `data-fetching.md` / `performance.md` |
+| `.go` | `$HOME/.claude/rules/backend/go/design.md` / `coding.md` / `testing.md` |
+| `.rs` | `$HOME/.claude/rules/backend/rust/design.md` / `coding.md` / `testing.md` |
+
+該当が無ければ言語別 rules は空 (`rules/core` の 5 ファイルのみ)。複数該当する場合は該当分をすべて挙げる。**実在するファイルだけを挙げる** — 渡したパスが存在しないと implementer は Read に失敗し、rules 全体を読み飛ばす方向に倒れる。列挙の前に `ls` で存在を確認する。
 
 ## 抜粋ロジック
 
