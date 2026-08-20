@@ -400,7 +400,14 @@ jq -c '[ (.design_decisions[]?   | select((.decision + " " + (.rationale // ""))
 
 出力が `[]` でも**ファイルは必ず作り、`exemptions_path` として review-tdd と review-adversarial に渡す** (免除が無かったことと、渡し忘れたことを区別できるようにする)。**review-adversarial に渡しても fresh context 監査の趣旨は壊れない** — 渡すのは実装者が編纂した実装の説明ではなく「検証しないと宣言した項目の名指しリスト」であり、被監査者の主張をそのまま信じる材料ではなく攻撃対象の指定になるため。受け側の裁定手順は `claude/agents/review-*.md` の `Step 0: 自己免除の裁定`。
 
-修正ラウンドの report にも自己免除は現れるので、**再 fan-out のたびに最新の report で作り直す** (追記ではなく上書き。前ラウンドで裁定済みのものは受け側が `upheld` として再掲する)。
+**抽出元は当該フェーズの全 report (`impl-report.json` と `impl-report-fix-*.json`) であり、最新の 1 本ではない。** 免除は宣言されたラウンド以降ずっと有効なままだが、実装者が後続ラウンドの report で再掲するとは限らない (実測: 最も危険だった ABA の受容は初回 report、等価変異の宣言は fix-2 の report にあり、最終ラウンドの report にはどちらも現れなかった。最新 1 本だけを見ると両方取りこぼす)。`jq -s` で全 report を読み、`unique_by(.claim)` で重複を除く:
+
+```bash
+jq -s -c '[ .[] | (.design_decisions[]? | select(...)), (.verification_skipped[]? | ...) ] | unique_by(.claim)' \
+  "$SCRATCH_DIR"/impl-report.json "$SCRATCH_DIR"/impl-report-fix-*.json > "$SCRATCH_DIR/self-exemptions.json"
+```
+
+再 fan-out のたびに作り直す (追記ではなく上書き。前ラウンドで裁定済みのものは受け側が `upheld` として再掲する)。
 
 gating された観点と `architecture-guard` を**同一メッセージ内の複数 Agent tool_use として並列起動**し、main が全部の完了を待つ。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 検査 fan-out の起動` 節を Read してから実行する。
 
