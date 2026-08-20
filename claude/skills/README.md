@@ -129,7 +129,7 @@ git index を共有する操作 (コミット) は並列化できないので親
 | `architecture-guard` | `dev-impl` Step 4.2c (検査 fan-out に毎フェーズ含める) |
 | `fix-lsp-warnings` | `dev-impl` Step 4.2b (単独・逐次。修正 agent なので検査 fan-out に混ぜない) / Agent ツールで直接起動 |
 | `review-*` (tdd / quality / product-readiness) | `dev-impl` Step 4.2c (model: opus 明示) / `workflow-review` |
-| `review-adversarial` | `dev-impl` Step 4.2c (model: sonnet 明示。毎フェーズは `mode: weakening_only`、消費型資源フェーズと最後の issue のみ `mode: full`) / `workflow-review` (常に `full`) |
+| `review-adversarial` | `dev-impl` Step 4.2c (model: sonnet 明示。毎フェーズは `mode: weakening_only`、消費型資源・認証・テスト差分なしの大量実装・最後の issue のフェーズのみ `mode: full`) / `workflow-review` (常に `full`) |
 | `review-tdd` (単一観点のみ) | `dev-impl-quick` ステップ 4 (model: opus 明示) |
 
 ## スキル一覧

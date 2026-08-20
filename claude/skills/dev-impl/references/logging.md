@@ -26,7 +26,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
   "timestamp": "2026-06-30T10:00:00+09:00",
   "phase": "phase-3",
   "step": "architecture-guard",
-  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|spawn|fix_dispatch|run_facts_updated|impl_dispatch|impl_report|impl_done",
+  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|spec_lookup|self_review|gating_decided|spawn|fix_dispatch|run_facts_updated|impl_report|impl_done",
   "severity": "info|warn|error",
   "summary": "1 行サマリ (テキストログにも残る内容)",
   "context": {
@@ -112,9 +112,13 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 | --- | --- | --- | --- |
 | `impl_report` | info | implementer から報告を受領した時 | 報告要約 JSON + `report_path`。**全文を転記する場合は `jq` で `report_path` から直接 JSONL へ流し込み、main のコンテキストには載せない** |
 | `impl_done` | info | **1 issue の完了時** (SKILL.md 4.2e のコミット後。**issue 完了はこのイベントだけ**で表す。`done` はステップ単位の完了に使い、issue 完了には使わない) | `phase` / `summary` / `commit_sha` / `review_outputs` (main が確認した検査結果 JSON のパス配列、監査証跡) / `phase_fix_round` (このフェーズで回した修正ラウンド数、0〜3) / `phase_spawns` |
-| `gating_decided` | info | フェーズの初回検査 fan-out の直前 (SKILL.md 4.2c。**フェーズごとに 1 件だけ**) | `phase` / `gating_set` (このフェーズで起動しうる観点名の配列。再 fan-out はこの部分集合しか起動できない) / `adversarial_mode` (`full` / `weakening_only` / `skipped`) / `basis` (`{uiPhase, test_diff, consumable, is_last_issue}` の真偽値。判定根拠) |
+| `gating_decided` | info | フェーズの初回検査 fan-out の直前 (SKILL.md 4.2c。**フェーズごとに 1 件だけ**) | `phase` / `gating_set` (このフェーズで起動しうる **review-\* の観点名**の配列。`architecture-guard` は gating 対象外で常に実行するので含めない。再 fan-out はこの部分集合しか起動できない) / `adversarial_mode` (`full` / `weakening_only` / `skipped`) / `basis` (判定根拠の真偽値。`{uiPhase, test_diff: $TEST_FILE_CHANGED か $TEST_CONTENT_CHANGED が非空, consumable: $CONSUMABLE_CHANGED が非空, auth: $AUTH_CHANGED が非空, is_last_issue}`) |
+
+同一 `phase` に `gating_decided` が複数ある場合 (中断・再入や 4.2d 手順 5 の例外による追記) は**最新の 1 件を採る**。
 | `spawn` | info | Agent ツールで subagent を起動した直後 (**例外なく全て**) | `phase` / `agent` (`dev-impl-implementer` / `architecture-guard` / `review-*` / `fix-lsp-warnings`) / `model` (`opus` / `sonnet` / `haiku`) / `mode` (implementer は `implement` / `fix`、review-adversarial は `full` / `weakening_only`) / `phase_spawns` (このフェーズの累計、起動後の値) / `run_spawns` (run 全体の累計) |
 | `fix_dispatch` | warn | 修正ラウンド (SKILL.md 4.2d) で `mode: fix` の implementer を起動した時 | `phase` / `phase_fix_round` (このラウンドの番号、1〜3) / `findings_paths` (渡した結果 JSON のパス配列) / `fatal_summary` (`{severity, rule, file, line}` の射影配列。**findings の本文は入れない**) |
+| `self_review` | info | implementer 報告の一括転記時 (Step 4.2e 手順 5) | `checklist_applied` / `tests_revised` / `notes`。実装者が `rules/core/testing.md` のセルフレビューチェックリストを自分のテストへ適用した結果。HTML レポートの実装ノートに出す |
+| `spec_lookup` | info | 同上 | `path` (PHASE_CONTEXT の抜粋で足りず implementer が自分で Read した設計書のパスと節)。抜粋精度を事後に確認するために残す |
 | `run_facts_updated` | info | RUN_FACTS.md への追記後 (SKILL.md 4.2e のコミット後) | `phase` / `sections` (更新した節名の配列: `commands` / `artifacts` / `design_decisions` / `pitfalls`) / `bytes` (更新後のファイルサイズ。4KB 上限の監視用) |
 
 `spawn` を全件記録するのは、`phase_spawns` の上限判定を「記憶」ではなくログから復元できる状態に保つため (compaction をまたいでもカウンタが失われない)。`gating_decided` も同じ理由で必ず記録する — 再 fan-out で起動してよい観点の集合はこのエントリが唯一のソースであり、記録が無ければ「記憶」で判断することになって仕様外の観点が起動する (実測で review-quality が規定外に 3 フェーズで起動していた)。

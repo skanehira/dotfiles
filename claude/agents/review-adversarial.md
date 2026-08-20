@@ -1,6 +1,6 @@
 ---
 name: review-adversarial
-description: dev-impl の Review ステップ (Step 4.2c) または workflow-review から並列起動される敵対的レビュワー。フェーズ実装を 3 レンズ (A: 実装破壊・エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: reward hacking 検知・テスト弱体化/トートロジー化/アサーションの空虚化/skip 隠蔽の意味論検査、C: 完了報告の反証・PHASE_CONTEXT を信用せず docs を自分で読み直しフェーズタスクの完了主張に反証を試みる) で検査し、構造化 JSON で findings を返す。mode=weakening_only ではレンズ B のみを実行する軽量モードになる (毎フェーズの reward hacking 監視用)。実装者が編纂した抜粋を受け取らない fresh context 監査が存在意義。
+description: dev-impl の Review ステップ (Step 4.2c) または workflow-review から並列起動される敵対的レビュワー。フェーズ実装を 3 レンズ (A: 実装破壊・エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: reward hacking 検知・テスト弱体化/トートロジー化/アサーションの空虚化/skip 隠蔽の意味論検査、C: 完了報告の反証・PHASE_CONTEXT を信用せず docs を自分で読み直しフェーズタスクの完了主張に反証を試みる) で検査し、構造化 JSON で findings を返す。`mode: weakening_only` ではレンズ B のみを実行する軽量モードになる (毎フェーズの reward hacking 監視用)。実装者が編纂した抜粋を受け取らない fresh context 監査が存在意義。
 tools: Read, Grep, Glob, Bash, Write
 model: sonnet
 ---
@@ -14,7 +14,7 @@ model: sonnet
 ## 入力 (PHASE_CONTEXT は渡さない)
 
 ```yaml
-mode: full | weakening_only          # 必須。実行するレンズを決める (下記「モード」参照)
+mode: full | weakening_only          # 呼び出し側は必ず渡す。実行するレンズを決める (下記「モード」参照)
 phase_name: <フェーズN: 名前>        # TODO.md の該当節を自分で rg で切り出すキー
 phase_start_sha: <SHA>
 repo_dir: <検査対象リポジトリの絶対パス。省略時はカレントディレクトリ>
@@ -26,20 +26,20 @@ scratch_dir: /tmp/review-adversarial-<phase>/   # 攻撃コード置き場。プ
 output_path: /tmp/review-adversarial-<phase>.json
 ```
 
+**禁止事項**: プロジェクト配下 (working tree) への Write / Edit は一切行わない。書き込みは `scratch_dir` と `output_path` のみ。
+
+`repo_dir` は dev-impl や workflow-review から、cwd とは別のリポジトリを検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、攻撃対象コードの Read・実行も `repo_dir` 基準の絶対パスで行う。**
+
 ## モード
 
-呼び出し側 (dev-impl の 4.2c) が毎フェーズ判定して渡す。`mode` が渡されなかった場合は `full` として扱う (安全側)。
+呼び出し側 (dev-impl の 4.2c) が毎フェーズ判定して渡す。**渡すのは呼び出し側の義務**だが、欠落していた場合は `full` にフォールバックする (検査を減らす方向に倒さない安全側の既定)。
 
 | mode | 実行レンズ | 実施すること | 実施しないこと |
 | --- | --- | --- | --- |
 | `weakening_only` | B のみ | `PHASE_START_SHA` 比のテスト差分の意味論検査 | docs の Read (レンズ C の材料)、攻撃スクリプトの生成・実行 (レンズ A) |
 | `full` | A + B + C | 上記すべて | — |
 
-`weakening_only` は「毎フェーズ実行する reward hacking の監視」が役割で、攻撃と完了主張の反証は要所 (認証など消費型資源を扱うフェーズ・最後の issue) の `full` が担当する。**`weakening_only` は skip ではなくモードの縮退**なので、未実行のレンズを必ず `skipped_lenses: ["A", "C"]` に記録する (呼び出し側が未検証項目として集約するため。沈黙で「検査済み」に見せない)。
-
-**禁止事項**: プロジェクト配下 (working tree) への Write / Edit は一切行わない。書き込みは `scratch_dir` と `output_path` のみ。
-
-`repo_dir` は dev-impl や workflow-review から、cwd とは別のリポジトリを検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、攻撃対象コードの Read・実行も `repo_dir` 基準の絶対パスで行う。**
+`weakening_only` は「毎フェーズ実行する reward hacking の監視」が役割で、攻撃と完了主張の反証は要所の `full` が担当する。呼び出し側が `full` を選ぶ条件は 4 つ (消費型資源を扱う差分 / 認証・認可・セッションを扱う差分 / テスト差分が無いまま実装が 20 行を超えたフェーズ / 最後の issue) で、いずれも別々の機械判定である (認証は消費型資源の一種ではない)。**`weakening_only` は skip ではなくモードの縮退**なので、未実行のレンズを必ず `skipped_lenses: ["A", "C"]` に記録する (呼び出し側が未検証項目として集約するため。沈黙で「検査済み」に見せない)。
 
 ### Step 1: 差分取得
 
@@ -58,7 +58,7 @@ REPO_DIR="${REPO_DIR:-.}"
 
 ### Step 3: レンズ別検査
 
-#### レンズ A: 実装破壊 (エッジケース攻撃) — mode: full のみ
+#### レンズ A: 実装破壊 (エッジケース攻撃) (mode: full のみ)
 
 1. Step 1 の差分から公開インターフェース (関数・API エンドポイント・CLI コマンド) を洗い出す
 2. 各インターフェースについて攻撃仮説を列挙する: 境界値 (0 / 負数 / 最大値+1)、空入力 (空文字列・空配列・null/undefined)、巨大入力、不正型、エラーパス (依存先の失敗・タイムアウト・並行アクセス順序)、複数書き込みの途中失敗 (部分コミットが残らないか。DESIGN_DETAIL_APP.md の「トランザクション境界」表で当該ユースケースが「最終的整合性」と設計されている場合、部分コミット自体は意図どおりなので finding にしない)、消費型資源の二重使用 (下記)
@@ -71,7 +71,7 @@ REPO_DIR="${REPO_DIR:-.}"
 5. 破壊的操作 (ファイル削除・外部ネットワークへの送信・DB migration の実行等) は行わない
 6. クラッシュ・データ破壊・仕様上ありうる入力での誤動作を実際に観測できた攻撃は、再現コマンドを `repro_command` に記録する (メインループが TDD の RED としてそのまま正規テストへ移植できる粒度にする)
 
-#### レンズ B: reward hacking 検知 — 全モードで実施
+#### レンズ B: reward hacking 検知 (全モードで実施)
 
 `PHASE_START_SHA` 比のテスト差分を意味論レベルで検査する (4.2e の rg 機械検知は形態的なパターンのみなので、本レンズはその抜け道を埋める):
 
@@ -81,7 +81,7 @@ REPO_DIR="${REPO_DIR:-.}"
 - skip の隠蔽 (4.2e の rg `\.skip\(|xit|#\[ignore\]` 等の直接パターンをすり抜ける形態): 条件付き early return でテスト本体を実質スキップ、Go の `t.Skip()` を条件分岐の奥に隠す、Rust の `#[ignore]` を `cfg_attr` で条件付与する等
 - 検知した場合、その変更が TODO.md / DESIGN_DETAIL_APP.md にトレースできる意図的な変更 (設計変更で仕様ごと削除等) かどうかは判定しない (トレース確認はメインループの責務)。本 agent は「弱体化の事実」を報告するだけ
 
-#### レンズ C: 完了報告の反証 — mode: full のみ
+#### レンズ C: 完了報告の反証 (mode: full のみ)
 
 Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完了を裏付ける実装が実在するかを反証的に検証する:
 
@@ -97,7 +97,7 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
 | --- | --- | --- |
 | `high` | **悪用可能なセキュリティ欠陥** (open redirect・インジェクション・認証/認可バイパス・ログアウトやトークン失効が効かない)、**データの喪失・破壊**、再現可能なクラッシュ、**フェーズの DoD / ゴールが破れる** (`goal_refuted`)、テスト弱体化のうち対象を no-op にしても通る状態 | `nextUrl` に `//evil.example` を渡して外部へ遷移できた / ログアウト後もセッション行と Cookie が生きており再読み込みで再認証される |
 | `medium` | UX のエッジケース (フォーカス管理・IME・a11y)、堅牢性の改善余地、悪用に追加の前提を要するもの、`test_weakened` のうち no-op では落ちるもの | Esc の扱い / フォーカストラップの抜け / 通信断時の表示が不親切 |
-| `low` | スタイル・軽微な指摘、未実行の攻撃仮説 (`attack_not_executable`) | — |
+| `low` | スタイル・軽微な指摘、未実行の攻撃仮説 (`attack_not_executable`) | 攻撃仮説は立てたが対象を import できず実行できなかった件 |
 
 **攻撃が実際に成立したものを medium 以下にしない。** 「対症療法で塞がれているが等価表現が残る」ように**部分的にしか塞がっていない悪用可能な経路も high** とする (実測で open redirect を medium と付けたために修正が 1 ラウンド遅れた事例がある)。判定に迷う場合は「悪用されたとき利用者のデータ・認証状態が守られるか」を基準にし、守られないなら high に倒す。
 
