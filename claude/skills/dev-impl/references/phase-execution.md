@@ -178,9 +178,9 @@ git diff ${PHASE_START_SHA} -U0 | rg '^\+.*\.(skip|only)\s*\(|^\+\s*(xit|xdescri
 
 ```bash
 test_signature() {
-  { git -C "$REPO_DIR" ls-files; git -C "$REPO_DIR" ls-files --others --exclude-standard; } \
-    | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)' \
-    | sort | xargs -r -I{} shasum "$REPO_DIR/{}" | shasum | cut -d' ' -f1
+  { git -C "$REPO_DIR" ls-files -z; git -C "$REPO_DIR" ls-files --others --exclude-standard -z; } \
+    | rg --null-data '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)' \
+    | sort -z | xargs -0 -r -I{} shasum "$REPO_DIR/{}" | shasum | cut -d' ' -f1
 }
 SIG_BEFORE=$(test_signature)   # mode: fix の implementer を起動する直前
 # ... fix 完了後 ...
@@ -194,7 +194,7 @@ Rust のインラインテスト (src ファイル内の `#[cfg(test)]`) はこ�
 
 SKILL.md 4.2e 手順 5 の転記は、**項目ごとに Bash を呼ばず 1 回の実行で全件を流し込む**。実測 (mind、4 フェーズ) で JSONL 239 件中 121 件が `design_decision` / `open_question` の転記で、これを逐次実行すると main の往復がフェーズあたり 30 回近く増える。
 
-`REPORT_PATH` は implementer 報告 (`report_path`) の絶対パス、`JSONL` は当該 run の `decisions.jsonl`、`PHASE_NAME` は本ファイル冒頭で定義済みのフェーズ識別子。
+`REPORT_PATH` は implementer 報告 (`report_path`) の絶対パス、`JSONL` は当該 run の `decisions.jsonl`、`PHASE_NAME` は `## 4.2: 事前判定` で PHASE_CONTEXT から代入したフェーズ識別子だが、**JSONL の `phase` には 1 行ログと同じ短い識別子 (`phase-3` 形式) を入れる** (フェーズ名そのままだと同じフェーズが別表記で混ざり、HTML レポートのフェーズ集計が割れる)。
 
 ```bash
 jq -c --arg phase "$PHASE_NAME" --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" '
@@ -204,7 +204,7 @@ jq -c --arg phase "$PHASE_NAME" --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" '
     (.spec_lookups[]?          | {event_type:"spec_lookup",          context:{path:.}}),
     (.self_review              | select(. != null) | {event_type:"self_review", context:.}) ][]
   | . + {timestamp:$ts, phase:$phase, step:"implement",
-         severity:(if .event_type == "open_question" then "warn" else "info" end),
+         severity:(if .event_type == "open_question" or .event_type == "verification_skipped" then "warn" else "info" end),
          summary:(. as $e
                   | (($e.context.decision // $e.context.question // $e.context.target
                       // $e.context.path // $e.context.notes // "") | tostring) as $c
@@ -212,7 +212,7 @@ jq -c --arg phase "$PHASE_NAME" --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" '
 ' "$REPORT_PATH" >> "$JSONL"
 ```
 
-`severity` を出し分けるのは、`open_question` の severity を `warn` と定める本ファイルの規定に合わせるため。`verification_skipped` に `source: "implementer"` を付けるのは、同じ event_type を 4.2c の adversarial スキップでも使い context の形が異なるため (識別キーの規定は [logging.md](./logging.md))。
+`severity` を出し分けるのは、`open_question` と `verification_skipped` の severity を `warn` と定める [logging.md](./logging.md) の規定に合わせるため。`verification_skipped` に `source: "implementer"` を付けるのは、同じ event_type を 4.2c の adversarial スキップでも使い context の形が異なるため (識別キーの規定は [logging.md](./logging.md))。
 
 出力を main のコンテキストに載せない (`>>` でファイルへ直行させ、標準出力に流さない)。転記件数だけ確認したい場合は `wc -l` の差分を見る。
 
