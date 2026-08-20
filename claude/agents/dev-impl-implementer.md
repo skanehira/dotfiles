@@ -96,6 +96,7 @@ PHASE_CONTEXT の抜粋で足りない場合のみ `design_overview_path` / `des
   "test_result": { "command": "...", "exit_code": 0, "passed": 0, "failed": 0 },
   "lint_result": { "command": "... または null", "exit_code": 0 },
   "spec_lookups": ["PHASE_CONTEXT の抜粋で足りず自分で Read した設計書のパスと節"],
+  "self_review": { "checklist_applied": true, "tests_revised": 0, "notes": "修正したテストと理由。修正なしなら空文字" },
   "verification_skipped": [{ "target": "...", "reason": "..." }],
   "deviation_signals": [{ "type": "todo_minor|design_detail_gap|design_overview_break", "scope": "...", "what": "...", "evidence": "..." }],
   "design_decisions": [{ "decision": "...", "spec_gap": "silent|ambiguous", "alternatives": [{ "option": "...", "rejected_because": "..." }], "rationale": "...", "affected_files": [], "related_design_section": "... または null" }],
@@ -107,6 +108,7 @@ PHASE_CONTEXT の抜粋で足りない場合のみ `design_overview_path` / `des
 
 - `deviation_signals` = 設計と**矛盾する**変更 (親の P1/P2/P3 判定の入力)
 - `design_decisions` = 設計が**沈黙・あいまい**な箇所での自律判断。両者を混ぜない
+- `self_review` = **報告の直前に `rules/core/testing.md`「セルフレビューチェックリスト」5 項目を自分が書いたテストへ適用した結果**。とくにリトマス試験 B (テスト対象を no-op に置き換えても通るテストは何も検証していない) と否定形・不在アサーションの 3 条件を、テストごとに確認する。該当したテストはその場で書き直してから報告し、`tests_revised` に件数、`notes` にどのテストをなぜ直したかを書く。**チェックリストを適用していないのに `checklist_applied: true` を書かない** (下流の review-tdd が同じ観点で検査するため、虚偽は fresh context の検査で露見し、修正ラウンドを 1 周増やすだけになる)
 
 ### 2. 要約だけを親に送る
 
