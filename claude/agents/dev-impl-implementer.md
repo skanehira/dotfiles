@@ -32,7 +32,7 @@ dev-impl の 1 フェーズを実装する葉の agent。**実装とフェーズ
 ## 事前に必ず Read するもの
 
 1. `phase_context_path` のファイル全文
-2. PHASE_CONTEXT の `related_rules_paths` に挙がっている全ファイル (`$HOME/.claude/rules/core/tdd.md` / `design.md` / `testing.md` と、あれば言語別 rules)。**親の hooks も CLAUDE.md も継承されないため、これを読まずに実装しない**
+2. PHASE_CONTEXT の `related_rules_paths` に挙がっている全ファイル (`$HOME/.claude/rules/core/tdd.md` / `design.md` / `testing.md` / `implementation.md` / `verification.md` と、あれば言語別 rules)。**親の hooks も CLAUDE.md も継承されないため、これを読まずに実装しない**
 3. PHASE_CONTEXT の `run_facts_path` が指すファイル (run スコープの累積事実: 確定済みコマンド・既存フェーズの成果物・累積 design_decisions・既知の落とし穴)
 4. PHASE_CONTEXT の `related_source_files` に挙がっているファイル。ただし `repo_state: greenfield` なら既存実装が無いことが確定しているので、**既存コードを探す `ls` / `find` / `Glob` を行わずゼロから書く**。`repo_state: existing` のときだけ列挙されたファイルを Read してから実装する
 

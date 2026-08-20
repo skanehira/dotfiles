@@ -25,11 +25,11 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, TaskCreate, TaskUpdat
 
 ## 入力
 
-`$ARGUMENTS` の依頼文、または箇条書きタスクリストをそのまま入力とする。docs ディレクトリは不要。ゴールと検証手段が依頼から自明でない場合のみ、着手前に 1 回確認する (自律モード・一括委任時は CLAUDE.md「自律モード時の優先順位」に従い、選択と根拠を明示して前進する)。
+`$ARGUMENTS` の依頼文、または箇条書きタスクリストをそのまま入力とする。docs ディレクトリは不要。ゴールと検証手段が依頼から自明でない場合のみ、着手前に 1 回確認する (自律モード・一括委任時は CLAUDE.md「エスカレーション」の自律モードに従い、選択と根拠を明示して前進する)。
 
 ## ステップ
 
-1. **タスク分解と見える化**: 依頼をタスク単位に分解し `TaskCreate` でリスト化する。CLAUDE.md「オーケストレーションとモデル階層」のトリアージ (難易度・コンテキスト連続性・並列可能性) を 1 行で出力してから着手する
+1. **タスク分解と見える化**: 依頼をタスク単位に分解し `TaskCreate` でリスト化する。`~/.claude/rules/core/orchestration.md` のトリアージ (難易度・コンテキスト連続性・並列可能性) を 1 行で出力してから着手する
 2. **1 件ずつ実装**: `TaskUpdate` で in_progress にし、メインループ直営で TDD 実装する (RED→GREEN→REFACTOR の順序は自律遵守するため、着手前にセッション未読なら `~/.claude/rules/core/tdd.md` / `design.md` / `testing.md` を Read する)。TDD を適用しない判断 (typo 修正・宣言的 config 変更など) をした場合は理由を出力に明示する
 3. **テストゲート**: 関連テストを Bash で実行し exit code で green を確認する。テストの削除・skip・弱体化によるゲート通過は禁止 — やむを得ない場合は理由を明示してユーザーに判断を仰ぐ
 4. **review-tdd (単一観点レビュー)**: テスト green 後、`review-tdd` subagent を `model: opus` 明示・`Agent` ツールで起動する。指示文にはそのタスクの diff (実装ファイル + テストファイル)、`output_path` (例: `/tmp/review-tdd-<task>.json`。review-tdd は findings 本体をこのファイルに書き stdout にはパスだけを返す契約なので必須)、「振る舞いのテストか / トートロジーではないか / 否定形・不在アサーションだけの空虚テスト (テスト対象を no-op にしても通るテスト) ではないか / AAA パターン / モックの過剰使用 / テスト独立性を判定して構造化 JSON を返し、結果は必ず `SendMessage` で親に送ること」を含める。CONFIRMED/PLAUSIBLE な finding があればメインループで直接 self-fix し、ステップ 3 に戻る (この往復も次項の失敗カウントに含める)。finding が無ければ次へ

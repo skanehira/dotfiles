@@ -77,7 +77,7 @@ skills/
 
 ## モデル方針 (ループエンジニアリング)
 
-モデル割当の正は **CLAUDE.md「オーケストレーションとモデル階層」** (トリアージ手順・割当マトリクス・Fable → Opus 4.8 フォールバック規定)。ここではスキル側への適用だけを記す。原則: **実行器のモデル ≤ 検証器のモデル**。モデルの賢さは検証器の薄いところに配置する。設計思想の全体像 (7 要素・三大失敗モード) は [rules/core/references/loop-engineering.md](../rules/core/references/loop-engineering.md) を参照。
+モデル割当の正は **`rules/core/orchestration.md`** (トリアージ手順・割当マトリクス・Fable → Opus 4.8 フォールバック規定)。ここではスキル側への適用だけを記す。原則: **実行器のモデル ≤ 検証器のモデル**。モデルの賢さは検証器の薄いところに配置する。設計思想の全体像 (7 要素・三大失敗モード) は [rules/core/references/loop-engineering.md](../rules/core/references/loop-engineering.md) を参照。
 
 | 対象 | モデル | 理由 |
 |---|---|---|
@@ -105,7 +105,7 @@ skills/
 | 並列化 | 単発 | 同一メッセージ内の複数 Agent tool_use で並列起動可 |
 | hook 適用 | parent の Stop/PostToolUse/UserPromptSubmit | parent の hooks は継承されない |
 
-subagent への委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」のためだけに行う。逐次依存する実装・修正・コミットは**メインループ直営** (CLAUDE.md「委譲の判断」)。
+subagent への委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」のためだけに行う。逐次依存する実装・修正・コミットは**メインループ直営** (`rules/core/orchestration.md`「委譲の判断」)。
 
 **dev-impl だけがこの原則の明示的な例外**で、issue 1 件ずつの逐次実装であっても `dev-impl-implementer` subagent に出す。根拠は「フェーズを 100 本単位で回すとメインループのコンテキストが単調増加し、平均 475k トークン × 1 万リクエストになる」という実測で、詳細は `dev-impl/SKILL.md` の「フェーズ実装を subagent に委譲する理由」にある。この例外は dev-impl に閉じており、他のスキル・plan mode・直接依頼では従来どおり直営で実装する。
 

@@ -91,7 +91,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 
 `alternatives` は代替案を検討した場合のみ配列を入れ、検討していなければ `[]`。`related_design_section` は最も近い節が無ければ `null`。
 
-`event_type: open_question` の場合 (Step 4.2a 以降のどのステップからでも記録可)、`severity` は常に `warn`。エスカレ条件には該当しないが選択に確信が持てず、ユーザの事後確認が必要なときに記録する (CLAUDE.md「自律モード時の優先順位」に従い、暫定処理を明記してループは止めずに前進する):
+`event_type: open_question` の場合 (Step 4.2a 以降のどのステップからでも記録可)、`severity` は常に `warn`。エスカレ条件には該当しないが選択に確信が持てず、ユーザの事後確認が必要なときに記録する (CLAUDE.md「エスカレーション」の自律モードに従い、暫定処理を明記してループは止めずに前進する):
 
 ```json
 "context": {

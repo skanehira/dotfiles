@@ -25,6 +25,7 @@ PHASE_CONTEXT:
     <DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md 関連節抜粋: 実装ガイド / 採用パターン (通常は APP 側)。フェーズが複数テーブル書き込みを含む場合は「トランザクション境界」の表も含める>
   related_rules_paths:
     - rules/core/design.md
+    - rules/core/implementation.md         # 外科的変更 / 最小実装 / 仕様外実装の明示 (観点 B の原文)
     - rules/frontend/react/hooks.md       # (TypeScript/React なら)
     - rules/backend/go/...                 # (Go なら)
   output_path: /tmp/review-quality-<phase>.json

@@ -61,6 +61,7 @@ related_rules_paths:
   - rules/core/tdd.md
   - rules/core/design.md
   - rules/core/testing.md
+  - rules/core/implementation.md
   - rules/core/commit.md
   - <変更ファイル拡張子に応じて path 別 rules を追加>
 design_overview: |
@@ -129,7 +130,7 @@ CI_CHANGED=$(echo "$CHANGED" | rg '(^|/)\.github/workflows/|(^|/)\.gitlab-ci|Doc
 
 `$CONSUMABLE_CHANGED` は消費すると無効化される資源 (ローテーション有効な refresh token・nonce・ワンタイムコード・べき等キー・使い捨て署名 URL) を扱う差分の検知で、行数が小さくても quality を起動させるためにある。この種の差分は 1 行の変更でも多重消費・恒久エラー分岐の漏れで復帰不能障害になるため、行数ゲートの例外とする。
 
-pre-filter で候補になった観点をそのままメインループに渡し、**メインループが diff の内容を見て最終的にどの観点を実際に起動するかを選択し、「選択と根拠」を 1 行出力**する (自律モード規約と同型。事後にユーザがレビューで乖離に気付ける状態を保つ)。`args.dimensions` が指定されている場合はこの述語評価をスキップし、指定観点をそのまま使う。
+pre-filter で候補になった観点をそのままメインループに渡し、**メインループが diff の内容を見て最終的にどの観点を実際に起動するかを選択し、「選択と根拠」を 1 行出力**する (CLAUDE.md「エスカレーション」の自律モードと同型。事後にユーザがレビューで乖離に気付ける状態を保つ)。`args.dimensions` が指定されている場合はこの述語評価をスキップし、指定観点をそのまま使う。
 
 ### Step 3: subagent 並列起動
 
