@@ -57,14 +57,17 @@ dev_server:                              # review-product-readiness (Step 4.2c) 
 `related_rules_paths` の言語別 rules は「あれば追加」ではなく、`related_source_files` の拡張子から機械的に決める (判断を挟むと毎回抜ける。実測で React プロジェクトのフェーズに `rules/frontend/react/` が一度も渡っていなかった):
 
 ```bash
-EXTS=$(printf '%s\n' $RELATED_SOURCE_FILES | rg -o '\.[a-z]+$' | sort -u)
+EXTS=$(printf '%s\n' $RELATED_SOURCE_FILES | rg -oi '\.[a-z]+$' | tr 'A-Z' 'a-z' | sort -u)
+FRONTEND_DIR=$(printf '%s\n' $RELATED_SOURCE_FILES | rg 'apps/web/|frontend/|src/components/|src/pages/|src/web/' || true)
 ```
 
-| `related_source_files` に含まれる拡張子 (または条件) | 追加する rules |
+| 条件 | 追加する rules |
 | --- | --- |
-| `.tsx` / `.jsx`、または `uiPhase == true` | `$HOME/.claude/rules/frontend/react/components.md` / `hooks.md` / `data-fetching.md` / `performance.md` |
-| `.go` | `$HOME/.claude/rules/backend/go/design.md` / `coding.md` / `testing.md` |
-| `.rs` | `$HOME/.claude/rules/backend/rust/design.md` / `coding.md` / `testing.md` |
+| `$EXTS` に `.tsx` / `.jsx` が含まれる、または `$FRONTEND_DIR` が非空 | `$HOME/.claude/rules/frontend/react/components.md` / `hooks.md` / `data-fetching.md` / `performance.md` |
+| `$EXTS` に `.go` が含まれる | `$HOME/.claude/rules/backend/go/design.md` / `coding.md` / `testing.md` |
+| `$EXTS` に `.rs` が含まれる | `$HOME/.claude/rules/backend/rust/design.md` / `coding.md` / `testing.md` |
+
+判定に `uiPhase` を使わないのは、`uiPhase` を算出するのが Step 4.2 の事前判定 (本節が動く Step 4.1.5 より後) だからで、代わりに `uiPhase` と同じフロントエンド dir 判定をここで直接行う。
 
 該当が無ければ言語別 rules は空 (`rules/core` の 5 ファイルのみ)。複数該当する場合は該当分をすべて挙げる。**実在するファイルだけを挙げる** — 渡したパスが存在しないと implementer は Read に失敗し、rules 全体を読み飛ばす方向に倒れる。列挙の前に `ls` で存在を確認する。
 
@@ -167,4 +170,4 @@ run 全体で 1 ファイル (`docs/.dev-impl/<run_id>/RUN_FACTS.md`)。**親だ
 | implementer (implement / fix) | 絶対パスを渡す |
 | review-tdd / review-quality / review-product-readiness | 絶対パスを渡す |
 | architecture-guard | **渡さない** (`claude/agents/architecture-guard.md` の入力節が PHASE_CONTEXT を受け取らないため。代わりに `design_path` / `design_detail_path` / `target_diff` / `PHASE_START_SHA` / `repo_dir` / `output_path` を直接渡す) |
-| review-adversarial | **渡さない** (fresh context 監査のため、phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / output_path のみを直接渡す) |
+| review-adversarial | **渡さない** (fresh context 監査のため、`mode` / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / output_path のみを直接渡す。`mode` は SKILL.md 4.2c で確定した `full` / `weakening_only`。省略すると agent 側の既定で `full` になる。`weakening_only` のときは docs_dir / dev_server を渡さない) |

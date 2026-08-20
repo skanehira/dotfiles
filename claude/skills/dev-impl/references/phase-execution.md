@@ -122,14 +122,14 @@ output_path: ${absScratchDir}/review-adversarial.json` }   // PHASE_CONTEXT は�
 **結果の読み方** (SKILL.md「main のコンテキスト規律」):
 
 ```bash
-jq -c '{ok, skip_reason, dimension, findings: [(.findings // .violations)[]? | {severity, rule, file, line}]}' "$RESULT_JSON"
+jq -c '{ok, skip_reason, dimension, mode, skipped_lenses, findings: [(.findings // .violations)[]? | {severity, rule, file, line}]}' "$RESULT_JSON"
 ```
 
 `message` / `fix_proposal` は main では読まない (修正する implementer が JSON を自分で Read する)。
 
 ## 4.2c: 観点 gating 述語の算出コマンド
 
-review-adversarial のスキップ述語と mode 判定、review-quality を最終フェーズ以外でも起動させる条件を算出する。**フェーズの初回 fan-out 前に 1 回だけ実行し、結果を `gating_decided` に記録する** (4.2d の再 fan-out では再評価しない。ただし fix 差分に対する `TEST_CONTENT_CHANGED` の再算出だけは 4.2d 手順 5 の規定により行う。その場合は `${PHASE_START_SHA}` を fix 直前の SHA ではなくフェーズ開始 SHA のまま使い、「このフェーズでテストに触れたか」を判定する)。
+review-adversarial のスキップ述語と mode 判定、review-quality を最終フェーズ以外でも起動させる条件を算出する。**フェーズの初回 fan-out 前に 1 回だけ実行し、結果を `gating_decided` に記録する。** 4.2d の再 fan-out では再評価しない。例外は 1 つだけで、**初回評価で review-adversarial を skip したフェーズ**に限り、各修正ラウンドの fan-out 直前に本節の述語一式を再算出して skip → 実行 の転換を判定する (SKILL.md 4.2c の遷移規定)。fix がテストに触れたかの判定は本節の述語ではなく `## 4.2d: fix がテストに触れたかの判定` を使う。
 
 ```bash
 CHANGED=$({ git diff --name-only "${PHASE_START_SHA}"; git ls-files --others --exclude-standard; } | sort -u)
@@ -156,6 +156,11 @@ CI_FILES_CHANGED=$(echo "$CHANGED" | rg '\.github/|config|package\.json|Cargo\.t
 TRACKED_CONSUMABLE=$(git diff "${PHASE_START_SHA}" -U0 -- ':!*.md' ':!docs/' | rg -i '^[+-].*(refresh[_-]?token|\bnonce\b|one[_-]?time|idempotenc|\botp\b|presigned)' || true)
 UNTRACKED_CONSUMABLE=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 -I{} rg -li 'refresh[_-]?token|\bnonce\b|one[_-]?time|idempotenc|\botp\b|presigned' {} 2>/dev/null || true)
 CONSUMABLE_CHANGED="${TRACKED_CONSUMABLE}${UNTRACKED_CONSUMABLE}"
+# 認証・認可・セッションに触れる差分 (review-adversarial の mode を full に上げる条件の 1 つ)。
+# CONSUMABLE と同じ 2 層 (tracked の差分内容 + untracked のファイル内容) で見る
+TRACKED_AUTH=$(git diff -U0 "${PHASE_START_SHA}" -- ':!*.md' ':!docs/' | rg -i '^\+.*(\bauth|\bsession\b|\bcookie\b|\bjwt\b|\blogin\b|\blogout\b|authoriz|credential|\bpassword\b)' || true)
+UNTRACKED_AUTH=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 -I{} rg -li '\bauth|\bsession\b|\bcookie\b|\bjwt\b|\blogin\b|\blogout\b|authoriz|credential|\bpassword\b' {} 2>/dev/null || true)
+AUTH_CHANGED="${TRACKED_AUTH}${UNTRACKED_AUTH}"
 ```
 
 判定条件テーブル (review-adversarial の skip/実行の遷移規則と mode 決定、`$CONSUMABLE_CHANGED` による review-quality の起動) は SKILL.md 側の 4.2c を参照。
@@ -167,21 +172,46 @@ git diff ${PHASE_START_SHA} --diff-filter=D --name-only -- '*test*' '*spec*'   #
 git diff ${PHASE_START_SHA} -U0 | rg '^\+.*\.(skip|only)\s*\(|^\+\s*(xit|xdescribe|xtest)\b|^\+.*#\[ignore\]'   # skip/only/ignore の追加
 ```
 
+## 4.2d: fix がテストに触れたかの判定
+
+4.2d 手順 5 の例外 1 で使う。**4.2e までコミットしないため fix 差分だけを切り出す SHA は存在しない**ので、fix 起動の直前と完了直後にテストファイル群の署名を取って比較する (フェーズ開始 SHA 比の `$TEST_CONTENT_CHANGED` では「implement 段階で触れたか」しか分からず、通常のフェーズでは常に真になって絞り込みが効かない)。
+
+```bash
+test_signature() {
+  { git -C "$REPO_DIR" ls-files; git -C "$REPO_DIR" ls-files --others --exclude-standard; } \
+    | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)' \
+    | sort | xargs -r -I{} shasum "$REPO_DIR/{}" | shasum | cut -d' ' -f1
+}
+SIG_BEFORE=$(test_signature)   # mode: fix の implementer を起動する直前
+# ... fix 完了後 ...
+SIG_AFTER=$(test_signature)
+[ "$SIG_BEFORE" != "$SIG_AFTER" ] && echo "fix がテストに触れた"
+```
+
+Rust のインラインテスト (src ファイル内の `#[cfg(test)]`) はこのファイル名パターンで捕まらない。**Rust プロジェクトでは `rg -l '#\[cfg\(test\)\]'` の結果も署名の対象に加える**こと。署名が一致しても `$CI_FILES_CHANGED` に相当する設定変更があれば同様に adversarial を追加する。
+
 ## 4.2e: implementer 報告の JSONL 一括転記
 
 SKILL.md 4.2e 手順 5 の転記は、**項目ごとに Bash を呼ばず 1 回の実行で全件を流し込む**。実測 (mind、4 フェーズ) で JSONL 239 件中 121 件が `design_decision` / `open_question` の転記で、これを逐次実行すると main の往復がフェーズあたり 30 回近く増える。
 
+`REPORT_PATH` は implementer 報告 (`report_path`) の絶対パス、`JSONL` は当該 run の `decisions.jsonl`、`PHASE_NAME` は本ファイル冒頭で定義済みのフェーズ識別子。
+
 ```bash
-jq -c --arg phase "$PHASE_ID" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
+jq -c --arg phase "$PHASE_NAME" --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" '
   [ (.design_decisions[]?      | {event_type:"design_decision",      context:.}),
     (.open_questions[]?        | {event_type:"open_question",        context:.}),
-    (.verification_skipped[]?  | {event_type:"verification_skipped", context:.}),
-    (.spec_lookups[]?          | {event_type:"spec_lookups",         context:{path:.}}) ][]
-  | . + {timestamp:$ts, phase:$phase, step:"implement", severity:"info",
-         summary:(.context | tostring | .[0:200])}
+    (.verification_skipped[]?  | {event_type:"verification_skipped", context:(. + {source:"implementer"})}),
+    (.spec_lookups[]?          | {event_type:"spec_lookup",          context:{path:.}}),
+    (.self_review              | select(. != null) | {event_type:"self_review", context:.}) ][]
+  | . + {timestamp:$ts, phase:$phase, step:"implement",
+         severity:(if .event_type == "open_question" then "warn" else "info" end),
+         summary:((.context.decision // .context.question // .context.target // .context.path
+                   // .context.notes // (.context | tostring)) | tostring | .[0:200])}
 ' "$REPORT_PATH" >> "$JSONL"
 ```
 
+`severity` を出し分けるのは、`open_question` の severity を `warn` と定める本ファイルの規定に合わせるため。`verification_skipped` に `source: "implementer"` を付けるのは、同じ event_type を 4.2c の adversarial スキップでも使い context の形が異なるため (識別キーの規定は [logging.md](./logging.md))。
+
 出力を main のコンテキストに載せない (`>>` でファイルへ直行させ、標準出力に流さない)。転記件数だけ確認したい場合は `wc -l` の差分を見る。
 
-1 行ログ側にも同じ件数を出す必要はない (JSONL が正)。**`spawn` / `fix_dispatch` / エスカレ系はリアルタイム監視の価値があるので、これまでどおり発生時に即座に 1 件ずつ追記する** (一括化の対象は implementer 報告由来の転記だけ)。
+1 行ログ側にも同じ件数を出す必要はない (JSONL が正)。**`spawn` / `fix_dispatch` / エスカレ系はリアルタイム監視の価値があるので、発生時に 1 件ずつ追記する** (一括化の対象は implementer 報告由来の転記だけ)。
