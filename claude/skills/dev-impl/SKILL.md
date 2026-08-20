@@ -215,7 +215,6 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq 
 | `p1_fixes_in_phase` (現フェーズ内 P1 修正回数)  | 2 (回)                                                    | P2 として扱う (次のループでは P2 として処理)    |
 | `p2_fixes_total` (dev-impl 全体の P2 修正回数)  | 3 (回)                                                    | P3 扱いに昇格してエスカレ停止                   |
 | `goal_loop` (ゴール達成判定 → 未達対応の周回数) | 2 (周)                                                    | P3 として停止                                   |
-| `run_elapsed_minutes` (run 開始からの経過時間)  | 480 (分 = 8 時間。プロジェクト規模に応じて起動時に調整可) | `time_budget_exceeded` でエスカレ停止 (P3 扱い) |
 | `phase_fix_round` (現フェーズの検査 → 修正の周回数) | 3 (回)                                                | `phase_fix_exceeded` でエスカレ停止 (context に guard 由来 / review 由来の内訳を残す) |
 | `test_gate_retry` (現フェーズの 4.2e テストゲート再試行回数) | 3 (回)                                       | `tests_failing_before_commit` でエスカレ停止    |
 | `phase_spawns` (現フェーズの累計 subagent 起動数) | 24 (回)                                                | `spawn_budget_exceeded` でエスカレ停止          |
@@ -226,9 +225,9 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq 
 | スコープ | カウンタ | リセット時点 |
 | --- | --- | --- |
 | issue | `p1_fixes_in_phase` / `phase_fix_round` / `test_gate_retry` / `phase_spawns` | **その issue の Step 4.1 (最初の subagent を起動する前)** |
-| run 全体 | `p2_fixes_total` / `goal_loop` / `run_spawns` / `run_elapsed_minutes` | リセットしない。**再入時は Step 0 で decisions.jsonl から復元した値を初期値にする** |
+| run 全体 | `p2_fixes_total` / `goal_loop` / `run_spawns` | リセットしない。**再入時は Step 0 で decisions.jsonl から復元した値を初期値にする** |
 
-`run_elapsed_minutes` は各フェーズ開始時 (Step 4.1) に計算する (macOS/Linux 両対応)。算出コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.1: run_elapsed_minutes 計算` 節を Read してから実行する (この節を読まず近似コマンドで代替すると、date コマンドの macOS/Linux 分岐が崩れ time budget (`time_budget_exceeded`) が機能しなくなるリスクがある)。
+**run 全体の経過時間では打ち切らない。** 発散は試行回数の上限 (`phase_fix_round` / `test_gate_retry` / `p2_fixes_total` / `goal_loop` / `phase_spawns` / `run_spawns`) で止める。長時間走ること自体は、フェーズ数の多いプロジェクトでは正常な状態であり停止理由にしない。個々の subagent が応答しないケースは、run の経過時間ではなく **spawn からの経過時間**で打ち切る (Step 4.2a)。
 
 カウンタと findings / deviation_signals の集約は**メインセッションが管理する**。各カウンタの現在値と集約結果は都度 1 行テキストログ + JSONL に書き出して外部化する (コンテキストが長くなり compaction をまたいでも、ログから状態を復元できるように)。
 
@@ -365,7 +364,7 @@ implementer 側の規約 (TDD の順序、フェーズスコープのテスト�
 
 **報告が読めない場合**: `report_path` が不在・`jq` でパース不能・必須フィールド (`status` / `summary` / `files_changed` / `test_result`) の欠落はいずれも `impl_failed` として扱い、`phase_fix_round += 1` して `mode: implement` で再起動する (fix ではない — 何が実装されたか分からないため)。3 回で `phase_fix_exceeded` でエスカレ停止する。検査 agent の `guard_agent_failed` / `review_agent_failed` と同じく、**パス扱いにしない**。
 
-- implementer が応答しないまま `run_elapsed_minutes` が 30 分進んだら打ち切る (`impl_failed`)。その issue を `gh issue edit <N> --add-label needs-human --remove-label in-progress` で駐車して次の issue に移る (`in-progress` を外さないとラベルが併記になり、Step 2 の判定が割れる)
+- implementer が応答しないまま **spawn から 30 分**経過したら打ち切る (`impl_failed`。計測は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: subagent の応答待ち時間` 節)。その issue を `gh issue edit <N> --add-label needs-human --remove-label in-progress` で駐車して次の issue に移る (`in-progress` を外さないとラベルが併記になり、Step 2 の判定が割れる)
 
 ##### 実装ノートの受け取り (design_decision / open_question)
 
@@ -809,7 +808,6 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 - P3 検出 (DESIGN.md 概要レベルの再設計必要)
 - `p2_fixes_total > 3` (P3 扱いに昇格)
 - `goal_loop > 2` (ゴール達成判定 → 未達対応の 3 周回でも未達ゴール残存)
-- `run_elapsed_minutes > 480` (`time_budget_exceeded`。試行回数の上限だけでなく経過時間でも打ち切る)
 - 必須ドキュメント (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) 欠如
 - `blocker=true` の POC_NEEDED マーカーが残存 (`poc_marker_unresolved`。dev-spec フェーズ 5 で解決してから再実行)
 - Step 1 構造ゲートの欠落 (`design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing`)
@@ -823,7 +821,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
    | 停止理由 | ラベル | 再開のしかた |
    | --- | --- | --- |
-   | 再実行で解決しうるもの (`phase_fix_exceeded` / `impl_failed` / `guard_agent_failed` / `review_agent_failed` / `spawn_budget_exceeded` / `tests_failing_before_commit` / `time_budget_exceeded`) | `in-progress` のまま | `/dev-impl` の再実行で Step 2 が再開対象として拾う |
+   | 再実行で解決しうるもの (`phase_fix_exceeded` / `impl_failed` / `guard_agent_failed` / `review_agent_failed` / `spawn_budget_exceeded` / `tests_failing_before_commit`) | `in-progress` のまま | `/dev-impl` の再実行で Step 2 が再開対象として拾う |
    | 人間の判断が要るもの (P3 / `design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing` / `poc_marker_unresolved` / `acceptance_criteria_change` / `test_weakening_detected` / `verification_tampered` / `dependency_blocked`) | **`needs-human` を貼り `in-progress` を外す** | 人間が対応した後、次の `/dev-impl` 起動時に Step 0 が確認してラベルを `ready` に戻す |
 
    人間の判断が要る側で `in-progress` のままにしてはならない。**再実行がそのまま同じ状態から再開してしまい、人間が何もしていないのに前進したように見える**ため。
