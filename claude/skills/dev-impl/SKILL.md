@@ -397,7 +397,7 @@ guard を review と同じ fan-out に入れるのは、待ちを 2 回から 1 
 
 **観点 gating (トークン削減の要):**
 
-**gating はフェーズごとに 1 回だけ確定する。** 4.2c の初回 fan-out の直前に下表と述語を評価し、決まった観点の集合 (review-adversarial の `mode` を含む) を JSONL に `event_type: gating_decided` で記録する。**4.2d の再 fan-out はこの記録された集合の部分集合しか起動できない** (毎ラウンド評価し直すと、判定が揺れて仕様外の観点が起動する。実測で review-quality が「最後の issue のみ」の規定に反して 3 フェーズで起動していた)。記録する `context` は `{gating_set: [...], adversarial_mode: "...", basis: {uiPhase, test_diff, consumable, auth, is_last_issue}}`。
+**gating はフェーズごとに 1 回だけ確定する。** 4.2c の初回 fan-out の直前に下表と述語を評価し、決まった観点の集合 (review-adversarial の `mode` を含む) を JSONL に `event_type: gating_decided` で記録する。**4.2d の再 fan-out はこの記録された集合の部分集合しか起動できない** (毎ラウンド評価し直すと、判定が揺れて仕様外の観点が起動する。実測で review-quality が「最後の issue のみ」の規定に反して 3 フェーズで起動していた)。`context` のスキーマは [references/logging.md](./references/logging.md) の `gating_decided` の行が正 (ここでは重ねて定義しない)。
 
 | タイミング        | 実行観点                                                                                            |
 | ----------------- | --------------------------------------------------------------------------------------------------- |
@@ -472,12 +472,12 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
    ただし **fatal が 1 件以上あって既に fix を起動する場合に限り、同じフェーズの medium を `findings_paths` に同梱してよい** (相乗り。追加の spawn を生まないため無料)。相乗りさせた medium は再検証しないので解消は主張せず、結果に関わらず `review_low` として記録する。
 3. fatal あり → `phase_fix_round += 1` する。**この時点で `phase_fix_round > 3` なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)
 4. **`mode: fix` の `dev-impl-implementer` を `model: "opus"` 明示で起動**する。渡すのは `findings_paths` (fatal を含む結果 JSON の絶対パスの配列) / `phase_context_path` / `repo_dir` / `report_path`。main は findings の本文を読まないし、修正内容を指示しない (fixer が JSON を自分で Read する)。**fixer が直す対象は「review-* の high」と「architecture-guard の high/medium」**で、fatal の定義と一致させてある (guard の medium が誰にも直されず空回りするのを防ぐため)
-5. 修正完了後、**再 fan-out は「fatal を出した観点 + architecture-guard」に絞る**。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は**原則として `gating_decided` に記録した `gating_set` の部分集合**とする (`architecture-guard` は gating 対象外で常に実行するため、この判定の対象に含めない)。下記 2 つの場合に限り集合外の review-adversarial を追加してよく、追加したときは `gating_decided` を追記して事後に正当な例外だと分かるようにする:
+5. 修正完了後、**再 fan-out は「fatal を出した観点 + architecture-guard」に絞って 4.2c に戻る**。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は**原則として `gating_decided` に記録した `gating_set` の部分集合**とする (`architecture-guard` は gating 対象外で常に実行するため、この判定の対象に含めない)。下記 2 つの場合に限り集合外の review-adversarial を追加してよく、追加したときは `gating_decided` を追記して事後に正当な例外だと分かるようにする:
 
    - **fix がテストに触れた場合は review-adversarial を必ず追加する** (`mode: weakening_only` で足りる)。判定は **fix 起動の直前と完了直後にテストファイル群の署名を取って比較する** ([references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: fix がテストに触れたかの判定` 節)。4.2e までコミットしないため fix 差分だけを切り出す SHA は存在せず、`$TEST_CONTENT_CHANGED` (フェーズ開始 SHA 比) では「implement 段階で触れたか」しか分からない。修正の過程でテストが弱体化されるのはレンズ B が守る対象そのもので、ここに穴を作らない。既に adversarial が `full` で起動していたフェーズでは `full` のまま再実行する
    - review-adversarial のスキップ述語が「skip → 実行」に転じた場合 (既存規定どおり、降格は禁止)。**この転換で起動するときの `mode` は、その時点で「review-adversarial の mode 決定」表を評価して決める** (初回に skip したフェーズは mode を確定しておらず `adversarial_mode: "skipped"` しか記録が無いため)。決まった値で `gating_decided` を追記する
 
-   「修正が別観点を壊す」リスクは、最後の issue の全観点フル検査と Step 5 の第三者監査 (`review-spec-compliance`) で受け止める。4.2c に戻る
+   「修正が別観点を壊す」リスクは、最後の issue の全観点フル検査と Step 5 の第三者監査 (`review-spec-compliance`) で受け止める
 6. 修正中に `design_overview_break` を検知 → 即エスカレ停止 (commit しない)
 7. review-adversarial の `test_weakened` / `vacuous_assertion` / `skip_added` (confidence: high) は**修正ラウンドに乗せない**。弱体化を実装者自身に直させると骨抜きの温床になるため、4.2e と同じトレース確認 (TODO.md / DESIGN_DETAIL_APP.md に意図的な変更としてトレースできるか) を main が行い、トレース不能なら `test_weakening_detected` でエスカレ停止する。`dev-impl-implementer` 側もこれらの finding を渡されたら修正せず `test_weakening_suspected` で停止する規約になっている (二重の歯止め)
 8. review-adversarial の `working_tree_polluted` を検知したら、main が `git status --porcelain` で実際の汚染有無を確認し、汚染があれば restore する
