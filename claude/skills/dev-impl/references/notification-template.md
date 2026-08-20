@@ -10,6 +10,9 @@
 実装フェーズ: N / N (全完了)
 新規コミット: <git rev-list --count $START_SHA..HEAD>
 動的修正: P1 <X> 回 / P2 <Y> 回 / P3 0 回 (停止無し)
+  P2 の内訳 (設計を実装に合わせて書き換えた箇所。要確認):
+  - <section> — <what> (<commit_sha>)
+  ... P2 が 0 回なら「P2 なし」の 1 行
 ゴール達成: <achieved>/<total> (うち手動確認待ち <manual_pending>)
 受入監査 (spec_compliance): high <X> 件 / medium <Y> 件 / vacuous_verification による手動 pending 落ち <Z> 件
 未検証 (skip された検証): <verification_skipped の一覧、なければ「なし」>
