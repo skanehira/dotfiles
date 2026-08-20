@@ -205,8 +205,10 @@ jq -c --arg phase "$PHASE_NAME" --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" '
     (.self_review              | select(. != null) | {event_type:"self_review", context:.}) ][]
   | . + {timestamp:$ts, phase:$phase, step:"implement",
          severity:(if .event_type == "open_question" then "warn" else "info" end),
-         summary:((.context.decision // .context.question // .context.target // .context.path
-                   // .context.notes // (.context | tostring)) | tostring | .[0:200])}
+         summary:(. as $e
+                  | (($e.context.decision // $e.context.question // $e.context.target
+                      // $e.context.path // $e.context.notes // "") | tostring) as $c
+                  | (if $c == "" then ($e.context | tostring) else $c end) | .[0:200])}
 ' "$REPORT_PATH" >> "$JSONL"
 ```
 
