@@ -24,10 +24,32 @@ PHASE_CONTEXT:
   related_rules_paths:
     - rules/core/tdd.md
     - rules/core/testing.md
+  exemptions_path: <実装者の自己免除一覧の絶対パス。optional。Step 0 参照>
   output_path: /tmp/review-tdd-<phase>.json
 ```
 
 `repo_dir` は dev-impl や workflow-review から、cwd とは別のリポジトリを検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、ファイルの Read も `repo_dir` 基準の絶対パスで行う。**
+
+### Step 0: 自己免除の裁定 (exemptions_path が渡された場合)
+
+`exemptions_path` は、実装者が「検証しない」と自分で宣言した項目の一覧である (親が implementer の報告から抽出したもの)。実装の説明ではなく**免除の名指しリスト**なので、これを信用する対象としてではなく**最優先の検査対象**として扱う。
+
+```json
+[{ "kind": "accepted_risk|equivalent_mutation|verification_skipped",
+   "claim": "実装者の主張", "rationale": "実装者が挙げた根拠", "source": "design_decisions[1]" }]
+```
+
+各項目について、**主張が成り立つ条件を自分で特定し、その条件が破れる経路を探す**。実装者の根拠は「その人が思いついた範囲」でしか成り立っておらず、範囲外の経路が残っているのが典型である (実測 2 件: (a)「同一ミリ秒の ABA は検出できないが影響は軽微」という受容が、実際には現在位置を履歴の範囲外へ飛ばし恒久的な機能喪失を招いた / (b)「この属性は他の属性と同時にしか変化しないので等価変異」という主張が、単一の操作の中でしか成り立たず複数操作をまたぐと破れた)。
+
+裁定の結果は finding の有無に関わらず `adjudicated_exemptions` に必ず記録する:
+
+| verdict | 意味 |
+| --- | --- |
+| `upheld` | 主張が成り立つことを自分で確かめた。根拠を `evidence` に書く (再現を試みて破れなかった手順を含む) |
+| `refuted` | 反例を見つけた。**通常の finding としても起票する** (severity は影響の大きさで決める) |
+| `unverifiable` | 自分では確かめられなかった。**`upheld` に倒さない** — 未検証として残す |
+
+**免除が 1 件も渡されなかった場合と、渡されたが裁定していない場合を区別できるようにする** (前者は `adjudicated_exemptions: []`、後者は起こしてはならない)。
 
 ### Step 1: 差分取得
 
