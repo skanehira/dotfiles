@@ -22,6 +22,7 @@ docs_dir: docs/                      # mode: full のみ。TODO.md / DESIGN*.md 
 dev_server:                          # optional。mode: full のレンズ A で Web UI を攻撃するときのみ使う
   url: <検出できた URL>
   start_command: <dev/start script>
+exemptions_path: <実装者の自己免除一覧の絶対パス。optional。Step 0 参照。実装の説明ではなく免除の名指しリストなので fresh context 監査の趣旨とは両立する>
 scratch_dir: /tmp/review-adversarial-<phase>/   # 攻撃コード置き場。プロジェクト配下は使わない
 output_path: /tmp/review-adversarial-<phase>.json
 ```
@@ -40,6 +41,27 @@ output_path: /tmp/review-adversarial-<phase>.json
 | `full` | A + B + C | 上記すべて | — |
 
 `weakening_only` は「毎フェーズ実行する reward hacking の監視」が役割で、攻撃と完了主張の反証は要所の `full` が担当する。呼び出し側が `full` を選ぶ条件は 4 つ (消費型資源を扱う差分 / 認証・認可・セッションを扱う差分 / テスト差分が無いまま実装が 20 行を超えたフェーズ / 最後の issue) で、いずれも別々の機械判定である (認証は消費型資源の一種ではない)。**`weakening_only` は skip ではなくモードの縮退**なので、未実行のレンズを必ず `skipped_lenses: ["A", "C"]` に記録する (呼び出し側が未検証項目として集約するため。沈黙で「検査済み」に見せない)。
+
+### Step 0: 自己免除の裁定 (exemptions_path が渡された場合)
+
+`exemptions_path` は、実装者が「検証しない」と自分で宣言した項目の一覧である (親が implementer の報告から抽出したもの)。実装の説明ではなく**免除の名指しリスト**なので、これを信用する対象としてではなく**最優先の検査対象**として扱う。
+
+```json
+[{ "kind": "accepted_risk|equivalent_mutation|verification_skipped",
+   "claim": "実装者の主張", "rationale": "実装者が挙げた根拠", "source": "design_decisions[1]" }]
+```
+
+各項目について、**主張が成り立つ条件を自分で特定し、その条件が破れる経路を探す**。実装者の根拠は「その人が思いついた範囲」でしか成り立っておらず、範囲外の経路が残っているのが典型である (実測 2 件: (a)「同一ミリ秒の ABA は検出できないが影響は軽微」という受容が、実際には現在位置を履歴の範囲外へ飛ばし恒久的な機能喪失を招いた / (b)「この属性は他の属性と同時にしか変化しないので等価変異」という主張が、単一の操作の中でしか成り立たず複数操作をまたぐと破れた)。
+
+裁定の結果は finding の有無に関わらず `adjudicated_exemptions` に必ず記録する:
+
+| verdict | 意味 |
+| --- | --- |
+| `upheld` | 主張が成り立つことを自分で確かめた。根拠を `evidence` に書く (再現を試みて破れなかった手順を含む) |
+| `refuted` | 反例を見つけた。**通常の finding としても起票する** (severity は影響の大きさで決める) |
+| `unverifiable` | 自分では確かめられなかった。**`upheld` に倒さない** — 未検証として残す |
+
+**免除が 1 件も渡されなかった場合と、渡されたが裁定していない場合を区別できるようにする** (前者は `adjudicated_exemptions: []`、後者は起こしてはならない)。
 
 ### Step 1: 差分取得
 

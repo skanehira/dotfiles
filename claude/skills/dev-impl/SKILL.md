@@ -388,6 +388,20 @@ git ls-files -z --others --exclude-standard | xargs -0 -r git add -N
 
 dev-impl は 4.2e までコミットしないため、新規実装だけのフェーズは全ファイルが untracked になり `git diff <PHASE_START_SHA>` では見えない。`architecture-guard` は `git ls-files --others` を併用するが検査 agent ごとに扱いが揃っていないので、ここで揃えて全 agent の `git diff <PHASE_START_SHA>` が同じ差分を返すようにする。
 
+**続けて、implementer の自己免除を抽出して検査 agent へ渡す** (実装者が「検証しない」と宣言した項目は、記録するだけでは誰も裁定しない。実測で修正ラウンド後半の fatal 2 件がいずれも初回に宣言された自己免除に起因していた):
+
+```bash
+jq -c '[ (.design_decisions[]?   | select((.decision + " " + (.rationale // "")) | test("受容|残余リスク|許容|トレードオフ"))
+           | {kind:"accepted_risk", claim:.decision, rationale:.rationale, source:"design_decisions"}),
+         (.verification_skipped[]? | {kind:(if ((.reason // "") | test("等価変異|equivalent")) then "equivalent_mutation" else "verification_skipped" end),
+                                      claim:.target, rationale:.reason, source:"verification_skipped"}) ]' \
+  "$REPORT_PATH" > "$SCRATCH_DIR/self-exemptions.json"
+```
+
+出力が `[]` でも**ファイルは必ず作り、`exemptions_path` として review-tdd と review-adversarial に渡す** (免除が無かったことと、渡し忘れたことを区別できるようにする)。**review-adversarial に渡しても fresh context 監査の趣旨は壊れない** — 渡すのは実装者が編纂した実装の説明ではなく「検証しないと宣言した項目の名指しリスト」であり、被監査者の主張をそのまま信じる材料ではなく攻撃対象の指定になるため。受け側の裁定手順は `claude/agents/review-*.md` の `Step 0: 自己免除の裁定`。
+
+修正ラウンドの report にも自己免除は現れるので、**再 fan-out のたびに最新の report で作り直す** (追記ではなく上書き。前ラウンドで裁定済みのものは受け側が `upheld` として再掲する)。
+
 gating された観点と `architecture-guard` を**同一メッセージ内の複数 Agent tool_use として並列起動**し、main が全部の完了を待つ。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 検査 fan-out の起動` 節を Read してから実行する。
 
 guard を review と同じ fan-out に入れるのは、待ちを 2 回から 1 回に減らすため。guard の違反も review の fatal も同じ修正ラウンド (4.2d) で処理する。
