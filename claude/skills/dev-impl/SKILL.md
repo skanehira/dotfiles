@@ -75,7 +75,7 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 - `event_type: start` の `context.repo_root` が現在の `git rev-parse --show-toplevel` と一致する (このディレクトリは全プロジェクト共通なので、パスで絞らないと他プロジェクトの run を拾う)
 - 完了イベント (Step 6 の完了サマリ出力時に記録する `done`) が無い (最後が `p3_escalate` 等)
 
-1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値を復元する — 再実行のたびにカウンタが 0 に戻ると発散上限 (Step 3) が実質無効化されるため。**進行中フェーズの `gating_decided` (最新の 1 件) も復元する** — 再 fan-out で起動してよい観点の唯一のソースなので、失うと記憶で判断することになる。当該フェーズの `gating_decided` が無ければ 4.2c の初回 fan-out からやり直す。
+1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値を復元する — `goal_loop` / `run_spawns` は再実行のたびに 0 に戻ると発散上限 (Step 3) が実質無効化されるため、`p2_fixes_total` は上限こそ無いが run をまたいだ通算件数を Step 6 で提示するため。**進行中フェーズの `gating_decided` (最新の 1 件) も復元する** — 再 fan-out で起動してよい観点の唯一のソースなので、失うと記憶で判断することになる。当該フェーズの `gating_decided` が無ければ 4.2c の初回 fan-out からやり直す。
 2. **working tree の突合**: `git status --porcelain` が非クリーンなら前回停止時の残骸。**逐次モードでも implementer が main の working tree で直接編集するため、停止時の未コミット実装はここに残る**。内容を確認し、AskUserQuestion で「続きとして取り込む / `git restore` で捨ててフェーズをやり直す」を確認する (再入時 1 回だけの人間確認)
    - 何が実装されたかは `~/.claude/logs/dev-impl/<前回の run_id>/reviews/phase-<識別子>/impl-report.json` に残っているので、判断材料としてこれを `jq` で読む (`summary` / `files_changed` / `test_result`)
    - 捨てる場合は 3 段階で行う。**`git reset` + `git restore` だけでは実装ファイルが残る** — 新規実装フェーズの成果物は全て未追跡で、intent-to-add (`git add -N`、Step 4.2c) 済みのファイルも `git reset` 後は未追跡に戻るだけでディスクに残り、`git restore` は未追跡ファイルを削除しないため (実測確認済み):
@@ -213,7 +213,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq 
 | カウンタ                                        | 上限                                                      | 超過時の挙動                                    |
 | ----------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------- |
 | `p1_fixes_in_phase` (現フェーズ内 P1 修正回数)  | 2 (回)                                                    | P2 として扱う (次のループでは P2 として処理)    |
-| `p2_fixes_total` (dev-impl 全体の P2 修正回数)  | 3 (回)                                                    | P3 扱いに昇格してエスカレ停止                   |
+| `p2_fixes_total` (dev-impl 全体の P2 修正回数)  | なし (上限を設けない)                                     | 停止しない。件数と内訳を記録し Step 6 で提示する |
 | `goal_loop` (ゴール達成判定 → 未達対応の周回数) | 2 (周)                                                    | P3 として停止                                   |
 | `phase_fix_round` (現フェーズの検査 → 修正の周回数) | 3 (回)                                                | `phase_fix_exceeded` でエスカレ停止 (context に guard 由来 / review 由来の内訳を残す) |
 | `test_gate_retry` (現フェーズの 4.2e テストゲート再試行回数) | 3 (回)                                       | `tests_failing_before_commit` でエスカレ停止    |
@@ -227,7 +227,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq 
 | issue | `p1_fixes_in_phase` / `phase_fix_round` / `test_gate_retry` / `phase_spawns` | **その issue の Step 4.1 (最初の subagent を起動する前)** |
 | run 全体 | `p2_fixes_total` / `goal_loop` / `run_spawns` | リセットしない。**再入時は Step 0 で decisions.jsonl から復元した値を初期値にする** |
 
-**run 全体の経過時間では打ち切らない。** 発散は試行回数の上限 (`phase_fix_round` / `test_gate_retry` / `p2_fixes_total` / `goal_loop` / `phase_spawns` / `run_spawns`) で止める。長時間走ること自体は、フェーズ数の多いプロジェクトでは正常な状態であり停止理由にしない。個々の subagent が応答しないケースは、run の経過時間ではなく **spawn からの経過時間**で打ち切る (Step 4.2a)。
+**run 全体の経過時間では打ち切らない。** 発散は試行回数の上限 (`phase_fix_round` / `test_gate_retry` / `goal_loop` / `phase_spawns` / `run_spawns`) で止める。長時間走ること自体は、フェーズ数の多いプロジェクトでは正常な状態であり停止理由にしない。個々の subagent が応答しないケースは、run の経過時間ではなく **spawn からの経過時間**で打ち切る (Step 4.2a)。
 
 カウンタと findings / deviation_signals の集約は**メインセッションが管理する**。各カウンタの現在値と集約結果は都度 1 行テキストログ + JSONL に書き出して外部化する (コンテキストが長くなり compaction をまたいでも、ログから状態を復元できるように)。
 
@@ -601,7 +601,7 @@ git commit -m "📝 docs: <P1|P2> 動的修正 — <何をどう変えたかの 
 
 ##### P2 動的修正
 
-1. `p2_fixes_total += 1`。`p2_fixes_total > 3` なら本シグナルを P3 (design_overview_break) として扱い、エスカレ停止する (以降のステップは実行しない)
+1. `p2_fixes_total += 1`。**回数では止めない** — 詳細設計の不足は実装しないと分からないことが多く、回数が増えること自体は異常ではない。代わりに**何をどう変えたかを後から追える形で残す**責任を負う (手順 6 のコミット / 手順 7 の JSONL / Step 6 の完了サマリ / HTML レポートのセクション 4 の 4 つが揃って初めて「確認できる」状態になる)。設計の前提そのものが崩れている場合は回数に関わらず P3 (`design_overview_break`) として停止する — これは回数ではなくシグナルの種類で判定する
 2. DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側 (境界基準: 変更に IaC・コンソール操作・環境設定変更が要るなら INFRA) のセクションを Edit
 3. **受入基準ガード**: Edit 直後に goals_sha を再計算 (Step 1 のコマンド) し、承認スタンプの値と照合する。不一致 = 受入基準 (ゴール / 検証手順行) を触った P2 であり、実装者による自己適用は禁止。Edit を revert せず `acceptance_criteria_change` でエスカレ停止する (「受入基準の変更が必要になった。dev-spec フェーズ 9 → 11 で再承認せよ」と通知。実装ガイド・スキーマ等の追記はハッシュ対象外なので通過する)
 4. **再生成の前にフェーズ見出しのスナップショットを取る** (再生成後では「前」の状態が失われ、増えたフェーズを特定できない)。そのうえで `../dev-spec/references/todo-generation.md` を Read し、その手順に従ってメインループで TODO.md を再生成する (ステップ 2〜3 を既存の TODO.md に対して適用し、完了済みフェーズのチェック状態は保つ)。**フェーズ見出しの `deps` / `goals` / (USECASES.md がある構成では) `ucs` の宣言を落とさない** — 再生成で `ucs` が消えると、次の `/dev-spec` 実行でフェーズ 12.0 がフラット判定に落ち、親 issue が作られなくなる
@@ -615,7 +615,7 @@ git commit -m "📝 docs: <P1|P2> 動的修正 — <何をどう変えたかの 
 
 5. **増えたフェーズがあれば、その各件に「新フェーズの issue 化」を実行する** (下記の共通手順)。closed の issue はそのまま完了扱いを維持する
 6. **編集した設計書 (`DESIGN_DETAIL_APP.md` / `_INFRA.md`) と `docs/TODO.md` をコミットする** (上記「動的修正のコミット」)
-7. ログに「P2 fix: <更新セクション>」を残す (JSONL は `event_type: p2_fix`)
+7. ログに「P2 fix: <更新セクション>」を残す (JSONL は `event_type: p2_fix`)。**`context` には `section` (更新したセクション名) / `what` (何をどう変えたか 1 行) / `why` (実装から判明した事実) / `commit_sha` (手順 6 のコミット) / `p2_fixes_total` (この時点の通算) を入れる** — 停止しない代わりに、ユーザーが後から「設計のどこが実装に合わせて書き換わったか」を追える唯一の記録になる
 8. 当該フェーズの再実行 (Step 4.2 から) か次フェーズへ進むかを判定: 再生成後の TODO.md で **当該フェーズ内に新規の未完了タスク (`- [ ]`) が追加されていれば Step 4.2 から再実行**、既存タスクが全て完了済みのまま (詳細設計の記述を補っただけで実装側の追加作業が無い) なら次フェーズへ進む
 9. ユーザに対する通知は「DESIGN_DETAIL_APP.md (または _INFRA.md) / TODO.md を更新しました (詳細はログ参照)」程度 (dev-impl は止まらない)
 
@@ -806,7 +806,6 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 停止条件:
 - Step 4.2 のフェーズ内エスカレ条件 (`phase_fix_exceeded` / `guard_agent_failed` / `review_agent_failed` / `impl_failed` / `spawn_budget_exceeded` / `tests_failing_before_commit`)
 - P3 検出 (DESIGN.md 概要レベルの再設計必要)
-- `p2_fixes_total > 3` (P3 扱いに昇格)
 - `goal_loop > 2` (ゴール達成判定 → 未達対応の 3 周回でも未達ゴール残存)
 - 必須ドキュメント (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) 欠如
 - `blocker=true` の POC_NEEDED マーカーが残存 (`poc_marker_unresolved`。dev-spec フェーズ 5 で解決してから再実行)
