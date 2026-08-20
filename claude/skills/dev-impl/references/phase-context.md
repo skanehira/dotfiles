@@ -52,7 +52,14 @@ dev_server:                              # review-product-readiness (Step 4.2c) 
   start_command: <package.json の dev/start script>
 ```
 
-## 言語別 rules の選択
+## 抜粋ロジック
+
+- `phase_tasks`: `gh issue view <N> --json body -q .body` の出力から `## ゴール` / `## DoD` / `## 非スコープ` / `## 実装タスク` の 4 節を切り出す (`## 参照すべき docs` は設計の該当節を読む入口なので、必要な節だけ docs から読んで `design_detail` に入れる)
+- `design_overview` / `design_detail`: フェーズ名から推測した key term (例: 「認証」「ユーザー登録」「CI」「デプロイ」) で DESIGN / DETAIL_APP / DETAIL_INFRA を grep、ヒット節とその前後を抜粋。**抜粋は必須、全文フォールバックは禁止** (1 フェーズにつき implementer + 最大 4 検査 subagent がそれぞれ Read するため、全文だとコストが大きい)。抜粋の目安上限は 1 ファイルあたり 4KB、超える場合は該当節の見出し + 要約のみ残す。抜粋に加えて「このフェーズに関連しそうな DESIGN / DETAIL_APP / DETAIL_INFRA の見出し一覧」を必ず列挙し、抜粋に本文が無い見出しが必要になったら subagent が `*_path` を自分で Read する (抜粋漏れを silent にしない。Read した subagent は報告の `spec_lookups` に記録し、親が抜粋精度を事後に確認できるようにする)
+- `related_source_files`: フェーズ名 / phase_tasks から推測したキーワードで Glob (`src/**/*<key>*`) + git diff で過去フェーズで触ったファイル
+- `prev_phase_summary`: decisions.jsonl の直前 issue の `event_type: impl_done` エントリ summary を引く
+
+### 言語別 rules の選択
 
 `related_rules_paths` の言語別 rules は「あれば追加」ではなく、`related_source_files` の拡張子から機械的に決める (判断を挟むと毎回抜ける。実測で React プロジェクトのフェーズに `rules/frontend/react/` が一度も渡っていなかった):
 
@@ -70,13 +77,6 @@ FRONTEND_DIR=$(printf '%s\n' $RELATED_SOURCE_FILES | rg 'apps/web/|frontend/|src
 判定に `uiPhase` を使わないのは、`uiPhase` を算出するのが Step 4.2 の事前判定 (本節が動く Step 4.1.5 より後) だからで、代わりに `uiPhase` と同じフロントエンド dir 判定をここで直接行う。
 
 該当が無ければ言語別 rules は空 (`rules/core` の 5 ファイルのみ)。複数該当する場合は該当分をすべて挙げる。**実在するファイルだけを挙げる** — 渡したパスが存在しないと implementer は Read に失敗し、rules 全体を読み飛ばす方向に倒れる。列挙の前に `ls` で存在を確認する。
-
-## 抜粋ロジック
-
-- `phase_tasks`: `gh issue view <N> --json body -q .body` の出力から `## ゴール` / `## DoD` / `## 非スコープ` / `## 実装タスク` の 4 節を切り出す (`## 参照すべき docs` は設計の該当節を読む入口なので、必要な節だけ docs から読んで `design_detail` に入れる)
-- `design_overview` / `design_detail`: フェーズ名から推測した key term (例: 「認証」「ユーザー登録」「CI」「デプロイ」) で DESIGN / DETAIL_APP / DETAIL_INFRA を grep、ヒット節とその前後を抜粋。**抜粋は必須、全文フォールバックは禁止** (1 フェーズにつき implementer + 最大 4 検査 subagent がそれぞれ Read するため、全文だとコストが大きい)。抜粋の目安上限は 1 ファイルあたり 4KB、超える場合は該当節の見出し + 要約のみ残す。抜粋に加えて「このフェーズに関連しそうな DESIGN / DETAIL_APP / DETAIL_INFRA の見出し一覧」を必ず列挙し、抜粋に本文が無い見出しが必要になったら subagent が `*_path` を自分で Read する (抜粋漏れを silent にしない。Read した subagent は報告の `spec_lookups` に記録し、親が抜粋精度を事後に確認できるようにする)
-- `related_source_files`: フェーズ名 / phase_tasks から推測したキーワードで Glob (`src/**/*<key>*`) + git diff で過去フェーズで触ったファイル
-- `prev_phase_summary`: decisions.jsonl の直前 issue の `event_type: impl_done` エントリ summary を引く
 
 ### repo_state
 

@@ -96,10 +96,10 @@ PHASE_CONTEXT の抜粋で足りない場合のみ `design_overview_path` / `des
   "test_result": { "command": "...", "exit_code": 0, "passed": 0, "failed": 0 },
   "lint_result": { "command": "... または null", "exit_code": 0 },
   "spec_lookups": ["PHASE_CONTEXT の抜粋で足りず自分で Read した設計書のパスと節"],
-  "self_review": { "checklist_applied": true, "tests_revised": 0, "notes": "修正したテストと理由。修正なしなら空文字" },
   "verification_skipped": [{ "target": "...", "reason": "..." }],
   "deviation_signals": [{ "type": "todo_minor|design_detail_gap|design_overview_break", "scope": "...", "what": "...", "evidence": "..." }],
   "design_decisions": [{ "decision": "...", "spec_gap": "silent|ambiguous", "alternatives": [{ "option": "...", "rejected_because": "..." }], "rationale": "...", "affected_files": [], "related_design_section": "... または null" }],
+  "self_review": { "checklist_applied": true, "tests_revised": 0, "notes": "修正したテストと理由。修正なしなら空文字" },
   "open_questions": [{ "question": "...", "background": "...", "suggested_action": "...", "affected_files": [] }]
 }
 ```
