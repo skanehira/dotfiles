@@ -119,6 +119,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 | `fix_dispatch` | warn | 修正ラウンド (SKILL.md 4.2d) で `mode: fix` の implementer を起動した時 | `phase` / `phase_fix_round` (このラウンドの番号、1〜3) / `findings_paths` (渡した結果 JSON のパス配列) / `fatal_summary` (`{severity, rule, file, line}` の射影配列。**findings の本文は入れない**) |
 | `self_review` | info | implementer 報告の一括転記時 (Step 4.2e 手順 5) | `checklist_applied` / `tests_revised` / `notes`。実装者が `rules/core/testing.md` のセルフレビューチェックリストを自分のテストへ適用した結果。HTML レポートの実装ノートに出す |
 | `spec_lookup` | info | 同上 | `path` (PHASE_CONTEXT の抜粋で足りず implementer が自分で Read した設計書のパスと節)。抜粋精度を事後に確認するために残す |
+| `verification_skipped` | warn | 検証を実行しなかった時 (4.2c の adversarial スキップ / 4.2c のモード縮退 / implementer 報告の転記 / 4.2e のテストタイムアウト) | **`source` で 3 系統を識別する**。`"adversarial_skip"`: `{target, source, changed_files, changed_lines, criteria_result}` / `"mode_degraded"`: `{target, source, lenses, mode}` / `"implementer"`: implementer 報告の要素に `source` を足したもの。Step 5.6 の未検証項目集約が `source` で分岐する |
 | `run_facts_updated` | info | RUN_FACTS.md への追記後 (SKILL.md 4.2e のコミット後) | `phase` / `sections` (更新した節名の配列: `commands` / `artifacts` / `design_decisions` / `pitfalls`) / `bytes` (更新後のファイルサイズ。4KB 上限の監視用) |
 
 `spawn` を全件記録するのは、`phase_spawns` の上限判定を「記憶」ではなくログから復元できる状態に保つため (compaction をまたいでもカウンタが失われない)。`gating_decided` も同じ理由で必ず記録する — 再 fan-out で起動してよい観点の集合はこのエントリが唯一のソースであり、記録が無ければ「記憶」で判断することになって仕様外の観点が起動する (実測で review-quality が規定外に 3 フェーズで起動していた)。
