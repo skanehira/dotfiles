@@ -100,15 +100,18 @@ repo_dir: ${absRepoDir}
 output_path: ${absScratchDir}/guard.json
 git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。` }
 
-// スキップ述語を満たさなければ実行
+// スキップ述語を満たさなければ実行。mode は SKILL.md 4.2c の「review-adversarial の mode 決定」表で決め、
+// gating_decided に記録した値をそのまま渡す (再 fan-out でも同じ値を使う)
 { subagent_type: "review-adversarial", model: "sonnet",
-  prompt: `phase_name: ${phaseName}
+  prompt: `mode: ${adversarialMode}
+phase_name: ${phaseName}
 phase_start_sha: ${phaseStartSha}
 repo_dir: ${absRepoDir}
 docs_dir: ${absDocsDir}
 dev_server: ${devServerOrNull}
 scratch_dir: ${absScratchDir}
 output_path: ${absScratchDir}/review-adversarial.json` }   // PHASE_CONTEXT は渡さない
+// mode: weakening_only のときは docs_dir / dev_server の行を省く (レンズ A/C を実行しないため不要)
 
 // gating に応じて review-tdd / review-quality / review-product-readiness を同様に (model: opus)
 //   共通で渡す: PHASE_CONTEXT の絶対パス / phase_name / phase_start_sha / repo_dir / output_path
@@ -126,7 +129,7 @@ jq -c '{ok, skip_reason, dimension, findings: [(.findings // .violations)[]? | {
 
 ## 4.2c: 観点 gating 述語の算出コマンド
 
-review-adversarial のスキップ述語と、review-quality を最終フェーズ以外でも起動させる条件を算出する。
+review-adversarial のスキップ述語と mode 判定、review-quality を最終フェーズ以外でも起動させる条件を算出する。**フェーズの初回 fan-out 前に 1 回だけ実行し、結果を `gating_decided` に記録する** (4.2d の再 fan-out では再評価しない。ただし fix 差分に対する `TEST_CONTENT_CHANGED` の再算出だけは 4.2d 手順 5 の規定により行う。その場合は `${PHASE_START_SHA}` を fix 直前の SHA ではなくフェーズ開始 SHA のまま使い、「このフェーズでテストに触れたか」を判定する)。
 
 ```bash
 CHANGED=$({ git diff --name-only "${PHASE_START_SHA}"; git ls-files --others --exclude-standard; } | sort -u)
@@ -155,7 +158,7 @@ UNTRACKED_CONSUMABLE=$(git ls-files --others --exclude-standard -z -- ':!*.md' '
 CONSUMABLE_CHANGED="${TRACKED_CONSUMABLE}${UNTRACKED_CONSUMABLE}"
 ```
 
-判定条件テーブル (review-adversarial の skip/実行の遷移規則、`$CONSUMABLE_CHANGED` による review-quality の起動) は SKILL.md 側の 4.2c を参照。
+判定条件テーブル (review-adversarial の skip/実行の遷移規則と mode 決定、`$CONSUMABLE_CHANGED` による review-quality の起動) は SKILL.md 側の 4.2c を参照。
 
 ## 4.2e: テスト弱体化検知コマンド
 
