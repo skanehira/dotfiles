@@ -507,7 +507,7 @@ bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
 2. **コミットする**。`rules/core/commit.md` に従う (関心事分割 / STRUCTURAL・BEHAVIORAL 分離)。**コミットは必ず main が行う** — 形式を機械検証する commit-msg-guard hook は親にしか効かないため。ただし hook が実際に検証するのは `$GHQ_ROOT/github.com/skanehira/` 配下のリポジトリで作業しているときだけで、それ以外では fail-open で素通りする。push はしない (ユーザ手動)
 3. **RUN_FACTS.md を更新する** (書式と規則は [references/phase-context.md](./references/phase-context.md) の `## RUN_FACTS.md`)。implementer 報告の `report_path` から `jq` で引いて「完了フェーズの成果物」「累積 design_decisions」「既知の落とし穴」に追記する。**この更新がフェーズ間の文脈再注入を代替する**ので省略しない (省略すると次フェーズの implementer がプロジェクトの作り方を探索し直す)。追記後にファイルサイズを測り、**4096 バイトを超えていたら最新 3 フェーズ以外の「完了フェーズの成果物」行を要約に畳む**。JSONL に `event_type: run_facts_updated` (context に `sections` / `bytes`) を記録する
 4. **JSONL に `event_type: impl_done` を記録する** (context: `phase` / `summary` / `commit_sha` / `phase_fix_round` / `phase_spawns` / `review_outputs`)。これが issue 完了の唯一のイベントで、`prev_phase_summary` (次フェーズの PHASE_CONTEXT) と HTML レポートのフェーズタイムラインがこれを読む
-5. implementer 報告の `verification_skipped` / `design_decisions` / `open_questions` / `spec_lookups` を `report_path` から `jq` で JSONL に転記する (`verification_skipped` は Step 5.6 の未検証項目集約に合流する)
+5. implementer 報告の `verification_skipped` / `design_decisions` / `open_questions` / `spec_lookups` を `report_path` から `jq` で JSONL に転記する (`verification_skipped` は Step 5.6 の未検証項目集約に合流する)。**転記は 1 回の Bash 実行で全件を流し込む** — コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2e: implementer 報告の JSONL 一括転記` 節を使う (項目ごとに Bash を呼ぶと main の往復がフェーズあたり 30 回近く増える)
 6. **当該 issue を close する** (`gh issue close <N> --comment "DoD がすべて通過したため close する"`)
 7. **親 issue の自動 close sweep** を回す (下記)
 

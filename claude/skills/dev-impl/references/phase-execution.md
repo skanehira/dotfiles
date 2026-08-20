@@ -166,3 +166,22 @@ CONSUMABLE_CHANGED="${TRACKED_CONSUMABLE}${UNTRACKED_CONSUMABLE}"
 git diff ${PHASE_START_SHA} --diff-filter=D --name-only -- '*test*' '*spec*'   # テストファイルの削除
 git diff ${PHASE_START_SHA} -U0 | rg '^\+.*\.(skip|only)\s*\(|^\+\s*(xit|xdescribe|xtest)\b|^\+.*#\[ignore\]'   # skip/only/ignore の追加
 ```
+
+## 4.2e: implementer 報告の JSONL 一括転記
+
+SKILL.md 4.2e 手順 5 の転記は、**項目ごとに Bash を呼ばず 1 回の実行で全件を流し込む**。実測 (mind、4 フェーズ) で JSONL 239 件中 121 件が `design_decision` / `open_question` の転記で、これを逐次実行すると main の往復がフェーズあたり 30 回近く増える。
+
+```bash
+jq -c --arg phase "$PHASE_ID" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
+  [ (.design_decisions[]?      | {event_type:"design_decision",      context:.}),
+    (.open_questions[]?        | {event_type:"open_question",        context:.}),
+    (.verification_skipped[]?  | {event_type:"verification_skipped", context:.}),
+    (.spec_lookups[]?          | {event_type:"spec_lookups",         context:{path:.}}) ][]
+  | . + {timestamp:$ts, phase:$phase, step:"implement", severity:"info",
+         summary:(.context | tostring | .[0:200])}
+' "$REPORT_PATH" >> "$JSONL"
+```
+
+出力を main のコンテキストに載せない (`>>` でファイルへ直行させ、標準出力に流さない)。転記件数だけ確認したい場合は `wc -l` の差分を見る。
+
+1 行ログ側にも同じ件数を出す必要はない (JSONL が正)。**`spawn` / `fix_dispatch` / エスカレ系はリアルタイム監視の価値があるので、これまでどおり発生時に即座に 1 件ずつ追記する** (一括化の対象は implementer 報告由来の転記だけ)。

@@ -123,6 +123,8 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 
 書き込みは `jq -nc --arg ... '{...}' >> $JSONL` で 1 行 1 エントリの append-only。`context` は event_type に応じて中身が変わる (`done` ではほぼ空でも良い)。
 
+**implementer 報告由来の転記 (`design_decision` / `open_question` / `verification_skipped` / `spec_lookups`) だけは 1 回の実行で全件をまとめて append する** (コマンドは [phase-execution.md](./phase-execution.md) の `## 4.2e: implementer 報告の JSONL 一括転記`)。実測でこの 4 種が JSONL の過半を占めており、1 件ずつ書くと main の往復がフェーズあたり 30 回近く増える。`spawn` / `fix_dispatch` / エスカレ系はリアルタイム監視の価値があるので発生時に 1 件ずつ書く。
+
 両ログとも各ステップの「開始 / 完了 / 動的修正 / エスカレ」発生時に同期して書き込む。1 行ログ = summary のみ、JSONL = summary + context を構造化。
 
 ## 範例: typical な実行ログ
