@@ -34,6 +34,10 @@ JSON スキーマ:
 {
   "ok": false,
   "checked_files": 12,
+  "checked_file_list": [
+    { "file": "src/domain/user/User.ts", "layer": "domain", "import_lines_checked": 5, "violation_count": 1 },
+    { "file": "src/api/app.ts", "layer": "api", "import_lines_checked": 8, "violation_count": 0 }
+  ],
   "skip_reason": null,
   "violations": [
     {
@@ -58,6 +62,8 @@ JSON スキーマ:
 
 - `ok: true` は違反ゼロ。`ok: false` は 1 件以上の違反あり
 - `severity`: `high` (即修正必須) / `medium` (修正推奨) / `low` (情報レベル)。dev-impl は high と medium を修正対象として渡す
+- `checked_file_list`: **実際に import 行を読んだファイルを 1 件も省略せず列挙する (必須)。** これが無いと、呼び出し側は「違反が無い」と「そのファイルを見ていない」を区別できない。検出できていないことと異常が無いことが区別できない検査は、実行しても情報が増えていない (`rules/core/verification.md`)。実測では、型のみの cross-layer import 1 行を 5 回中 4 回見落としながら毎回 `ok: true` を返し、呼び出し側はそれを「境界は健全」と読んでいた。`violation_count: 0` のファイルも必ず載せる (違反があったファイルだけを列挙すると `violations` と同じ情報にしかならない)。件数は `checked_files` と一致させる
+- 呼び出し側は `git diff <PHASE_START_SHA>` のソースファイルのうち `checked_file_list` に無いものを**未検証として扱う** (パス扱いにしない)
 - `skip_reason`: `checked_files: 0` の理由を区別するためのフィールド。`null` (差分が実際に空、正常) / `"no_layer_convention"` (DESIGN 文書にも慣例にも一致するレイヤ構造が無く Clean Arch チェック自体を skip、ステップ1参照) / `"diff_command_failed"` (ステップ2の git diff コマンドが失敗、下記参照)。`skip_reason` が `null` 以外なら `ok` の値に関わらず「正常に検査できていない」ことを表す
 
 ## 進捗ログ
