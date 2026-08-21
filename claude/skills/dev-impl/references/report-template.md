@@ -149,7 +149,7 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
 
 ## セクション 3: フェーズタイムライン
 
-spawns 列の分母 `p.phase_spawns_budget` は、当該フェーズの `start` イベントの `context.phase_spawns_budget` の**最大**を採る (再入で引き上げられた値が正。記録が無い旧 run は既定の 33 を使う)。
+fix rounds 列と spawns 列の分母 (`p.phase_fix_budget` / `p.phase_spawns_budget`) は、当該フェーズの `start` イベントの同名フィールドの**最大**を採る (再入で引き上げられた値が正。記録が無い旧 run は既定の 3 / 33 を使う)。
 
 ```html
 <section class="space-y-2">
@@ -163,7 +163,7 @@ spawns 列の分母 `p.phase_spawns_budget` は、当該フェーズの `start` 
         <tr class="border-t cursor-pointer" style="border-color: var(--border);" onclick="this.nextElementSibling.querySelector('details').open = !this.nextElementSibling.querySelector('details').open">
           <td class="py-2 font-mono">${p.name}</td>
           <td class="py-2 font-mono">${p.duration}</td>
-          <td class="py-2 font-mono">${p.phase_fix_round}/3</td>
+          <td class="py-2 font-mono">${p.phase_fix_round}/${p.phase_fix_budget}</td>
           <td class="py-2 font-mono">${p.phase_spawns}/${p.phase_spawns_budget}</td>
           <td class="py-2 font-mono">${p.commit_sha.slice(0,7)}</td>
           <td class="py-2">${p.status_badge}</td>

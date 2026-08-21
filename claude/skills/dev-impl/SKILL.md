@@ -163,7 +163,7 @@ printf '%s' "$REENTRY_JSONL" > "$HOME/.claude/logs/dev-impl/.reentry"
 
 **センチネルに `done` を使わない。** `done` はステップ単位の完了にも使う値なので (logging.md)、run が完了していなくても途中のステップ完了で真になり、**「未完了である」ことを検出できない**。実測でも 1 つの未完了 run に `done` が 6 件記録されており、この判定は人手で中身を読んで補うしかなかった。`run_done` は run の完了時にしか書かれないので、仕掛ける前に**未完了の run に対してこの判定が `fresh` を返さないこと**を確認できる (陰性対照)。
 
-1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値と `run_spawns_budget` (記録済みの値の最大) を復元する — `goal_loop` / `run_spawns` は再実行のたびに 0 に戻ると発散上限 (Step 3) が実質無効化されるため、`p2_fixes_total` は上限こそ無いが run をまたいだ通算件数を Step 6 で提示するため、`run_spawns_budget` はこの復元値を下限として Step 1 で再計算するため。**進行中フェーズのカウンタも JSONL から復元する** — `phase_spawns` は当該 phase の `spawn` 件数、`phase_fix_round` は `fix_dispatch` 件数 + `context.round` が `retry*` の implementer `spawn` 件数 (報告不整合の再起動も 4.2a の表で `phase_fix_round` を進めるため)、`test_gate_retry` は **`context.agent` が `dev-impl-implementer`** かつ `context.round` が `tg*` の `spawn` 件数 (テストゲート再試行では fix がテストに触れると review-adversarial も同じ round ラベルで起動するので、agent で絞らないと二重に数える)、`p1_fixes_in_phase` は当該 phase の `p1_fix` 件数。**Step 4.1 のリセットは「その issue を初めて着手したとき」だけ**で、再入や reopen 経由の再着手では復元する (リセットしてしまうと、上限のあるカウンタが再入のたびに 0 に戻って発散上限が実質無効になる)。**進行中フェーズの `gating_decided` (最新の 1 件) も復元する** — 再 fan-out で起動してよい観点の唯一のソースなので、失うと記憶で判断することになる。当該フェーズの `gating_decided` が無ければ 4.2c の初回 fan-out からやり直す。
+1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値と `run_spawns_budget` (記録済みの値の最大) を復元する — `goal_loop` / `run_spawns` は再実行のたびに 0 に戻ると発散上限 (Step 3) が実質無効化されるため、`p2_fixes_total` は上限こそ無いが run をまたいだ通算件数を Step 6 で提示するため、`run_spawns_budget` はこの復元値を下限として Step 1 で再計算するため。**進行中フェーズのカウンタも JSONL から復元する** — `phase_spawns` は当該 phase の `spawn` 件数、`phase_fix_round` は `fix_dispatch` 件数 + `context.round` が `retry*` の implementer `spawn` 件数 (報告不整合の再起動も 4.2a の表で `phase_fix_round` を進めるため)、`test_gate_retry` は **`context.agent` が `dev-impl-implementer`** かつ `context.round` が `tg*` の `spawn` 件数 (テストゲート再試行では fix がテストに触れると review-adversarial も同じ round ラベルで起動するので、agent で絞らないと二重に数える)、`p1_fixes_in_phase` は当該 phase の `p1_fix` 件数。**あわせて `phase_spawns_budget` / `phase_fix_budget` を当該 phase の `start` イベントの記録値の最大 (無ければ既定 33 / 3) として復元し、Step 3 の式で引き上げる。** カウンタだけ復元して予算を復元しないと、上限を超えた状態のカウンタだけが戻り、再入した瞬間に同じ理由で再停止する。**Step 4.1 のリセットは「その issue を初めて着手したとき」だけ**で、再入や reopen 経由の再着手では復元する (リセットしてしまうと、上限のあるカウンタが再入のたびに 0 に戻って発散上限が実質無効になる)。**進行中フェーズの `gating_decided` (最新の 1 件) も復元する** — 再 fan-out で起動してよい観点の唯一のソースなので、失うと記憶で判断することになる。当該フェーズの `gating_decided` が無ければ 4.2c の初回 fan-out からやり直す。
 2. **進行中フェーズの突合**: ラウンドごとにコミットしているので (4.2a / 4.2d の「ラウンドごとのコミット」)、中断したフェーズは `PHASE_START_SHA` の上に積まれた `[phase-<識別子>]` prefix つきのコミット列として残り、working tree は通常 clean である。
    - 進行中フェーズの `PHASE_START_SHA` は decisions.jsonl の当該フェーズの `start` イベントの `context.phase_start_sha` から復元する
    - `git log --oneline <PHASE_START_SHA>..HEAD` で何が積まれているかを確認し、AskUserQuestion で「続きとして取り込む / 捨ててフェーズをやり直す」を確認する (再入時 1 回だけの人間確認)。各ラウンドが何をしたかは `~/.claude/logs/dev-impl/<前回の run_id>/reviews/phase-<識別子>/impl-report*.json` にも残っている
@@ -334,10 +334,14 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 | `p1_fixes_in_phase` (現フェーズ内 P1 修正回数)  | 2 (回)                                                    | P2 として扱う (次のループでは P2 として処理)    |
 | `p2_fixes_total` (dev-impl 全体の P2 修正回数)  | なし (上限を設けない)                                     | 停止しない。件数と内訳を記録し Step 6 で提示する |
 | `goal_loop` (ゴール達成判定 → 未達対応の周回数) | 2 (周)                                                    | P3 として停止                                   |
-| `phase_fix_round` (現フェーズの検査 → 修正の周回数) | 3 (回)                                                | `phase_fix_exceeded` でエスカレ停止 (context に guard 由来 / review 由来の内訳を残す) |
+| `phase_fix_round` (現フェーズの検査 → 修正の周回数) | `phase_fix_budget` (既定 3。**再入時は `max(3, 復元値 + 1)` に引き上げ、フェーズの `start` イベントの `context.phase_fix_budget` に記録する。復元は記録値の最大**) | `phase_fix_exceeded` でエスカレ停止 (context に guard 由来 / review 由来の内訳を残す) |
 | `test_gate_retry` (現フェーズの 4.2e テストゲート再試行回数) | 3 (回)                                       | `tests_failing_before_commit` でエスカレ停止    |
 | `phase_spawns` (現フェーズの累計 subagent 起動数) | `phase_spawns_budget` (既定 33。**再入時は `max(33, 復元値 + 16)` に引き上げ、フェーズの `start` イベントの `context.phase_spawns_budget` に記録する。復元は記録値の最大**) — `spawn_budget_exceeded` は「再実行で解決しうる」停止で、復元されたカウンタが上限を超えたままだと再実行が構造的に何も解決しない (`run_spawns_budget` と同じ理由。16 は fix 1 + 再検査 5 の 2 ラウンド分 + 予備) | `spawn_budget_exceeded` でエスカレ停止          |
 | `run_spawns` (run 全体の累計 subagent 起動数)   | `run_spawns_budget` (下記「spawn 予算の意図」で定義)      | 同上                                            |
+
+**再入で予算が増える 3 つ (`phase_fix_budget` / `phase_spawns_budget` / `run_spawns_budget`) は同じ理屈で動く。** いずれの停止理由も「再実行で解決しうる」か「人間が対応した後に再開する」ものなので、**再入しても予算が一切増えないなら再実行が構造的に何も解決できず、即座に同じ理由で再停止する**。予算の追加付与を人間の再起動に紐づけることで、1 セッション内の暴走は有限の予算で止めたまま、人間の判断を挟んだ継続だけが前進する。
+
+`phase_fix_budget` の増分が **+1** なのは、`phase_fix_exceeded` が `needs-human` に分類される停止だからである。人間が 1 回対応したら 1 ラウンド分だけ直す余地を与える、という対応付けにする (人間の関与なしには増えない)。
 
 スコープ別のリセット時点:
 
@@ -737,7 +741,7 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
    **main は agent が付けた severity を変更しない (昇格も降格もしない)。** 修正ラウンドを起こすのは上記の fatal だけで、medium / low を「重要そうだから」と high 扱いにして新ラウンドを起こすことはしない。過小評価は agent 側の severity 基準 (各 agent 定義の「severity の判定基準」節 (節を持たない agent は該当する判定記述)) を直して解決する問題であり、実行時の裁量で埋めるとラウンド数が判定基準なしに増える (実測で 9 ラウンド中 2 ラウンド以上が裁量昇格のみで起動していた)。
 
    **medium の「相乗り」は行わない。** implementer は review-* の `findings[]` を high だけ、architecture-guard の `violations[]` を high/medium 直す規約なので、review-* の medium を渡しても no-op になる (guard の medium は fatal の定義に入っているので通常の経路で直る)。medium は `review_low` として記録し、Step 6 のサマリと HTML レポートに残す。
-3. fatal あり → `phase_fix_round += 1` する。**この時点で `phase_fix_round > 3` なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)。
+3. fatal あり → `phase_fix_round += 1` する。**この時点で `phase_fix_round > phase_fix_budget` (既定 3) なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)。
 
    **続けて JSONL に `event_type: fix_dispatch` を記録する** (context は logging.md の規定)。`spawn` と同じく**起動する前に書く**。このイベントは 2 箇所が読む load-bearing な記録である: Step 0 の再入で `phase_fix_round` を復元する唯一のソースであり、ラウンド 2 以降の implementer へ渡す「過去ラウンドの経過」の材料でもある (references/phase-execution.md の `ROUND2_PLUS_BRIEF`)。
 
