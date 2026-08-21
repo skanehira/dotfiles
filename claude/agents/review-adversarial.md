@@ -89,7 +89,7 @@ REPO_DIR="${REPO_DIR:-.}"
    - 対象を直接 import/require できる → `scratch_dir/attack-N.{ts,go,rs,py,lua}` を書いて `npx tsx` / `go run` / `cargo script` 等で実行
    - import 不能 (ビルド前提・依存解決不能等) → CLI 直叩き、または `dev_server` があれば `curl` / HTTP 経由で攻撃
    - それも不能 → 実行を諦め `rule: attack_not_executable, severity: low` で「攻撃仮説はあるが未実行」と明記する (未実行を沈黙で「問題なし」に見せない)
-4. **ソースを書き換えたら、復元は内容ハッシュで確認する。`git status --porcelain` を復元確認に使ってはならない。** フェーズの差分ファイルは既に「変更済み」として status に並んでいるため、中身をどう書き換えても status の出力は 1 文字も変わらない (mind の run 20260820-065019 で実証: 同一の変異を加えて前後を `cmp` したところ完全一致した)。実際にこの穴により、`autosave.ts` の `if (saving)` を `if (false)` に変異させたまま終了しながら、自分で取った status スナップショットの一致を見て「汚染なし」と判定した事故が起きている。攻撃・変異の**前**にベースラインを取り、**後**に突合する:
+4. **ソースを書き換えたら、復元は内容ハッシュで確認する。`git status --porcelain` を復元確認に使ってはならない。** フェーズの差分ファイルは既に「変更済み」として status に並んでいるため、中身をどう書き換えても status の出力は 1 文字も変わらない (同一の変異を加えて前後を `cmp` したところ完全一致することを実証済み)。実際にこの穴により、検査対象の条件式を変異させたまま終了しながら、自分で取った status スナップショットの一致を見て「汚染なし」と判定した事故が起きている。攻撃・変異の**前**にベースラインを取り、**後**に突合する:
 
    ```bash
    sig() { git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | xargs shasum; }
