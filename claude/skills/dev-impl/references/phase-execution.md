@@ -2,7 +2,26 @@
 
 `dev-impl/SKILL.md` の Step 4 (各フェーズの実行) 各節から参照される実行コマンドの詳細。判断基準・観点 gating・ループ規則・エスカレ条件は SKILL.md 本体にあるので、そちらを先に読んでから該当節だけをここで参照する。
 
-本ファイル中のシェル変数の前提: `$REPO_DIR` は作業ディレクトリ (main のリポジトリ) の絶対パス、`$PHASE_START_SHA` は SKILL.md 4.1 で記録した SHA、`$RESULT_JSON` は検査 agent が `output_path` に書いた結果 JSON のパス。JavaScript 風の `${...}` は Agent 呼び出しに埋める実値を表す。
+## 変数の定義
+
+本ファイルのコマンドが前提にするシェル変数。**どれも「どこかで代入されているはず」ではなく、下記の時点で main が代入する。** JavaScript 風の `${...}` は Agent 呼び出しに埋める実値を表す (シェル変数ではない)。
+
+| 変数 | 代入する時点 | 値 |
+| --- | --- | --- |
+| `REPO_DIR` | Step 1 (`REPO_ROOT` と同時) | `git rev-parse --show-toplevel` の絶対パス。**SKILL.md Step 1 が代入する `REPO_ROOT` と同じ値**で、本ファイルと agent への受け渡しでは `REPO_DIR` の名前を使う |
+| `RUN_DIR` / `JSONL` / `LOG` | 起動時 (SKILL.md「進捗ログ」) | `~/.claude/logs/dev-impl/${run_id}` / その下の `decisions.jsonl` / `~/.claude/logs/dev-impl.log` |
+| `SCRATCH_DIR` | Step 4.1 | `$RUN_DIR/reviews/phase-<識別子>` |
+| `PHASE_START_SHA` | Step 4.1 | そのフェーズ開始時の `git rev-parse HEAD`。**JSONL のフェーズ `start` イベントにも記録する** (再入時の復元元) |
+| `PHASE` | Step 4.1 | 短縮識別子 (`phase-4-a` 形式)。JSONL の `phase` に入れる値 |
+| `PHASE_NAME` | Step 4.1.5 | issue タイトル形式 (`フェーズ4-a: 名前`)。agent へ渡す `phase_name` と `target_diff: phase:<...>` に使う |
+| `ISSUE` | Step 4 の着手時 | 着手中の issue 番号 |
+| `ROUND` | 各 fan-out の直前 | 初回 fan-out は `0`、修正ラウンド後の再検査は `phase_fix_round` と同値 |
+| `AGENTS_TO_SPAWN` | 各 fan-out の直前 | `"<agent>:<model>"` を空白区切りで並べた文字列 |
+| `PHASE_SPAWNS` / `RUN_SPAWNS` | Step 4.1 (フェーズ) / Step 0 か Step 1 (run) | カウンタの現在値。復元の正は `spawn` イベントの件数 (logging.md) |
+| `REPORT_PATH` | implementer 起動の直前 | `$SCRATCH_DIR/impl-report.json` または `impl-report-fix-<round>.json` |
+| `RESULT_JSON` | 検査結果を読む時 | 検査 agent が `output_path` に書いた結果 JSON のパス |
+
+**`PHASE` と `PHASE_NAME` を取り違えない。** JSONL の集計は `PHASE` (短縮識別子) で行い、同じフェーズが 2 表記で混ざるとレポートのフェーズ集計が割れる。
 
 ## 4.2a: subagent の応答待ち時間
 
@@ -100,18 +119,26 @@ TDD の順序・フェーズスコープのテストのみ実行・コミット�
 **起動前に 2 つを 1 ブロックで行う** (作業ツリーが clean であることの確認 / spawn の先行記録)。**どちらも「起動する前」でなければ意味を成さない**ので、fan-out ごとに必ずこのブロックを流す:
 
 ```bash
+# このブロックが前提にする変数 (フェーズ / ラウンドのスコープ。値の出どころは冒頭「変数の定義」)
+PHASE="phase-4-a"                    # 短縮識別子。JSONL の phase に入れる値
+ROUND=0                              # 初回 fan-out は 0、修正ラウンド後の再検査は phase_fix_round と同値
+AGENTS_TO_SPAWN="architecture-guard:haiku review-tdd:opus review-adversarial:sonnet"
+
 # (1) ツリーが clean であること。非空なら直前のラウンドのコミット漏れ (SKILL.md 4.2c)。
 #     実装がコミット済みであることが「全 agent の git diff が同じ差分を返す」ことと
 #     「検査 agent の書き換えが status に現れる」ことの前提になっている
 git -C "$REPO_DIR" status --porcelain
 
-# (2) これから起動する agent の spawn を JSONL に先に書く (起動後に書く規定だと構造的に落ちる = SKILL.md 4.2c)
-for a in $AGENTS_TO_SPAWN; do   # 例: "architecture-guard:haiku review-tdd:opus review-adversarial:sonnet"
+# (2) これから起動する agent の spawn を JSONL に先に書く (起動後に書く規定だと構造的に落ちる = SKILL.md 4.2c)。
+#     phase_spawns / run_spawns は「これから起動する 1 件を含めた値」を書く (logging.md)
+for a in $AGENTS_TO_SPAWN; do
+  PHASE_SPAWNS=$((PHASE_SPAWNS + 1)); RUN_SPAWNS=$((RUN_SPAWNS + 1))
   jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
-     --arg n "${a%%:*}" --arg m "${a##*:}" --arg r "$ROUND" '{
+     --arg n "${a%%:*}" --arg m "${a##*:}" --argjson r "$ROUND" \
+     --argjson ps "$PHASE_SPAWNS" --argjson rs "$RUN_SPAWNS" '{
     timestamp:$ts, phase:$p, step:"review", event_type:"spawn", severity:"info",
-    summary:("spawn " + $n + " (" + $m + ", round " + $r + ")"),
-    context:{phase:$p, agent:$n, model:$m, round:$r}}' >> "$JSONL"
+    summary:("spawn " + $n + " (" + $m + ", round " + ($r|tostring) + ")"),
+    context:{phase:$p, agent:$n, model:$m, round:$r, phase_spawns:$ps, run_spawns:$rs}}' >> "$JSONL"
 done
 ```
 
@@ -123,6 +150,8 @@ gating で決まった観点 + architecture-guard を**同一メッセージ内�
 最終メッセージは output_path の絶対パス 1 行だけにせよ。findings 本文や要約を書くな。
 ```
 
+**`output_path` はラウンド番号で分ける (`-r${round}`)。** 固定名にするとラウンドごとに上書きされ、(a) `impl_done` の `review_outputs` に残る監査証跡が最終ラウンド分だけになり、(b) 4.2e 手順 4 の spawn 突合が「起動回数」ではなく「観点の種類数」を数えることになって、修正ラウンドを回したフェーズで必ず記録漏れと誤診する。
+
 ```javascript
 // 毎フェーズ必須
 { subagent_type: "architecture-guard", model: "haiku", run_in_background: false,
@@ -131,7 +160,7 @@ design_path: ${absDocsDir}/DESIGN.md
 design_detail_path: ${absDocsDir}/DESIGN_DETAIL_APP.md
 PHASE_START_SHA: ${phaseStartSha}
 repo_dir: ${absRepoDir}
-output_path: ${absScratchDir}/guard.json
+output_path: ${absScratchDir}/guard-r${round}.json
 git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。` }
 
 // スキップ述語を満たさなければ実行。mode は SKILL.md 4.2c の「review-adversarial の mode 決定」表で決め、
@@ -144,11 +173,15 @@ repo_dir: ${absRepoDir}
 docs_dir: ${absDocsDir}
 dev_server: ${devServerOrNull}
 scratch_dir: ${absScratchDir}
-output_path: ${absScratchDir}/review-adversarial.json` }   // PHASE_CONTEXT は渡さない
+exemptions_path: ${absScratchDir}/self-exemptions.json
+output_path: ${absScratchDir}/review-adversarial-r${round}.json` }   // PHASE_CONTEXT は渡さない
 // mode: weakening_only のときは docs_dir / dev_server の行を省く (レンズ A/C を実行しないため不要)
 
 // gating に応じて review-tdd / review-quality / review-product-readiness を同様に (model: opus)
-//   共通で渡す: PHASE_CONTEXT の絶対パス / phase_name / phase_start_sha / repo_dir / output_path
+//   共通で渡す: PHASE_CONTEXT の絶対パス / phase_name / phase_start_sha / repo_dir (絶対パス)
+//               / output_path (`${absScratchDir}/review-<観点>-r${round}.json`)
+//   review-tdd には加えて exemptions_path: ${absScratchDir}/self-exemptions.json を渡す
+//     (SKILL.md 4.2c が review-tdd と review-adversarial への受け渡しを義務づけている)
 ```
 
 `target_diff` に渡せるのは `HEAD` / `working_tree` / `phase:<フェーズ名>` の 3 値のみ (`claude/agents/architecture-guard.md` の「入力」節)。それ以外の文字列は agent 側の分岐に該当せず未定義動作になる。
@@ -156,10 +189,17 @@ output_path: ${absScratchDir}/review-adversarial.json` }   // PHASE_CONTEXT は�
 **結果の読み方** (SKILL.md「main のコンテキスト規律」):
 
 ```bash
-jq -c '{ok, skip_reason, dimension, mode, skipped_lenses, findings: [(.findings // .violations)[]? | {severity, rule, file, line}]}' "$RESULT_JSON"
+jq -c '{
+  ok, skip_reason, dimension, mode, skipped_lenses,
+  unchecked: (.unchecked_files // []),                  # architecture-guard: 未検証ファイル (非空なら未検証扱い)
+  adjudicated: ((.adjudicated_exemptions // []) | length),  # review-tdd / review-adversarial: 免除を裁定した件数
+  findings: [(.findings // .violations)[]? | {severity, rule, file, line}]
+}' "$RESULT_JSON"
 ```
 
 `message` / `fix_proposal` は main では読まない (修正する implementer が JSON を自分で Read する)。
+
+射影に `unchecked` と `adjudicated` を含めるのは、**どちらも「検査していないこと」を検出するための値**だから。前者が非空なら guard は差分の一部を見ていない (architecture-guard.md の `unchecked_files`)。後者は `exemptions_path` に渡した件数と突き合わせ、**渡した件数より少なければ免除の裁定が実行されていない** — 裁定は「実装者が検証しないと宣言した項目を第三者が裁く」仕掛けなので、実行の有無を検証しないと自己申告のままになる。どちらの判定も 4.2d 手順 1 で使う。
 
 ## 4.2c: 観点 gating 述語の算出コマンド
 
@@ -202,9 +242,29 @@ AUTH_CHANGED="${TRACKED_AUTH}${UNTRACKED_AUTH}"
 ## 4.2e: テスト弱体化検知コマンド
 
 ```bash
-git diff ${PHASE_START_SHA} --diff-filter=D --name-only -- '*test*' '*spec*'   # テストファイルの削除
-git diff ${PHASE_START_SHA} -U0 | rg '^\+.*\.(skip|only)\s*\(|^\+\s*(xit|xdescribe|xtest)\b|^\+.*#\[ignore\]'   # skip/only/ignore の追加
+# (1) テストファイルの削除
+git diff "${PHASE_START_SHA}" --diff-filter=D --name-only -- '*test*' '*spec*'
+
+# (2) skip/only/ignore の追加。**検知はテストファイルの差分に限定する** — 対象を絞らないと
+#     プロダクションコードの `iter().skip(` や `array.only(` のような無関係な行にマッチし、
+#     偽陽性のたびにトレース確認 (SKILL.md 4.2e) を人手で回すことになる
+TEST_PATHS=$(git diff "${PHASE_START_SHA}" --name-only \
+  | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)' || true)
+if [ -n "$TEST_PATHS" ]; then
+  printf '%s\n' "$TEST_PATHS" | tr '\n' '\0' \
+    | xargs -0 git diff "${PHASE_START_SHA}" -U0 -- \
+    | rg '^\+.*\b(it|test|describe|context|suite)\.(skip|only)\s*\(|^\+\s*(xit|xdescribe|xtest)\b|^\+.*#\[ignore\]|^\+\s*@(unittest\.)?skip|^\+.*t\.Skip\('
+fi
+
+# (3) Rust のインラインテスト (src ファイル内の #[cfg(test)]) は (2) のパスに載らないので別途見る
+git diff "${PHASE_START_SHA}" -U0 -- '*.rs' | rg '^\+.*#\[ignore\]' || true
 ```
+
+`.skip(` / `.only(` を単独で照合せず、直前のトークン (`it` / `test` / `describe` / `context` / `suite`) を含めて照合するのも同じ理由 (メソッドチェーンの `.skip(` との区別)。
+
+**判定は exit code ではなく出力行数で行う。** (2) は `if` で囲ってあるため、テスト差分が 1 件も無いフェーズでは中身が実行されず全体が exit 0 になる。「何も検出しなかった」と「検出器が走らなかった」が exit code では区別できないので、`| wc -l` で数えて 0 件であることを確認する。
+
+上記の検知は**陽性・陰性の両対照を取ってある**: テストファイルに `it.skip(` を足すと 1 件検出し、プロダクションコードに `.values().skip(1)` を足しても 0 件のままであることを実測で確認済み (パス制限を外した以前の形は後者にも誤爆した)。
 
 ## 4.2e: implementer 報告の JSONL 一括転記
 

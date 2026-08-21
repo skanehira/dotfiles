@@ -17,11 +17,12 @@ Agent({
   model: "opus",
   prompt: `mode: post-impl
 product_mode: cli
-docs_dir: docs/
+docs_dir: ${absRepoDir}/docs
 approved_stamp: "<TODO.md 1 行目をそのまま>"
 run_start_sha: ${START_SHA}
-decisions_jsonl: ~/.claude/logs/dev-impl/${run_id}/decisions.jsonl
-output_path: /tmp/review-spec-compliance-${run_id}.json
+repo_dir: ${absRepoDir}
+decisions_jsonl: ${absRunDir}/decisions.jsonl
+output_path: ${absRunDir}/review-spec-compliance.json
 holdout_enabled: false
 docs は自分で全文 Read すること。product_mode: cli のため G_E2E も自動系ゴールとして自分で実行し goal_results に含めること (他 agent は起動しない)。
 作業結果 (output_path のパス) は必ず最終メッセージで親に返すこと。`
@@ -38,18 +39,39 @@ Agent({
   model: "opus",
   prompt: `mode: post-impl
 product_mode: webapp
-docs_dir: docs/
+docs_dir: ${absRepoDir}/docs
 approved_stamp: "<TODO.md 1 行目をそのまま>"
 run_start_sha: ${START_SHA}
-decisions_jsonl: ~/.claude/logs/dev-impl/${run_id}/decisions.jsonl
-output_path: /tmp/review-spec-compliance-${run_id}.json
+repo_dir: ${absRepoDir}
+decisions_jsonl: ${absRunDir}/decisions.jsonl
+output_path: ${absRunDir}/review-spec-compliance.json
 holdout_enabled: false
 docs は自分で全文 Read すること。G_E2E は実行しないこと (別 agent が担当)。
 作業結果 (output_path のパス) は必ず最終メッセージで親に返すこと。`
 })
 
-// 2 体目: G_E2E 実機検証 (Web プロダクトのみ。従来どおり)
-Agent({ subagent_type: "review-product-readiness", model: "opus", prompt: `<dev_server 情報 + DESIGN_DETAIL_APP.md の UX 設計>` })
+// 2 体目: G_E2E 実機検証 (Web プロダクトのみ)
+Agent({
+  description: "G_E2E の実機検証",
+  subagent_type: "review-product-readiness",
+  model: "opus",
+  prompt: `phase_name: G_E2E (run 全体の受入)
+phase_start_sha: ${START_SHA}
+repo_dir: ${absRepoDir}
+design_overview: |
+  <DESIGN.md の「ゴール」セクション。G_E2E のシナリオを含む>
+design_detail: |
+  <DESIGN_DETAIL_APP.md の「UX 設計」セクション (画面遷移マップ / ナビゲーション仕様 / 共通 UI 仕様 / アクセシビリティ)>
+dev_server:
+  url: ${devServerUrl}
+  start_command: ${devServerStartCommand}
+snapshot_dir: ${absRunDir}/review-product-readiness-snapshots/
+output_path: ${absRunDir}/review-product-readiness-goal-e2e.json
+
+最終メッセージは output_path の絶対パス 1 行だけにせよ。findings 本文や要約を書くな。`
+})
 ```
+
+**パスはすべて絶対で渡す** (`absRepoDir` = `git rev-parse --show-toplevel`、`absRunDir` = `$HOME` 展開済みの `~/.claude/logs/dev-impl/<run_id>`)。subagent の Bash は呼び出しごとに cwd が親のものへ戻り、`~` もシェルを介さない受け渡しでは展開されないため、相対パスやチルダのままでは意図した場所を指さない。`agent-spawn-guard` の必須フィールド検査はキーの存在しか見ないので、**値の形式はこのテンプレート側でしか担保できない**。
 
 `holdout_enabled` は現時点でデフォルト無効。TODO.md に書かれていないエッジケースを review-spec-compliance が能動的に生成・検証する PoC 機能で (review-spec-compliance.md 参照)、効果測定後に有効化を検討する。
