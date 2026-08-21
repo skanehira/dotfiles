@@ -191,6 +191,15 @@ JSONL から `event_type` が `p1_fix | p2_fix | p3_escalate | phase_added` の�
 
 各エントリカード:
 
+**カードは event_type で分岐させ、[logging.md](./logging.md) が定める各 `context` のフィールドだけを描画する。** 共通フィールド (`affected_files` / `rationale` / `diff_before`) を一律に描く形にすると、実際には存在しないフィールドを読んで空欄になる:
+
+| event_type | 描画するフィールド |
+| --- | --- |
+| `p1_fix` | `section` / `what` / `commit_sha` / `p1_fixes_in_phase` |
+| `p2_fix` | `section` / `what` / `why` / `commit_sha` / `p2_fixes_total` |
+| `phase_added` | `phase` / `issue_number` / `parent_number` / `origin` / `run_spawns_budget` |
+| `p3_escalate` | `reason` / `phase` / `issue` / `label` / `last_success_sha` + 停止理由ごとの詳細 (`remaining_fatal` / `round_history` 等があれば `<details>` で畳む) |
+
 ```html
 <article class="rounded border p-4" style="border-color: var(--border); background: var(--p1-bg); color: var(--p1-fg);">
   <header class="flex items-center justify-between text-sm">
@@ -199,14 +208,13 @@ JSONL から `event_type` が `p1_fix | p2_fix | p3_escalate | phase_added` の�
   </header>
   <p class="mt-2">${e.summary}</p>
   <dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-    <dt>修正対象</dt><dd>${e.context.affected_files.join(', ')}</dd>
-    <dt>関連設計</dt><dd><a href="../${e.context.related_design_section}">${e.context.related_design_section}</a></dd>
-    <dt>判断根拠</dt><dd>${e.context.rationale}</dd>
+    ${fieldsFor(e.event_type).map(k => `<dt>${label(k)}</dt><dd>${escape(e.context[k] ?? '-')}</dd>`).join('')}
   </dl>
-  <details class="mt-2">
-    <summary class="cursor-pointer text-xs">前後 diff</summary>
-    <pre class="mt-1 p-2 bg-white text-xs overflow-x-auto rounded"><code>${escape(e.context.diff_before)}\n→\n${escape(e.context.diff_after)}</code></pre>
-  </details>
+  ${e.event_type === 'p3_escalate' && e.context.remaining_fatal ? `
+  <details class="mt-2" open>
+    <summary class="cursor-pointer text-xs">残存 fatal</summary>
+    <div class="mt-1 text-xs">${escape(e.context.remaining_fatal.essence ?? '')}</div>
+  </details>` : ''}
 </article>
 ```
 
