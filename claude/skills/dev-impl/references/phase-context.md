@@ -65,8 +65,12 @@ snapshot_dir: <$SCRATCH_DIR/product-readiness-snapshots/ の絶対パス>  # 視
 `related_rules_paths` の言語別 rules は「あれば追加」ではなく、`related_source_files` の拡張子から機械的に決める (判断を挟むと毎回抜ける。実測で React プロジェクトのフェーズに `rules/frontend/react/` が一度も渡っていなかった):
 
 ```bash
-EXTS=$(printf '%s\n' $RELATED_SOURCE_FILES | rg -oi '\.[a-z]+$' | tr 'A-Z' 'a-z' | sort -u)
-FRONTEND_DIR=$(printf '%s\n' $RELATED_SOURCE_FILES | rg 'apps/web/|frontend/|src/components/|src/pages/|src/web/' || true)
+# **改行区切りの 1 変数にする** — zsh は $VAR を単語分割しないため、空白区切りだと
+# printf に 1 引数として渡って 1 行にまとまり、行末の拡張子しか拾えない
+RELATED_SOURCE_FILES='src/web/features/map-editor/Canvas.tsx
+src/domain/node.ts'
+EXTS=$(printf '%s\n' "$RELATED_SOURCE_FILES" | rg -oi '\.[a-z]+$' | tr 'A-Z' 'a-z' | sort -u)
+FRONTEND_DIR=$(printf '%s\n' "$RELATED_SOURCE_FILES" | rg 'apps/web/|frontend/|src/components/|src/pages/|src/web/' || true)
 ```
 
 | 条件 | 追加する rules |

@@ -123,7 +123,7 @@ mkdir -p "$(dirname "$HOME/.claude/logs/dev-impl.log")"
 # 新規 run として起動してカウンタ (goal_loop / run_spawns / p2_fixes_total) が 0 に戻る
 ROOT="$(git rev-parse --show-toplevel)"
 REENTRY_JSONL=""
-for f in $(ls -1t "$HOME"/.claude/logs/dev-impl/*/decisions.jsonl 2>/dev/null); do
+for f in $(find "$HOME/.claude/logs/dev-impl" -maxdepth 2 -name decisions.jsonl -exec ls -1t {} +); do
   v=$(jq -sr --arg root "$ROOT" '
     (map(select(.event_type=="start" and .context.repo_root==$root)) | length) as $mine
     | (map(select(.event_type=="run_done")) | length) as $done
@@ -141,9 +141,11 @@ done
    - `git log --oneline <PHASE_START_SHA>..HEAD` で何が積まれているかを確認し、AskUserQuestion で「続きとして取り込む / 捨ててフェーズをやり直す」を確認する (再入時 1 回だけの人間確認)。各ラウンドが何をしたかは `~/.claude/logs/dev-impl/<前回の run_id>/reviews/phase-<識別子>/impl-report*.json` にも残っている
    - **捨てる場合は `git reset --hard <PHASE_START_SHA>`。** ただし打つ前に、`<PHASE_START_SHA>..HEAD` の全件が `[phase-<識別子>]` prefix を持つことを確認する。**エスカレ停止した run では HTML レポートのコミット (Step 7) が、P1/P2 の動的修正があった run では設計書のコミットが同じ範囲に混ざる**ので、無条件の reset はそれらも巻き戻す。prefix を持たないコミットがあれば、実装コミットだけを `git revert` するかユーザーに判断を仰ぐ
    - working tree が非クリーンなら、ラウンドのコミット前に落ちたか、検査 agent の汚染 (4.2d 手順 8) が残っている。`git status --porcelain` の中身も提示して同じ確認に含める
-3. **TODO チェックの突合**: TODO.md で `- [x]` 化されているフェーズのうち、**対応する issue が open のまま**のものは未完了として扱い、チェックを `- [ ]` に戻す。
+3. **TODO チェックの突合**: TODO.md で `- [x]` 化されているフェーズのうち、**対応する issue が open のまま**のものは「最終コミットまでは済んだが close まで到達していない」として扱う。**チェックは戻さず、フェーズもやり直さない。**
 
-   **`impl_done` の SHA を基準にしない。** 4.2e はフェーズ最終コミット (手順 2) を打ってから `impl_done` (手順 5) を書くので、その間で落ちると「コミットは済んだが `impl_done` が無い」状態になり、SHA 基準の突合は完了しているフェーズを未完了と誤判定する。**issue の open/closed は 4.2e 手順 7 の close と対になっていて、`- [x]` と同じコミットに入る TODO.md の状態より後に動く**ので、「TODO は `[x]` だが issue が open」= 「最終コミットまでは済んだが close まで到達していない」を正しく表す。この場合はフェーズをやり直さず、**4.2e の手順 7 (close) から再開する**。
+   **`impl_done` の SHA を基準にしない。** 4.2e はフェーズ最終コミット (手順 2) を打ってから `impl_done` (手順 5) を書くので、その間で落ちると「コミットは済んだが `impl_done` が無い」状態になり、SHA 基準の突合は完了しているフェーズを未完了と誤判定する。**issue の open/closed は 4.2e 手順 7 の close と対になっていて、`- [x]` と同じコミットに入る TODO.md の状態より後に動く**ので、「TODO は `[x]` だが issue が open」= 「最終コミットまでは済んだが close まで到達していない」を正しく表す。**4.2e の手順 7 (close) から再開する**。
+
+   例外は `- [x]` が**未コミット** (working tree にだけある) の場合で、これはコミット前に落ちたことを意味するので `- [ ]` に戻してフェーズをやり直す。
 4. **Step 5 系の停止からの再開**: 前回が `goal_loop > 2` / `verification_tampered` / `acceptance_criteria_change` など**ゴール判定の段階で停止**していた場合、in-progress の issue は 1 件も無いので issue ラベルによる駐車が使えない。この場合は decisions.jsonl の最後の `p3_escalate` を提示し、**AskUserQuestion で「対応済み (再判定する) / まだ (中止する)」を確認する**。「対応済み」を選ばれたときだけ `goal_loop` を 0 に戻して Step 5.1 から再開する。**Claude の判断で戻さない** — 戻す条件が「人間の回答が入ったこと」であり、自動化すると `goal_loop` の上限が実質無効になる (needs-human ラベルを Claude が勝手に外さないのと同じ理由)
 
 未完了 run が無ければ通常起動 (新規 run_id 発行) で Step 1 へ。
@@ -380,9 +382,9 @@ gh issue close <N> --repo "$REPO_SLUG" --comment "DoD がすべて通過した�
 
 **main が行うこと** (implementer には渡さない): PHASE_CONTEXT と RUN_FACTS の組み立て、事前判定と観点 gating の確定、検査 fan-out の起動と待機、fatal 判定、全テストゲート、テスト弱体化の機械検知、コミット、issue のラベル操作と close、decisions.jsonl への書き込み、Step 4.6 の P1/P2/P3 判定。
 
-**完了判定は main が自分で行う。** implementer の `status: done` を完了根拠にせず、次の 2 点を main が確認する ((a) は 3 つの条件をすべて満たすこと):
+**完了判定は main が自分で行う。** implementer の `status: done` を完了根拠にせず、次の 2 点を main が確認する:
 
-- (a) **実装が実在すること** — 次の 2 つを**両方**確認する。**`files_changed` が空でないことを先に見る** — 空配列に対する「全要素が差分に現れる」は空集合の包含として無条件に成立し、**この判定が防ぐと宣言している当のケース (何も実装せず `status: done`) で空虚になる**:
+- (a) **実装が実在すること** — 次の 3 つを**すべて**確認する。**`files_changed` が空でないことを先に見る** — 空配列に対する「全要素が差分に現れる」は空集合の包含として無条件に成立し、**この判定が防ぐと宣言している当のケース (何も実装せず `status: done`) で空虚になる**:
   1. `files_changed` が**非空**であること。空なら `impl_report_invalid` として扱う (4.2a の表。`mode: implement` で再起動し、3 回で `phase_fix_exceeded`)
   2. `files_changed` の各パスが、実際に `git diff --name-only <PHASE_START_SHA>` + `git ls-files --others --exclude-standard` の結果に現れること
   3. そのラウンドのコミットで変更行数が実際に増えたこと。**起動の直前に控えた SHA と比較する** (`BEFORE=$(git rev-parse HEAD)` を implementer 起動前に取り、コミット後に `git diff --shortstat "$BEFORE" HEAD` が非空であることを見る)。working tree が非空であることだけでは足りない (`.gitignore` 追記や作業ファイルで非空になりうるため)
@@ -408,7 +410,7 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
   context:{issue:$issue, phase_start_sha:$sha}}' >> "$JSONL"
 ```
 
-あわせて**フェーズスコープの変数を確定し、`$SCRATCH_DIR/env.sh` に書く** (Bash の呼び出しをまたぐと消えるため。値の一覧と意味は [references/phase-execution.md](./references/phase-execution.md) の `## 変数の定義`):
+あわせて**作業ファイル置き場を作り、フェーズスコープの変数を `$SCRATCH_DIR/env.sh` に書き出す** (Bash の呼び出しをまたぐと変数が消えるため。値の一覧と意味は [references/phase-execution.md](./references/phase-execution.md) の `## 変数の定義`)。**この順序で行う** — `SCRATCH_DIR` を作る前に env.sh は書けない:
 
 ```bash
 # 値は着手中の issue から取る (下は「フェーズ4-a: ノードの編集と階層操作」= issue #15 の例)
@@ -416,13 +418,27 @@ PHASE_ID="4-a"                          # issue タイトル `フェーズ<識�
 ISSUE=15                                # issue 番号
 PHASE="phase-$PHASE_ID"                 # JSONL の phase に入れる短縮識別子
 PHASE_NAME="フェーズ$PHASE_ID: ノードの編集と階層操作"   # agent へ渡す phase_name
-```
 
-作業ファイル置き場も作る (implementer の報告 JSON・検査結果 JSON・攻撃スクリプト等の置き場。**リポジトリの外に置く**ことでコミット対象への混入を防ぎ、エスカレ停止後の再入時にも残す):
-
-```bash
+# 作業ファイル置き場 (implementer の報告 JSON・検査結果 JSON・攻撃スクリプト等)。
+# **リポジトリの外に置く**ことでコミット対象への混入を防ぎ、エスカレ停止後の再入時にも残す
 SCRATCH_DIR="$RUN_DIR/reviews/$PHASE"
 mkdir -p "$SCRATCH_DIR"
+
+cat > "$SCRATCH_DIR/env.sh" <<EOF
+export PHASE="$PHASE"
+export PHASE_NAME="$PHASE_NAME"
+export PHASE_ID="$PHASE_ID"
+export ISSUE=$ISSUE
+export SCRATCH_DIR="$SCRATCH_DIR"
+export PHASE_START_SHA="$PHASE_START_SHA"
+EOF
+```
+
+以降このフェーズで Bash を呼ぶときは、冒頭で run スコープと合わせて `source` する:
+
+```bash
+. "$HOME/.claude/logs/dev-impl/<run_id>/env.sh"
+. "$SCRATCH_DIR/env.sh"
 ```
 
 
@@ -579,7 +595,7 @@ EXEMPTIONS_COUNT=$(jq 'length' "$SCRATCH_DIR/self-exemptions.json")
 
 **`EXEMPTIONS_COUNT` が 1 以上なのに review-tdd と review-adversarial のどちらも起動しないフェーズでは、免除が誰にも裁定されないまま通過する。** その場合は `verification_skipped` (source: `exemptions_unadjudicated`、context に免除の `claim` 一覧) を記録し、Step 5.6 の集約に載せる (沈黙させない)。
 
-出力が `[]` でも**ファイルは必ず作り、`exemptions_path` として review-tdd と review-adversarial に渡す** (免除が無かったことと、渡し忘れたことを区別できるようにする)。**`EXEMPTIONS_COUNT` は控えておく** — 結果を受け取ったとき、射影の `adjudicated` がこれを下回っていれば裁定が実行されていないので未検証として扱う (4.2d 手順 1)。**review-adversarial に渡しても fresh context 監査の趣旨は壊れない** — 渡すのは実装者が編纂した実装の説明ではなく「検証しないと宣言した項目の名指しリスト」であり、被監査者の主張をそのまま信じる材料ではなく攻撃対象の指定になるため。受け側の裁定手順は `claude/agents/review-*.md` の `Step 0: 自己免除の裁定`。
+出力が `[]` でも**ファイルは必ず作り、`exemptions_path` として review-tdd と review-adversarial に渡す** (免除が無かったことと、渡し忘れたことを区別できるようにする)。**`EXEMPTIONS_COUNT` は控えるのではなく、使う直前に `jq 'length' "$SCRATCH_DIR/self-exemptions.json"` で取り直す** (シェル変数は Bash 呼び出しをまたぐと消えるが、ファイルは残るため)。結果を受け取ったとき、射影の `adjudicated` がこれを下回っていれば裁定が実行されていないので未検証として扱う (4.2d 手順 1)。**review-adversarial に渡しても fresh context 監査の趣旨は壊れない** — 渡すのは実装者が編纂した実装の説明ではなく「検証しないと宣言した項目の名指しリスト」であり、被監査者の主張をそのまま信じる材料ではなく攻撃対象の指定になるため。受け側の裁定手順は `claude/agents/review-*.md` の `Step 0: 自己免除の裁定`。
 
 再 fan-out のたびに作り直す (追記ではなく上書き。前ラウンドで裁定済みのものは受け側が `upheld` として再掲する)。
 
@@ -671,7 +687,7 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
    - architecture-guard が `skip_reason: "diff_command_failed"` を返した (差分が取れておらず検査が成立していない。**修正ラウンドに乗せない** — 実装を直しても解消しない性質のため)
    - **architecture-guard の `unchecked_files` が非空** (差分の一部を見ていない。「違反 0 件」と「そのファイルを見ていない」を区別するための値なので、非空を `ok: true` と同一視しない)
    - **architecture-guard が `skip_reason: "no_layer_convention"` を返した**場合は**未検証にしない**。DESIGN 文書にも慣例にもレイヤ構造が無いプロジェクトで誤検知を出さないための意図的な素通りで、`checked_files: 0, ok: true` が正しい結果である (guard 側の規定と揃える)。ただし `verification_skipped` (source: `no_layer_convention`) には記録し、「レイヤ境界を検査していない run」であることを Step 5.6 の集約から読めるようにする
-   - **`exemptions_path` を渡した agent (review-tdd と review-adversarial の 2 つだけ) について、`EXEMPTIONS_COUNT` より `adjudicated` が少ない** (免除の裁定が実行されていない。裁定は実装者が「検証しない」と宣言した項目を第三者が裁く仕掛けで、実行を検証しないと自己申告のまま通る)。**`exemptions_path` を渡していない agent (architecture-guard / review-quality / review-product-readiness) にこの条件を適用しない** — 渡していないものを裁定できるはずがなく、免除が 1 件でもあるフェーズが全て偽の停止になる
+   - **`exemptions_path` を渡した agent (review-tdd と review-adversarial の 2 つだけ) について、`jq 'length' "$SCRATCH_DIR/self-exemptions.json"` で取り直した件数より `adjudicated` が少ない** (免除の裁定が実行されていない。裁定は実装者が「検証しない」と宣言した項目を第三者が裁く仕掛けで、実行を検証しないと自己申告のまま通る)。**`exemptions_path` を渡していない agent (architecture-guard / review-quality / review-product-readiness) にこの条件を適用しない** — 渡していないものを裁定できるはずがなく、免除が 1 件でもあるフェーズが全て偽の停止になる
 
    **review-product-readiness の `dev_server_unavailable` は未検証扱いにするが、修正ラウンドには乗せない。** 環境起因で実装者が直せる問題ではないため (architecture-guard の `diff_command_failed` と同じ性質)。そのフェーズの product-readiness を `verification_skipped` (source: `dev_server_unavailable`) として記録し、他の観点の fatal 判定は通常どおり続ける。
 
@@ -698,7 +714,7 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
      "$SCRATCH_DIR/review-<観点>-r${ROUND}.json" > "$SCRATCH_DIR/ride-<観点>-r${ROUND}.json"
    ```
 
-   architecture-guard の分は `.violations` を読む (`{ok, findings: [.violations[] | select(.severity=="high" or .severity=="medium")]}`)。**これらのファイルの生成者はこの手順だけ**で、4.2e 手順 4 の突合はこれらを spawn の成果物として数えない (main が書いたものなので)
+   architecture-guard の分は**キーを `violations` のまま出す** (`jq '{ok, violations: [.violations[] | select(.severity=="high" or .severity=="medium")]}'`)。`findings` に付け替えてはならない — implementer は `violations[]` を high/medium、`findings[]` を high だけ拾う規約なので (`claude/agents/dev-impl-implementer.md`)、付け替えると **guard の medium が誰にも直されず毎ラウンド再検出される**。**これらのファイルの生成者はこの手順だけ**で、4.2e 手順 4 の突合はこれらを spawn の成果物として数えない (main が書いたものなので)
 4. **`mode: fix` の `dev-impl-implementer` を起動**する。**モデルはラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (上記「修正ラウンドのモデル昇格」)。ラウンド 2 以降は指示文に「指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを確認せよ。族として閉じられない残りは報告の `open_questions` に明記せよ」を加える。渡すのは `findings_paths` (fatal を含む結果 JSON の絶対パスの配列) / `phase_context_path` / `repo_dir` / `report_path`。main は findings の本文を読まないし、修正内容を指示しない (fixer が JSON を自分で Read する)。**fixer が直す対象は「review-* の high」と「architecture-guard の high/medium」**で、fatal の定義と一致させてある (guard の medium が誰にも直されず空回りするのを防ぐため)。**報告を受けたら 4.2a と同じく main がコミットする** (「ラウンドごとのコミット」)
 5. 修正完了後、**再 fan-out は「fatal を出した観点 + architecture-guard」に絞って 4.2c に戻る**。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は**原則として `gating_decided` に記録した `gating_set` の部分集合**とする (`architecture-guard` は gating 対象外で常に実行するため、この判定の対象に含めない)。下記 2 つの場合に限り集合外の review-adversarial を追加してよく、追加したときは `gating_decided` を追記して事後に正当な例外だと分かるようにする:
 
@@ -799,11 +815,13 @@ bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
    # ので、修正ラウンドを回しても上書きで潰れず、起動回数と 1:1 で対応する。
    # 変換先は JSONL の context.agent と同じ綴りに揃える (guard → architecture-guard、
    # impl-report → dev-impl-implementer)。揃えないと差集合が全件ずれる
-   { ls "$SCRATCH_DIR"/guard-r*.json 2>/dev/null \
+   # zsh は未マッチの glob を NOMATCH エラーにし `2>/dev/null` では抑止できないので、
+   # ls + glob ではなく find を使う (4.2c の self-exemptions 抽出と同じ形)
+   { find "$SCRATCH_DIR" -maxdepth 1 -name 'guard-r*.json' \
        | sed 's|.*/||; s|\.json$||; s|^guard-|architecture-guard-|';
-     ls "$SCRATCH_DIR"/review-*-r*.json 2>/dev/null \
+     find "$SCRATCH_DIR" -maxdepth 1 -name 'review-*-r*.json' \
        | sed 's|.*/||; s|\.json$||';
-     ls "$SCRATCH_DIR"/impl-report*.json 2>/dev/null \
+     find "$SCRATCH_DIR" -maxdepth 1 -name 'impl-report*.json' \
        | sed 's|.*/||; s|\.json$||;
               s|^impl-report$|dev-impl-implementer-r0|;
               s|^impl-report-fix-|dev-impl-implementer-r|;
@@ -1051,7 +1069,7 @@ findings ごとの分岐:
 
 それ以外:
 
-1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing`) ごとに **`docs/TODO.md` にフェーズを追記し、Step 4.6 の「新フェーズの issue 化」を実行する** (issue 作成・親への紐付け・`phase_added` の記録・Step 2 の再抽出まで、手順はすべてそこに集約してある)。本ステップ固有の中身は次のとおり:
+1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing` / `holdout_test_failed`) ごとに **`docs/TODO.md` にフェーズを追記し、Step 4.6 の「新フェーズの issue 化」を実行する** (issue 作成・親への紐付け・`phase_added` の記録・Step 2 の再抽出まで、手順はすべてそこに集約してある)。本ステップ固有の中身は次のとおり:
 
    - **`## DoD`**: 未達を検出した検証コマンドをそのまま入れる
    - **`## 対応ゴール`**: その未達ゴールの識別子を書く
@@ -1077,14 +1095,7 @@ Step 5 のゴール判定後、`docs/POST_MVP.md` に **「UI/UX gap」セクシ
 
 **実行しなかった検証は「成功」と区別できるよう必ず可視化する** (沈黙は成功に見えるため)。以下の事象は発生時に JSONL へ `event_type: verification_skipped` を記録し、ここで集約して Step 6 サマリに列挙する。**集約は `context.source` で分類して並べる** (値と context の形は [references/logging.md](./references/logging.md) の `verification_skipped` の `source` 表が正):
 
-- dev_server が推定できず skip した review-product-readiness / G_E2E 検証 (source: `dev_server_missing`)
-- review-product-readiness が dev サーバを起動できなかったフェーズ (source: `dev_server_unavailable`)
-- issue の `## DoD` から取り出せた自動コマンドが 0 件だったフェーズ (source: `dod_no_automated`。手動系だけなのか抽出の空振りなのかを区別できないため、通過扱いにしない)
-- fix-lsp-warnings の失敗 (警告残存のまま継続した場合。source: `lsp_fix_failed`)
-- 手動 pending のゴール
-- implementer 報告の `verification_skipped` (Step 4.2e 手順 6 で転記済みのもの)
-- `full_test_command` が Bash の 600 秒上限でタイムアウトした実行 (Step 4.2e)
-- review-adversarial の `skipped_lenses` が非空だったフェーズ (レンズ A / C の未実行。`mode: weakening_only` による縮退のほか、`full` でも docs_dir に TODO.md が無ければレンズ C が落ちる。いずれも規定どおりの挙動だが、検査済みと区別する)
+**集約の対象は [references/logging.md](./references/logging.md) の `verification_skipped` の `source` 表が正**で、ここでは列挙し直さない (2 箇所に列挙を持つと片方だけが更新されて取りこぼす)。`source` ごとにまとめ、それぞれ「何を検証しなかったか」と「なぜか」を 1 行で書く。
 
 ##### status 判定
 
