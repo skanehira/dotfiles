@@ -393,6 +393,17 @@ function escape(s) {
 2. entries を event_type で分類 (phases / decisions / review_low / design_decisions / open_questions / pocs / goals)。JSONL 記録時点で重複排除済みのため、`design_decision_count` / `open_question_count` は分類後の配列の件数 (`.length`) をそのまま使う。**issue 完了数は `impl_done` の件数**で数える
 3. 上記テンプレ各セクションを順に組み立て (template literal で文字列構築)
 4. 1 つの HTML 文字列にして Write
-5. `git add` + `git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"`
+5. `git add` してコミットする。本文フッタは `rules/core/commit.md` の必須項目なので 1 行 `-m` にしない:
+
+   ```bash
+   git commit -m "$(cat <<'EOF'
+📝 docs: dev-impl <run_id> 実行レポート
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+   ```
 
 dev-impl は単純な文字列組み立てで HTML を作る (ビルドツール不要、外部 npm 依存なし)。
