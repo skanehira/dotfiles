@@ -341,7 +341,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 - **`OPEN × 8` を `run_spawns` と直接比べてはならない。** 前者は「これから使ってよい量」、後者は「すでに使った量」で、比べる単位が違う。直接比べると issue を close するたびに上限が下がるので、**正常に完了した作業そのものが停止理由になる** (実測: 5 フェーズ完了・`run_spawns` 74 の run で残 `OPEN` が 10 件 → 上限 80。次の 1 件を close した瞬間に `OPEN` 9 件 → 上限 72 となり、消費済み 80 を下回って breach する)。さらに Step 5 (ゴール達成判定) では定義上 `OPEN` が 0 件になるため上限も 0 になり、`review-spec-compliance` / `review-product-readiness` の起動が必ず上限違反になる
 - **再入で予算が増えるのは意図した挙動である。** `spawn_budget_exceeded` は「再実行で解決しうる」停止理由に分類されている (「エスカレ停止時の挙動」の表) ので、再入で予算が一切増えないなら、再実行しても同じ状態のまま即座に再停止して何も解決しない。予算の追加付与を人間の再起動に紐づけることで、1 セッション内の暴走は有限の `run_spawns_budget` で止めたまま、正当な継続だけが人間の判断を挟んで前進する
 - `run_spawns_budget` は更新のたびに JSONL の `start` / `phase_added` の `context` に記録する (compaction や再入をまたいでも値を復元できるように)。復元は記録済みの値の**最大**を採る (上方向にしか動かないので一意に決まる)
-- **Agent ツールで subagent を起動する箇所は、本スキルに 7 つある** — 4.2a (implementer)、4.2b (fix-lsp-warnings)、4.2c (検査 fan-out)、4.2d 手順 4 (`mode: fix` の implementer)、4.2e のテストゲート再試行 (`mode: fix` の implementer)、Step 5.2 (監査 agent)、Step 1.5 の `tech-investigation` (未解決 PoC を実装中に検証する個別呼び出し)。**この 6 つすべてで、起動する直前に `event_type: spawn` を JSONL へ書き、`phase_spawns` / `run_spawns` を進める。** 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる (4.2c 参照)
+- **Agent ツールで subagent を起動する箇所は、本スキルに 7 つある** — 4.2a (implementer)、4.2b (fix-lsp-warnings)、4.2c (検査 fan-out)、4.2d 手順 4 (`mode: fix` の implementer)、4.2e のテストゲート再試行 (`mode: fix` の implementer)、Step 5.2 (監査 agent)、Step 1.5 の `tech-investigation` (未解決 PoC を実装中に検証する個別呼び出し)。**この 7 つすべてで、起動する直前に `event_type: spawn` を JSONL へ書き、`phase_spawns` / `run_spawns` を進める。** 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる (4.2c 参照)
 - 記録が欠けると `run_spawns` の予算判定が実態より小さい値で走る。**フェーズを閉じる直前 (4.2e 手順 4) に成果物と突合して補記する**のが二段目の歯止めだが、成果物 JSON を出さない fix-lsp-warnings は補記でも拾えないので、一段目 (起動前の記録) を落とさないことが要点である
 
 ### main のコンテキスト規律
@@ -411,15 +411,17 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 あわせて**フェーズスコープの変数を確定し、`$SCRATCH_DIR/env.sh` に書く** (Bash の呼び出しをまたぐと消えるため。値の一覧と意味は [references/phase-execution.md](./references/phase-execution.md) の `## 変数の定義`):
 
 ```bash
-PHASE="phase-<識別子>"                 # JSONL の phase に入れる短縮識別子
-PHASE_NAME="フェーズ<識別子>: <名前>"   # issue タイトル形式。agent へ渡す phase_name
-ISSUE=<issue 番号>
+# 値は着手中の issue から取る (下は「フェーズ4-a: ノードの編集と階層操作」= issue #15 の例)
+PHASE_ID="4-a"                          # issue タイトル `フェーズ<識別子>: <名前>` の識別子
+ISSUE=15                                # issue 番号
+PHASE="phase-$PHASE_ID"                 # JSONL の phase に入れる短縮識別子
+PHASE_NAME="フェーズ$PHASE_ID: ノードの編集と階層操作"   # agent へ渡す phase_name
 ```
 
 作業ファイル置き場も作る (implementer の報告 JSON・検査結果 JSON・攻撃スクリプト等の置き場。**リポジトリの外に置く**ことでコミット対象への混入を防ぎ、エスカレ停止後の再入時にも残す):
 
 ```bash
-SCRATCH_DIR=$RUN_DIR/reviews/phase-<識別子>
+SCRATCH_DIR="$RUN_DIR/reviews/$PHASE"
 mkdir -p "$SCRATCH_DIR"
 ```
 
@@ -673,8 +675,8 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
 
    **review-product-readiness の `dev_server_unavailable` は未検証扱いにするが、修正ラウンドには乗せない。** 環境起因で実装者が直せる問題ではないため (architecture-guard の `diff_command_failed` と同じ性質)。そのフェーズの product-readiness を `verification_skipped` (source: `dev_server_unavailable`) として記録し、他の観点の fatal 判定は通常どおり続ける。
 
-   **agent の失敗は「一過性」と「決定的」を分けて扱う。** タイムアウト・JSON 破損・一時的なエラー終了は `in-progress` のまま再実行で解決しうるが、**`TOO_MANY_FILES` / `NO_DESIGN_DOCS` / スキーマ不適合 / `diff_command_failed` は決定的**で、同じ入力なら何度再実行しても同じ結果になる。決定的な失敗と、同一フェーズで同じ agent が 2 回続けて失敗した場合は **`needs-human` に振り分ける** (「エスカレ停止時の挙動」の表)。決定的な失敗を「再実行で解決しうる」に入れると、人間に渡る経路が無いまま同じ停止を繰り返す
-2. **fatal の定義**: review-* の severity: high、または architecture-guard の `violations` のうち severity が high / medium のもの。fatal 0 件 → 4.2e へ。**ただし review-adversarial の `test_weakened` / `vacuous_assertion` / `skip_added` / `tautological_test` は confidence と severity に関わらず fatal に数えない** — 手順 7 のトレース確認・エスカレ経路が優先する (実装者自身に弱体化を直させないため)。**この 4 つの rule 名は `claude/agents/review-adversarial.md` の `rule` enum を正とし、本手順・手順 7・`claude/agents/dev-impl-implementer.md` の 3 箇所を同じ集合に保つ** (どこか 1 つに漏れると、その rule だけが実装者に直させる経路へ流れて必ず空回りする)。
+   **agent の失敗は「一過性」と「決定的」を分けて扱う。** タイムアウト・JSON 破損・一時的なエラー終了は `in-progress` のまま再実行で解決しうるが、**`TOO_MANY_FILES` / `NO_DESIGN_DOCS` / スキーマ不適合 / `diff_command_failed` / `unchecked_files` 非空 / `adjudicated` 不足 は決定的**で、同じ入力なら何度再実行しても同じ結果になる。決定的な失敗と、同一フェーズで同じ agent が 2 回続けて失敗した場合は **`needs-human` に振り分ける** (「エスカレ停止時の挙動」の表)。決定的な失敗を「再実行で解決しうる」に入れると、人間に渡る経路が無いまま同じ停止を繰り返す
+2. **fatal の定義**: review-* の severity: high、または architecture-guard の `violations` のうち severity が high / medium のもの。fatal 0 件 → 4.2e へ。**ただし review-adversarial の `test_weakened` / `vacuous_assertion` / `skip_added` / `tautological_test` は confidence と severity に関わらず fatal に数えない** — 手順 7 のトレース確認・エスカレ経路が優先する (実装者自身に弱体化を直させないため)。**この 4 つの rule 名は `claude/agents/review-adversarial.md` の `rule` enum を正とし、本手順・手順 7・「関連スキル / agent」節・`claude/agents/dev-impl-implementer.md` の 4 箇所を同じ集合に保つ** (どこか 1 つに漏れると、その rule だけが実装者に直させる経路へ流れて必ず空回りする)。
 
    **main は agent が付けた severity を変更しない (昇格も降格もしない)。** 修正ラウンドを起こすのは上記の fatal だけで、medium / low を「重要そうだから」と high 扱いにして新ラウンドを起こすことはしない。過小評価は agent 側の severity 基準 (各 agent 定義の「severity の判定基準」節 (節を持たない agent は該当する判定記述)) を直して解決する問題であり、実行時の裁量で埋めるとラウンド数が判定基準なしに増える (実測で 9 ラウンド中 2 ラウンド以上が裁量昇格のみで起動していた)。
 
@@ -1126,7 +1128,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 - Step 4.2 のフェーズ内エスカレ条件 (`phase_fix_exceeded` / `guard_agent_failed` / `review_agent_failed` / `spawn_budget_exceeded` / `tests_failing_before_commit` / `working_tree_polluted`)
 - P3 検出 (DESIGN.md 概要レベルの再設計必要 = `design_overview_break`)
 - `goal_loop > 2` (ゴール達成判定 → 未達対応の 3 周回でも未達ゴール残存)
-- 必須ドキュメント (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) 欠如
+- 必須ドキュメント (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) 欠如 (`docs_missing`)
 - `blocker=true` の POC_NEEDED マーカーが残存 (`poc_marker_unresolved`。dev-spec フェーズ 5 で解決してから再実行)
 - Step 1 構造ゲートの欠落 (`design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing`)
 - Step 1 の GitHub 前提条件が解決できない (`github_prereq_failed` = `gh` が使えない / issue が未生成) / issue の取得が `$LIMIT` に張り付いた (`issue_list_truncated` = 一部の issue が見えていない)
@@ -1141,17 +1143,15 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
 1. **ラウンドのコミットはそのまま残す。** フェーズ範囲のテストは緑で、「ラウンドごとのコミット」の条件を満たしているため履歴に置いてよい。**フェーズ最終コミット (4.2e) は打たず、TODO.md の `- [x]` 化もしない** — 全体スイートと DoD を通っていないので、そのフェーズは完了していない。作業ツリーは clean のはずで、非クリーンなら 4.2d 手順 8 の汚染なので `git restore` で戻してから停止する。**issue のラベルを停止理由で振り分ける**:
 
-   | 停止理由 | ラベル | 再開のしかた |
-   | --- | --- | --- |
-**上から順に評価し、最初に当てはまった行を採る** (`verification_tampered` のように複数行の記述に当てはまりうる理由があるため、順序が意味を持つ):
+   **上から順に評価し、最初に当てはまった行を採る** (`verification_tampered` のように複数行の記述に当てはまりうる理由があるため、順序が意味を持つ):
 
    | # | 停止理由 | ラベル | 再開のしかた |
    | - | --- | --- | --- |
-   | 1 | **着手中の issue が無い時点での停止** — Step 1 / 1.5 / 2 の停止 (`design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing` / `poc_marker_unresolved` / `github_prereq_failed` / `issue_list_truncated` / `dependency_blocked` / `issue_incomplete`) と Step 5 系の停止 (`goal_loop > 2` / `verification_tampered` / `acceptance_criteria_change`) | ラベル操作は行わない (対象の issue が無い) | JSONL の `p3_escalate` を駐車マーカーとし、**Step 0 手順 4 が再入時にユーザーへ確認してから再開する** |
+   | 1 | **着手中の issue が無い時点での停止** — Step 1 / 1.5 / 2 の停止 (`docs_missing` / `design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing` / `poc_marker_unresolved` / `github_prereq_failed` / `issue_list_truncated` / `dependency_blocked` / `issue_incomplete`) と Step 5 系の停止 (`goal_loop > 2` / `verification_tampered` / `acceptance_criteria_change`) | ラベル操作は行わない (対象の issue が無い) | JSONL の `p3_escalate` を駐車マーカーとし、**Step 0 手順 4 が再入時にユーザーへ確認してから再開する** |
    | 2 | 人間の判断が要るもの (P3 = `design_overview_break` / `test_weakening_detected` / `working_tree_polluted` / **決定的な** `guard_agent_failed` / `review_agent_failed`) | **`needs-human` を貼り `in-progress` を外す** | 人間が対応した後、次の `/dev-impl` 起動時に Step 0 が確認してラベルを `ready` に戻す |
    | 3 | 再実行で解決しうるもの (`phase_fix_exceeded` / `spawn_budget_exceeded` / `tests_failing_before_commit` / **一過性の** `guard_agent_failed` / `review_agent_failed`) | `in-progress` のまま | `/dev-impl` の再実行で Step 2 が再開対象として拾う |
 
-   **agent 失敗の「一過性」と「決定的」の区別は 4.2d 手順 1 に従う** (タイムアウト・JSON 破損は一過性、`TOO_MANY_FILES` / `NO_DESIGN_DOCS` / スキーマ不適合 / `diff_command_failed` と 2 回連続の失敗は決定的)。決定的な失敗を再実行側に入れると、同じ入力で同じ停止を繰り返すだけで人間に渡る経路が無くなる。
+   **agent 失敗の「一過性」と「決定的」の区別は 4.2d 手順 1 に従う** (タイムアウト・JSON 破損は一過性、`TOO_MANY_FILES` / `NO_DESIGN_DOCS` / スキーマ不適合 / `diff_command_failed` / `unchecked_files` 非空 / `adjudicated` 不足 と 2 回連続の失敗は決定的)。決定的な失敗を再実行側に入れると、同じ入力で同じ停止を繰り返すだけで人間に渡る経路が無くなる。
 
    人間の判断が要る側で `in-progress` のままにしてはならない。**再実行がそのまま同じ状態から再開してしまい、人間が何もしていないのに前進したように見える**ため。
 2. 停止理由を `~/.claude/logs/dev-impl.log` と JSONL (`event_type: p3_escalate`) と stdout 全てに詳細出力
@@ -1183,7 +1183,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 - **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.2c の fan-out に毎フェーズ含める、haiku)
 - **fix-lsp-warnings**: Lua/Neovim の LSP 警告修正 (Step 4.2b、haiku)。修正する agent なので検査 fan-out には混ぜず単独・逐次で走らせる
 - **review-tdd / review-quality / review-product-readiness**: Step 4.2c から `model: opus` 明示で並列起動 (観点 gating・起動条件は Step 4.2c 参照)。review-quality は rules 準拠 + アーキテクチャ heuristic を統合。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査 (Step 5.2 の G_E2E 判定も担当)
-- **review-adversarial**: Step 4.2c から `model: sonnet` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・アサーションの空虚化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず `docs_dir` の TODO.md から当該フェーズの節を自分で読み直し、その完了主張に反証を試みる) で検査。**毎フェーズは `mode: weakening_only` (レンズ B のみ) で走り、消費型資源・認証・テスト差分なしの大量実装・最後の issue のフェーズだけ `mode: full` (A+B+C) に上げる** (Step 4.2c の mode 決定表)。機械スキップ述語 (Step 4.2c 参照) を満たせば skip 可。`test_weakened` / `vacuous_assertion` / `skip_added` は confidence に関わらず修正ラウンドに乗せず即エスカレ判定に直結する (詳細は Step 4.2d)
+- **review-adversarial**: Step 4.2c から `model: sonnet` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・アサーションの空虚化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず `docs_dir` の TODO.md から当該フェーズの節を自分で読み直し、その完了主張に反証を試みる) で検査。**毎フェーズは `mode: weakening_only` (レンズ B のみ) で走り、消費型資源・認証・テスト差分なしの大量実装・最後の issue のフェーズだけ `mode: full` (A+B+C) に上げる** (Step 4.2c の mode 決定表)。機械スキップ述語 (Step 4.2c 参照) を満たせば skip 可。`test_weakened` / `vacuous_assertion` / `skip_added` / `tautological_test` は severity と confidence に関わらず修正ラウンドに乗せず、トレース確認の経路に直結する (詳細は Step 4.2d)
 
 - **review-spec-compliance**: Step 5.2 から `model: opus` 明示で起動する第三者受入監査 (mode: post-impl)。承認ハッシュの独立照合・自動系ゴール検証コマンドの独立再実行・成果物全体 ↔ 詳細設計の突合・検証コマンドの空虚性検査。PHASE_CONTEXT 抜粋は渡さず docs を自分で全文 Read させる (被監査者が編纂した入力を信用しない)。`PRODUCT_MODE=cli` では G_E2E 検証コマンドの実行もこの agent が担当する (review-product-readiness は起動しないため)
 - **security-guidance プラグイン**: セキュリティレビューはこのプラグイン (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review) に委譲。自作 subagent は持たない

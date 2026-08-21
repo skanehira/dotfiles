@@ -20,7 +20,7 @@ docs_dir: docs/                    # 設計成果物のディレクトリ
 approved_stamp: "<TODO.md 1 行目の承認スタンプをそのまま>"   # post-impl のみ
 run_start_sha: <SHA>               # post-impl のみ。dev-impl 開始時点の commit
 decisions_jsonl: <path>            # post-impl のみ。dev-impl の意思決定ログ
-output_path: /tmp/review-spec-compliance-<id>.json
+output_path: <呼び出し側が渡す絶対パス。dev-impl では $RUN_DIR/review-spec-compliance.json>
 holdout_enabled: true | false      # post-impl のみ。省略時 false (PoC 機能、デフォルト無効)
 ```
 

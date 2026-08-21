@@ -19,6 +19,7 @@
 | `AGENTS_TO_SPAWN` | 各 fan-out の直前 | `<agent>:<model>:<mode>` を**改行区切り**で並べた文字列 (mode 無しは `-`)。空白区切りにしない — zsh は `$VAR` を単語分割しない |
 | `PHASE_SPAWNS` / `RUN_SPAWNS` | Step 4.1 (フェーズ) / Step 0 か Step 1 (run) | カウンタの現在値。復元の正は `spawn` イベントの件数 (logging.md) |
 | `REPORT_PATH` | implementer 起動の直前 | 起動の種類ごとに分ける: `impl-report.json` (初回) / `impl-report-fix-<round>.json` (修正ラウンド) / `impl-report-testgate-<test_gate_retry>.json` (4.2e の再試行) / `impl-report-retry-<phase_fix_round>.json` (`impl_report_invalid` の再起動)。**衝突させない** — 4.2e 手順 4 の突合が成果物とラウンドを 1:1 で対応させるため |
+| `EXEMPTIONS_COUNT` | 4.2c の事前ブロック | `jq 'length' "$SCRATCH_DIR/self-exemptions.json"`。**消えても再算出できる** (ファイルが残るため) ので env.sh には入れず、4.2d 手順 1 で使う直前に取り直してよい |
 | `RESULT_JSON` | 検査結果を読む時 | 検査 agent が `output_path` に書いた結果 JSON のパス |
 
 **`PHASE` と `PHASE_NAME` を取り違えない。** JSONL の集計は `PHASE` (短縮識別子) で行い、同じフェーズが 2 表記で混ざるとレポートのフェーズ集計が割れる。
@@ -288,7 +289,7 @@ git diff "${PHASE_START_SHA}" -U0 -- '*.rs' | rg '^\+.*#\[ignore\]' || true
 
 SKILL.md 4.2e 手順 6 の転記は、**項目ごとに Bash を呼ばず 1 回の実行で全件を流し込む**。実測 (4 フェーズ) で JSONL 239 件中 121 件が `design_decision` / `open_question` の転記で、これを逐次実行すると main の往復がフェーズあたり 30 回近く増える。
 
-`REPORT_PATH` は implementer 報告 (`report_path`) の絶対パス、`JSONL` は当該 run の `decisions.jsonl`、`PHASE_NAME` は `## 4.2: 事前判定` で PHASE_CONTEXT から代入したフェーズ識別子だが、**JSONL の `phase` には 1 行ログと同じ短い識別子 (`phase-3` 形式) を入れる** (フェーズ名そのままだと同じフェーズが別表記で混ざり、HTML レポートのフェーズ集計が割れる)。
+`REPORT_PATH` は implementer 報告 (`report_path`) の絶対パス、`JSONL` は当該 run の `decisions.jsonl`、`PHASE` は Step 4.1 で代入した短縮識別子で、**JSONL の `phase` にはこれを入れる** (1 行ログと同じ `phase-3` 形式) (フェーズ名そのままだと同じフェーズが別表記で混ざり、HTML レポートのフェーズ集計が割れる)。
 
 ```bash
 jq -c --arg phase "$PHASE" --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" '
