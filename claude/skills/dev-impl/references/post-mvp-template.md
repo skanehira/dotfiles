@@ -19,7 +19,7 @@
 - <review-product-readiness や手動チェックで残った a11y 違反>
 
 ### 視覚的回帰参照
-- スナップショット: /tmp/review-product-readiness-snapshots/<phase>/
+- スナップショット: `<run_dir>/reviews/phase-<識別子>/product-readiness-snapshots/` (review-product-readiness へ `snapshot_dir` として渡した場所)
 ```
 
 各項目は **dev-impl が自動でログ / review 結果から収集して埋める** (decisions.jsonl / review-product-readiness の findings / G_E2E 判定結果から)。

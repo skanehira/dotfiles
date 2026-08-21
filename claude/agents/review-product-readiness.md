@@ -32,7 +32,7 @@ dev_server:
   url: http://localhost:5173/   # デフォルト、dev-impl が project 別に渡す
   start_command: pnpm dev        # 起動コマンド
 output_path: /tmp/review-product-readiness-<phase>.json
-snapshot_dir: /tmp/review-product-readiness-snapshots/<phase>/
+snapshot_dir: <呼び出し側が渡す絶対パス。dev-impl では $SCRATCH_DIR/product-readiness-snapshots/>
 ```
 
 ## 検査観点
@@ -125,9 +125,9 @@ echo $! > "$SNAPSHOT_DIR/dev-server.pid"     # 停止用に PID を残す
 # 起動完了を待つ (PORT が listen するまで)
 ```
 
-**自分で起動した dev サーバは、検査を終える前に必ず停止する** (`kill "$(cat "$SNAPSHOT_DIR/dev-server.pid")"`)。停止しないとプロセスが agent 終了後も残り、以降のフェーズ・以降の run が「既に起動中」と誤認して**古いコードのサーバを検査し続ける**。既に起動中だった場合は自分では起動も停止もしない (PID ファイルを作らない)。
+**自分で起動した dev サーバは、検査を終える前に必ず停止する。** 異常終了しても取り残さないよう、起動直後に `trap` を仕掛けてから検査に入る (`trap 'kill "$(cat "$SNAPSHOT_DIR/dev-server.pid" 2>/dev/null)" 2>/dev/null; rm -f "$SNAPSHOT_DIR/dev-server.pid"' EXIT`)。停止したら PID ファイルも消す — **ファイルだけが残ると次回以降が「既に起動中」と誤認する**。停止しないとプロセスが agent 終了後も残り、以降のフェーズ・以降の run が「既に起動中」と誤認して**古いコードのサーバを検査し続ける**。既に起動中だった場合は自分では起動も停止もしない (PID ファイルを作らない)。
 
-起動失敗 → `findings` に `rule: dev_server_unavailable`, **`severity: medium`** のエントリを 1 件追加した上で Step 4 (JSON 出力) に進み終了する (他の観点の Step 2/3 は skip)。**`high` にしない** — dev-impl の fatal 判定は `severity: high` を修正ラウンドに載せるが、これは環境起因で実装者が直せる問題ではなく、修正ラウンドが空回りするため (architecture-guard の `diff_command_failed` と同じ扱い)。呼び出し側はこの rule を見たら当該フェーズの product-readiness を**未検証**として `verification_skipped` (source: `dev_server_missing`) に記録する。`findings: []` の「問題なし」として素通りさせないことが要点なので、severity を下げても finding 自体は必ず出す。
+起動失敗 → `findings` に `rule: dev_server_unavailable`, **`severity: medium`** のエントリを 1 件追加した上で Step 4 (JSON 出力) に進み終了する (他の観点の Step 2/3 は skip)。**`high` にしない** — dev-impl の fatal 判定は `severity: high` を修正ラウンドに載せるが、これは環境起因で実装者が直せる問題ではなく、修正ラウンドが空回りするため (architecture-guard の `diff_command_failed` と同じ扱い)。呼び出し側はこの rule を見たら当該フェーズの product-readiness を**未検証**として `verification_skipped` (source: `dev_server_unavailable`) に記録する (`dev_server_missing` は「そもそも dev_server を推定できず起動を試みなかった」場合の source で、別物)。`findings: []` の「問題なし」として素通りさせないことが要点なので、severity を下げても finding 自体は必ず出す。
 
 ### Step 2: 静的解析 (観点 2-5)
 
@@ -159,7 +159,7 @@ chrome-devtools MCP で:
   "dimension": "product_readiness",
   "phase_name": "...",
   "checked_files": 12,
-  "snapshots_dir": "/tmp/review-product-readiness-snapshots/<phase>/",
+  "snapshots_dir": "<入力の snapshot_dir をそのまま>",
   "findings": [
     {
       "file": "apps/web/src/App.tsx",

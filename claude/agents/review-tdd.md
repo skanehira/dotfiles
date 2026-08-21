@@ -154,6 +154,9 @@ related_source_files が指定されていればそれを優先。それ以外�
   "dimension": "tdd",
   "phase_name": "...",
   "checked_files": 12,
+  "adjudicated_exemptions": [
+    { "claim": "e2e の実行", "verdict": "refuted|upheld|unverifiable", "evidence": "どう確かめたか" }
+  ],
   "findings": [
     {
       "file": "src/auth/auth-service.test.ts",

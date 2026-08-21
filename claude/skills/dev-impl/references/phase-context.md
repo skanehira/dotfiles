@@ -50,6 +50,7 @@ poc_results:                             # dev-spec フェーズ 5 が FEASIBILI
 dev_server:                              # review-product-readiness (Step 4.2c) 用。Web プロダクトでなければ null
   url: <検出できた URL>
   start_command: <package.json の dev/start script>
+snapshot_dir: <$SCRATCH_DIR/product-readiness-snapshots/ の絶対パス>  # 視覚的回帰の参考データと dev サーバの PID ファイルの置き場
 ```
 
 ## 抜粋ロジック
@@ -168,6 +169,7 @@ run 全体で 1 ファイル (`docs/.dev-impl/<run_id>/RUN_FACTS.md`)。**親だ
 | 受け取る側 | PHASE_CONTEXT |
 | --- | --- |
 | implementer (implement / fix) | 絶対パスを渡す |
-| review-tdd / review-quality / review-product-readiness | 絶対パスを渡す |
+| review-tdd | 絶対パスを渡す。**加えて `exemptions_path` (`$SCRATCH_DIR/self-exemptions.json`) を渡す** — 免除 0 件でも必ず渡し、受け側は `adjudicated_exemptions` を返す (SKILL.md 4.2c / 4.2d 手順 1) |
+| review-quality / review-product-readiness | 絶対パスを渡す。review-product-readiness には加えて `repo_dir` (絶対パス) を渡す |
 | architecture-guard | **渡さない** (`claude/agents/architecture-guard.md` の入力節が PHASE_CONTEXT を受け取らないため。代わりに `design_path` / `design_detail_path` / `target_diff` / `PHASE_START_SHA` / `repo_dir` / `output_path` を直接渡す) |
-| review-adversarial | **渡さない** (fresh context 監査のため、`mode` / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / output_path のみを直接渡す。`mode` は SKILL.md 4.2c で確定した `full` / `weakening_only`。省略すると agent 側の既定で `full` になる。`weakening_only` のときは docs_dir / dev_server を渡さない) |
+| review-adversarial | **渡さない** (fresh context 監査のため、`mode` / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / **`exemptions_path`** / output_path のみを直接渡す。`exemptions_path` は免除 0 件でも必ず渡す — 渡すのは実装の説明ではなく「検証しないと宣言した項目の名指しリスト」なので fresh context の趣旨は壊れない。`mode` は SKILL.md 4.2c で確定した `full` / `weakening_only`。省略すると agent 側の既定で `full` になる。`weakening_only` のときは docs_dir / dev_server を渡さない) |
