@@ -138,3 +138,13 @@ comm -13 $RUN_DIR/linked.txt $RUN_DIR/all-children.txt   # 未紐付けの子 = 
 ```
 
 `gh issue reopen` を無条件で打たない (open な親に打つと不要な通知とコメントが残る)。紐付け本体のコマンドと API 仕様 (numeric id を `-F` で渡す・二重紐付けの 422・`replace_parent`) は `../dev-spec/SKILL.md` の 12.4.3 に従う。
+
+## Step 4.6: 設計乖離のシグナル元と分類
+
+implementer 報告の `deviation_signals` を main が `report_path` から `jq` で集め、P 値に分類する。
+
+| シグナル元                                                                          | type                    | 分類                | 対処                                                           |
+| ----------------------------------------------------------------------------------- | ----------------------- | ------------------- | -------------------------------------------------------------- |
+| implementer 報告                                                                    | `todo_minor`            | P1 (TODO 軽微)      | 下記「P1 動的修正」へ                                          |
+| implementer 報告 / review-quality の design 整合 finding (severity: medium)         | `design_detail_gap`     | P2 (詳細設計の不足) | 下記「P2 動的修正」へ                                          |
+| implementer 報告の `design_overview_break`                                          | `design_overview_break` | P3 (概要設計の破綻) | エスカレ停止 (Step 4.2 内で検知した時点で commit 前に停止済み) |
