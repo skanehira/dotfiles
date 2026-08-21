@@ -151,7 +151,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 
 `event_type: start` (run 開始時の 1 件。再入した run では再入のたびに 1 件) の `context` には **`repo_root` (`git rev-parse --show-toplevel` の絶対パス)** と `start_sha` を必ず入れる。`~/.claude/logs/dev-impl/` は全プロジェクト共通のディレクトリなので、これが無いと SKILL.md Step 0 の「同一プロジェクトで未完了の run があるか」を機械判定できない。
 
-**あわせて `run_spawns_budget` (SKILL.md Step 1 で確定した `run_spawns` の上限) を入れる。** フェーズ単位の `start` (再入時の書き直しを含む) には **`phase_spawns_budget`** (既定 33、再入時は引き上げ後の値) も入れる — 復元は記録値の最大を採る。 この値と `phase_added` の同名フィールドだけが予算の記録先で、再入時の復元は両者に記録された値の**最大**を採る (予算は上方向にしか動かないため一意に決まる)。記録が無いと、compaction や再入をまたいだ時点で上限を「記憶」で判断することになる。
+**あわせて `run_spawns_budget` (SKILL.md Step 1 で確定した `run_spawns` の上限) を入れる。** フェーズ単位の `start` (再入時の書き直しを含む) には **`phase_spawns_budget`** (既定 33) と **`phase_fix_budget`** (既定 3) も入れる。いずれも再入時は引き上げ後の値を書き、復元は記録値の最大を採る。 この値と `phase_added` の同名フィールドだけが予算の記録先で、再入時の復元は両者に記録された値の**最大**を採る (予算は上方向にしか動かないため一意に決まる)。記録が無いと、compaction や再入をまたいだ時点で上限を「記憶」で判断することになる。
 
 **`event_type: start` はフェーズ開始時にも 1 件書く** (`phase` に短縮識別子、`step: "start"`)。この場合の `context` には **`phase_start_sha` (SKILL.md 4.1 で取った `git rev-parse HEAD`) と `issue` (issue 番号) を必ず入れる**。`phase_start_sha` は、中断したフェーズの提示 (`git log <SHA>..HEAD`)・破棄 (`git reset --hard <SHA>`)・検査 agent への基準点の受け渡し のすべての起点で、**再入時にこれを復元できないと Step 0 の「続きとして取り込む / 捨てる」分岐が成立しない**。run 単位の `start` とはどちらも `phase` の値で区別する (run 単位は `"run"`)。
 
