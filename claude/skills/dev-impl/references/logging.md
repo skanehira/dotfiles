@@ -121,7 +121,9 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 | `spec_lookup` | info | 同上 | `path` (PHASE_CONTEXT の抜粋で足りず implementer が自分で Read した設計書のパスと節)。抜粋精度を事後に確認するために残す |
 | `verification_skipped` | warn | 検証を実行しなかった / できなかった時 (記録箇所は下表) | **`source` を必ず入れる** (context の形が発生源ごとに違うため、Step 5.6 の集約はこれで分岐する)。値と形は下表 |
 | `run_facts_updated` | info | RUN_FACTS.md への追記後 (SKILL.md 4.2e のコミット後) | `phase` / `sections` (更新した節名の配列: `commands` / `artifacts` / `design_decisions` / `pitfalls`) / `bytes` (更新後のファイルサイズ。4KB 上限の監視用) |
-| `working_tree_polluted` | warn | 検査 fan-out の後に作業ツリーが非クリーンだった時 (SKILL.md 4.2d 手順 8) | `phase` / `round` / `files` (`git status --porcelain` の出力) / `restored` (`git restore` で戻せたか) / `rerun` (fatal 0 件のため検査をやり直したか) / `occurrence` (このフェーズで何回目か。2 回目はエスカレ停止) |
+| `working_tree_polluted` | warn | 検査 fan-out の後に作業ツリーが非クリーンだった時 (SKILL.md 4.2d 手順 8) | `phase` / `round` / `files` (`git status --porcelain` の出力) / `restored` (`git restore` で戻せたか) / `rerun` (検査をやり直したか。汚染を検出したラウンドは fatal の有無に関わらずやり直す) / `occurrence` (このフェーズで何回目か。2 回目はエスカレ停止) |
+| `phase_added` | warn | run の途中でフェーズと issue が増えた時 (SKILL.md 4.6「新フェーズの issue 化」手順 4) | `phase` / `issue_number` / `parent_number` (紐付けた親。フラット構成なら省略) / `origin` (`p1` / `p2` / `goal_unmet`) / `run_spawns_budget` (同手順 3 で再計算した値) |
+| `p3_escalate` | error | エスカレ停止時 (SKILL.md「エスカレ停止時の挙動」) | `reason` (停止条件リストの値) / `phase` / `issue` (対象が無ければ `null`) / `label` (`in-progress` / `needs-human` / `none`) / `last_success_sha` / 停止理由ごとの詳細。**Step 0 手順 4 の再開分岐が読む唯一の駐車マーカー**なので、`reason` と `issue` は必ず入れる |
 | `run_done` | info | **run の完了時 (Step 6 の完了サマリ出力時) に 1 件だけ**。Step 0 の再入判定はこのイベントの有無だけを見る | `status` (`done` / `partial`) / `phases_completed` / `goal_summary`。**`done` (ステップ単位の完了) と混同しない** — 再入判定のセンチネルは `run_done` であって `done` ではない |
 
 
@@ -136,6 +138,10 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 | `dev_server_missing` | 4.2c / Step 5.2: dev_server を推定できず review-product-readiness / G_E2E を skip | `{target, source}` |
 | `lsp_fix_failed` | 4.2b: fix-lsp-warnings が失敗し警告を残したまま継続 | `{target, source, remaining}` |
 | `manual_pending` | Step 5: 手動確認が必要なゴールを自動判定できずに残した | `{target, source, goal_id}` |
+| `dod_no_automated` | 4.2e: issue の `## DoD` から取り出せた自動コマンドが 0 件だった (手動系だけか、抽出の空振りかを区別できない) | `{target, source, issue, dod_cmds}` |
+| `dev_server_unavailable` | 4.2c / Step 5.2: review-product-readiness が dev サーバを起動できず実機検査が成立しなかった | `{target, source, phase}` |
+| `no_layer_convention` | 4.2c: architecture-guard がレイヤ構造を見つけられず Clean Arch 検査を skip した (意図的な素通りだが、境界を検査していない run であることを残す) | `{target, source, phase}` |
+| `exemptions_unadjudicated` | 4.2c: 自己免除が 1 件以上あるのに review-tdd / review-adversarial のどちらも起動せず、誰も裁定しなかった | `{target, source, phase, claims}` |
 
 同一 `phase` に `gating_decided` が複数ある場合 (中断・再入や 4.2d 手順 5 の例外による追記) は**最新の 1 件を採る**。
 

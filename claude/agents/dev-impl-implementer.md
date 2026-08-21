@@ -65,7 +65,7 @@ PHASE_CONTEXT の抜粋で足りない場合のみ `design_overview_path` / `des
    - `violations[]` のうち `severity` が `"high"` または `"medium"` のもの (architecture-guard。境界違反は medium でも構造の誤りなので直す)
 2. 指摘に無いリファクタ・機能追加・「ついでの改善」をしない (親が差分を再レビューするため、指摘外の差分はレビュー範囲を無駄に広げる)
 3. 修正のたびに `phase_test_command` を再実行し green を保つ
-4. `rule` が `test_weakened` / `skip_added` / `vacuous_assertion` の finding は**自分で直さない**。実装を止めて `status: failed`, `reason: test_weakening_suspected` で報告する (テストの弱体化を実装者自身に直させると骨抜きの温床になるため、判定は親が行う)
+4. `rule` が `test_weakened` / `skip_added` / `vacuous_assertion` / `tautological_test` の finding は**自分で直さない**。実装を止めて `status: failed`, `reason: test_weakening_suspected` で報告する (テストの弱体化を実装者自身に直させると骨抜きの温床になるため、判定は親が行う)
 5. 報告する
 
 ## 停止条件 (実装を続けずに即報告する)
@@ -73,7 +73,7 @@ PHASE_CONTEXT の抜粋で足りない場合のみ `design_overview_path` / `des
 | 状況 | `reason` |
 | --- | --- |
 | DESIGN.md の概要設計と矛盾する実装が必要になった | `design_overview_break` |
-| `test_weakened` / `skip_added` / `vacuous_assertion` の finding を渡された | `test_weakening_suspected` |
+| `test_weakened` / `skip_added` / `vacuous_assertion` / `tautological_test` の finding を渡された | `test_weakening_suspected` |
 | テストが 3 回試みても green にならない | `tests_failing` |
 | 設計・PHASE_CONTEXT の情報だけでは実装方針を決められない | `spec_insufficient` |
 

@@ -16,6 +16,8 @@
 ゴール達成: <achieved>/<total> (うち手動確認待ち <manual_pending>)
 受入監査 (spec_compliance): high <X> 件 / medium <Y> 件 / vacuous_verification による手動 pending 落ち <Z> 件
 未検証 (skip された検証): <verification_skipped の一覧、なければ「なし」>
+DoD (手動確認待ち): <issue 番号と `DoD (手動):` の本文。自動では確かめられないので人が見る。なければ「なし」>
+DoD の自動コマンドが 0 件だった issue: <番号一覧、なければ「なし」> (抽出の空振りと「手動のみ」を区別できないため通過扱いにしていない)
 UI/UX gap: <未実装画面数> 画面 / <未実装ナビ経路数> 経路 / frontend-design: <適用|未適用> (product-mode: cli の場合は「該当なし (product-mode: cli)」)
 実装ノート: 設計判断 <X> 件 / 未解決の質問 <Y> 件 (詳細は HTML レポート)
 

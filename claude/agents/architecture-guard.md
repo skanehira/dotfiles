@@ -21,6 +21,7 @@ Clean Architecture と DDD の**境界違反だけ**を検出する専用 review
   - `"phase:<phase-name>"` (TODO.md のフェーズ名、dev-impl からの呼び出し時)
 - `design_path`: 概要設計書のパス (デフォルト `docs/DESIGN.md`)。レイヤ定義と aggregate 一覧を抽出する
 - `design_detail_path`: アプリ詳細設計書のパス (デフォルト `docs/DESIGN_DETAIL_APP.md`)。実装ガイドに記載されたディレクトリ構造を読む (レイヤ境界検査に必要なのはアプリ側のみ。INFRA 側は読まない)
+- `PHASE_START_SHA`: `target_diff: phase:<...>` のときの**必須値**。そのフェーズ開始時の SHA で、差分の基準点になる (未設定だとステップ 2 の `git diff` が失敗し `skip_reason: "diff_command_failed"` になる)
 - `output_path`: 検出結果 JSON の書き出し先 (デフォルト `/tmp/architecture-guard-result.json`)
 - `repo_dir`: 検査対象リポジトリの**絶対パス** (省略時はカレントディレクトリ)。dev-impl や workflow-review から、cwd とは別のリポジトリを検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、設計書のパスも `repo_dir` 基準の絶対パスに解決する**
 
@@ -112,7 +113,7 @@ case "$TARGET" in
 esac
 ```
 
-`phase:*` ケースで `git diff --name-only "$PHASE_START_SHA"` が非0 exit code を返した場合 (`$PHASE_START_SHA` が未設定 / 存在しない SHA 等)、これは「差分が空」と区別する: `checked_files: 0` ではなく `ok: false, skip_reason: "diff_command_failed", violations: []`、`message` にコマンドの stderr を含めて返す。これにより「本当に変更なし」を装った偽陽性の `ok: true` を防ぐ (dev-impl 側は guard_loop の通常の再試行に委ねるが、実装修正では解決しない性質のエラーなので、3 回失敗すれば通常通り P3 エスカレとしてユーザに気付かせる)。
+`phase:*` ケースで `git diff --name-only "$PHASE_START_SHA"` が非0 exit code を返した場合 (`$PHASE_START_SHA` が未設定 / 存在しない SHA 等)、これは「差分が空」と区別する: `checked_files: 0` ではなく `ok: false, skip_reason: "diff_command_failed", violations: []`、`message` にコマンドの stderr を含めて返す。これにより「本当に変更なし」を装った偽陽性の `ok: true` を防ぐ。**呼び出し側 (dev-impl) はこれを未検証として扱い、修正ラウンドに乗せずに停止する** (実装を直しても解消しない性質のため。dev-impl SKILL.md 4.2d 手順 1)。
 
 各ファイルが「inner layer」「outer layer」「unknown」のどれに属するか、ステップ 1 の pattern で分類する。
 

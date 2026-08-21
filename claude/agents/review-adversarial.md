@@ -40,6 +40,8 @@ output_path: /tmp/review-adversarial-<phase>.json
 | `weakening_only` | B のみ | `PHASE_START_SHA` 比のテスト差分の意味論検査 | docs の Read (レンズ C の材料)、攻撃スクリプトの生成・実行 (レンズ A) |
 | `full` | A + B + C | 上記すべて | — |
 
+**Step 0 (自己免除の裁定) は mode に関わらず必ず実施する。** `weakening_only` でも `exemptions_path` は渡されるので、`adjudicated_exemptions` を返さないと呼び出し側の未検証判定 (dev-impl SKILL.md 4.2d 手順 1) に必ず引っかかって停止する。攻撃の実行が要る免除は `weakening_only` では確かめられないので `verdict: "unverifiable"` に倒し、その理由を `evidence` に書く (裁定しなかったのではなく、このモードでは確かめられないことを明示する)。
+
 `weakening_only` は「毎フェーズ実行する reward hacking の監視」が役割で、攻撃と完了主張の反証は要所の `full` が担当する。呼び出し側が `full` を選ぶ条件は 4 つ (消費型資源を扱う差分 / 認証・認可・セッションを扱う差分 / テスト差分が無いまま実装が 20 行を超えたフェーズ / 最後の issue) で、いずれも別々の機械判定である (認証は消費型資源の一種ではない)。**`weakening_only` は skip ではなくモードの縮退**なので、未実行のレンズを必ず `skipped_lenses: ["A", "C"]` に記録する (呼び出し側が未検証項目として集約するため。沈黙で「検査済み」に見せない)。
 
 ### Step 0: 自己免除の裁定 (exemptions_path が渡された場合)
@@ -166,6 +168,9 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
   "checked_files": 12,
   "attacks_attempted": 8,
   "skipped_lenses": [],
+  "adjudicated_exemptions": [
+    { "claim": "同一ミリ秒の ABA は影響が軽微として受容", "verdict": "refuted|upheld|unverifiable", "evidence": "どう確かめたか" }
+  ],
   "findings": [
     {
       "file": "src/auth/session.ts",

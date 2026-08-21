@@ -16,9 +16,9 @@
 | `PHASE_NAME` | Step 4.1.5 | issue タイトル形式 (`フェーズ4-a: 名前`)。agent へ渡す `phase_name` と `target_diff: phase:<...>` に使う |
 | `ISSUE` | Step 4 の着手時 | 着手中の issue 番号 |
 | `ROUND` | 各 fan-out の直前 | 初回 fan-out は `0`、修正ラウンド後の再検査は `phase_fix_round` と同値 |
-| `AGENTS_TO_SPAWN` | 各 fan-out の直前 | `"<agent>:<model>"` を空白区切りで並べた文字列 |
+| `AGENTS_TO_SPAWN` | 各 fan-out の直前 | `<agent>:<model>:<mode>` を**改行区切り**で並べた文字列 (mode 無しは `-`)。空白区切りにしない — zsh は `$VAR` を単語分割しない |
 | `PHASE_SPAWNS` / `RUN_SPAWNS` | Step 4.1 (フェーズ) / Step 0 か Step 1 (run) | カウンタの現在値。復元の正は `spawn` イベントの件数 (logging.md) |
-| `REPORT_PATH` | implementer 起動の直前 | `$SCRATCH_DIR/impl-report.json` または `impl-report-fix-<round>.json` |
+| `REPORT_PATH` | implementer 起動の直前 | 起動の種類ごとに分ける: `impl-report.json` (初回) / `impl-report-fix-<round>.json` (修正ラウンド) / `impl-report-testgate-<test_gate_retry>.json` (4.2e の再試行) / `impl-report-retry-<phase_fix_round>.json` (`impl_report_invalid` の再起動)。**衝突させない** — 4.2e 手順 4 の突合が成果物とラウンドを 1:1 で対応させるため |
 | `RESULT_JSON` | 検査結果を読む時 | 検査 agent が `output_path` に書いた結果 JSON のパス |
 
 **`PHASE` と `PHASE_NAME` を取り違えない。** JSONL の集計は `PHASE` (短縮識別子) で行い、同じフェーズが 2 表記で混ざるとレポートのフェーズ集計が割れる。
@@ -122,7 +122,13 @@ TDD の順序・フェーズスコープのテストのみ実行・コミット�
 # このブロックが前提にする変数 (フェーズ / ラウンドのスコープ。値の出どころは冒頭「変数の定義」)
 PHASE="phase-4-a"                    # 短縮識別子。JSONL の phase に入れる値
 ROUND=0                              # 初回 fan-out は 0、修正ラウンド後の再検査は phase_fix_round と同値
-AGENTS_TO_SPAWN="architecture-guard:haiku review-tdd:opus review-adversarial:sonnet"
+# 形式は <agent>:<model>:<mode> を 1 行 1 件。mode を持たない agent は "-" を置く
+# (logging.md の spawn スキーマが mode を要求するため、無い場合も明示的に「無い」と書く)。
+# **空白区切りの 1 変数にしない** — zsh は $VAR を単語分割しないため、`for a in $VAR` が
+# 全体を 1 要素として扱い、記録が 1 件しか残らない (実行シェルが zsh のとき必ず起きる)
+AGENTS_TO_SPAWN='architecture-guard:haiku:-
+review-tdd:opus:-
+review-adversarial:sonnet:full'
 
 # (1) ツリーが clean であること。非空なら直前のラウンドのコミット漏れ (SKILL.md 4.2c)。
 #     実装がコミット済みであることが「全 agent の git diff が同じ差分を返す」ことと
@@ -131,15 +137,20 @@ git -C "$REPO_DIR" status --porcelain
 
 # (2) これから起動する agent の spawn を JSONL に先に書く (起動後に書く規定だと構造的に落ちる = SKILL.md 4.2c)。
 #     phase_spawns / run_spawns は「これから起動する 1 件を含めた値」を書く (logging.md)
-for a in $AGENTS_TO_SPAWN; do
+# here-string で読む。パイプ (`printf ... | while`) にするとループが subshell で走り、
+# ループ内で進めた PHASE_SPAWNS / RUN_SPAWNS がループを抜けた時点で失われる
+while IFS= read -r a; do
+  [ -n "$a" ] || continue
+  NAME="${a%%:*}"; REST="${a#*:}"; MODEL="${REST%%:*}"; MODE="${REST#*:}"
   PHASE_SPAWNS=$((PHASE_SPAWNS + 1)); RUN_SPAWNS=$((RUN_SPAWNS + 1))
   jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
-     --arg n "${a%%:*}" --arg m "${a##*:}" --argjson r "$ROUND" \
+     --arg n "$NAME" --arg m "$MODEL" --arg mo "$MODE" --argjson r "$ROUND" \
      --argjson ps "$PHASE_SPAWNS" --argjson rs "$RUN_SPAWNS" '{
     timestamp:$ts, phase:$p, step:"review", event_type:"spawn", severity:"info",
     summary:("spawn " + $n + " (" + $m + ", round " + ($r|tostring) + ")"),
-    context:{phase:$p, agent:$n, model:$m, round:$r, phase_spawns:$ps, run_spawns:$rs}}' >> "$JSONL"
-done
+    context:{phase:$p, agent:$n, model:$m, mode:(if $mo == "-" then null else $mo end),
+             round:$r, phase_spawns:$ps, run_spawns:$rs}}' >> "$JSONL"
+done <<< "$AGENTS_TO_SPAWN"
 ```
 
 **結果を全部受け取った後**に、同じ `git -C "$REPO_DIR" status --porcelain` を取る。非空なら検査 agent がソースを書き換えたまま戻していない (SKILL.md 4.2d 手順 8)。
@@ -182,6 +193,10 @@ output_path: ${absScratchDir}/review-adversarial-r${round}.json` }   // PHASE_CO
 //               / output_path (`${absScratchDir}/review-<観点>-r${round}.json`)
 //   review-tdd には加えて exemptions_path: ${absScratchDir}/self-exemptions.json を渡す
 //     (SKILL.md 4.2c が review-tdd と review-adversarial への受け渡しを義務づけている)
+//   review-product-readiness には加えて dev_server (url / start_command) と
+//     snapshot_dir: ${absScratchDir}/product-readiness-snapshots/ を渡す
+//     (snapshot_dir は視覚的回帰の参考データと dev サーバの PID ファイルの置き場。渡さないと
+//      agent が起動した dev サーバを停止できず、以降のフェーズが古いサーバを検査し続ける)
 ```
 
 `target_diff` に渡せるのは `HEAD` / `working_tree` / `phase:<フェーズ名>` の 3 値のみ (`claude/agents/architecture-guard.md` の「入力」節)。それ以外の文字列は agent 側の分岐に該当せず未定義動作になる。
@@ -250,11 +265,14 @@ git diff "${PHASE_START_SHA}" --diff-filter=D --name-only -- '*test*' '*spec*'
 #     偽陽性のたびにトレース確認 (SKILL.md 4.2e) を人手で回すことになる
 TEST_PATHS=$(git diff "${PHASE_START_SHA}" --name-only \
   | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)' || true)
+WEAKENING_HITS=0
 if [ -n "$TEST_PATHS" ]; then
-  printf '%s\n' "$TEST_PATHS" | tr '\n' '\0' \
+  WEAKENING_HITS=$(printf '%s\n' "$TEST_PATHS" | tr '\n' '\0' \
     | xargs -0 git diff "${PHASE_START_SHA}" -U0 -- \
-    | rg '^\+.*\b(it|test|describe|context|suite)\.(skip|only)\s*\(|^\+\s*(xit|xdescribe|xtest)\b|^\+.*#\[ignore\]|^\+\s*@(unittest\.)?skip|^\+.*t\.Skip\('
+    | rg '^\+.*\b(it|test|describe|context|suite)\.(skip|only)\s*\(|^\+\s*(xit|xdescribe|xtest)\b|^\+.*#\[ignore\]|^\+\s*@(unittest\.)?skip|^\+.*t\.Skip\(' \
+    | tee /dev/stderr | wc -l | tr -d ' ')
 fi
+echo "弱体化の検出行数: $WEAKENING_HITS"   # 0 でなければ 4.2e のトレース確認へ
 
 # (3) Rust のインラインテスト (src ファイル内の #[cfg(test)]) は (2) のパスに載らないので別途見る
 git diff "${PHASE_START_SHA}" -U0 -- '*.rs' | rg '^\+.*#\[ignore\]' || true
@@ -273,7 +291,7 @@ SKILL.md 4.2e 手順 6 の転記は、**項目ごとに Bash を呼ばず 1 回�
 `REPORT_PATH` は implementer 報告 (`report_path`) の絶対パス、`JSONL` は当該 run の `decisions.jsonl`、`PHASE_NAME` は `## 4.2: 事前判定` で PHASE_CONTEXT から代入したフェーズ識別子だが、**JSONL の `phase` には 1 行ログと同じ短い識別子 (`phase-3` 形式) を入れる** (フェーズ名そのままだと同じフェーズが別表記で混ざり、HTML レポートのフェーズ集計が割れる)。
 
 ```bash
-jq -c --arg phase "$PHASE_NAME" --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" '
+jq -c --arg phase "$PHASE" --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" '
   [ (.design_decisions[]?      | {event_type:"design_decision",      context:.}),
     (.open_questions[]?        | {event_type:"open_question",        context:.}),
     (.verification_skipped[]?  | {event_type:"verification_skipped", context:(. + {source:"implementer"})}),
