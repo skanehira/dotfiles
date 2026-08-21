@@ -60,18 +60,36 @@ report_path: ${absScratchDir}/impl-report.json
 
 ## 4.2d: 修正ラウンドの implementer 起動
 
-`mode: fix` は上記 4.2a の呼び出しに加えて `findings_paths` を渡す:
+`mode: fix` は上記 4.2a の呼び出しに加えて `findings_paths` を渡す。**`model` はラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (SKILL.md「修正ラウンドのモデル昇格」):
 
 ```javascript
+{ subagent_type: "dev-impl-implementer",
+  model: round === 1 ? "opus" : "fable",
+  run_in_background: false,
   prompt: `mode: fix
 phase_context_path: ${absPhaseContextPath}
 repo_dir: ${absRepoDir}
 report_path: ${absScratchDir}/impl-report-fix-${round}.json
 findings_paths:
 ${fatalResultPaths.map(p => `  - ${p}`).join("\n")}
-
-最終メッセージは report_path の絶対パス 1 行だけにせよ。要約や解説を書くな。`
+${round === 1 ? "" : ROUND2_PLUS_BRIEF}
+最終メッセージは report_path の絶対パス 1 行だけにせよ。要約や解説を書くな。` }
 ```
+
+`ROUND2_PLUS_BRIEF` (ラウンド 2 以降だけ足す。**過去ラウンドの実績を必ず埋めて渡す** — 「同じ族の隣が出続けている」ことは実装者からは見えないため):
+
+```text
+これはラウンド ${round}/3 で、ラウンド 1 では解消しきれなかった fatal である。3 ラウンド目でも fatal が残れば
+このフェーズはエスカレ停止となる。
+
+過去ラウンドの経過: ${roundHistory}
+(例: 「round 1 は A:100 を指摘 → 解消したが round 2 で B:79 が新規に出た」)
+
+指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを
+確認せよ。族として閉じられない残りがあれば、その旨を報告の open_questions に明記せよ。
+```
+
+`roundHistory` は JSONL の `fix_dispatch` の `fatal_summary` と、その次ラウンドの検査結果から main が組み立てる (main は findings 本文を読まないので、`{rule, file, line}` の射影と解消 / 未解消の別だけで足りる)。
 
 すべて**絶対パス**で渡す。subagent の Bash は呼び出しごとに cwd が親のものへ戻るため、相対パスは意図したディレクトリで解決できない。
 
