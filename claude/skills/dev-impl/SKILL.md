@@ -31,7 +31,7 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 
 ### 修正ラウンドのモデル昇格 (ラウンド 2 以降は `fable`)
 
-**ラウンド 1 で解消しなかった fatal は、指摘箇所の局所修正では閉じない性質のものが多い。** 実測 (mind の run 20260820-065019 のフェーズ6): `opus` の fix は毎ラウンド「指摘された high」を必ず解消したが、そのたびに同じ族の隣接箇所に新しい high が出た (round 1 `MapEditorPage.tsx:100` → round 2 `autosave.ts:79` → round 3 `MapEditorPage.tsx:134` と `autosave.ts:116` → 検査で `autosave.ts:113`)。個別のエッジケースを潰す作業になっていて、状態遷移の不変条件という根が閉じていなかった。
+**ラウンド 1 で解消しなかった fatal は、指摘箇所の局所修正では閉じない性質のものが多い。** 実測: `opus` の fix は毎ラウンド「指摘された high」を必ず解消したのに、そのたびに同じ族の隣接箇所へ新しい high が出た。あるフェーズでは 3 ラウンドすべてがこの形を繰り返し (指摘 → 解消 → 隣接箇所に新規)、high の出所は同じ 2 ファイルの間を往復したまま上限に達して停止した。個別のエッジケースを潰す作業になっていて、状態遷移の不変条件という根が閉じていなかった。
 
 そこで**ラウンド 2 以降は `model: "fable"` に上げ、指示文で「指摘箇所を局所的に塞ぐ前に、当該箇所が属する不変条件を洗い出して族ごと閉じる」ことを求める** (指示文の全文は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 修正ラウンドの implementer 起動`)。ラウンド 3 でも解消しなければ従来どおり `phase_fix_exceeded` でエスカレ停止する — **モデルを上げても閉じない fatal は、実装の腕ではなく設計の問題である**可能性が高く、人間の判断を仰ぐべき局面だと見なす。
 
@@ -440,7 +440,7 @@ jq -s -c '[ .[] | (.design_decisions[]? | select(...)), (.verification_skipped[]
 git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | xargs shasum > "$SCRATCH_DIR/content-hash-before-${ROUND}.txt"
 ```
 
-**続けて、この fan-out で起動する agent の `spawn` を JSONL に先に書く。記録は「起動した後」ではなく、この事前ブロックの中で行う。** 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。実測 (mind の run 20260820-065019): 初回 fan-out は同じブロックで `gating_decided` を書く必要があるため記録が残ったが、**再 fan-out には他に書く理由が無く、architecture-guard の spawn は phase-2 が 4 回中 2 件・phase-3 が 4 回中 1 件・phase-5 は 7 回中 0 件しか記録されなかった** (phase-6 も 16 回中 8 件が欠落)。`run_spawns` の予算ゲートはこの記録を唯一のソースにしているので、欠けると上限判定が実態より小さい値で走る。起動する agent 集合はこのブロックの時点で確定しているため先に書いても内容は正確で、起動が失敗した場合は別途 `guard_agent_failed` / `review_agent_failed` が記録されるので実態と食い違ったままにはならない。
+**続けて、この fan-out で起動する agent の `spawn` を JSONL に先に書く。記録は「起動した後」ではなく、この事前ブロックの中で行う。** 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。実測: 初回 fan-out は同じブロックで `gating_decided` を書く必要があるため記録が残ったが、**再 fan-out には他に書く理由が無く記録が落ちた**。ある run の 5 フェーズで、architecture-guard の spawn 記録は実行回数に対し 1/1・2/4・1/4・4/4・0/7 件だった (修正ラウンドを多く回したフェーズほど欠落が大きい)。別のフェーズでは全 agent 合計 16 回のうち 8 件が欠落していた。`run_spawns` の予算ゲートはこの記録を唯一のソースにしているので、欠けると上限判定が実態より小さい値で走る。起動する agent 集合はこのブロックの時点で確定しているため先に書いても内容は正確で、起動が失敗した場合は別途 `guard_agent_failed` / `review_agent_failed` が記録されるので実態と食い違ったままにはならない。
 
 gating された観点と `architecture-guard` を**同一メッセージ内の複数 Agent tool_use として並列起動**し、main が全部の完了を待つ。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 検査 fan-out の起動` 節を Read してから実行する。
 
@@ -543,7 +543,7 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
    「修正が別観点を壊す」リスクは、最後の issue の全観点フル検査と Step 5 の第三者監査 (`review-spec-compliance`) で受け止める
 6. 修正中に `design_overview_break` を検知 → 即エスカレ停止 (commit しない)
 7. review-adversarial の `test_weakened` / `vacuous_assertion` / `skip_added` は confidence に関わらず**修正ラウンドに乗せない** (`dev-impl-implementer` 側も rule 名だけで無条件に `test_weakening_suspected` で停止する規約なので、confidence で線を引くと fix を起動しても必ず空振りして 1 ラウンド無駄になる)。弱体化を実装者自身に直させると骨抜きの温床になるため、4.2e と同じトレース確認 (TODO.md / DESIGN_DETAIL_APP.md に意図的な変更としてトレースできるか) を main が行い、トレース不能なら `test_weakening_detected` でエスカレ停止する。`dev-impl-implementer` 側もこれらの finding を渡されたら修正せず `test_weakening_suspected` で停止する規約になっている (二重の歯止め)
-8. **作業ツリーの汚染は、agent の自己申告ではなく main が内容ハッシュで機械検出する** (4.2c の検査後ブロック)。`working_tree_polluted` の報告が無くても必ず突合する — **`git status --porcelain` では検出できない**。フェーズの差分ファイルは既に「変更済み」として並んでいるので、中身を書き換えても status の出力は 1 文字も変わらない (mind の run 20260820-065019 で `cmp` により実証: 同一の変異を加えて前後のバイト比較が完全一致)。実際にこの穴により、review-adversarial が `autosave.ts` の `if (saving)` を `if (false)` に変異させたまま終了し、agent 自身は自分で取った status スナップショットの一致を見て「汚染なし」と判定していた。差分が出たファイルは `git checkout` せず、**どのラウンドの成果物が失われるか分からないためエスカレ停止 (`working_tree_polluted`) してユーザーに判断を仰ぐ** (直前の実装が変異と混ざっている可能性があるため、機械的な復元をしない)
+8. **作業ツリーの汚染は、agent の自己申告ではなく main が内容ハッシュで機械検出する** (4.2c の検査後ブロック)。`working_tree_polluted` の報告が無くても必ず突合する — **`git status --porcelain` では検出できない**。フェーズの差分ファイルは既に「変更済み」として並んでいるので、中身を書き換えても status の出力は 1 文字も変わらない (同一の変異を加えて前後を `cmp` でバイト比較し、完全一致することを実証済み)。実際にこの穴により、review-adversarial が検査対象の条件式を変異させたまま終了し、agent 自身は自分で取った status スナップショットの一致を見て「汚染なし」と判定していた事故が起きている。差分が出たファイルは `git checkout` せず、**どのラウンドの成果物が失われるか分からないためエスカレ停止 (`working_tree_polluted`) してユーザーに判断を仰ぐ** (直前の実装が変異と混ざっている可能性があるため、機械的な復元をしない)
 
 severity: low/medium の findings は修正せず JSONL に `event_type: review_low` で記録する (射影で読んだ `{severity, rule, file, line}` と結果 JSON のパスだけを記録し、本文は転記しない)。
 

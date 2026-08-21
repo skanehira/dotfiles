@@ -235,7 +235,7 @@ Rust のインラインテスト (src ファイル内の `#[cfg(test)]`) はこ�
 
 ## 4.2e: implementer 報告の JSONL 一括転記
 
-SKILL.md 4.2e 手順 6 の転記は、**項目ごとに Bash を呼ばず 1 回の実行で全件を流し込む**。実測 (mind、4 フェーズ) で JSONL 239 件中 121 件が `design_decision` / `open_question` の転記で、これを逐次実行すると main の往復がフェーズあたり 30 回近く増える。
+SKILL.md 4.2e 手順 6 の転記は、**項目ごとに Bash を呼ばず 1 回の実行で全件を流し込む**。実測 (4 フェーズ) で JSONL 239 件中 121 件が `design_decision` / `open_question` の転記で、これを逐次実行すると main の往復がフェーズあたり 30 回近く増える。
 
 `REPORT_PATH` は implementer 報告 (`report_path`) の絶対パス、`JSONL` は当該 run の `decisions.jsonl`、`PHASE_NAME` は `## 4.2: 事前判定` で PHASE_CONTEXT から代入したフェーズ識別子だが、**JSONL の `phase` には 1 行ログと同じ短い識別子 (`phase-3` 形式) を入れる** (フェーズ名そのままだと同じフェーズが別表記で混ざり、HTML レポートのフェーズ集計が割れる)。
 
