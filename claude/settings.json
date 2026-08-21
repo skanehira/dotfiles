@@ -196,5 +196,9 @@
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "statusLine": {
+    "type": "command",
+    "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/claude/scripts/statusline-command.sh"
+  }
 }
