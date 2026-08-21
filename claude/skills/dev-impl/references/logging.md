@@ -40,15 +40,16 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 }
 ```
 
-`event_type: review_low` の場合 (Step 4.2d 参照)、`severity` は常に `info` (fatal ではない軽微な指摘のため)。`context` には**各検査 agent の結果 JSON (`output_path`) の findings** を severity: low/medium に絞った上で dimension ごとにまとめる。**転記は `jq` で結果 JSON から直接行い、main のコンテキストを経由させない** (Step 4.2d の射影は `{severity, rule, file, line}` までで、`message` は main が読まないため):
+`event_type: review_low` の場合 (Step 4.2d 参照)、`severity` は常に `info` (fatal ではない軽微な指摘のため)。`context` には**各検査 agent の結果 JSON (`output_path`) の findings** を severity: low/medium に絞った上で dimension ごとにまとめる。キーは各 agent が返す `dimension` の値 (`tdd` / `quality` / `product_readiness` / `adversarial`) をそのまま使う。architecture-guard は `dimension` を返さないので `architecture` を割り当てる。**転記は `jq` で結果 JSON から直接行い、main のコンテキストを経由させない** (Step 4.2d の射影は `{severity, rule, file, line}` までで、`message` は main が読まないため):
 
 ```json
 "context": {
   "findings_by_dimension": {
     "tdd": [{ "file": "...", "line": 12, "severity": "low", "message": "..." }],
     "quality": [],
-    "architecture": [],
-    "adversarial": []
+    "product_readiness": [],
+    "adversarial": [],
+    "architecture": []
   }
 }
 ```
@@ -116,7 +117,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 | `p2_fix` | warn | P2 動的修正で詳細設計を書き換えた時 (SKILL.md 4.6) | `section` (更新したセクション名) / `what` (何をどう変えたか 1 行) / `why` (実装から判明した事実) / `commit_sha` (設計変更のコミット) / `p2_fixes_total` (この時点の通算)。**P2 は回数で停止しない**ので、このエントリが「承認済みの設計が実装に合わせてどう書き換わったか」をユーザーが後から追える唯一の記録になる。Step 6 の完了サマリと HTML レポートのセクション 4 がこれを読む |
 | `p1_fix` | info | P1 動的修正で TODO.md を書き換えた時 (SKILL.md 4.6) | `section` / `what` / `commit_sha` / `p1_fixes_in_phase` |
 | `gating_decided` | info | フェーズの初回検査 fan-out の直前 (SKILL.md 4.2c。**フェーズごとに 1 件だけ**) | `phase` / `gating_set` (このフェーズで起動しうる **review-\* の観点名**の配列。`architecture-guard` は gating 対象外で常に実行するので含めない。再 fan-out はこの部分集合しか起動できない) / `adversarial_mode` (`full` / `weakening_only` / `skipped`) / `basis` (判定根拠の真偽値: `{test_changed: $TEST_FILE_CHANGED か $TEST_CONTENT_CHANGED が非空, consumable: $CONSUMABLE_CHANGED が非空, auth: $AUTH_CHANGED が非空, ui_phase: uiPhase, final_phase: 自分以外に open issue が無い}`)。**`verification_skipped` の `criteria_result` と共通するキー (`test_changed` / `final_phase`) は同名で揃える**が、両者はキー集合そのものは異なる (`basis` は gating の判定根拠、`criteria_result` は skip 述語の判定結果) |
-| `spawn` | info | **Agent ツールで起動する直前** (**例外なく全て**。起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。実測で再 fan-out の記録が phase-5 は 7 回中 0 件だった。SKILL.md 4.2c の事前ブロックで他の必須処理とまとめて書く) | `phase` / `agent` (`dev-impl-implementer` / `architecture-guard` / `review-*` / `fix-lsp-warnings` / `tech-investigation`。後ろ 2 つは結果 JSON を出さないので 4.2e 手順 4 の突合対象外) / `model` (`opus` / `fable` / `sonnet` / `haiku`。`fable` は修正ラウンド 2 以降の implementer = SKILL.md「修正ラウンドのモデル昇格」) / `mode` (implementer は `implement` / `fix`、review-adversarial は `full` / `weakening_only`) / `round` (fan-out / 修正ラウンドの番号。初回 fan-out は 0) / `phase_spawns` (このフェーズの累計、**起動前に書くので「これから起動する 1 件を含めた値」**) / `run_spawns` (run 全体の累計、同上) |
+| `spawn` | info | **Agent ツールで起動する直前** (**例外なく全て**。起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。実測で再 fan-out の記録が phase-5 は 7 回中 0 件だった。SKILL.md 4.2c の事前ブロックで他の必須処理とまとめて書く) | `phase` (フェーズ外の起動 — Step 1.5 の tech-investigation と Step 5.2 の監査 agent — は `"run"` を入れる。null にしない: 4.2e 手順 4 の突合が phase で絞るため) / `agent` (`dev-impl-implementer` / `architecture-guard` / `review-*` / `fix-lsp-warnings` / `tech-investigation`。後ろ 2 つは結果 JSON を出さないので 4.2e 手順 4 の突合対象外) / `model` (`opus` / `fable` / `sonnet` / `haiku`。`fable` は修正ラウンド 2 以降の implementer = SKILL.md「修正ラウンドのモデル昇格」) / `mode` (implementer は `implement` / `fix`、review-adversarial は `full` / `weakening_only`) / `round` (fan-out / 修正ラウンドの番号。初回 fan-out は 0) / `phase_spawns` (このフェーズの累計、**起動前に書くので「これから起動する 1 件を含めた値」**) / `run_spawns` (run 全体の累計、同上) |
 | `fix_dispatch` | warn | 修正ラウンド (SKILL.md 4.2d) で `mode: fix` の implementer を起動した時 | `phase` / `phase_fix_round` (このラウンドの番号、1〜3) / `findings_paths` (渡した結果 JSON のパス配列) / `fatal_summary` (`{severity, rule, file, line}` の射影配列。**findings の本文は入れない**) |
 | `self_review` | info | implementer 報告の一括転記時 (Step 4.2e 手順 6) | `checklist_applied` / `tests_revised` / `notes`。実装者が `rules/core/testing.md` のセルフレビューチェックリストを自分のテストへ適用した結果。HTML レポートには出さず、事後の振り返りで人が読むために残す |
 | `spec_lookup` | info | 同上 | `path` (PHASE_CONTEXT の抜粋で足りず implementer が自分で Read した設計書のパスと節)。抜粋精度を事後に確認するために残す |
@@ -167,22 +168,22 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 ```
 [2026-06-30 10:00:00] dev-impl start (repo=/Users/x/dev/foo, docs/DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md + TODO.md)
 [2026-06-30 10:00:01] phase-1 / start (RUN_FACTS.md 新規作成、gate コマンド検証 green)
-[2026-06-30 10:00:05] phase-1 / spawn dev-impl-implementer (opus, mode=implement) [1/24]
+[2026-06-30 10:00:05] phase-1 / spawn dev-impl-implementer (opus, mode=implement) [1/33]
 [2026-06-30 10:03:10] phase-1 / impl_report (status=done, files=2, tests 12 passed)
 [2026-06-30 10:03:12] phase-1 / fix-lsp-warnings / skipped (not a neovim plugin)
-[2026-06-30 10:03:15] phase-1 / spawn architecture-guard (haiku) + review-tdd (opus) [3/24]
+[2026-06-30 10:03:15] phase-1 / spawn architecture-guard (haiku) + review-tdd (opus) [3/33]
 [2026-06-30 10:05:40] phase-1 / 検査 / guard violations=0, review (dims: tdd) fatal=0
 [2026-06-30 10:05:55] phase-1 / test-gate / green
 [2026-06-30 10:06:00] phase-1 / commit + run_facts_updated + impl_done
 [2026-06-30 10:06:01] phase-2 / start
-[2026-06-30 10:06:05] phase-2 / spawn dev-impl-implementer (opus, mode=implement) [1/24]
+[2026-06-30 10:06:05] phase-2 / spawn dev-impl-implementer (opus, mode=implement) [1/33]
 [2026-06-30 10:09:12] phase-2 / impl_report (status=done, files=3, tests 18 passed)
 [2026-06-30 10:09:14] phase-2 / design_decision / retry デフォルト 3 回を採用 (設計に記述なし)
-[2026-06-30 10:09:20] phase-2 / spawn architecture-guard (haiku) + review-tdd (opus) [3/24]
+[2026-06-30 10:09:20] phase-2 / spawn architecture-guard (haiku) + review-tdd (opus) [3/33]
 [2026-06-30 10:11:25] phase-2 / 検査 / guard violations=2 (fatal)
-[2026-06-30 10:11:30] phase-2 / fix_dispatch (round 1/3) → spawn dev-impl-implementer (opus, mode=fix) [4/24]
+[2026-06-30 10:11:30] phase-2 / fix_dispatch (round 1/3) → spawn dev-impl-implementer (opus, mode=fix) [4/33]
 [2026-06-30 10:13:40] phase-2 / impl_report (status=done, mode=fix)
-[2026-06-30 10:13:45] phase-2 / spawn architecture-guard (haiku) + review-tdd (opus) [6/24]
+[2026-06-30 10:13:45] phase-2 / spawn architecture-guard (haiku) + review-tdd (opus) [6/33]
 [2026-06-30 10:15:50] phase-2 / 検査 / guard violations=0, review fatal=0
 [2026-06-30 10:16:03] phase-2 / test-gate / green
 [2026-06-30 10:16:05] phase-2 / commit + run_facts_updated + impl_done

@@ -80,6 +80,7 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 # --- 1 回だけ実行する (Step 0 の再入判定を済ませた直後) ---
 # 再入なら run_id は $REENTRY_JSONL のディレクトリ名から取る (シェル変数は前回の起動から
 # 引き継がれないので、run_id を「変数が残っている前提」で復元してはならない)
+REENTRY_JSONL="$(cat "$HOME/.claude/logs/dev-impl/.reentry" 2>/dev/null)"   # Step 0 が書いたもの
 if [ -n "$REENTRY_JSONL" ]; then
   run_id="$(basename "$(dirname "$REENTRY_JSONL")")"
 else
@@ -144,6 +145,9 @@ for f in $(find "$HOME/.claude/logs/dev-impl" -maxdepth 2 -name decisions.jsonl 
     | if $mine > 0 and $done == 0 then "reentry" else "fresh" end' "$f")
   [ "$v" = "reentry" ] && { REENTRY_JSONL="$f"; break; }
 done
+# **結果はファイルに落とす。** シェル変数は Bash 呼び出しをまたいで消えるので、
+# 次のブロック (run スコープの確定) が $REENTRY_JSONL を読めない
+printf '%s' "$REENTRY_JSONL" > "$HOME/.claude/logs/dev-impl/.reentry"
 [ -n "$REENTRY_JSONL" ] && echo "reentry: $REENTRY_JSONL" || echo "fresh"
 ```
 
@@ -614,7 +618,16 @@ EXEMPTIONS_COUNT=$(jq 'length' "$SCRATCH_DIR/self-exemptions.json")
 
 **続けて、この fan-out で起動する agent の `spawn` を JSONL に先に書く。記録は「起動した後」ではなく、この事前ブロックの中で行う。** 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。実測: 初回 fan-out は同じブロックで `gating_decided` を書く必要があるため記録が残ったが、**再 fan-out には他に書く理由が無く記録が落ちた**。ある run の 5 フェーズで、architecture-guard の spawn 記録は実行回数に対し 1/1・2/4・1/4・4/4・0/7 件だった (修正ラウンドを多く回したフェーズほど欠落が大きい)。別のフェーズでは全 agent 合計 16 回のうち 8 件が欠落していた。`run_spawns` の予算ゲートはこの記録を唯一のソースにしているので、欠けると上限判定が実態より小さい値で走る。起動する agent 集合はこのブロックの時点で確定しているため先に書いても内容は正確で、起動が失敗した場合は別途 `guard_agent_failed` / `review_agent_failed` が記録されるので実態と食い違ったままにはならない。
 
-gating された観点と `architecture-guard` を**同一メッセージ内の複数 Agent tool_use として並列起動**し、main が全部の完了を待つ。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 検査 fan-out の起動` 節を Read してから実行する。
+**`mode: full` の review-adversarial は fan-out に入れず、単独で先に走らせてから残りを fan-out する。** レンズ A は**共有の作業ツリー上でソースを直接書き換えて実行し、終える前に戻す**ので、その間に並列で走る観点は変異後のコードを読みうる。読んだかどうかは事後に判別できず (戻ってしまえば `status` は clean)、その観点の結果が「fatal なし」でも「fatal あり」でも信用できない。**影響は dev サーバを立てる review-product-readiness に限らない** — guard も tdd も quality も同じツリーを読む。`mode: weakening_only` の adversarial は変異を行わないので通常どおり fan-out に入れてよい。
+
+したがって起動の順序は次のいずれかになる:
+
+| `adversarial_mode` | 起動のしかた |
+| --- | --- |
+| `full` | ① review-adversarial を単独起動して完了を待つ → ② 汚染の突合 → ③ 残りの観点 + architecture-guard を fan-out |
+| `weakening_only` / `skipped` | 全観点 + architecture-guard を 1 回の fan-out で並列起動 |
+
+gating された観点と `architecture-guard` を**同一メッセージ内の複数 Agent tool_use として並列起動**し、main が全部の完了を待つ (`full` の adversarial だけは上表のとおり先に単独で走らせる)。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 検査 fan-out の起動` 節を Read してから実行する。
 
 **全観点の結果を受け取ったら、汚染の突合を行う** (agent の `working_tree_polluted` 報告の有無に関わらず必ず実行する):
 
@@ -712,6 +725,8 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
    ただし **fatal が 1 件以上あって既に fix を起動する場合に限り、同じフェーズの medium を `findings_paths` に同梱してよい** (相乗り。追加の spawn を生まないため無料)。相乗りさせた medium は再検証しないので解消は主張せず、結果に関わらず `review_low` として記録する。
 3. fatal あり → `phase_fix_round += 1` する。**この時点で `phase_fix_round > 3` なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)。
 
+   **続けて JSONL に `event_type: fix_dispatch` を記録する** (context は logging.md の規定)。`spawn` と同じく**起動する前に書く**。このイベントは 2 箇所が読む load-bearing な記録である: Step 0 の再入で `phase_fix_round` を復元する唯一のソースであり、ラウンド 2 以降の implementer へ渡す「過去ラウンドの経過」の材料でもある (references/phase-execution.md の `ROUND2_PLUS_BRIEF`)。
+
    続けて、fixer に渡す findings ファイルを**観点ごとに 1 本ずつ** `jq` で作る (main は findings 本文を読まず、`jq` の出力をファイルへ直行させる):
 
    ```bash
@@ -762,8 +777,6 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
    差分が出たら `git restore <該当ファイル>` で直前のコミットの状態に戻す。**実装は既に履歴に入っているので、この復元で失われるのは agent が加えた変異だけである** (フェーズ中に何もコミットしない設計では、実装と変異が同じ未コミット差分に混ざるため機械復元ができなかった)。復元したら JSONL に `working_tree_polluted` を記録する。
 
    **汚染を検出したラウンドの検査結果は fatal の有無に関わらず全て破棄し、同じ観点で 1 回やり直す。** 並列に走った他の観点が変異後のコードを読んでいた可能性があり、そのラウンドの結果は「fatal なし」も「fatal あり」も信用できない — 前者をそのまま通せば検査していないコードをコミットへ通すことになり、後者をそのまま修正ラウンドへ載せれば**変異が原因の偽の fatal を実装者に直させる**ことになる (実在しない不具合を追わせるので必ず空回りする)。やり直しの spawn は `phase_spawns` に計上するが `phase_fix_round` は進めない (修正ラウンドではないため)。**同一フェーズで 2 回目の汚染を検出したらエスカレ停止する** (`working_tree_polluted`。並列実行と変異が構造的に噛み合っていない状態なので、3 回目を試す価値が無い)
-
-   **`mode: full` の review-adversarial は fan-out に入れず、単独で先に走らせる。** レンズ A は**共有の作業ツリー上でソースを直接書き換えて実行し、終える前に戻す**ので、その間に並列で走る観点は変異後のコードを読みうる。読んだかどうかは事後に判別できず (戻ってしまえば `status` は clean)、その観点の結果が「fatal なし」でも「fatal あり」でも信用できない。**影響は dev サーバを立てる review-product-readiness に限らない** — guard も tdd も quality も同じツリーを読む。したがって順序は「adversarial (full) を単独実行 → 完了後に残りの観点を fan-out」とする。`mode: weakening_only` の adversarial は変異を行わないので通常どおり fan-out に入れてよい
 
 severity: low/medium の findings は修正せず JSONL に `event_type: review_low` で記録する。**転記は `jq` で結果 JSON から JSONL へ直接流し込み、`message` を含む本文も入れる** — HTML レポートのレビュー残課題セクションが `message` を表示するため、落とすと「どのファイルの何行目か」しか残らず読めない。**main のコンテキスト規律に反しない**のは、`jq` の出力を標準出力に流さずファイルへ直行させるから (main が読むのは射影した `{severity, rule, file, line}` だけで、本文は main を経由せずに JSONL へ入る)。
 
