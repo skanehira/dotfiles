@@ -114,7 +114,17 @@ mkdir -p "$(dirname "$HOME/.claude/logs/dev-impl.log")"
 . "$HOME/.claude/logs/dev-impl/<run_id>/env.sh"
 ```
 
-**フェーズ / ラウンドのスコープの値** (`PHASE` / `PHASE_NAME` / `PHASE_START_SHA` / `SCRATCH_DIR` / `ISSUE` / `ROUND` / カウンタ) も同じ理由で消えるので、**Step 4.1 で `$SCRATCH_DIR/env.sh` に書き、フェーズ内の各ブロックの冒頭で run スコープと合わせて `source` する**。カウンタ (`PHASE_SPAWNS` / `RUN_SPAWNS`) は env.sh に書いた値ではなく **JSONL の `spawn` イベントの件数から数え直す** (logging.md が復元の正と定めている。ファイルの値は書き損ねると実態からずれるが、件数はイベントそのものから出る)。
+**フェーズ / ラウンドのスコープの値** (`PHASE` / `PHASE_NAME` / `PHASE_START_SHA` / `SCRATCH_DIR` / `ISSUE` / `ROUND` / カウンタ) も同じ理由で消えるので、**Step 4.1 で `$SCRATCH_DIR/env.sh` に書き、フェーズ内の各ブロックの冒頭で run スコープと合わせて `source` する**。
+
+**「Agent の起動をまたいで比較する値」は env.sh ではなく専用のファイルに落とす** (env.sh はフェーズ開始時に 1 度書くもので、ラウンドごとに変わる値の置き場ではない)。該当するのは次の 3 つで、**いずれも「取った時点」と「使う時点」の間に必ず Agent の待ちが挟まる**:
+
+| 値 | 置き場 | 取る時点 → 使う時点 |
+| --- | --- | --- |
+| `BEFORE_FIX` / `BEFORE` (ラウンド前の HEAD) | `$SCRATCH_DIR/before-<round>.sha` | implementer を起動する直前 → 報告受領後の完了判定と「fix がテストに触れたか」 |
+| `SPAWN_EPOCH` (起動時刻) | `$SCRATCH_DIR/spawn-<agent>-<round>.epoch` | Agent 起動の直前 → 30 分タイムアウトの判定 |
+| `EXEMPTIONS_COUNT` | `$SCRATCH_DIR/self-exemptions.json` から都度算出 | 4.2c → 4.2d 手順 1 |
+
+**読み出し側は「ファイルが無い」を沈黙で通さない。** `[ -f "$f" ] || { echo "起動前の値が残っていない。判定不能"; exit 1; }` を必ず置く — 無いまま進むと、たとえば「fix がテストに触れたか」の判定が `git diff` の失敗を経て 0 件 (= 触れていない) を返し、**reward hacking を守るためのゲートが沈黙して開く**。カウンタ (`PHASE_SPAWNS` / `RUN_SPAWNS`) は env.sh に書いた値ではなく **JSONL の `spawn` イベントの件数から数え直す** (logging.md が復元の正と定めている。ファイルの値は書き損ねると実態からずれるが、件数はイベントそのものから出る)。
 
 **`$HOME` を使い、`~` を変数に入れない。** `~` はシェルの展開に依存するので、subagent への受け渡しや `jq --arg` を経由すると文字列 `~/...` のまま渡り、存在しないパスを指す。
 
@@ -153,7 +163,7 @@ printf '%s' "$REENTRY_JSONL" > "$HOME/.claude/logs/dev-impl/.reentry"
 
 **センチネルに `done` を使わない。** `done` はステップ単位の完了にも使う値なので (logging.md)、run が完了していなくても途中のステップ完了で真になり、**「未完了である」ことを検出できない**。実測でも 1 つの未完了 run に `done` が 6 件記録されており、この判定は人手で中身を読んで補うしかなかった。`run_done` は run の完了時にしか書かれないので、仕掛ける前に**未完了の run に対してこの判定が `fresh` を返さないこと**を確認できる (陰性対照)。
 
-1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値と `run_spawns_budget` (記録済みの値の最大) を復元する — `goal_loop` / `run_spawns` は再実行のたびに 0 に戻ると発散上限 (Step 3) が実質無効化されるため、`p2_fixes_total` は上限こそ無いが run をまたいだ通算件数を Step 6 で提示するため、`run_spawns_budget` はこの復元値を下限として Step 1 で再計算するため。**進行中フェーズのカウンタも JSONL から復元する** — `phase_spawns` は当該 phase の `spawn` 件数、`phase_fix_round` は `fix_dispatch` 件数、`test_gate_retry` は `context.round` が `tg*` の `spawn` 件数、`p1_fixes_in_phase` は当該 phase の `p1_fix` 件数。**Step 4.1 のリセットは「その issue を初めて着手したとき」だけ**で、再入や reopen 経由の再着手では復元する (リセットしてしまうと、上限のあるカウンタが再入のたびに 0 に戻って発散上限が実質無効になる)。**進行中フェーズの `gating_decided` (最新の 1 件) も復元する** — 再 fan-out で起動してよい観点の唯一のソースなので、失うと記憶で判断することになる。当該フェーズの `gating_decided` が無ければ 4.2c の初回 fan-out からやり直す。
+1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値と `run_spawns_budget` (記録済みの値の最大) を復元する — `goal_loop` / `run_spawns` は再実行のたびに 0 に戻ると発散上限 (Step 3) が実質無効化されるため、`p2_fixes_total` は上限こそ無いが run をまたいだ通算件数を Step 6 で提示するため、`run_spawns_budget` はこの復元値を下限として Step 1 で再計算するため。**進行中フェーズのカウンタも JSONL から復元する** — `phase_spawns` は当該 phase の `spawn` 件数、`phase_fix_round` は `fix_dispatch` 件数 + `context.round` が `retry*` の implementer `spawn` 件数 (報告不整合の再起動も 4.2a の表で `phase_fix_round` を進めるため)、`test_gate_retry` は **`context.agent` が `dev-impl-implementer`** かつ `context.round` が `tg*` の `spawn` 件数 (テストゲート再試行では fix がテストに触れると review-adversarial も同じ round ラベルで起動するので、agent で絞らないと二重に数える)、`p1_fixes_in_phase` は当該 phase の `p1_fix` 件数。**Step 4.1 のリセットは「その issue を初めて着手したとき」だけ**で、再入や reopen 経由の再着手では復元する (リセットしてしまうと、上限のあるカウンタが再入のたびに 0 に戻って発散上限が実質無効になる)。**進行中フェーズの `gating_decided` (最新の 1 件) も復元する** — 再 fan-out で起動してよい観点の唯一のソースなので、失うと記憶で判断することになる。当該フェーズの `gating_decided` が無ければ 4.2c の初回 fan-out からやり直す。
 2. **進行中フェーズの突合**: ラウンドごとにコミットしているので (4.2a / 4.2d の「ラウンドごとのコミット」)、中断したフェーズは `PHASE_START_SHA` の上に積まれた `[phase-<識別子>]` prefix つきのコミット列として残り、working tree は通常 clean である。
    - 進行中フェーズの `PHASE_START_SHA` は decisions.jsonl の当該フェーズの `start` イベントの `context.phase_start_sha` から復元する
    - `git log --oneline <PHASE_START_SHA>..HEAD` で何が積まれているかを確認し、AskUserQuestion で「続きとして取り込む / 捨ててフェーズをやり直す」を確認する (再入時 1 回だけの人間確認)。各ラウンドが何をしたかは `~/.claude/logs/dev-impl/<前回の run_id>/reviews/phase-<識別子>/impl-report*.json` にも残っている
@@ -161,10 +171,12 @@ printf '%s' "$REENTRY_JSONL" > "$HOME/.claude/logs/dev-impl/.reentry"
    - working tree が非クリーンなら、ラウンドのコミット前に落ちたか、検査 agent の汚染 (4.2d 手順 8) が残っている。`git status --porcelain` の中身も提示して同じ確認に含める
 3. **TODO チェックの突合**: TODO.md で `- [x]` 化されているフェーズのうち、**対応する issue が open のまま**のものは「最終コミットまでは済んだが close まで到達していない」として扱う。**チェックは戻さず、フェーズもやり直さない。**
 
-   **`impl_done` の SHA を基準にしない。** 4.2e はフェーズ最終コミット (手順 2) を打ってから `impl_done` (手順 5) を書くので、その間で落ちると「コミットは済んだが `impl_done` が無い」状態になり、SHA 基準の突合は完了しているフェーズを未完了と誤判定する。**issue の open/closed は 4.2e 手順 7 の close と対になっていて、`- [x]` と同じコミットに入る TODO.md の状態より後に動く**ので、「TODO は `[x]` だが issue が open」= 「最終コミットまでは済んだが close まで到達していない」を正しく表す。**4.2e の手順 3 (RUN_FACTS 更新) から再開する** — 手順 3〜8 はどれも冪等 (RUN_FACTS の追記は同じ内容なら差分が出ず、突合と転記と close は再実行しても結果が変わらない) なので、どこから落ちたかを特定せずに済む。**手順 7 から再開しない** — 手順 3〜6 が永久にスキップされ、RUN_FACTS の更新も実装ノートの転記も失われる。
+   **`impl_done` の SHA を基準にしない。** 4.2e はフェーズ最終コミット (手順 2) を打ってから `impl_done` (手順 5) を書くので、その間で落ちると「コミットは済んだが `impl_done` が無い」状態になり、SHA 基準の突合は完了しているフェーズを未完了と誤判定する。**issue の open/closed は 4.2e 手順 7 の close と対になっていて、`- [x]` と同じコミットに入る TODO.md の状態より後に動く**ので、「TODO は `[x]` だが issue が open」= 「最終コミットまでは済んだが close まで到達していない」を正しく表す。**4.2e の手順 3 (RUN_FACTS 更新) から再開する** — ただし**手順 5 (`impl_done`) と手順 6 (転記) は JSONL への追記なので、実行前に当該 phase の `impl_done` が既に無いかを `jq` で確認し、あればスキップする** (JSONL は append-only なので再実行すると重複エントリが入り、件数ベースの復元と集計が全部ずれる)。それ以外の手順 (RUN_FACTS は同内容なら差分なし、突合は読み取り、close は既 closed に冪等) はそのまま再実行してよい。**手順 7 から再開しない** — 手順 3〜6 が永久にスキップされ、RUN_FACTS の更新も実装ノートの転記も失われる。
 
    例外は `- [x]` が**未コミット** (working tree にだけある) の場合で、これはコミット前に落ちたことを意味するので `- [ ]` に戻してフェーズをやり直す。
-4. **Step 5 系の停止からの再開**: 前回が `goal_loop > 2` / `verification_tampered` / `acceptance_criteria_change` など**ゴール判定の段階で停止**していた場合、in-progress の issue は 1 件も無いので issue ラベルによる駐車が使えない。この場合は decisions.jsonl の最後の `p3_escalate` を提示し、**AskUserQuestion で「対応済み (再判定する) / まだ (中止する)」を確認する**。「対応済み」を選ばれたときだけ `goal_loop` を 0 に戻して Step 5.1 から再開する。**Claude の判断で戻さない** — 戻す条件が「人間の回答が入ったこと」であり、自動化すると `goal_loop` の上限が実質無効になる (needs-human ラベルを Claude が勝手に外さないのと同じ理由)
+
+   **issue が closed のフェーズも 1 点だけ確認する**: 当該 phase の `impl_done` はあるのに、その後の `deviation` の処理痕 (`p1_fix` / `p2_fix`、またはシグナル無しを示す次フェーズの `start`) が無ければ、**4.2e 手順 8 (親 sweep) と Step 4.6 の判定だけをやり直してから**次の issue へ進む (close 直後・4.6 前に落ちた場合、deviation_signals が未処理のまま失われるため。report は `$SCRATCH_DIR` に残っている)。
+4. **Step 5 系の停止からの再開**: 前回が `goal_loop_exceeded` / `verification_tampered` / `acceptance_criteria_change` など**ゴール判定の段階で停止**していた場合、in-progress の issue は 1 件も無いので issue ラベルによる駐車が使えない。この場合は decisions.jsonl の最後の `p3_escalate` を提示し、**AskUserQuestion で「対応済み (再判定する) / まだ (中止する)」を確認する**。「対応済み」を選ばれたときだけ `goal_loop` を 0 に戻して Step 5.1 から再開する。**Claude の判断で戻さない** — 戻す条件が「人間の回答が入ったこと」であり、自動化すると `goal_loop` の上限が実質無効になる (needs-human ラベルを Claude が勝手に外さないのと同じ理由)
 
 未完了 run が無ければ通常起動 (新規 run_id 発行) で Step 1 へ。
 
@@ -324,7 +336,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 | `goal_loop` (ゴール達成判定 → 未達対応の周回数) | 2 (周)                                                    | P3 として停止                                   |
 | `phase_fix_round` (現フェーズの検査 → 修正の周回数) | 3 (回)                                                | `phase_fix_exceeded` でエスカレ停止 (context に guard 由来 / review 由来の内訳を残す) |
 | `test_gate_retry` (現フェーズの 4.2e テストゲート再試行回数) | 3 (回)                                       | `tests_failing_before_commit` でエスカレ停止    |
-| `phase_spawns` (現フェーズの累計 subagent 起動数) | 33 (回)                                                | `spawn_budget_exceeded` でエスカレ停止          |
+| `phase_spawns` (現フェーズの累計 subagent 起動数) | 33 (回)。**再入時は `max(33, 復元値 + 16)` に引き上げる** — `spawn_budget_exceeded` は「再実行で解決しうる」停止で、復元されたカウンタが上限を超えたままだと再実行が構造的に何も解決しない (`run_spawns_budget` と同じ理由。16 は fix 1 + 再検査 5 の 2 ラウンド分 + 予備) | `spawn_budget_exceeded` でエスカレ停止          |
 | `run_spawns` (run 全体の累計 subagent 起動数)   | `run_spawns_budget` (下記「spawn 予算の意図」で定義)      | 同上                                            |
 
 スコープ別のリセット時点:
@@ -404,7 +416,7 @@ gh issue close <N> --repo "$REPO_SLUG" --comment "DoD がすべて通過した�
 - (a) **実装が実在すること** — 次の 3 つを**すべて**確認する。**`files_changed` が空でないことを先に見る** — 空配列に対する「全要素が差分に現れる」は空集合の包含として無条件に成立し、**この判定が防ぐと宣言している当のケース (何も実装せず `status: done`) で空虚になる**:
   1. `files_changed` が**非空**であること。空なら `impl_report_invalid` として扱う (4.2a の表。`mode: implement` で再起動し、3 回で `phase_fix_exceeded`)
   2. `files_changed` の各パスが、実際に `git diff --name-only <PHASE_START_SHA>` + `git ls-files --others --exclude-standard` の結果に現れること
-  3. そのラウンドのコミットで変更行数が実際に増えたこと。**起動の直前に控えた SHA と比較する** (`BEFORE=$(git rev-parse HEAD)` を implementer 起動前に取り、コミット後に `git diff --shortstat "$BEFORE" HEAD` が非空であることを見る)。working tree が非空であることだけでは足りない (`.gitignore` 追記や作業ファイルで非空になりうるため)
+  3. そのラウンドのコミットで変更行数が実際に増えたこと。**起動の直前に `$SCRATCH_DIR/before-<round>.sha` へ落とした SHA と比較する** (コミット後に `git diff --shortstat "$(cat "$SCRATCH_DIR/before-$ROUND.sha")" HEAD` が非空であることを見る。ファイルが無ければ判定不能として `impl_report_invalid` に倒す)。working tree が非空であることだけでは足りない (`.gitignore` 追記や作業ファイルで非空になりうるため)
 - (b) **fatal が 0 件であること** — 判定基準は 4.2d の fatal の定義に従う (review-* の high と architecture-guard の high/medium)
 
 何も実装せず `status: done` を返した場合に「差分ゼロ → 全テスト green → `- [x]` 化」まで素通りするのを防ぐための判定。
@@ -616,7 +628,7 @@ EXEMPTIONS_COUNT=$(jq 'length' "$SCRATCH_DIR/self-exemptions.json")
 
 出力が `[]` でも**ファイルは必ず作り、`exemptions_path` として review-tdd と review-adversarial に渡す** (免除が無かったことと、渡し忘れたことを区別できるようにする)。**`EXEMPTIONS_COUNT` は控えるのではなく、使う直前に `jq 'length' "$SCRATCH_DIR/self-exemptions.json"` で取り直す** (シェル変数は Bash 呼び出しをまたぐと消えるが、ファイルは残るため)。結果を受け取ったとき、射影の `adjudicated` がこれを下回っていれば裁定が実行されていないので未検証として扱う (4.2d 手順 1)。**review-adversarial に渡しても fresh context 監査の趣旨は壊れない** — 渡すのは実装者が編纂した実装の説明ではなく「検証しないと宣言した項目の名指しリスト」であり、被監査者の主張をそのまま信じる材料ではなく攻撃対象の指定になるため。受け側の裁定手順は `claude/agents/review-*.md` の `Step 0: 自己免除の裁定`。
 
-再 fan-out のたびに作り直す (追記ではなく上書き。前ラウンドで裁定済みのものは受け側が `upheld` として再掲する)。
+再 fan-out のたびに作り直す (追記ではなく上書き。前ラウンドで裁定済みのものは受け側が `upheld` として再掲する)。**作り直したら前ラウンドの内容と `claim` の差分を取り、新規の免除が 1 件でもあれば、再 fan-out の観点に review-adversarial (`mode: weakening_only` で足りる) を必ず含める** — 修正ラウンドで新たに宣言された免除は、そのラウンドの再検査対象に adversarial / tdd が居なければ誰にも裁かれないまま通ってしまう (裁定ゲートの意味が最終ラウンドの宣言にだけ効かなくなる)。
 
 **続けて、この fan-out で起動する agent の `spawn` を JSONL に先に書く。記録は「起動した後」ではなく、この事前ブロックの中で行う。** 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。実測: 初回 fan-out は同じブロックで `gating_decided` を書く必要があるため記録が残ったが、**再 fan-out には他に書く理由が無く記録が落ちた**。ある run の 5 フェーズで、architecture-guard の spawn 記録は実行回数に対し 1/1・2/4・1/4・4/4・0/7 件だった (修正ラウンドを多く回したフェーズほど欠落が大きい)。別のフェーズでは全 agent 合計 16 回のうち 8 件が欠落していた。`run_spawns` の予算ゲートはこの記録を唯一のソースにしているので、欠けると上限判定が実態より小さい値で走る。起動する agent 集合はこのブロックの時点で確定しているため先に書いても内容は正確で、起動が失敗した場合は別途 `guard_agent_failed` / `review_agent_failed` が記録されるので実態と食い違ったままにはならない。
 
@@ -754,8 +766,11 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
      # fix 起動の直前に控えた SHA と比較する。HEAD~1 を使わない —
      # (a) fix の差分が空でコミットが打たれなかった場合、HEAD~1..HEAD は 1 つ前のラウンドを指して誤判定する
      # (b) そのコミットがリポジトリの最初のコミットだと HEAD~1 が解決できずコマンド自体が失敗する
-     BEFORE_FIX=$(git -C "$REPO_DIR" rev-parse HEAD)   # ← mode: fix を起動する直前に取る
+     # mode: fix を起動する直前にファイルへ落とす (シェル変数は Agent の待ちをまたぐと消える)
+     git -C "$REPO_DIR" rev-parse HEAD > "$SCRATCH_DIR/before-$ROUND.sha"
      # ... fix の完了とコミット ...
+     BEFORE_FIX=$(cat "$SCRATCH_DIR/before-$ROUND.sha" 2>/dev/null)
+     [ -n "$BEFORE_FIX" ] || { echo "起動前の SHA が残っていない。テスト接触の判定が不能なので review-adversarial を必ず起動する"; }
      if [ "$BEFORE_FIX" = "$(git -C "$REPO_DIR" rev-parse HEAD)" ]; then
        echo "fix はコミットを生まなかった (差分なし)。テストには触れていない"
      else
@@ -1094,7 +1109,7 @@ findings ごとの分岐:
 
 | # | 状況                                                    | 対処                   |
 | - | ------------------------------------------------------- | ---------------------- |
-| 1 | `verification_tampered` が 1 件以上                     | 即エスカレ停止 (5.3 の表。修正ループなし) |
+| 1 | `verification_tampered` (**severity: high**) が 1 件以上 | 即エスカレ停止 (5.3 の表。修正ループなし)。low/medium の同 rule は改変ではなく書式の揺れ等なので、`spec_compliance` に記録して次の行の判定へ進む |
 | 2 | unmet ゴール、または**修正可能な** high findings (`unimplemented_api` / `schema_drift` / `infra_missing` / `goal_result_mismatch` / `holdout_test_failed`) が 1 件以上 | Step 5.5 の未達対応ループへ |
 | 3 | 残る high が**修正対象外のものだけ** (`vacuous_verification`) で、ゴールは achieved か手動 pending | **Step 6 へ**。当該ゴールを手動 pending に落とし、`status` は `partial`。完了サマリに人間確認要求として明示する |
 | 4 | 全ゴール achieved (or 手動 pending のみ) かつ high 0 件 | Step 6 へ (完了サマリ、`status` は 5.6 の判定に従う) |
@@ -1103,7 +1118,7 @@ findings ごとの分岐:
 
 #### Step 5.5: 未達対応ループ
 
-`goal_loop += 1`。`goal_loop > 2` なら P3 として停止 (エスカレ)。
+`goal_loop += 1`。`goal_loop > 2` なら `goal_loop_exceeded` で停止 (エスカレ)。
 
 それ以外:
 
@@ -1176,7 +1191,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
 - Step 4.2 のフェーズ内エスカレ条件 (`phase_fix_exceeded` / `guard_agent_failed` / `review_agent_failed` / `spawn_budget_exceeded` / `tests_failing_before_commit` / `working_tree_polluted` / `exemptions_extract_failed`)
 - P3 検出 (DESIGN.md 概要レベルの再設計必要 = `design_overview_break`)
-- `goal_loop > 2` (ゴール達成判定 → 未達対応の 3 周回でも未達ゴール残存)
+- ゴール達成判定 → 未達対応の 3 周回でも未達ゴールが残存 (`goal_loop_exceeded`。`goal_loop > 2` で発火)
 - 必須ドキュメント (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) 欠如 (`docs_missing`)
 - `blocker=true` の POC_NEEDED マーカーが残存 (`poc_marker_unresolved`。dev-spec フェーズ 5 で解決してから再実行)
 - Step 1 構造ゲートの欠落 (`design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing`)
@@ -1196,7 +1211,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
    | # | 停止理由 | ラベル | 再開のしかた |
    | - | --- | --- | --- |
-   | 1 | **着手中の issue が無い時点での停止** — Step 1 / 1.5 / 2 の停止 (`docs_missing` / `design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing` / `poc_marker_unresolved` / `github_prereq_failed` / `issue_list_truncated` / `dependency_blocked` / `issue_incomplete`) と Step 5 系の停止 (`goal_loop > 2` / `verification_tampered` / `acceptance_criteria_change`) | ラベル操作は行わない (対象の issue が無い) | JSONL の `p3_escalate` を駐車マーカーとし、**Step 0 手順 4 が再入時にユーザーへ確認してから再開する** |
+   | 1 | **着手中の issue が無い時点での停止** — Step 1 / 1.5 / 2 の停止 (`docs_missing` / `design_not_approved` / `approval_stale` / `goals_missing` / `verification_missing` / `poc_marker_unresolved` / `github_prereq_failed` / `issue_list_truncated` / `dependency_blocked` / `issue_incomplete`) と Step 5 系の停止 (`goal_loop_exceeded` / `verification_tampered` / `acceptance_criteria_change`) | ラベル操作は行わない (対象の issue が無い) | JSONL の `p3_escalate` を駐車マーカーとし、**Step 0 手順 4 が再入時にユーザーへ確認してから再開する** |
    | 2 | 人間の判断が要るもの (P3 = `design_overview_break` / `test_weakening_detected` / `working_tree_polluted` / `exemptions_extract_failed` / **決定的な** `guard_agent_failed` / `review_agent_failed`) | **`needs-human` を貼り `in-progress` を外す** | 人間が対応した後、次の `/dev-impl` 起動時に Step 0 が確認してラベルを `ready` に戻す |
    | 3 | 再実行で解決しうるもの (`phase_fix_exceeded` / `spawn_budget_exceeded` / `tests_failing_before_commit` / **一過性の** `guard_agent_failed` / `review_agent_failed`) | `in-progress` のまま | `/dev-impl` の再実行で Step 2 が再開対象として拾う |
 

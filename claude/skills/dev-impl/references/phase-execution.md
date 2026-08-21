@@ -28,10 +28,15 @@
 
 subagent が応答しないまま 30 分経過したかの判定に使う (SKILL.md 4.2a / 4.2c)。**run 全体の経過時間は計測しない** — 経過時間で run を打ち切る基準は無い。
 
+**起動時刻はファイルに落とす。** 待ちの実体は Agent ツール呼び出しそのものなので、判定する Bash は必ず別の呼び出しになり、シェル変数は生き残らない (空のまま引き算すると必ず「30 分超」になり、正常な agent を打ち切る):
+
 ```bash
-SPAWN_EPOCH=$(date +%s)          # Agent を起動した直後に記録する
+# Agent を起動する直前
+date +%s > "$SCRATCH_DIR/spawn-$NAME-$ROUND.epoch"
 # ... 応答を待つ ...
-waited_minutes=$(( ($(date +%s) - SPAWN_EPOCH) / 60 ))
+EPOCH_FILE="$SCRATCH_DIR/spawn-$NAME-$ROUND.epoch"
+[ -f "$EPOCH_FILE" ] || { echo "起動時刻が残っていない。タイムアウト判定は行わず待ちを継続する"; }
+waited_minutes=$(( ($(date +%s) - $(cat "$EPOCH_FILE")) / 60 ))
 ```
 
 ## 4.2: 事前判定
@@ -212,10 +217,14 @@ output_path: ${absScratchDir}/review-adversarial-r${round}.json` }   // PHASE_CO
 jq -c '{
   ok, skip_reason, dimension, mode, skipped_lenses,
   unchecked: (.unchecked_files // []),                  # architecture-guard: 未検証ファイル (非空なら未検証扱い)
+  checked: (.checked_files // 0),                       # architecture-guard: 読んだファイル数
+  sbd: ((.skipped_by_design // []) | length),           # architecture-guard: 対象外としたファイル数
   adjudicated: ((.adjudicated_exemptions // []) | length),  # review-tdd / review-adversarial: 免除を裁定した件数
   findings: [(.findings // .violations)[]? | {severity, rule, file, line}]
 }' "$RESULT_JSON"
 ```
+
+architecture-guard については、main 側で `checked + sbd + (unchecked の件数)` が**フェーズ差分のソースファイル数と一致すること**を突き合わせる (`git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | wc -l` と比較)。一致しなければ guard の自己申告に漏れがある = 未検証として扱う。
 
 `message` / `fix_proposal` は main では読まない (修正する implementer が JSON を自分で Read する)。
 
