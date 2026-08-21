@@ -145,9 +145,11 @@ ROUND=0                              # 初回 fan-out は 0、修正ラウンド
 # (logging.md の spawn スキーマが mode を要求するため、無い場合も明示的に「無い」と書く)。
 # **空白区切りの 1 変数にしない** — zsh は $VAR を単語分割しないため、`for a in $VAR` が
 # 全体を 1 要素として扱い、記録が 1 件しか残らない (実行シェルが zsh のとき必ず起きる)
+# (例は weakening_only の一段 fan-out。full の場合は冒頭の表のとおり段ごとに作る —
+#  段 1 = 'review-adversarial:sonnet:full' の 1 行だけ、段 3 = それを除いた残り)
 AGENTS_TO_SPAWN='architecture-guard:haiku:-
 review-tdd:opus:-
-review-adversarial:sonnet:full'
+review-adversarial:sonnet:weakening_only'
 
 # (0) カウンタを JSONL から数え直す (env.sh の値ではなく spawn イベントの件数が正 = logging.md)
 PHASE_SPAWNS=$(jq -r --arg p "$PHASE" 'select(.event_type=="spawn" and .phase==$p)|1' "$JSONL" | wc -l | tr -d ' ')

@@ -114,7 +114,7 @@ mkdir -p "$(dirname "$HOME/.claude/logs/dev-impl.log")"
 . "$HOME/.claude/logs/dev-impl/<run_id>/env.sh"
 ```
 
-**フェーズスコープの値** (`PHASE` / `PHASE_NAME` / `PHASE_START_SHA` / `SCRATCH_DIR` / `ISSUE`) も同じ理由で消えるので、**Step 4.1 で `$SCRATCH_DIR/env.sh` に書き、フェーズ内の各ブロックの冒頭で run スコープと合わせて `source` する**。**`ROUND` とカウンタは env.sh に書かない** — ラウンドごとに変わる値で、フェーズ開始時に 1 度書く env.sh の性質と合わない。`ROUND` は使うブロックの冒頭で JSONL の当該 phase の `fix_dispatch` 件数から導出し、カウンタは `spawn` イベントの件数から数え直す (logging.md)。
+**フェーズスコープの値** (`PHASE` / `PHASE_NAME` / `PHASE_START_SHA` / `SCRATCH_DIR` / `ISSUE`) も同じ理由で消えるので、**Step 4.1 で `$SCRATCH_DIR/env.sh` に書き、フェーズ内の各ブロックの冒頭で run スコープと合わせて `source` する**。**`ROUND` とカウンタは env.sh に書かない** — ラウンドごとに変わる値で、フェーズ開始時に 1 度書く env.sh の性質と合わない。`ROUND` は使うブロックの冒頭で **Step 0 手順 1 と同じ式** (`fix_dispatch` 件数 + `context.round` が `retry*` の implementer `spawn` 件数 = `phase_fix_round` の現在値) から導出する。導出式をここに再定義しない — **正は Step 0 手順 1 の復元式**である。カウンタは `spawn` イベントの件数から数え直す (logging.md)。
 
 **「Agent の起動をまたいで比較する値」は env.sh ではなく専用のファイルに落とす** (env.sh はフェーズ開始時に 1 度書くもので、ラウンドごとに変わる値の置き場ではない)。該当するのは次の 3 つで、**いずれも「取った時点」と「使う時点」の間に必ず Agent の待ちが挟まる**:
 
@@ -544,7 +544,7 @@ implementer 側の規約 (TDD の順序、フェーズスコープのテスト�
 
 | reason | 該当する状況 | 対処 |
 | --- | --- | --- |
-| `impl_report_invalid` | `report_path` が不在 / `jq` でパース不能 / 必須フィールド (`status` / `summary` / `files_changed` / `test_result`) の欠落 / `files_changed` が空 (完了判定 (a)) | **フェーズ内で処理する。** `phase_fix_round += 1` して `mode: implement` で再起動 (fix ではない — 何が実装されたか分からないため)。**`report_path` は `impl-report-retry-<phase_fix_round>.json`、`spawn` 記録の `context.round` は文字列 `"retry<phase_fix_round>"`** にする (4.2e 手順 4 の集合突合が成果物と 1:1 で対応するようにするため。ファイル名の変換規則は同手順の sed に `s|^impl-report-retry-|dev-impl-implementer-rretry|` を足す)。3 回で `phase_fix_exceeded` でエスカレ停止。issue は `in-progress` のまま |
+| `impl_report_invalid` | `report_path` が不在 / `jq` でパース不能 / 必須フィールド (`status` / `summary` / `files_changed` / `test_result`) の欠落 / `files_changed` が空 (完了判定 (a)) | **フェーズ内で処理する。** `phase_fix_round += 1` して `mode: implement` で再起動 (fix ではない — 何が実装されたか分からないため)。**`report_path` は `impl-report-retry-<phase_fix_round>.json`、`spawn` 記録の `context.round` は文字列 `"retry<phase_fix_round>"`** にする (4.2e 手順 4 の集合突合が成果物と 1:1 で対応するようにするため。変換は同手順の sed の `impl-report-retry-` 行が対応する — 定義済みなので足さない)。3 回で `phase_fix_exceeded` でエスカレ停止。issue は `in-progress` のまま |
 | `impl_timeout` | spawn から **30 分**応答が無い (計測は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: subagent の応答待ち時間` 節) | **run は止めない。** その issue に `gh issue comment <N>` で停止理由 (何分待って応答が無かったか・そのラウンドまでに積まれたコミット) を残し、`gh issue edit <N> --add-label needs-human --remove-label in-progress` で駐車して、**次の着手可能な issue に移る** (Step 0 の再開確認は issue コメントに理由が書かれている前提で「解決したか」を尋ねるので、コメントが無いと人間が何を判断すればよいか分からない) (`in-progress` を外さないとラベルが併記になり Step 2 の判定が割れる)。着手可能な issue が他に無ければ `dependency_blocked` と同じ扱いで停止する |
 
 どちらも検査 agent の `guard_agent_failed` / `review_agent_failed` と同じく、**パス扱いにしない**。**`impl_timeout` は「エスカレ停止」ではない** (run は次の issue へ進む) ので、フェーズ内エスカレ条件の表にも停止条件のリストにも載せない。載せるのは `impl_report_invalid` から昇格した `phase_fix_exceeded` の側である。
@@ -714,7 +714,7 @@ review-quality (rules 準拠 + アーキテクチャ heuristic 統合) は最後
 
 例外は **初回評価で skip だったフェーズだけ**: 各修正ラウンドの fan-out 直前に述語一式 (`$CHANGED` / `$LINES` / `$TEST_FILE_CHANGED` / `$TEST_CONTENT_CHANGED` / `$CI_FILES_CHANGED` に加え、**mode 決定に要る `$CONSUMABLE_CHANGED` / `$AUTH_CHANGED` も**) を再算出し、skip → 実行 に転じたら起動する (降格は禁止)。mode の判定材料まで揃えないと、起動すると決めた直後に mode を決められない。初回 skip 後の修正でテストが追加・弱体化されるケースを取りこぼさないため。
 
-各 Agent 呼び出しには **「モデル方針」の表どおり `model` を明示**する。呼び出し時の model 指定は agent 定義側のデフォルトより優先され、**未指定にすると親のセッションモデルを継承してしまう** (`agent-spawn-guard` hook が未指定を deny する)。**review-adversarial には PHASE_CONTEXT の path を渡さない** — fresh context 監査のため、`mode` (上記「review-adversarial の mode 決定」で確定した値) / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / output_path のみを渡す。**`mode` を渡し忘れると agent 側の既定で `full` に戻り、縮退が無音で効かなくなる** (`claude/agents/review-adversarial.md` の「モード」節)。
+各 Agent 呼び出しには **「モデル方針」の表どおり `model` を明示**する。呼び出し時の model 指定は agent 定義側のデフォルトより優先され、**未指定にすると親のセッションモデルを継承してしまう** (`agent-spawn-guard` hook が未指定を deny する)。**review-adversarial には PHASE_CONTEXT の path を渡さない** — fresh context 監査のため、`mode` (上記「review-adversarial の mode 決定」で確定した値) / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / **exemptions_path** / output_path のみを渡す (**集合の正は phase-context.md「渡し方」の行**。この列挙とずれたらあちらに従う)。**`mode` を渡し忘れると agent 側の既定で `full` に戻り、縮退が無音で効かなくなる** (`claude/agents/review-adversarial.md` の「モード」節)。
 
 ##### 4.2d: fatal 判定と修正ラウンド (最大 3)
 
