@@ -14,9 +14,9 @@ input=$(cat)
 # 区切りに \x1f (unit separator) を使うのは、IFS が空白文字だと空フィールドが
 # 詰められて以降の代入位置がずれるため。
 IFS=$'\x1f' read -r -d '' \
-  duration_ms cost_usd in_tokens out_tokens ctx_pct model_name effort thinking fast cwd session_id \
+  api_duration_ms cost_usd in_tokens out_tokens ctx_pct model_name effort thinking fast cwd session_id \
   < <(printf '%s' "$input" | jq -j '
-        [ (.cost.total_duration_ms // ""),
+        [ (.cost.total_api_duration_ms // ""),
           (.cost.total_cost_usd // ""),
           (.context_window.total_input_tokens // ""),
           (.context_window.total_output_tokens // ""),
@@ -69,9 +69,11 @@ join_comma() {
 
 groups=()
 
-# 1. 経過時間
-if [[ $duration_ms =~ ^[0-9]+$ ]]; then
-  groups+=("$(format_duration "$duration_ms")")
+# 1. 経過時間 (API 応答待ちの合計)
+# total_duration_ms ではなく total_api_duration_ms を使う。前者は壁時計時間で、
+# セッションを再開して使い続けると 272h のような値になり指標として読めないため。
+if [[ $api_duration_ms =~ ^[0-9]+$ ]]; then
+  groups+=("$(format_duration "$api_duration_ms")")
 fi
 
 # 2. トークン in/out と概算料金
