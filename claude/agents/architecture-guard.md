@@ -100,9 +100,9 @@ case "$TARGET" in
     { git -C "$REPO_DIR" diff --name-only; git -C "$REPO_DIR" diff --staged --name-only; git -C "$REPO_DIR" ls-files --others --exclude-standard; } | sort -u
     ;;
   phase:*)
-    # dev-impl はフェーズ末尾のテストゲート通過後 (Step 4.2e) までコミットしないため、
-    # "$PHASE_START_SHA..HEAD" のようなコミット間 diff は常に空になる (HEAD が動いていないため)。
-    # working tree (staged + unstaged) を PHASE_START_SHA と比較し、新規 untracked ファイルも加える。
+    # dev-impl は実装ラウンドごとにコミットするので、PHASE_START_SHA との比較でフェーズの
+    # 全差分が取れる。未コミットの残り (コミット漏れ・検査中の書き換え) も取りこぼさないよう、
+    # working tree と untracked も併せて見る。
     { git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA"; git -C "$REPO_DIR" ls-files --others --exclude-standard; } | sort -u
     ;;
 esac

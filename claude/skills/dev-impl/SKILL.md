@@ -86,17 +86,11 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 - 完了イベント (Step 6 の完了サマリ出力時に記録する `done`) が無い (最後が `p3_escalate` 等)
 
 1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値と `run_spawns_budget` (記録済みの値の最大) を復元する — `goal_loop` / `run_spawns` は再実行のたびに 0 に戻ると発散上限 (Step 3) が実質無効化されるため、`p2_fixes_total` は上限こそ無いが run をまたいだ通算件数を Step 6 で提示するため、`run_spawns_budget` はこの復元値を下限として Step 1 で再計算するため。**進行中フェーズの `gating_decided` (最新の 1 件) も復元する** — 再 fan-out で起動してよい観点の唯一のソースなので、失うと記憶で判断することになる。当該フェーズの `gating_decided` が無ければ 4.2c の初回 fan-out からやり直す。
-2. **working tree の突合**: `git status --porcelain` が非クリーンなら前回停止時の残骸。**逐次モードでも implementer が main の working tree で直接編集するため、停止時の未コミット実装はここに残る**。内容を確認し、AskUserQuestion で「続きとして取り込む / `git restore` で捨ててフェーズをやり直す」を確認する (再入時 1 回だけの人間確認)
-   - 何が実装されたかは `~/.claude/logs/dev-impl/<前回の run_id>/reviews/phase-<識別子>/impl-report.json` に残っているので、判断材料としてこれを `jq` で読む (`summary` / `files_changed` / `test_result`)
-   - 捨てる場合は 3 段階で行う。**`git reset` + `git restore` だけでは実装ファイルが残る** — 新規実装フェーズの成果物は全て未追跡で、intent-to-add (`git add -N`、Step 4.2c) 済みのファイルも `git reset` 後は未追跡に戻るだけでディスクに残り、`git restore` は未追跡ファイルを削除しないため (実測確認済み):
-
-     ```bash
-     git reset                                  # intent-to-add を解除
-     git restore .                              # 追跡済みファイルの変更を戻す
-     git clean -fd <implementer 報告の files_changed のパス>   # 未追跡の実装を削除
-     ```
-
-     `git clean -fd` は**必ずパスを指定する** (無条件だと `docs/.dev-impl/` や他の作業ファイルまで消える)。対象パスは前回 run の `impl-report.json` の `files_changed` から取る。
+2. **進行中フェーズの突合**: ラウンドごとにコミットしているので (4.2a / 4.2d の「ラウンドごとのコミット」)、中断したフェーズは `PHASE_START_SHA` の上に積まれた `[phase-<識別子>]` prefix つきのコミット列として残り、working tree は通常 clean である。
+   - 進行中フェーズの `PHASE_START_SHA` は decisions.jsonl の当該フェーズの `start` イベントの `context.phase_start_sha` から復元する
+   - `git log --oneline <PHASE_START_SHA>..HEAD` で何が積まれているかを確認し、AskUserQuestion で「続きとして取り込む / 捨ててフェーズをやり直す」を確認する (再入時 1 回だけの人間確認)。各ラウンドが何をしたかは `~/.claude/logs/dev-impl/<前回の run_id>/reviews/phase-<識別子>/impl-report*.json` にも残っている
+   - **捨てる場合は `git reset --hard <PHASE_START_SHA>`。** ただし打つ前に、`<PHASE_START_SHA>..HEAD` の全件が `[phase-<識別子>]` prefix を持つことを確認する。**エスカレ停止した run では HTML レポートのコミット (Step 7) が、P1/P2 の動的修正があった run では設計書のコミットが同じ範囲に混ざる**ので、無条件の reset はそれらも巻き戻す。prefix を持たないコミットがあれば、実装コミットだけを `git revert` するかユーザーに判断を仰ぐ
+   - working tree が非クリーンなら、ラウンドのコミット前に落ちたか、検査 agent の汚染 (4.2d 手順 8) が残っている。`git status --porcelain` の中身も提示して同じ確認に含める
 4. **TODO チェックの突合**: 直近の完了コミット (decisions.jsonl の直近 `impl_done` イベントの SHA) 以降に `- [x]` 化されたタスクがあれば、そのフェーズは「チェック済みだが未コミット」= 未完了として pending に戻す (`- [x]` は実行器の自己申告なので、コミットと突き合わせて初めて完了扱いにする)
 
 未完了 run が無ければ通常起動 (新規 run_id 発行) で Step 1 へ。
@@ -357,6 +351,7 @@ PHASE_CONTEXT の YAML テンプレートと抜粋ロジック (design 節の抜
 implementer 側の規約 (TDD の順序、フェーズスコープのテストのみ実行、コミット・`docs/` 編集の禁止、報告 JSON のスキーマ、停止条件) は `claude/agents/dev-impl-implementer.md` に常駐しているので、指示文で繰り返さない。
 
 - **起動する直前に** `phase_spawns += 1` / `run_spawns += 1` し、JSONL に `event_type: spawn` を記録する (起動後に書く規定だと構造的に落ちる。理由は 4.2c の事前ブロック)
+- **報告を受けたら main がその差分をコミットする** (下記「ラウンドごとのコミット」)
 - 報告受領時に JSONL へ `event_type: impl_report` (context に要約 JSON + `report_path`) を記録する。**報告要約は main のコンテキストに載るが、全文 JSON は載せない** (P1/P2/P3 判定と JSONL 転記に必要なフィールドは `jq` で `report_path` から直接引く)
 - `status: failed` の場合は `reason` に応じて分岐する:
 
@@ -391,6 +386,21 @@ implementer 側の規約 (TDD の順序、フェーズスコープのテスト�
 
 - implementer が応答しないまま **spawn から 30 分**経過したら打ち切る (`impl_failed`。計測は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: subagent の応答待ち時間` 節)。その issue を `gh issue edit <N> --add-label needs-human --remove-label in-progress` で駐車して次の issue に移る (`in-progress` を外さないとラベルが併記になり、Step 2 の判定が割れる)
 
+##### ラウンドごとのコミット (4.2a / 4.2d 共通)
+
+**implementer の報告を受けたら、その差分をその場で main がコミットする。** フェーズの終わりまでコミットを溜めない。溜めると実装が未追跡ファイルとして積み上がり、**検査 agent への差分の見せ方・作業ツリー汚染の検出・中断時の巻き戻しがいずれも「未追跡ファイルを相手にする特殊な操作」に化ける** (4.2c の clean 前提・4.2d 手順 8・Step 0 の巻き戻しは、いずれもラウンドごとにコミットされていることを前提に組んである)。
+
+| 項目 | 規定 |
+| --- | --- |
+| 実行主体 | **main** (implementer ではない)。形式を機械検証する commit-msg-guard hook は親にしか効かないため |
+| subject | `<emoji> <type>: [phase-<識別子>] <要約>`。`<要約>` は implementer 報告の `summary` を 1 行に詰めたもの |
+| 識別子 | issue タイトル `フェーズ<識別子>: <名前>` の識別子。`$SCRATCH_DIR` のパスや `### フェーズ<識別子>:` 見出しと同じ値を使う |
+| `[STRUCTURAL]` / `[BEHAVIORAL]` | **付けない。** 途中のコミットは「フェーズの実装の一部」であって、動作変更の有無を独立に語れる単位ではない。フェーズ最終コミット (4.2e) にだけ付ける |
+| 本文 | `Refs #<issue 番号>` を入れる (close するのは 4.2e の最終コミットだけ) |
+| コミットの条件 | **フェーズ範囲のテストが緑であることだけ。** 全体スイートは 4.2e で確認する (`rules/core/commit.md`「dev-impl のフェーズ内コミット」の例外規定) |
+
+prefix を付けるのは `git log --oneline` でどのコミットがどのフェーズのものか目で追えるようにするため。フェーズ 1 本が 1 コミットではなくなるので、prefix が無いと履歴がフェーズ境界を失う。
+
 ##### 実装ノートの受け取り (design_decision / open_question)
 
 implementer 報告の `design_decisions` (設計が沈黙・あいまいな箇所での自律判断) と `open_questions` (確信が持てずユーザの事後確認が必要な選択) を、main が JSONL に `event_type: design_decision` / `open_question` として**`report_path` から `jq` で転記する** (スキーマは [references/logging.md](./references/logging.md) を参照)。ループは止めない。
@@ -405,13 +415,17 @@ implementer 報告の `design_decisions` (設計が沈黙・あいまいな箇�
 
 ##### 4.2c: 検査 fan-out (main が起動して待つ)
 
-**fan-out の直前に、未追跡ファイルを intent-to-add する。初回だけでなく 4.2d の再 fan-out でも毎回実行する** (修正ラウンドが新規作成したファイルは、実行しないと以後どのラウンドの検査からも見えないままになる。実測: fix ラウンドが作った 5 ファイル — マイグレーション 1 本と web 層 3 ファイルを含む — が後続 4 ラウンドの全観点で不可視だった):
+**fan-out の直前に、作業ツリーが clean であることを確認する。初回だけでなく 4.2d の再 fan-out でも毎回行う**:
 
 ```bash
-git ls-files -z --others --exclude-standard | xargs -0 -r git add -N
+git -C "$REPO_DIR" status --porcelain    # 出力が空であること
 ```
 
-dev-impl は 4.2e までコミットしないため、新規実装だけのフェーズは全ファイルが untracked になり `git diff <PHASE_START_SHA>` では見えない。`architecture-guard` は `git ls-files --others` を併用するが検査 agent ごとに扱いが揃っていないので、ここで揃えて全 agent の `git diff <PHASE_START_SHA>` が同じ差分を返すようにする。
+非空なら**直前のラウンドのコミットが漏れている** (4.2a / 4.2d は implementer の報告を受けるたびに main がコミットする → 「ラウンドごとのコミット」)。コミットしてから fan-out する。**実装がコミット済みであることは、この後の 3 つが成り立つ前提になっている**:
+
+- 全 agent の `git diff <PHASE_START_SHA>` が新規ファイルも含めて同じ差分を返す (`git diff` は未追跡ファイルを一切見ないので、コミットしていないと新規実装だけのフェーズが全 agent に空差分として見える)
+- 検査 agent がソースを書き換えたまま戻さなかった場合、clean なツリー上の変更として `git status --porcelain` に現れる (フェーズの差分が未コミットのまま並んでいると、既に「変更済み」の行しか出ないので中身の書き換えを検出できない)
+- 中断したフェーズの破棄が `git reset --hard <PHASE_START_SHA>` で済む (Step 0)
 
 **続けて、implementer の自己免除を抽出して検査 agent へ渡す** (実装者が「検証しない」と宣言した項目は、記録するだけでは誰も裁定しない。実測で修正ラウンド後半の fatal 2 件がいずれも初回に宣言された自己免除に起因していた):
 
@@ -434,12 +448,6 @@ jq -s -c '[ .[] | (.design_decisions[]? | select(...)), (.verification_skipped[]
 
 再 fan-out のたびに作り直す (追記ではなく上書き。前ラウンドで裁定済みのものは受け側が `upheld` として再掲する)。
 
-**続けて、検査対象の内容ハッシュのベースラインを取る** (検査 agent が攻撃・変異でソースを書き換えたまま戻さないことがあるため。詳細は 4.2d 手順 8):
-
-```bash
-git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | xargs shasum > "$SCRATCH_DIR/content-hash-before-${ROUND}.txt"
-```
-
 **続けて、この fan-out で起動する agent の `spawn` を JSONL に先に書く。記録は「起動した後」ではなく、この事前ブロックの中で行う。** 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。実測: 初回 fan-out は同じブロックで `gating_decided` を書く必要があるため記録が残ったが、**再 fan-out には他に書く理由が無く記録が落ちた**。ある run の 5 フェーズで、architecture-guard の spawn 記録は実行回数に対し 1/1・2/4・1/4・4/4・0/7 件だった (修正ラウンドを多く回したフェーズほど欠落が大きい)。別のフェーズでは全 agent 合計 16 回のうち 8 件が欠落していた。`run_spawns` の予算ゲートはこの記録を唯一のソースにしているので、欠けると上限判定が実態より小さい値で走る。起動する agent 集合はこのブロックの時点で確定しているため先に書いても内容は正確で、起動が失敗した場合は別途 `guard_agent_failed` / `review_agent_failed` が記録されるので実態と食い違ったままにはならない。
 
 gating された観点と `architecture-guard` を**同一メッセージ内の複数 Agent tool_use として並列起動**し、main が全部の完了を待つ。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 検査 fan-out の起動` 節を Read してから実行する。
@@ -447,12 +455,10 @@ gating された観点と `architecture-guard` を**同一メッセージ内の�
 **全観点の結果を受け取ったら、汚染の突合を行う** (agent の `working_tree_polluted` 報告の有無に関わらず必ず実行する):
 
 ```bash
-git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | xargs shasum > "$SCRATCH_DIR/content-hash-after-${ROUND}.txt"
-cmp -s "$SCRATCH_DIR/content-hash-before-${ROUND}.txt" "$SCRATCH_DIR/content-hash-after-${ROUND}.txt" \
-  || diff "$SCRATCH_DIR/content-hash-before-${ROUND}.txt" "$SCRATCH_DIR/content-hash-after-${ROUND}.txt"
+git -C "$REPO_DIR" status --porcelain    # 出力が空であること
 ```
 
-差分が出たら 4.2d 手順 8 に従う。
+fan-out の直前に clean を確認しているので、ここで非空なら**検査 agent が書き換えたまま戻していない**。差分が出たら 4.2d 手順 8 に従う。
 
 guard を review と同じ fan-out に入れるのは、待ちを 2 回から 1 回に減らすため。guard の違反も review の fatal も同じ修正ラウンド (4.2d) で処理する。
 
@@ -534,16 +540,27 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
 
    ただし **fatal が 1 件以上あって既に fix を起動する場合に限り、同じフェーズの medium を `findings_paths` に同梱してよい** (相乗り。追加の spawn を生まないため無料)。相乗りさせた medium は再検証しないので解消は主張せず、結果に関わらず `review_low` として記録する。
 3. fatal あり → `phase_fix_round += 1` する。**この時点で `phase_fix_round > 3` なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)
-4. **`mode: fix` の `dev-impl-implementer` を起動**する。**モデルはラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (上記「修正ラウンドのモデル昇格」)。ラウンド 2 以降は指示文に「指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを確認せよ。族として閉じられない残りは報告の `open_questions` に明記せよ」を加える。渡すのは `findings_paths` (fatal を含む結果 JSON の絶対パスの配列) / `phase_context_path` / `repo_dir` / `report_path`。main は findings の本文を読まないし、修正内容を指示しない (fixer が JSON を自分で Read する)。**fixer が直す対象は「review-* の high」と「architecture-guard の high/medium」**で、fatal の定義と一致させてある (guard の medium が誰にも直されず空回りするのを防ぐため)
+4. **`mode: fix` の `dev-impl-implementer` を起動**する。**モデルはラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (上記「修正ラウンドのモデル昇格」)。ラウンド 2 以降は指示文に「指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを確認せよ。族として閉じられない残りは報告の `open_questions` に明記せよ」を加える。渡すのは `findings_paths` (fatal を含む結果 JSON の絶対パスの配列) / `phase_context_path` / `repo_dir` / `report_path`。main は findings の本文を読まないし、修正内容を指示しない (fixer が JSON を自分で Read する)。**fixer が直す対象は「review-* の high」と「architecture-guard の high/medium」**で、fatal の定義と一致させてある (guard の medium が誰にも直されず空回りするのを防ぐため)。**報告を受けたら 4.2a と同じく main がコミットする** (「ラウンドごとのコミット」)
 5. 修正完了後、**再 fan-out は「fatal を出した観点 + architecture-guard」に絞って 4.2c に戻る**。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は**原則として `gating_decided` に記録した `gating_set` の部分集合**とする (`architecture-guard` は gating 対象外で常に実行するため、この判定の対象に含めない)。下記 2 つの場合に限り集合外の review-adversarial を追加してよく、追加したときは `gating_decided` を追記して事後に正当な例外だと分かるようにする:
 
-   - **fix がテストに触れた場合は review-adversarial を必ず追加する** (`mode: weakening_only` で足りる)。判定は **fix 起動の直前と完了直後にテストファイル群の署名を取って比較する** ([references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: fix がテストに触れたかの判定` 節)。4.2e までコミットしないため fix 差分だけを切り出す SHA は存在せず、`$TEST_CONTENT_CHANGED` (フェーズ開始 SHA 比) では「implement 段階で触れたか」しか分からない。修正の過程でテストが弱体化されるのはレンズ B が守る対象そのもので、ここに穴を作らない。既に adversarial が `full` で起動していたフェーズでは `full` のまま再実行する
+   - **fix がテストに触れた場合は review-adversarial を必ず追加する** (`mode: weakening_only` で足りる)。判定は**その fix のコミット差分にテストファイルが含まれるか**を見るだけでよい (ラウンドごとにコミットしているので、fix 差分を切り出す SHA が存在する):
+
+     ```bash
+     git -C "$REPO_DIR" diff --name-only HEAD~1 HEAD \
+       | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)'
+     ```
+
+     Rust のインラインテスト (`#[cfg(test)]`) はこのファイル名パターンで捕まらないので、Rust プロジェクトでは同じ差分に対して `git diff -U0 HEAD~1 HEAD | rg '#\[cfg\(test\)\]'` も見る。修正の過程でテストが弱体化されるのはレンズ B が守る対象そのもので、ここに穴を作らない。既に adversarial が `full` で起動していたフェーズでは `full` のまま再実行する
    - review-adversarial のスキップ述語が「skip → 実行」に転じた場合 (既存規定どおり、降格は禁止)。**この転換で起動するときの `mode` は、その時点で「review-adversarial の mode 決定」表を評価して決める** (初回に skip したフェーズは mode を確定しておらず `adversarial_mode: "skipped"` しか記録が無いため)。決まった値で `gating_decided` を追記する
 
    「修正が別観点を壊す」リスクは、最後の issue の全観点フル検査と Step 5 の第三者監査 (`review-spec-compliance`) で受け止める
 6. 修正中に `design_overview_break` を検知 → 即エスカレ停止 (commit しない)
 7. review-adversarial の `test_weakened` / `vacuous_assertion` / `skip_added` は confidence に関わらず**修正ラウンドに乗せない** (`dev-impl-implementer` 側も rule 名だけで無条件に `test_weakening_suspected` で停止する規約なので、confidence で線を引くと fix を起動しても必ず空振りして 1 ラウンド無駄になる)。弱体化を実装者自身に直させると骨抜きの温床になるため、4.2e と同じトレース確認 (TODO.md / DESIGN_DETAIL_APP.md に意図的な変更としてトレースできるか) を main が行い、トレース不能なら `test_weakening_detected` でエスカレ停止する。`dev-impl-implementer` 側もこれらの finding を渡されたら修正せず `test_weakening_suspected` で停止する規約になっている (二重の歯止め)
-8. **作業ツリーの汚染は、agent の自己申告ではなく main が内容ハッシュで機械検出する** (4.2c の検査後ブロック)。`working_tree_polluted` の報告が無くても必ず突合する — **`git status --porcelain` では検出できない**。フェーズの差分ファイルは既に「変更済み」として並んでいるので、中身を書き換えても status の出力は 1 文字も変わらない (同一の変異を加えて前後を `cmp` でバイト比較し、完全一致することを実証済み)。実際にこの穴により、review-adversarial が検査対象の条件式を変異させたまま終了し、agent 自身は自分で取った status スナップショットの一致を見て「汚染なし」と判定していた事故が起きている。差分が出たファイルは `git checkout` せず、**どのラウンドの成果物が失われるか分からないためエスカレ停止 (`working_tree_polluted`) してユーザーに判断を仰ぐ** (直前の実装が変異と混ざっている可能性があるため、機械的な復元をしない)
+8. **作業ツリーの汚染は、agent の自己申告ではなく main が検出する** (4.2c の検査後ブロック)。`working_tree_polluted` の報告が無くても必ず `git status --porcelain` で突合する。実装はラウンドごとにコミット済みで fan-out 直前のツリーは clean なので、**検査 agent が書き換えたまま戻さなければ必ず変更として現れる**。
+
+   差分が出たら `git restore <該当ファイル>` で直前のコミットの状態に戻す。**実装は既に履歴に入っているので、この復元で失われるのは agent が加えた変異だけである** (フェーズ中に何もコミットしない設計では、実装と変異が同じ未コミット差分に混ざるため機械復元ができなかった)。復元したら JSONL に `working_tree_polluted` を記録する。
+
+   **そのラウンドの fatal が 0 件だった場合に限り、検査を 1 回やり直す。** 並列に走った他の観点が変異後のコードを読んでいた可能性があり、汚染されたラウンドの「fatal なし」を根拠にコミットへ進むと、検査していないコードを通したことになるため。fatal が 1 件以上あるラウンドはそのまま修正ラウンドへ進んでよい (修正後の再検査が clean なツリーで走る)。同一フェーズで 2 回目の汚染を検出したらエスカレ停止する (`working_tree_polluted`)
 
 severity: low/medium の findings は修正せず JSONL に `event_type: review_low` で記録する (射影で読んだ `{severity, rule, file, line}` と結果 JSON のパスだけを記録し、本文は転記しない)。
 
@@ -575,8 +592,12 @@ bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
 
 緑を確認したら、以下を **main が**この順で行う:
 
-1. **TODO.md の該当フェーズを `- [x]` に更新する** (issue タイトルの識別子で `### フェーズ<識別子>:` 見出しを引き当てる)。実装と同じコミットに含める (チェックだけ先に入ってコミットが無い状態を作らない。Step 0 手順 4 の再入突合はこの前提で「チェック済みだがコミット無し = 未完了」と判定する)
-2. **コミットする**。`rules/core/commit.md` に従う (関心事分割 / STRUCTURAL・BEHAVIORAL 分離)。**コミットは必ず main が行う** — 形式を機械検証する commit-msg-guard hook は親にしか効かないため。ただし hook が実際に検証するのは `$GHQ_ROOT/github.com/skanehira/` 配下のリポジトリで作業しているときだけで、それ以外では fail-open で素通りする。push はしない (ユーザ手動)
+1. **TODO.md の該当フェーズを `- [x]` に更新する** (issue タイトルの識別子で `### フェーズ<識別子>:` 見出しを引き当てる)。次のフェーズ最終コミットに含める (チェックだけ先に入ってコミットが無い状態を作らない。Step 0 手順 4 の再入突合はこの前提で「チェック済みだがコミット無し = 未完了」と判定する)
+2. **フェーズ最終コミットを打つ**。実装はラウンドごとに入っているので、このコミットが載せるのは TODO.md の更新と、どのラウンドにも含まれなかった残りだけになる。
+   - subject は `<emoji> <type>: [phase-<識別子>][STRUCTURAL|BEHAVIORAL] <要約>`。**`[STRUCTURAL]` / `[BEHAVIORAL]` を付けるのはこのコミットだけ**で、フェーズ全体の動作変更の有無を表す (途中のラウンドコミットには付けない → 「ラウンドごとのコミット」)
+   - 本文に `Fixes #<issue 番号>` を入れる
+   - **`rules/core/commit.md` の条件をフェーズ単位で満たすのはこのコミットである。** 本ステップ冒頭の全体スイートと DoD がここまでに緑になっているためで、途中で全体スイートが落ちた場合はその修正が新しいラウンドのコミットとして積まれ、緑になってから最終コミットを打つ
+   - **コミットは必ず main が行う** — 形式を機械検証する commit-msg-guard hook は親にしか効かないため。ただし hook が実際に検証するのは `$GHQ_ROOT/github.com/skanehira/` 配下のリポジトリで作業しているときだけで、それ以外では fail-open で素通りする。push はしない (ユーザ手動)
 3. **RUN_FACTS.md を更新する** (書式と規則は [references/phase-context.md](./references/phase-context.md) の `## RUN_FACTS.md`)。implementer 報告の `report_path` から `jq` で引いて「完了フェーズの成果物」「累積 design_decisions」「既知の落とし穴」に追記する。**この更新がフェーズ間の文脈再注入を代替する**ので省略しない (省略すると次フェーズの implementer がプロジェクトの作り方を探索し直す)。追記後にファイルサイズを測り、**4096 バイトを超えていたら最新 3 フェーズ以外の「完了フェーズの成果物」行を要約に畳む**。JSONL に `event_type: run_facts_updated` (context に `sections` / `bytes`) を記録する
 4. **`impl_done` を書く前に spawn 記録を突合する。** 当該フェーズの `event_type: spawn` の件数と、`$SCRATCH_DIR` にある検査結果 JSON の本数 + implementer 報告 (`impl-report*.json`) の本数を突き合わせ、食い違ったら不足分を補記する (`context.backfilled: true` を付ける)。予算ゲートの前提を、フェーズを閉じる時点で 1 回だけ機械的に復元する:
 
@@ -586,7 +607,7 @@ bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
    [ "$REC" -eq "$ACT" ] || echo "spawn 記録が $REC 件、実際の成果物が $ACT 件。不足分を補記する"
    ```
 
-   `fatal-*.json` / `ride-*.json` / `self-exemptions.json` / `content-hash-*.txt` は main が書いたもので spawn ではないため、上の glob には含めない。
+   `fatal-*.json` / `ride-*.json` / `self-exemptions.json` は main が書いたもので spawn ではないため、上の glob には含めない。
 5. **JSONL に `event_type: impl_done` を記録する** (context: `phase` / `summary` / `commit_sha` / `phase_fix_round` / `phase_spawns` / `review_outputs`)。これが issue 完了の唯一のイベントで、`prev_phase_summary` (次フェーズの PHASE_CONTEXT) と HTML レポートのフェーズタイムラインがこれを読む
 6. implementer 報告の `verification_skipped` / `design_decisions` / `open_questions` / `spec_lookups` / `self_review` を `report_path` から `jq` で JSONL に転記する (`verification_skipped` は Step 5.6 の未検証項目集約に合流する)。**転記は 1 回の Bash 実行で全件を流し込む** — コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2e: implementer 報告の JSONL 一括転記` 節を使う (項目ごとに Bash を呼ぶと main の往復がフェーズあたり 30 回近く増える)
 7. **当該 issue を close する** (`gh issue close <N> --comment "DoD がすべて通過したため close する"`)
@@ -670,7 +691,7 @@ git commit -m "📝 docs: <P1|P2> 動的修正 — <何をどう変えたかの 
 
 **実装差分とは別コミットにする** (`rules/core/commit.md` の関心事分割。設計の更新と実装は別の関心事であり、混ぜると後から「設計がいつ変わったか」を追えなくなる)。type は `docs` を使い、`[STRUCTURAL]` / `[BEHAVIORAL]` は付けない — この 2 つはプロダクトコードの動作変更の有無を表す区分で、設計書の更新はどちらでもない (Step 7 の HTML レポートのコミットと同じ扱い)。
 
-**エスカレ停止時もこのコミットは残す。** 「停止時は当該 issue の変更をコミットしない」の対象は**実装差分**であり (緑でないコードを履歴に入れないため)、設計判断の記録は実装の成否と無関係に残す。
+**エスカレ停止時もこのコミットは残す。** 停止時に打たないのは**フェーズ最終コミット**だけで (全体スイートと DoD を通っていないため)、ラウンドのコミットも設計判断の記録も実装の成否と無関係に残す。
 
 ##### P2 動的修正
 
@@ -889,7 +910,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
 停止時の処理:
 
-1. 当該 issue の変更は**コミットしない** (緑状態でないため。working tree は残す)。**issue のラベルを停止理由で振り分ける**:
+1. **ラウンドのコミットはそのまま残す。** フェーズ範囲のテストは緑で、「ラウンドごとのコミット」の条件を満たしているため履歴に置いてよい。**フェーズ最終コミット (4.2e) は打たず、TODO.md の `- [x]` 化もしない** — 全体スイートと DoD を通っていないので、そのフェーズは完了していない。作業ツリーは clean のはずで、非クリーンなら 4.2d 手順 8 の汚染なので `git restore` で戻してから停止する。**issue のラベルを停止理由で振り分ける**:
 
    | 停止理由 | ラベル | 再開のしかた |
    | --- | --- | --- |

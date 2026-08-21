@@ -65,7 +65,7 @@ output_path: /tmp/review-adversarial-<phase>.json
 
 ### Step 1: 差分取得
 
-`review-tdd` と同じ理由 (Step 4.2e までコミットしないためコミット間 diff は空) で working tree を基準にする:
+`review-tdd` と同じく `PHASE_START_SHA` との比較を基準にする (dev-impl は実装ラウンドごとにコミットするので、この比較でフェーズの全差分が取れる)。未コミットの残りも取りこぼさないよう working tree と untracked も併せて見る:
 
 ```bash
 REPO_DIR="${REPO_DIR:-.}"
@@ -89,17 +89,15 @@ REPO_DIR="${REPO_DIR:-.}"
    - 対象を直接 import/require できる → `scratch_dir/attack-N.{ts,go,rs,py,lua}` を書いて `npx tsx` / `go run` / `cargo script` 等で実行
    - import 不能 (ビルド前提・依存解決不能等) → CLI 直叩き、または `dev_server` があれば `curl` / HTTP 経由で攻撃
    - それも不能 → 実行を諦め `rule: attack_not_executable, severity: low` で「攻撃仮説はあるが未実行」と明記する (未実行を沈黙で「問題なし」に見せない)
-4. **ソースを書き換えたら、復元は内容ハッシュで確認する。`git status --porcelain` を復元確認に使ってはならない。** フェーズの差分ファイルは既に「変更済み」として status に並んでいるため、中身をどう書き換えても status の出力は 1 文字も変わらない (同一の変異を加えて前後を `cmp` したところ完全一致することを実証済み)。実際にこの穴により、検査対象の条件式を変異させたまま終了しながら、自分で取った status スナップショットの一致を見て「汚染なし」と判定した事故が起きている。攻撃・変異の**前**にベースラインを取り、**後**に突合する:
+4. **ソースを書き換えたら、必ず元へ戻し、戻ったことを確認してから終える。** 呼び出し元 (dev-impl) は**実装をラウンドごとにコミットしており、起動時点の作業ツリーは clean** なので、自分が触ったファイルが HEAD と一致していれば復元できている:
 
    ```bash
-   sig() { git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | xargs shasum; }
-   sig > "$SCRATCH_DIR/_sig-before.txt"     # 最初の書き換えより前に 1 回
-   # ... 攻撃・変異・復元 ...
-   sig > "$SCRATCH_DIR/_sig-after.txt"
-   cmp -s "$SCRATCH_DIR/_sig-before.txt" "$SCRATCH_DIR/_sig-after.txt" || diff "$SCRATCH_DIR/_sig-before.txt" "$SCRATCH_DIR/_sig-after.txt"
+   git -C "$REPO_DIR" status --porcelain -- <自分が書き換えたファイル>   # 出力が空であること
    ```
 
-   差分が残っていたら、まず自分で復元を試み、それでも一致しなければ `rule: working_tree_polluted, severity: high` を必ず報告する (`message` に `diff` の出力を入れる)。**呼び出し側 (dev-impl の main) も同じ突合を独立に行う**ので、報告を省いても検出されるが、どのファイルをどう変異させたかを知っているのは本 agent だけなので、報告があるほど復旧が速い。復元は「変異を加える前の値に戻す」ことであり、`git checkout` は使わない (実装者の未コミットの成果物ごと消える)
+   **確認は自分が触ったファイルに限定する。** 検査は複数の観点が並列に走るため、ツリー全体を見ると他の agent の一時的な書き換えを自分の汚染と誤認する。
+
+   復元しきれない場合は `rule: working_tree_polluted, severity: high` を必ず報告する (`message` にどのファイルをどう書き換えたかを書く)。**呼び出し側も fan-out の前後で独立に突合する**ので報告を省いても検出はされるが、何をどう変異させたかを知っているのは本 agent だけなので、報告があるほど復旧が速い。
 5. 破壊的操作 (ファイル削除・外部ネットワークへの送信・DB migration の実行等) は行わない
 6. クラッシュ・データ破壊・仕様上ありうる入力での誤動作を実際に観測できた攻撃は、再現コマンドを `repro_command` に記録する (メインループが TDD の RED としてそのまま正規テストへ移植できる粒度にする)
 
