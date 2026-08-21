@@ -31,26 +31,15 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 
 ### 修正ラウンドのモデル昇格 (ラウンド 2 以降は `fable`)
 
-**ラウンド 1 で解消しなかった fatal は、指摘箇所の局所修正では閉じない性質のものが多い。** 実測: `opus` の fix は毎ラウンド「指摘された high」を必ず解消したのに、そのたびに同じ族の隣接箇所へ新しい high が出た。あるフェーズでは 3 ラウンドすべてがこの形を繰り返し (指摘 → 解消 → 隣接箇所に新規)、high の出所は同じ 2 ファイルの間を往復したまま上限に達して停止した。個別のエッジケースを潰す作業になっていて、状態遷移の不変条件という根が閉じていなかった。
+**ラウンド 1 で解消しなかった fatal は、指摘箇所の局所修正では閉じない性質のものが多い** (実測の内訳 → [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## 修正ラウンドのモデル昇格の根拠`)。そこで**ラウンド 2 以降は `model: "fable"` に上げ、指示文で「指摘箇所を局所的に塞ぐ前に、当該箇所が属する不変条件を洗い出して族ごと閉じる」ことを求める** (指示文の全文は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 修正ラウンドの implementer 起動`)。ラウンド 3 でも解消しなければ従来どおり `phase_fix_exceeded` でエスカレ停止する — **モデルを上げても閉じない fatal は、実装の腕ではなく設計の問題である**可能性が高く、人間の判断を仰ぐべき局面だと見なす。`agent-spawn-guard` hook は model の未指定だけを弾き、規定と違う値でも明示されていれば意図的な override として通すので、この昇格に hook の改修は要らない。
 
-そこで**ラウンド 2 以降は `model: "fable"` に上げ、指示文で「指摘箇所を局所的に塞ぐ前に、当該箇所が属する不変条件を洗い出して族ごと閉じる」ことを求める** (指示文の全文は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 修正ラウンドの implementer 起動`)。ラウンド 3 でも解消しなければ従来どおり `phase_fix_exceeded` でエスカレ停止する — **モデルを上げても閉じない fatal は、実装の腕ではなく設計の問題である**可能性が高く、人間の判断を仰ぐべき局面だと見なす。
-
-- `agent-spawn-guard` hook は **model の未指定だけを弾き、規定と違う値でも明示されていれば意図的な override として通す** (`claude/hooks/agent-spawn-guard.ts` の `validateAgentSpawn`)。この昇格に hook の改修は要らない
-- この昇格により、当該ラウンドだけ「実行器のモデル > 検証器のモデル」となり `rules/core/orchestration.md` の原則を満たさなくなる。**検証器 (review-*) を上げるのではなく実行器だけを上げるのは、ラウンド 2 に至った時点で不足しているのが検出力ではなく修正の設計力だと実測で分かっているため** (検出は毎ラウンド機能しており、新しい high を実行証拠つきで出し続けている)
-
-- **review-adversarial が `sonnet` である理由**: 同一セッション・同一フェーズ群での直接比較 (2026-08 のセッションログ実測) で、opus は 20 spawn・2.55 ドル/spawn で high 3 件 (0.15 件/spawn)、sonnet は 21 spawn・2.51 ドル/spawn で high 19 件 (0.90 件/spawn) だった。**1 spawn あたりの金額はほぼ同一で、単価が 1/5 の sonnet は同じ予算で 3.8 倍のターンを回せるため、実際に壊して確かめる本 agent の作業様式と噛み合う**。sonnet の findings は空虚ではなく、TOCTOU 並行削除を実際に再現し修正前ロジックで 20/20 再現するところまで確認する等、実行証拠を伴っていた。この 1 点で `rules/core/orchestration.md` の原則「実行器のモデル ≤ 検証器のモデル」を満たさなくなるが、当該原則は「検証が実行より弱いと骨抜きになる」ことを避けるための代理指標であり、**検出力の実測が代理指標に優先する**。切り替え後は high 検出件数の推移を監視し、opus 時の 0.15 件/spawn を下回り続けるようなら opus に戻す。
+**review-adversarial が `sonnet` である理由**も実測に基づく (同 `## review-adversarial が sonnet である根拠`)。`rules/core/orchestration.md` の原則「実行器のモデル ≤ 検証器のモデル」をこの 2 点で満たさなくなるが、当該原則は「検証が実行より弱いと骨抜きになる」ことを避けるための代理指標であり、**検出力の実測が代理指標に優先する**。切り替え後は high 検出件数の推移を監視し、**opus 時の 0.15 件/spawn を下回り続けるようなら opus に戻す**。
 
 ### フェーズ実装を subagent に委譲する理由 (`rules/core/orchestration.md` の原則に対する dev-impl 限定の例外)
 
-`rules/core/orchestration.md`「委譲の判断」は**逐次実装の subagent 委譲を禁止**している (固定費と報告往復で総トークン・時間とも増えるため)。dev-impl はこの原則の**唯一の例外**で、issue 1 件ずつの逐次実装であっても implementer subagent に出す。`rules/core/orchestration.md` 本体は変更しないので、他のタスクでは従来どおりメインループ直営で実装する。
+`rules/core/orchestration.md`「委譲の判断」は**逐次実装の subagent 委譲を禁止**している (固定費と報告往復で総トークン・時間とも増えるため)。dev-impl はこの原則の**唯一の例外**で、issue 1 件ずつの逐次実装であっても implementer subagent に出す。`rules/core/orchestration.md` 本体は変更しないので、他のタスクでは従来どおりメインループ直営で実装する。根拠は dev-impl だけが持つ「フェーズを 100 本単位で回す」性質にあり、実測値は [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## フェーズ実装を subagent に委譲する根拠` にある。
 
-例外にする根拠は、dev-impl だけが持つ「フェーズを 100 本単位で回す」性質にある (実測値はいずれも 2026-07 の dev-impl 実行 7 セッション):
-
-- メインループ直営では**フェーズ境界でコンテキストが一度も下がらず単調増加する**。実測で 160k → 286k → … → 980k → 自動圧縮 106k と推移し、平均コンテキストは 443,863〜515,258 トークンに収束した。cache read 48.7 億トークンの実体は「平均 475k × 10,247 リクエスト」であり、1 リクエストの単価ではなく**往復回数 × 常駐コンテキスト**が支配的だった
-- 委譲の固定費はフェーズ 1 本あたりで見れば小さい (U0 spike 実測: implementer 1 spawn 6.39 ドル、検査 3 観点 1.83 ドル、修正 1 ラウンド 2.96 ドル の計 11.18 ドル)。単発タスクなら固定費が勝つが、フェーズ数だけ常駐コンテキストが積み上がる dev-impl では逆転する
-- **待ちを親に集約できる。** main の cache write は全量 1 時間 TTL、subagent は全量 5 分 TTL (ハーネス仕様、スキルから制御不可)。子を待つ subagent は 5 分超のギャップでキャッシュを失効させる (実測: 失効 62 件のうち 32 件がこれ)。実装を葉の subagent に閉じ込め、レビューの起動と待機を 1 時間 TTL の main に置くことで、同じ待ち時間でもキャッシュが生き残る
-
-**implementer は葉であること (子 subagent を起動しないこと) が例外の前提条件**。葉の agent は実測で失効ゼロだった (architecture-guard 975 ギャップ / review-quality 55 / review-spec-compliance 165 のいずれも 0 件)。葉性は指示文ではなく `claude/agents/dev-impl-implementer.md` の `tools` から `Agent` を除くことで構造的に強制する (subagent には親の hooks が届かないため、指示文では違反を検出できない)。
+**implementer は葉であること (子 subagent を起動しないこと) が例外の前提条件**。葉性は指示文ではなく `claude/agents/dev-impl-implementer.md` の `tools` から `Agent` を除くことで構造的に強制する (subagent には親の hooks が届かないため、指示文では違反を検出できない)。
 
 ## 入力
 
@@ -255,10 +244,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 
 **spawn 予算の意図**:
 
-- 1 フェーズは最小構成でも implementer 1 + architecture-guard 1 + review 1〜4 の subagent を起動する。フェーズ数だけ積み上がるため、上限を機械ゲートとして置く
-- 根拠: subagent を最も使ったセッションは 129 spawn でフェーズ単価が最悪 (116.4 ドル / フェーズ、subagent が全体の 66.8%) だった (2026-07 の実測)。2026-08 の実測でも、4 フェーズで 66 spawn (16.5 spawn / フェーズ) のうち 53 がレビュー系で、全体コストの 35% を占めていた。**このとき JSONL に記録されていた `spawn` は 44 件で、実際の 66 件に対し 22 件 (33%) が記録漏れしていた** — 記録が欠けると `phase_spawns` の上限判定が実態より小さい値で走るので、下記の全件記録は予算ゲートの前提そのものである
-- `phase_spawns` の上限 33 の内訳 (最悪ケース = 最後の issue): implementer 1 + 初回検査 5 (guard 1 + review 最大 4) + (fix 1 + 再検査 最大 5) × 3 ラウンド = 24 に、**同じフェーズで正当に起きうる残りを足した値**: 4.2b の `fix-lsp-warnings` 1 + 4.2e のテストゲート再試行 3 + 報告不整合の再起動 3 + 汚染検出によるやり直し 2 = 9。合計 33。**以前の 24 は検査ラウンドだけを数えた値で、本文自身が挙げる正当な経路を足すと超えてしまっていた** (正常な作業が上限で止まる偽陽性になる)。上限に当たったら `spawn_budget_exceeded` で止めてよい (安全網として機能させる)。再検査は 4.2d 手順 5 のとおり「fatal を出した観点 + guard」に絞るため通常は 2〜3 に収まるが、全観点が同時に fatal を出す最悪ケースを上限に据える (上限は安全網であって想定値ではない)
-- `run_spawns` の上限係数は **20 (spawn / issue)** で、**実測から取る**。上に挙げた 2 件の測定はいずれも 1 フェーズあたり 14.8〜16.5 spawn であり、修正ラウンドが 1〜3 回入る通常のフェーズはこの範囲に収まる。20 はその上に予備を持たせた値で、**フェーズ単体の上限 33 より下に置く** (係数を 33 に揃えると run 側の予算がフェーズ側より先に効くことが無くなり、安全網として機能しなくなる)。**「最小構成 4 体 (implementer 1 + guard 1 + review-adversarial 1 + review-tdd 1) + 修正 1 ラウンド」から見積もった旧値 8 は実測の半分で、正常に完走する run を止めていた** — 4 フェーズ 66 spawn の run は open 4 件なら予算 32 で、2 フェーズ目の途中で `spawn_budget_exceeded` に当たる
+- 1 フェーズは最小構成でも implementer 1 + architecture-guard 1 + review 1〜4 の subagent を起動する。フェーズ数だけ積み上がるため、上限を機械ゲートとして置く。**`phase_spawns` の上限 33・`run_spawns` の上限係数 20 (spawn / issue) はいずれも実測から取った値**で、測定と算出の内訳は [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## spawn 予算の根拠` にある (値を変えるときはそこの実測と突き合わせる)
 - **`run_spawns` の上限は `run_spawns_budget` という別の値で保持し、残作業ベースで上方向にのみ更新する。** 更新するのは次の 3 時点だけで、**issue が close されても下げない**:
 
   | 更新時点 | 計算 |
@@ -271,11 +257,9 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 
   **下限 16 を置くのは、`OPEN = 0` で Step 5 (ゴール達成判定) から再開する経路があるため** (Step 1 の「`OPEN` が 0 で closed が 1 件以上なら全 issue 完了済み」)。この経路で `OPEN × 20` をそのまま使うと予算が 0 になり、Step 5.2 の監査 agent を 1 体も起動できない。16 は Step 5 の監査 2 体 + 未達対応ループ (`goal_loop` 上限 2 周 × 追加フェーズ 1 本) が回る最小限として置いた値で、**係数とは独立に決まる** (係数を変えてもこの下限は動かさない)。
 
-- **`OPEN × 20` を `run_spawns` と直接比べてはならない。** 前者は「これから使ってよい量」、後者は「すでに使った量」で、比べる単位が違う。直接比べると issue を close するたびに上限が下がるので、**正常に完了した作業そのものが停止理由になる** — 消費済みの `run_spawns` が残 `OPEN × 係数` を上回った時点で、次の 1 件を close した瞬間に breach する。実測 (5 フェーズ完了で `run_spawns` 74 = 14.8 spawn / フェーズ) のペースなら、残 `OPEN` が 4 件を切ったあたりでこれが起きる。さらに Step 5 (ゴール達成判定) では定義上 `OPEN` が 0 件になるため上限も 0 になり、`review-spec-compliance` / `review-product-readiness` の起動が必ず上限違反になる
-- **再入で予算が増えるのは意図した挙動である。** `spawn_budget_exceeded` は「再実行で解決しうる」停止理由に分類されている (「エスカレ停止時の挙動」の表) ので、再入で予算が一切増えないなら、再実行しても同じ状態のまま即座に再停止して何も解決しない。予算の追加付与を人間の再起動に紐づけることで、1 セッション内の暴走は有限の `run_spawns_budget` で止めたまま、正当な継続だけが人間の判断を挟んで前進する
+- **`OPEN × 20` を `run_spawns` と直接比べてはならない。** 前者は「これから使ってよい量」、後者は「すでに使った量」で、比べる単位が違う。直接比べると issue を close するたびに上限が下がるので、**正常に完了した作業そのものが停止理由になる**。さらに Step 5 (ゴール達成判定) では定義上 `OPEN` が 0 件になるため上限も 0 になり、監査 agent の起動が必ず上限違反になる
 - `run_spawns_budget` は更新のたびに JSONL の `start` / `phase_added` の `context` に記録する (compaction や再入をまたいでも値を復元できるように)。復元は記録済みの値の**最大**を採る (上方向にしか動かないので一意に決まる)
-- **Agent ツールで subagent を起動する箇所は、本スキルに 7 つある** — 4.2a (implementer)、4.2b (fix-lsp-warnings)、4.2c (検査 fan-out)、4.2d 手順 4 (`mode: fix` の implementer)、4.2e のテストゲート再試行 (`mode: fix` の implementer)、Step 5.2 (監査 agent)、Step 1.5 の `tech-investigation` (未解決 PoC を実装中に検証する個別呼び出し)。**この 7 つすべてで、起動する直前に `event_type: spawn` を JSONL へ書き、`phase_spawns` / `run_spawns` を進める。** 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる (4.2c 参照)
-- 記録が欠けると `run_spawns` の予算判定が実態より小さい値で走る。**フェーズを閉じる直前 (4.2e 手順 4) に成果物と突合して補記する**のが二段目の歯止めだが、成果物 JSON を出さない fix-lsp-warnings は補記でも拾えないので、一段目 (起動前の記録) を落とさないことが要点である
+- **Agent ツールで subagent を起動する箇所は、本スキルに 7 つある** — 4.2a (implementer)、4.2b (fix-lsp-warnings)、4.2c (検査 fan-out)、4.2d 手順 4 (`mode: fix` の implementer)、4.2e のテストゲート再試行 (`mode: fix` の implementer)、Step 5.2 (監査 agent)、Step 1.5 の `tech-investigation`。**この 7 つすべてで、起動する直前に `event_type: spawn` を JSONL へ書き、`phase_spawns` / `run_spawns` を進める。** 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる (4.2c 参照)。記録が欠けると予算判定が実態より小さい値で走るので、**フェーズを閉じる直前 (4.2e 手順 4) の成果物との突合が二段目の歯止め**になる (成果物 JSON を出さない fix-lsp-warnings は補記でも拾えないため、一段目を落とさないことが要点)
 
 ### main のコンテキスト規律
 
