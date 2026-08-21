@@ -53,7 +53,7 @@ PHASE_CONTEXT:
 
 ### Step 1: 差分取得
 
-dev-impl はフェーズ末尾のテストゲート通過後 (Step 4.2e) までコミットしないため、`"${PHASE_START_SHA}..HEAD"` のようなコミット間 diff/log は常に空になる。working tree (staged + unstaged) を `PHASE_START_SHA` と比較し、新規 untracked ファイルも加える:
+dev-impl は実装ラウンドごとにコミットするので、`PHASE_START_SHA` との比較でフェーズの全差分が取れる。コミット漏れや検査中の書き換えを取りこぼさないよう、working tree (staged + unstaged) と新規 untracked ファイルも併せて見る:
 
 ```bash
 REPO_DIR="${REPO_DIR:-.}"

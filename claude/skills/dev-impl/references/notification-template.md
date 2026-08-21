@@ -50,11 +50,12 @@ UI/UX gap: <未実装画面数> 画面 / <未実装ナビ経路数> 経路 / fro
 停止時点の状態:
 - close 済み issue: <このループで閉じた issue 番号、無ければ「なし」>
 - 停止した issue: #<N> (ラベルは in-progress のまま。再実行時に Step 2 が再開対象として拾う)
-- 未コミットの変更: `git status --porcelain` の結果 (緑でないためコミットしていない)
+- ラウンドのコミット: `git log --oneline <PHASE_START_SHA>..HEAD` の結果 (フェーズ最終コミットは未実施 = 全体スイートと DoD を通っていない)
+- 未コミットの変更: `git status --porcelain` の結果 (通常は空。非空なら検査 agent の汚染)
 - レビュー結果 JSON: ~/.claude/logs/dev-impl/<run_id>/reviews/issue-<N>/
 
 次のステップ:
 - 上記詳細を踏まえ DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md を見直す
-- (issue の実装をやり直したい場合) git restore で working tree クリア後、dev-impl 再起動
+- (issue の実装をやり直したい場合) `git reset --hard <PHASE_START_SHA>` で巻き戻してから dev-impl 再起動 (レポート・設計書のコミットが混ざっていないことを先に確認する)
 - (DESIGN 修正後) /dev-spec で TODO 再生成 → issue 更新後、/dev-impl を再起動
 ```

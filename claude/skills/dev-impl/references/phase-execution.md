@@ -97,18 +97,15 @@ TDD の順序・フェーズスコープのテストのみ実行・コミット�
 
 ## 4.2c: 検査 fan-out の起動
 
-**起動前に 3 つを 1 ブロックで行う** (intent-to-add / 内容ハッシュのベースライン / spawn の先行記録)。**この 3 つはいずれも「起動する前」でなければ意味を成さない**ので、fan-out ごとに必ずこのブロックを流す:
+**起動前に 2 つを 1 ブロックで行う** (作業ツリーが clean であることの確認 / spawn の先行記録)。**どちらも「起動する前」でなければ意味を成さない**ので、fan-out ごとに必ずこのブロックを流す:
 
 ```bash
-# (1) 未追跡ファイルを intent-to-add (これをしないと新規実装だけのフェーズが全 agent に空差分として見える)
-git -C "$REPO_DIR" ls-files -z --others --exclude-standard \
-  | xargs -0 -r git -C "$REPO_DIR" add -N
+# (1) ツリーが clean であること。非空なら直前のラウンドのコミット漏れ (SKILL.md 4.2c)。
+#     実装がコミット済みであることが「全 agent の git diff が同じ差分を返す」ことと
+#     「検査 agent の書き換えが status に現れる」ことの前提になっている
+git -C "$REPO_DIR" status --porcelain
 
-# (2) 内容ハッシュのベースライン (検査 agent が攻撃・変異でソースを書き換えたまま戻さない事故の検出用。
-#     git status --porcelain では検出できない = SKILL.md 4.2d 手順 8)
-git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | xargs shasum > "$SCRATCH_DIR/content-hash-before-${ROUND}.txt"
-
-# (3) これから起動する agent の spawn を JSONL に先に書く (起動後に書く規定だと構造的に落ちる = SKILL.md 4.2c)
+# (2) これから起動する agent の spawn を JSONL に先に書く (起動後に書く規定だと構造的に落ちる = SKILL.md 4.2c)
 for a in $AGENTS_TO_SPAWN; do   # 例: "architecture-guard:haiku review-tdd:opus review-adversarial:sonnet"
   jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
      --arg n "${a%%:*}" --arg m "${a##*:}" --arg r "$ROUND" '{
@@ -118,13 +115,7 @@ for a in $AGENTS_TO_SPAWN; do   # 例: "architecture-guard:haiku review-tdd:opus
 done
 ```
 
-**結果を全部受け取った後**に、(2) の対照を取る:
-
-```bash
-git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | xargs shasum > "$SCRATCH_DIR/content-hash-after-${ROUND}.txt"
-cmp -s "$SCRATCH_DIR/content-hash-before-${ROUND}.txt" "$SCRATCH_DIR/content-hash-after-${ROUND}.txt" \
-  || diff "$SCRATCH_DIR/content-hash-before-${ROUND}.txt" "$SCRATCH_DIR/content-hash-after-${ROUND}.txt"
-```
+**結果を全部受け取った後**に、同じ `git -C "$REPO_DIR" status --porcelain` を取る。非空なら検査 agent がソースを書き換えたまま戻していない (SKILL.md 4.2d 手順 8)。
 
 gating で決まった観点 + architecture-guard を**同一メッセージ内の複数 Agent tool_use** として並列起動する。全呼び出しに共通で付ける末尾指示:
 
@@ -172,13 +163,13 @@ jq -c '{ok, skip_reason, dimension, mode, skipped_lenses, findings: [(.findings 
 
 ## 4.2c: 観点 gating 述語の算出コマンド
 
-review-adversarial のスキップ述語と mode 判定、review-quality を最終フェーズ以外でも起動させる条件を算出する。**フェーズの初回 fan-out 前に 1 回だけ実行し、結果を `gating_decided` に記録する。** 4.2d の再 fan-out では再評価しない。例外は 1 つだけで、**初回評価で review-adversarial を skip したフェーズ**に限り、各修正ラウンドの fan-out 直前に本節の述語一式を再算出して skip → 実行 の転換を判定する (SKILL.md 4.2c の遷移規定)。fix がテストに触れたかの判定は本節の述語ではなく `## 4.2d: fix がテストに触れたかの判定` を使う。
+review-adversarial のスキップ述語と mode 判定、review-quality を最終フェーズ以外でも起動させる条件を算出する。**フェーズの初回 fan-out 前に 1 回だけ実行し、結果を `gating_decided` に記録する。** 4.2d の再 fan-out では再評価しない。例外は 1 つだけで、**初回評価で review-adversarial を skip したフェーズ**に限り、各修正ラウンドの fan-out 直前に本節の述語一式を再算出して skip → 実行 の転換を判定する (SKILL.md 4.2c の遷移規定)。fix がテストに触れたかの判定は本節の述語ではなく、その fix のコミット差分を見る (SKILL.md 4.2d 手順 5)。
 
 ```bash
 CHANGED=$({ git diff --name-only "${PHASE_START_SHA}"; git ls-files --others --exclude-standard; } | sort -u)
-# LINES は tracked (コミット済との差分) + untracked (新規ファイル) の合算。dev-impl は 4.2e まで
-# コミットしないため、フェーズの新規実装ファイルは常に untracked であり、tracked 差分だけでは
-# 大規模な新規実装を「変更 0 行」と誤判定してしまう
+# LINES は tracked (コミット済との差分) + untracked (新規ファイル) の合算。ラウンドごとにコミット
+# するため fan-out 時点の untracked は通常 空だが、コミット漏れがあっても取りこぼさないよう両方を足す
+# (clean なときは untracked が 0 なので tracked 差分と一致する)
 TRACKED_LINES=$(git diff --shortstat "${PHASE_START_SHA}" | rg -o '[0-9]+' | tail -n +2 | paste -sd+ - | bc)
 UNTRACKED_LINES=$(git ls-files --others --exclude-standard -z | xargs -0 cat 2>/dev/null | wc -l)
 LINES=$(( ${TRACKED_LINES:-0} + ${UNTRACKED_LINES:-0} ))
@@ -214,24 +205,6 @@ AUTH_CHANGED="${TRACKED_AUTH}${UNTRACKED_AUTH}"
 git diff ${PHASE_START_SHA} --diff-filter=D --name-only -- '*test*' '*spec*'   # テストファイルの削除
 git diff ${PHASE_START_SHA} -U0 | rg '^\+.*\.(skip|only)\s*\(|^\+\s*(xit|xdescribe|xtest)\b|^\+.*#\[ignore\]'   # skip/only/ignore の追加
 ```
-
-## 4.2d: fix がテストに触れたかの判定
-
-4.2d 手順 5 の例外 1 で使う。**4.2e までコミットしないため fix 差分だけを切り出す SHA は存在しない**ので、fix 起動の直前と完了直後にテストファイル群の署名を取って比較する (フェーズ開始 SHA 比の `$TEST_CONTENT_CHANGED` では「implement 段階で触れたか」しか分からず、通常のフェーズでは常に真になって絞り込みが効かない)。
-
-```bash
-test_signature() {
-  { git -C "$REPO_DIR" ls-files -z; git -C "$REPO_DIR" ls-files --others --exclude-standard -z; } \
-    | rg --null-data '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)' \
-    | sort -z | xargs -0 -r -I{} shasum "$REPO_DIR/{}" | shasum | cut -d' ' -f1
-}
-SIG_BEFORE=$(test_signature)   # mode: fix の implementer を起動する直前
-# ... fix 完了後 ...
-SIG_AFTER=$(test_signature)
-[ "$SIG_BEFORE" != "$SIG_AFTER" ] && echo "fix がテストに触れた"
-```
-
-Rust のインラインテスト (src ファイル内の `#[cfg(test)]`) はこのファイル名パターンで捕まらない。**Rust プロジェクトでは `rg -l '#\[cfg\(test\)\]'` の結果も署名の対象に加える**こと。署名が一致しても `$CI_FILES_CHANGED` に相当する設定変更があれば同様に adversarial を追加する。
 
 ## 4.2e: implementer 報告の JSONL 一括転記
 
