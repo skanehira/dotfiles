@@ -7,7 +7,7 @@
 - [4.2c: fan-out 前後の clean 確認](#42c-fan-out-前後の-clean-確認)
 - [4.2c: 自己免除の抽出](#42c-自己免除の抽出)
 - [4.2c: spawn の事前記録](#42c-spawn-の事前記録)
-- [4.2c: 「最後の issue」の判定](#42c-最後の-issue-の判定)
+- [4.2c: 「最後の issue」の判定](#42c-「最後の-issue」の判定)
 - [4.2d 手順 3: fixer へ渡す findings の切り出し](#42d-手順-3-fixer-へ渡す-findings-の切り出し)
 - [4.2d 手順 5: fix がテストに触れたかの判定](#42d-手順-5-fix-がテストに触れたかの判定)
 - [4.2d 手順 8: 作業ツリーの汚染の検出と復元](#42d-手順-8-作業ツリーの汚染の検出と復元)
@@ -15,6 +15,7 @@
 - [4.2e: DoD ブロックの抽出と実行](#42e-dod-ブロックの抽出と実行)
 - [4.2e 手順 3: RUN_FACTS.md の更新](#42e-手順-3-run_factsmd-の更新)
 - [4.2e 手順 4: spawn 記録の突合](#42e-手順-4-spawn-記録の突合)
+- [フェーズ内エスカレ条件まとめ](#フェーズ内エスカレ条件まとめ)
 
 ## 4.2c: fan-out 前後の clean 確認
 
@@ -191,7 +192,7 @@ bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
 
 ## 4.2e 手順 3: RUN_FACTS.md の更新
 
-3. **RUN_FACTS.md を更新する** (書式と規則は [references/phase-context.md](./references/phase-context.md) の `## RUN_FACTS.md`)。implementer 報告の `report_path` から `jq` で引いて「完了フェーズの成果物」「累積 design_decisions」「既知の落とし穴」に追記する。**この更新がフェーズ間の文脈再注入を代替する**ので省略しない (省略すると次フェーズの implementer がプロジェクトの作り方を探索し直す)。追記後にファイルサイズを測り、**4096 バイトを超えていたら最新 3 フェーズ以外の「完了フェーズの成果物」行を要約に畳む**。JSONL に `event_type: run_facts_updated` (context に `sections` / `bytes`) を記録する
+3. **RUN_FACTS.md を更新する** (書式と規則は [references/phase-context.md](./phase-context.md) の `## RUN_FACTS.md`)。implementer 報告の `report_path` から `jq` で引いて「完了フェーズの成果物」「累積 design_decisions」「既知の落とし穴」に追記する。**この更新がフェーズ間の文脈再注入を代替する**ので省略しない (省略すると次フェーズの implementer がプロジェクトの作り方を探索し直す)。追記後にファイルサイズを測り、**4096 バイトを超えていたら最新 3 フェーズ以外の「完了フェーズの成果物」行を要約に畳む**。JSONL に `event_type: run_facts_updated` (context に `sections` / `bytes`) を記録する
 
 ## 4.2e 手順 4: spawn 記録の突合
 

@@ -6,16 +6,22 @@
 ## 目次
 
 - [変数の定義](#変数の定義)
-- [4.1: フェーズ変数の確定と start イベント](#41-フェーズ変数の確定と-start-イベント)
 - [4.2a: subagent の応答待ち時間](#42a-subagent-の応答待ち時間)
 - [4.2: 事前判定](#42-事前判定)
 - [4.2a: implementer の起動](#42a-implementer-の起動)
-- [4.2a / 4.2e: fix ブリーフのスキーマ](#42a--42e-fix-ブリーフのスキーマ)
 - [4.2d: 修正ラウンドの implementer 起動](#42d-修正ラウンドの-implementer-起動)
 - [4.2c: 検査 fan-out の起動](#42c-検査-fan-out-の起動)
 - [4.2c: 観点 gating 述語の算出コマンド](#42c-観点-gating-述語の算出コマンド)
 - [4.2e: テスト弱体化検知コマンド](#42e-テスト弱体化検知コマンド)
 - [4.2e: implementer 報告の JSONL 一括転記](#42e-implementer-報告の-jsonl-一括転記)
+- [4.1: フェーズ変数の確定と start イベント](#41-フェーズ変数の確定と-start-イベント)
+- [4.2a / 4.2e: fix ブリーフのスキーマ](#42a-42e-fix-ブリーフのスキーマ)
+- [4.2a: implementer が status: failed を返したときの分岐](#42a-implementer-が-status-failed-を返したときの分岐)
+- [4.2a: implementer が期待どおりに終わらなかった場合の分岐](#42a-implementer-が期待どおりに終わらなかった場合の分岐)
+- [4.2c: adversarial_mode 別の起動順序](#42c-adversarial_mode-別の起動順序)
+- [4.2c: 観点 gating 表](#42c-観点-gating-表)
+- [4.2c: review-adversarial の mode 決定表](#42c-review-adversarial-の-mode-決定表)
+- [4.2c: review-adversarial のスキップ述語表](#42c-review-adversarial-のスキップ述語表)
 
 ## 変数の定義
 
@@ -358,7 +364,7 @@ jq -c --arg phase "$PHASE" --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" '
 
 ## 4.1: フェーズ変数の確定と start イベント
 
-**まず変数を確定し、作業ファイル置き場を作り、`$SCRATCH_DIR/env.sh` に書き出してから、`start` イベントを書く** (Bash の呼び出しをまたぐと変数が消えるため。値の一覧と意味は [references/phase-execution.md](./references/phase-execution.md) の `## 変数の定義`)。**この順序で行う** — `SCRATCH_DIR` を作る前に env.sh は書けない:
+**まず変数を確定し、作業ファイル置き場を作り、`$SCRATCH_DIR/env.sh` に書き出してから、`start` イベントを書く** (Bash の呼び出しをまたぐと変数が消えるため。値の一覧と意味は本ファイルの `## 変数の定義`)。**この順序で行う** — `SCRATCH_DIR` を作る前に env.sh は書けない:
 
 ```bash
 # 値は着手中の issue から取る (下は「フェーズ4-a: ノードの編集と階層操作」= issue #15 の例)
@@ -440,7 +446,7 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 | reason | 該当する状況 | 対処 |
 | --- | --- | --- |
 | `impl_report_invalid` | `report_path` が不在 / `jq` でパース不能 / 必須フィールド (`status` / `summary` / `files_changed` / `test_result`) の欠落 / `files_changed` が空 (完了判定 (a)) | **フェーズ内で処理する。** `phase_fix_round += 1` して `mode: implement` で再起動 (fix ではない — 何が実装されたか分からないため)。**`report_path` は `impl-report-retry-<phase_fix_round>.json`、`spawn` 記録の `context.round` は文字列 `"retry<phase_fix_round>"`** にする (4.2e 手順 4 の集合突合が成果物と 1:1 で対応するようにするため。変換は同手順の sed の `impl-report-retry-` 行が対応する — 定義済みなので足さない)。3 回で `phase_fix_exceeded` でエスカレ停止。issue は `in-progress` のまま |
-| `impl_timeout` | spawn から **30 分**応答が無い (計測は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: subagent の応答待ち時間` 節) | **run は止めない。** その issue に `gh issue comment <N>` で停止理由 (何分待って応答が無かったか・そのラウンドまでに積まれたコミット) を残し、`gh issue edit <N> --add-label needs-human --remove-label in-progress` で駐車して、**次の着手可能な issue に移る** (Step 0 の再開確認は issue コメントに理由が書かれている前提で「解決したか」を尋ねるので、コメントが無いと人間が何を判断すればよいか分からない) (`in-progress` を外さないとラベルが併記になり Step 2 の判定が割れる)。着手可能な issue が他に無ければ `dependency_blocked` と同じ扱いで停止する |
+| `impl_timeout` | spawn から **30 分**応答が無い (計測は本ファイルの `## 4.2a: subagent の応答待ち時間` 節) | **run は止めない。** その issue に `gh issue comment <N>` で停止理由 (何分待って応答が無かったか・そのラウンドまでに積まれたコミット) を残し、`gh issue edit <N> --add-label needs-human --remove-label in-progress` で駐車して、**次の着手可能な issue に移る** (Step 0 の再開確認は issue コメントに理由が書かれている前提で「解決したか」を尋ねるので、コメントが無いと人間が何を判断すればよいか分からない) (`in-progress` を外さないとラベルが併記になり Step 2 の判定が割れる)。着手可能な issue が他に無ければ `dependency_blocked` と同じ扱いで停止する |
 
 ## 4.2c: adversarial_mode 別の起動順序
 
