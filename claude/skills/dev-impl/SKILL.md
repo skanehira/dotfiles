@@ -1183,15 +1183,7 @@ UI/UX gap セクションが**空でなければ** dev-impl の終了 status を
 
 dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs/dev-impl-reports/${run_id}.html` を生成する。
 
-実装詳細とテンプレ関数は [references/report-template.md](./references/report-template.md) を参照。
-
-生成手順:
-
-1. JSONL ログ (`~/.claude/logs/dev-impl/${run_id}/decisions.jsonl`) を Read
-2. テンプレ関数 (single-page Tailwind CDN HTML) でレポート HTML を組み立て
-3. `mkdir -p docs/dev-impl-reports/` で出力先確保
-4. Write で `docs/dev-impl-reports/${run_id}.html` に書き出し
-5. `git add docs/dev-impl-reports/${run_id}.html` してコミット (HTML レポートは履歴管理する): `git commit` する。**本文には `rules/core/commit.md` が全コミットに要求するフッタ (`🤖 Generated with ...` と `Co-Authored-By: ...`) を必ず入れる** — 本スキルが打つコミットは例外なくこの規約に従う (subject の形式だけは commit-msg-guard が機械検証するが、フッタは検証されないので落としやすい)
+テンプレ関数・生成手順・XSS 対策・エスカレ停止時の差分は [references/report-template.md](./references/report-template.md) を Read して従う。**生成手順は同ファイルの `## 生成プロセス (dev-impl 視点)` 節が正**で、ここでは列挙し直さない (2 箇所に手順を持つと、テンプレ側を更新したときに片方だけが古いまま残る)。コミット本文のフッタ (`🤖 Generated with ...` と `Co-Authored-By: ...`) は同節の heredoc に含まれている — subject の形式だけは commit-msg-guard が機械検証するが、フッタは検証されないので落としやすい。
 
 レポート内容: ヘッダー (run_id / SHA / 所要時間) / 全体サマリ / フェーズタイムライン / 動的修正詳細 (P1/P2/P3) / レビュー残課題 (low/medium) / 実装ノート (設計判断 / 未解決の質問) / POC_NEEDED 残存状況 (pending non-blocker) / ゴール達成判定 / 受入監査結果 (spec_compliance findings) / フッター。
 
