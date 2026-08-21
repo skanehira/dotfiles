@@ -27,7 +27,6 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
 ## 出力先
 
 - ファイルパス: `docs/dev-impl-reports/${run_id}.html`
-- `run_id` 形式: `YYYYMMDD-HHMMSS` (例 `20260630-100023`)
 - 生成後 `git add` + `git commit` でリポジトリ管理対象に含める (PR レビューやチーム共有に使えるため)
 
 ## テーマ CSS 変数
