@@ -317,47 +317,7 @@ gh issue close <N> --repo "$REPO_SLUG" --comment "DoD がすべて通過した�
 
 **この値を JSONL のフェーズ `start` イベントに必ず書く** (`context.phase_start_sha`)。**Step 0 手順 2 の復元元はこの記録だけ**で、書き忘れると再入時に「続きとして取り込む / 捨てる」の分岐が成立しない:
 
-**まず変数を確定し、作業ファイル置き場を作り、`$SCRATCH_DIR/env.sh` に書き出してから、`start` イベントを書く** (Bash の呼び出しをまたぐと変数が消えるため。値の一覧と意味は [references/phase-execution.md](./references/phase-execution.md) の `## 変数の定義`)。**この順序で行う** — `SCRATCH_DIR` を作る前に env.sh は書けない:
-
-```bash
-# 値は着手中の issue から取る (下は「フェーズ4-a: ノードの編集と階層操作」= issue #15 の例)
-PHASE_ID="4-a"                          # issue タイトル `フェーズ<識別子>: <名前>` の識別子
-ISSUE=15                                # issue 番号
-PHASE="phase-$PHASE_ID"                 # JSONL の phase に入れる短縮識別子
-PHASE_NAME="フェーズ$PHASE_ID: ノードの編集と階層操作"   # agent へ渡す phase_name
-
-# 作業ファイル置き場 (implementer の報告 JSON・検査結果 JSON・攻撃スクリプト等)。
-# **リポジトリの外に置く**ことでコミット対象への混入を防ぎ、エスカレ停止後の再入時にも残す
-SCRATCH_DIR="$RUN_DIR/reviews/$PHASE"
-mkdir -p "$SCRATCH_DIR"
-
-cat > "$SCRATCH_DIR/env.sh" <<EOF
-export PHASE="$PHASE"
-export PHASE_NAME="$PHASE_NAME"
-export PHASE_ID="$PHASE_ID"
-export ISSUE=$ISSUE
-export SCRATCH_DIR="$SCRATCH_DIR"
-export PHASE_START_SHA="$PHASE_START_SHA"
-EOF
-```
-
-変数が揃ったところで、JSONL のフェーズ `start` イベントを書く (**この順序を守る** — 先に書こうとすると `$PHASE` も `$ISSUE` も未定義で、`--argjson issue "$ISSUE"` が JSON パースエラーで落ちる):
-
-```bash
-jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
-   --arg sha "$PHASE_START_SHA" --argjson issue "$ISSUE" '{
-  timestamp:$ts, phase:$p, step:"start", event_type:"start", severity:"info",
-  summary:("フェーズ開始 (issue #" + ($issue|tostring) + ")"),
-  context:{issue:$issue, phase_start_sha:$sha}}' >> "$JSONL"
-```
-
-以降このフェーズで Bash を呼ぶときは、冒頭で run スコープと合わせて `source` する:
-
-```bash
-. "$HOME/.claude/logs/dev-impl/<run_id>/env.sh"
-. "$SCRATCH_DIR/env.sh"
-```
-
+**まず変数を確定し、作業ファイル置き場 (`SCRATCH_DIR=$RUN_DIR/reviews/$PHASE`) を作り、`$SCRATCH_DIR/env.sh` に書き出してから、`start` イベントを書く。** 順序を守る — `SCRATCH_DIR` を作る前に env.sh は書けず、変数が未定義のまま `start` を書こうとすると `--argjson issue "$ISSUE"` が JSON パースエラーで落ちる。コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.1: フェーズ変数の確定と start イベント` を Read してから実行する (値の一覧と意味は同ファイルの `## 変数の定義`)。**`SCRATCH_DIR` はリポジトリの外に置く** — コミット対象への混入を防ぎ、エスカレ停止後の再入時にも残すため。
 
 #### Step 4.1.5: PHASE_CONTEXT の組み立て
 
@@ -405,26 +365,7 @@ implementer 側の規約 (TDD の順序、フェーズスコープのテスト�
 | `tests_failing` | 下記「fix ブリーフ」を書いて `mode: fix` で再起動する (4.2d の修正ラウンドと同じ扱い。`phase_fix_round` を共有する) |
 | `spec_insufficient` | **fix で再起動しない。** 足りないのは設計情報であって修正の指示ではなく、fix ブリーフが運べるのは reason 文字列とテスト出力だけなので、同じ情報で再実行しても同じ理由で止まる。**Step 4.6 の P2 (`design_detail_gap`) として扱い**、報告の `reason` が指す不足を DESIGN_DETAIL に補ってから `mode: implement` で再起動する (`phase_fix_round` を進める。**`report_path` と `spawn` の `context.round` は `impl_report_invalid` の再起動と同じ retry 系** — `impl-report-retry-<phase_fix_round>.json` / `"retry<phase_fix_round>"`)。補うべき内容が概要設計に及ぶなら P3 |
 
-**fix ブリーフ**: `mode: fix` の implementer は `findings_paths` の JSON しか入力に取らないので、検査結果 JSON が存在しないこの経路でも main が同じ形式のファイルを書いて渡す。書き出し先は `<SCRATCH_DIR>/impl-failure-<phase_fix_round>.json`:
-
-```json
-{
-  "ok": false,
-  "dimension": "implementation",
-  "findings": [
-    {
-      "severity": "high",
-      "rule": "tests_failing",
-      "file": "<報告の files_changed の代表 1 件、無ければ null>",
-      "line": null,
-      "message": "<implementer 報告の reason と、直前のテスト実行出力の末尾 30 行>",
-      "fix_proposal": null
-    }
-  ]
-}
-```
-
-`rule` には implementer 報告の `reason` (`tests_failing` / `spec_insufficient`) をそのまま入れる。4.2e のテストゲート失敗で書く `<SCRATCH_DIR>/test-failure-<test_gate_retry>.json` も同じスキーマを使う (`rule: "tests_failing_before_commit"`)。
+**fix ブリーフ**: `mode: fix` の implementer は `findings_paths` の JSON しか入力に取らないので、検査結果 JSON が存在しないこの経路でも main が同じ形式のファイルを書いて渡す。書き出し先は `<SCRATCH_DIR>/impl-failure-<phase_fix_round>.json` で、スキーマは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a / 4.2e: fix ブリーフのスキーマ`。`rule` には implementer 報告の `reason` (`tests_failing` / `spec_insufficient`) をそのまま入れる。4.2e のテストゲート失敗で書く `<SCRATCH_DIR>/test-failure-<test_gate_retry>.json` も同じスキーマを使う (`rule: "tests_failing_before_commit"`)。
 
 **implementer が期待どおりに終わらなかった場合は、原因で 2 つに分ける。** 混ぜると「フェーズ内で再起動する」のか「issue を駐車して次へ行く」のかが決まらない:
 
