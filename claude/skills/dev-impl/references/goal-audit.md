@@ -4,6 +4,13 @@
 
 下記テンプレートの必須フィールドは `hooks/agent-spawn-guard.ts` の `REQUIRED_FIELDS` が PreToolUse で機械検証しており、欠けた prompt での起動は deny される。**テンプレートのフィールドを増減したら hook 側も合わせて更新する**こと。
 
+## 目次
+
+- [5.2: 監査 agent の並列起動](#52-監査-agent-の並列起動)
+- [Step 5.3: 監査結果の findings 別の対処](#step-53-監査結果の-findings-別の対処)
+- [Step 5.4: 結果分岐](#step-54-結果分岐)
+- [Step 5.6: status 判定](#step-56-status-判定)
+
 ## 5.2: 監査 agent の並列起動
 
 `PRODUCT_MODE=cli` かどうかで起動 agent 数が変わる。

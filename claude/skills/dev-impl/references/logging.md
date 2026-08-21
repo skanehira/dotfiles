@@ -3,6 +3,13 @@
 書式・スキーマ・書き込みコマンドのリファレンス。dev-impl 実行開始時に Read する。
 
 
+## 目次
+
+- [1 行テキストログ (リアルタイム監視)](#1-行テキストログ-リアルタイム監視)
+- [構造化 JSONL ログ (事後振り返り)](#構造化-jsonl-ログ-事後振り返り)
+- [subagent 起動と issue 完了の event_type (Step 4)](#subagent-起動と-issue-完了の-event_type-step-4)
+- [範例: typical な実行ログ](#範例-typical-な実行ログ)
+
 ## 1 行テキストログ (リアルタイム監視)
 
 `~/.claude/logs/dev-impl.log` に追記:

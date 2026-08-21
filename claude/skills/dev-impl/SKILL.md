@@ -12,6 +12,20 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 
 人間の介入は **エスカレ条件** (検査 → 修正の周回が 3 回でも fatal 残存 / P3 検出など) でのみ発生する。それ以外は止まらず最後まで走る。
 
+## 目次
+
+- モデル方針
+- 入力
+- 参照ルール
+- 進捗ログ (2 系統)
+- 実行手順
+- エスカレ停止時の挙動
+- 既存プロジェクトでの注意
+- 範囲外 (やらないこと)
+- 関連スキル / agent
+
+「実行手順」の内訳: Step 0 / Step 1 / Step 1.5 / Step 2 / Step 3 / Step 4 / Step 5 / Step 6 / Step 7
+
 ## モデル方針
 
 - 本スキルは frontmatter で `model: opus` を指定している。モデル切り替えが効くのは**ユーザーが `/dev-impl` を直接起動したターンだけ** (Skill ツール経由の起動では適用されない)。エスカレーションに回答した後の再開も `/dev-impl` の再実行で行う (TODO.md の `- [x]` 状態から途中再開できるため、再実行で override が再適用される)
@@ -314,6 +328,8 @@ implementer 報告の `design_decisions` (設計が沈黙・あいまいな箇�
 
 ##### 4.2c: 検査 fan-out (main が起動して待つ)
 
+**このステップで Read する参照節** (起動前にまとめて開く): [phase-gates.md](./references/phase-gates.md) の `## 4.2c: fan-out 前後の clean 確認` / `## 4.2c: 自己免除の抽出` / `## 4.2c: spawn の事前記録` / `## 4.2c: 「最後の issue」の判定`、[phase-execution.md](./references/phase-execution.md) の `## 4.2c: 観点 gating 表` / `## 4.2c: review-adversarial の mode 決定表` / `## 4.2c: review-adversarial のスキップ述語表` / `## 4.2c: 観点 gating 述語の算出コマンド` / `## 4.2c: adversarial_mode 別の起動順序` / `## 4.2c: 検査 fan-out の起動`、[phase-context.md](./references/phase-context.md) の `## 渡し方` (agent ごとの入力集合の正)、[logging.md](./references/logging.md) の `gating_decided` の行 (context スキーマの正)。
+
 **fan-out の前後で作業ツリーが clean であることを確認する。初回だけでなく 4.2d の再 fan-out でも毎回行う。** 同じ「`status --porcelain` が非空」でも観測する時点で意味が違い、**処方が正反対 (前はコミットする / 後は `git restore` で捨てる) なので、取り違えると実装を捨てるか変異をコミットすることになる**。コマンドと 3 つの前提は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2c: fan-out 前後の clean 確認`。
 
 fan-out 前の事前ブロックでは、続けて次の 3 つを行う (いずれも phase-gates.md の同名節が正):
@@ -353,7 +369,7 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
    - **main は agent が付けた severity を変更しない (昇格も降格もしない)。** medium / low を「重要そうだから」と high 扱いにして新ラウンドを起こさない。過小評価は agent 側の severity 基準を直して解決する問題で、実行時の裁量で埋めるとラウンド数が判定基準なしに増える (実測で 9 ラウンド中 2 ラウンド以上が裁量昇格のみで起動していた)
    - **medium の「相乗り」は行わない。** implementer は review-* を high だけ、guard を high/medium 直す規約なので、review-* の medium を渡しても no-op になる。medium は `review_low` として記録し、Step 6 のサマリと HTML レポートに残す
 3. fatal あり → `phase_fix_round += 1`。**この時点で `phase_fix_round > phase_fix_budget` (既定 3) なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)。続けて **JSONL に `event_type: fix_dispatch` を記録する**。`spawn` と同じく**起動する前に書く** — Step 0 の再入で `phase_fix_round` を復元する唯一のソースであり、ラウンド 2 以降の implementer へ渡す「過去ラウンドの経過」の材料でもある。fixer に渡す findings ファイルの切り出しは [references/phase-gates.md](./references/phase-gates.md) の `## 4.2d 手順 3: fixer へ渡す findings の切り出し` を Read してから実行する (**guard の分をキー `findings` に付け替えると、implementer が high しか拾わない規約により guard の medium が誰にも直されず毎ラウンド再検出される**)。
-4. **`mode: fix` の `dev-impl-implementer` を起動**する。**モデルはラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (上記「修正ラウンドのモデル昇格」)。ラウンド 2 以降は指示文に「指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを確認せよ。族として閉じられない残りは報告の `open_questions` に明記せよ」を加える。渡すのは `findings_paths` / `phase_context_path` / `repo_dir` / `report_path`。main は findings の本文を読まないし、修正内容を指示しない。**報告を受けたら 4.2a と同じく main がコミットする**
+4. **`mode: fix` の `dev-impl-implementer` を起動**する。**モデルはラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (上記「修正ラウンドのモデル昇格」)。ラウンド 2 以降は指示文に「指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを確認せよ。族として閉じられない残りは報告の `open_questions` に明記せよ」を加える。渡すのは `findings_paths` / `phase_context_path` / `repo_dir` / `report_path`。**指示文の全文テンプレート (過去ラウンドの経過を渡す `ROUND2_PLUS_BRIEF` を含む) は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 修正ラウンドの implementer 起動` を Read して使う。** main は findings の本文を読まないし、修正内容を指示しない。**報告を受けたら 4.2a と同じく main がコミットする**
 5. 修正完了後、**再 fan-out は「fatal を出した観点 + architecture-guard」に絞って 4.2c に戻る**。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は**原則として `gating_decided` の `gating_set` の部分集合**とする (guard は gating 対象外なので判定に含めない)。集合外の review-adversarial を追加してよいのは次の 3 つだけで、追加したら `gating_decided` を追記する:
    - **fix がテストに触れた場合** (`mode: weakening_only` で足りる)。判定コマンドは [references/phase-gates.md](./references/phase-gates.md) の `## 4.2d 手順 5: fix がテストに触れたかの判定` を Read してから実行する (**`HEAD~1` で代替すると**、fix が差分ゼロでコミットを生まなかったとき 1 つ前のラウンドを指して誤判定し、最初のコミットでは解決自体に失敗する)。**判定不能なら安全側に倒して起動する**
    - **self-exemptions の claim 差分に新規の免除があった場合** (`mode: weakening_only` で足りる) — 修正ラウンドで新たに宣言された免除を裁く者を確保するため
