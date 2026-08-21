@@ -2,6 +2,21 @@
 
 `dev-impl/SKILL.md` の Step 4 (各フェーズの実行) 各節から参照される実行コマンドの詳細。判断基準・観点 gating・ループ規則・エスカレ条件は SKILL.md 本体にあるので、そちらを先に読んでから該当節だけをここで参照する。
 
+
+## 目次
+
+- [変数の定義](#変数の定義)
+- [4.1: フェーズ変数の確定と start イベント](#41-フェーズ変数の確定と-start-イベント)
+- [4.2a: subagent の応答待ち時間](#42a-subagent-の応答待ち時間)
+- [4.2: 事前判定](#42-事前判定)
+- [4.2a: implementer の起動](#42a-implementer-の起動)
+- [4.2a / 4.2e: fix ブリーフのスキーマ](#42a--42e-fix-ブリーフのスキーマ)
+- [4.2d: 修正ラウンドの implementer 起動](#42d-修正ラウンドの-implementer-起動)
+- [4.2c: 検査 fan-out の起動](#42c-検査-fan-out-の起動)
+- [4.2c: 観点 gating 述語の算出コマンド](#42c-観点-gating-述語の算出コマンド)
+- [4.2e: テスト弱体化検知コマンド](#42e-テスト弱体化検知コマンド)
+- [4.2e: implementer 報告の JSONL 一括転記](#42e-implementer-報告の-jsonl-一括転記)
+
 ## 変数の定義
 
 本ファイルのコマンドが前提にするシェル変数。**どれも「どこかで代入されているはず」ではなく、下記の時点で main が代入する。** JavaScript 風の `${...}` は Agent 呼び出しに埋める実値を表す (シェル変数ではない)。
@@ -340,3 +355,69 @@ jq -c --arg phase "$PHASE" --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" '
 出力を main のコンテキストに載せない (`>>` でファイルへ直行させ、標準出力に流さない)。転記件数だけ確認したい場合は `wc -l` の差分を見る。
 
 1 行ログ側にも同じ件数を出す必要はない (JSONL が正)。**`spawn` / `fix_dispatch` / エスカレ系はリアルタイム監視の価値があるので、発生時に 1 件ずつ追記する** (一括化の対象は implementer 報告由来の転記だけ)。
+
+## 4.1: フェーズ変数の確定と start イベント
+
+**まず変数を確定し、作業ファイル置き場を作り、`$SCRATCH_DIR/env.sh` に書き出してから、`start` イベントを書く** (Bash の呼び出しをまたぐと変数が消えるため。値の一覧と意味は [references/phase-execution.md](./references/phase-execution.md) の `## 変数の定義`)。**この順序で行う** — `SCRATCH_DIR` を作る前に env.sh は書けない:
+
+```bash
+# 値は着手中の issue から取る (下は「フェーズ4-a: ノードの編集と階層操作」= issue #15 の例)
+PHASE_ID="4-a"                          # issue タイトル `フェーズ<識別子>: <名前>` の識別子
+ISSUE=15                                # issue 番号
+PHASE="phase-$PHASE_ID"                 # JSONL の phase に入れる短縮識別子
+PHASE_NAME="フェーズ$PHASE_ID: ノードの編集と階層操作"   # agent へ渡す phase_name
+
+# 作業ファイル置き場 (implementer の報告 JSON・検査結果 JSON・攻撃スクリプト等)。
+# **リポジトリの外に置く**ことでコミット対象への混入を防ぎ、エスカレ停止後の再入時にも残す
+SCRATCH_DIR="$RUN_DIR/reviews/$PHASE"
+mkdir -p "$SCRATCH_DIR"
+
+cat > "$SCRATCH_DIR/env.sh" <<EOF
+export PHASE="$PHASE"
+export PHASE_NAME="$PHASE_NAME"
+export PHASE_ID="$PHASE_ID"
+export ISSUE=$ISSUE
+export SCRATCH_DIR="$SCRATCH_DIR"
+export PHASE_START_SHA="$PHASE_START_SHA"
+EOF
+```
+
+変数が揃ったところで、JSONL のフェーズ `start` イベントを書く (**この順序を守る** — 先に書こうとすると `$PHASE` も `$ISSUE` も未定義で、`--argjson issue "$ISSUE"` が JSON パースエラーで落ちる):
+
+```bash
+jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
+   --arg sha "$PHASE_START_SHA" --argjson issue "$ISSUE" '{
+  timestamp:$ts, phase:$p, step:"start", event_type:"start", severity:"info",
+  summary:("フェーズ開始 (issue #" + ($issue|tostring) + ")"),
+  context:{issue:$issue, phase_start_sha:$sha}}' >> "$JSONL"
+```
+
+以降このフェーズで Bash を呼ぶときは、冒頭で run スコープと合わせて `source` する:
+
+```bash
+. "$HOME/.claude/logs/dev-impl/<run_id>/env.sh"
+. "$SCRATCH_DIR/env.sh"
+```
+
+## 4.2a / 4.2e: fix ブリーフのスキーマ
+
+**fix ブリーフ**: `mode: fix` の implementer は `findings_paths` の JSON しか入力に取らないので、検査結果 JSON が存在しないこの経路でも main が同じ形式のファイルを書いて渡す。書き出し先は `<SCRATCH_DIR>/impl-failure-<phase_fix_round>.json`:
+
+```json
+{
+  "ok": false,
+  "dimension": "implementation",
+  "findings": [
+    {
+      "severity": "high",
+      "rule": "tests_failing",
+      "file": "<報告の files_changed の代表 1 件、無ければ null>",
+      "line": null,
+      "message": "<implementer 報告の reason と、直前のテスト実行出力の末尾 30 行>",
+      "fix_proposal": null
+    }
+  ]
+}
+```
+
+`rule` には implementer 報告の `reason` (`tests_failing` / `spec_insufficient`) をそのまま入れる。4.2e のテストゲート失敗で書く `<SCRATCH_DIR>/test-failure-<test_gate_retry>.json` も同じスキーマを使う (`rule: "tests_failing_before_commit"`)。
