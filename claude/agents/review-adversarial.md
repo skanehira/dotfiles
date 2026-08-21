@@ -89,7 +89,17 @@ REPO_DIR="${REPO_DIR:-.}"
    - 対象を直接 import/require できる → `scratch_dir/attack-N.{ts,go,rs,py,lua}` を書いて `npx tsx` / `go run` / `cargo script` 等で実行
    - import 不能 (ビルド前提・依存解決不能等) → CLI 直叩き、または `dev_server` があれば `curl` / HTTP 経由で攻撃
    - それも不能 → 実行を諦め `rule: attack_not_executable, severity: low` で「攻撃仮説はあるが未実行」と明記する (未実行を沈黙で「問題なし」に見せない)
-4. 実行前後で `git status --porcelain` を比較する。差分が生じていたら (working tree を汚染していたら) `rule: working_tree_polluted, severity: high` を必ず報告する
+4. **ソースを書き換えたら、復元は内容ハッシュで確認する。`git status --porcelain` を復元確認に使ってはならない。** フェーズの差分ファイルは既に「変更済み」として status に並んでいるため、中身をどう書き換えても status の出力は 1 文字も変わらない (mind の run 20260820-065019 で実証: 同一の変異を加えて前後を `cmp` したところ完全一致した)。実際にこの穴により、`autosave.ts` の `if (saving)` を `if (false)` に変異させたまま終了しながら、自分で取った status スナップショットの一致を見て「汚染なし」と判定した事故が起きている。攻撃・変異の**前**にベースラインを取り、**後**に突合する:
+
+   ```bash
+   sig() { git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | xargs shasum; }
+   sig > "$SCRATCH_DIR/_sig-before.txt"     # 最初の書き換えより前に 1 回
+   # ... 攻撃・変異・復元 ...
+   sig > "$SCRATCH_DIR/_sig-after.txt"
+   cmp -s "$SCRATCH_DIR/_sig-before.txt" "$SCRATCH_DIR/_sig-after.txt" || diff "$SCRATCH_DIR/_sig-before.txt" "$SCRATCH_DIR/_sig-after.txt"
+   ```
+
+   差分が残っていたら、まず自分で復元を試み、それでも一致しなければ `rule: working_tree_polluted, severity: high` を必ず報告する (`message` に `diff` の出力を入れる)。**呼び出し側 (dev-impl の main) も同じ突合を独立に行う**ので、報告を省いても検出されるが、どのファイルをどう変異させたかを知っているのは本 agent だけなので、報告があるほど復旧が速い。復元は「変異を加える前の値に戻す」ことであり、`git checkout` は使わない (実装者の未コミットの成果物ごと消える)
 5. 破壊的操作 (ファイル削除・外部ネットワークへの送信・DB migration の実行等) は行わない
 6. クラッシュ・データ破壊・仕様上ありうる入力での誤動作を実際に観測できた攻撃は、再現コマンドを `repro_command` に記録する (メインループが TDD の RED としてそのまま正規テストへ移植できる粒度にする)
 

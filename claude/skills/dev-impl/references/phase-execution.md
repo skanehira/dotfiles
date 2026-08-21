@@ -97,11 +97,33 @@ TDD の順序・フェーズスコープのテストのみ実行・コミット�
 
 ## 4.2c: 検査 fan-out の起動
 
-**起動前に未追跡ファイルを intent-to-add する** (これをしないと新規実装だけのフェーズが全 agent に空差分として見える):
+**起動前に 3 つを 1 ブロックで行う** (intent-to-add / 内容ハッシュのベースライン / spawn の先行記録)。**この 3 つはいずれも「起動する前」でなければ意味を成さない**ので、fan-out ごとに必ずこのブロックを流す:
 
 ```bash
+# (1) 未追跡ファイルを intent-to-add (これをしないと新規実装だけのフェーズが全 agent に空差分として見える)
 git -C "$REPO_DIR" ls-files -z --others --exclude-standard \
   | xargs -0 -r git -C "$REPO_DIR" add -N
+
+# (2) 内容ハッシュのベースライン (検査 agent が攻撃・変異でソースを書き換えたまま戻さない事故の検出用。
+#     git status --porcelain では検出できない = SKILL.md 4.2d 手順 8)
+git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | xargs shasum > "$SCRATCH_DIR/content-hash-before-${ROUND}.txt"
+
+# (3) これから起動する agent の spawn を JSONL に先に書く (起動後に書く規定だと構造的に落ちる = SKILL.md 4.2c)
+for a in $AGENTS_TO_SPAWN; do   # 例: "architecture-guard:haiku review-tdd:opus review-adversarial:sonnet"
+  jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
+     --arg n "${a%%:*}" --arg m "${a##*:}" --arg r "$ROUND" '{
+    timestamp:$ts, phase:$p, step:"review", event_type:"spawn", severity:"info",
+    summary:("spawn " + $n + " (" + $m + ", round " + $r + ")"),
+    context:{phase:$p, agent:$n, model:$m, round:$r}}' >> "$JSONL"
+done
+```
+
+**結果を全部受け取った後**に、(2) の対照を取る:
+
+```bash
+git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | xargs shasum > "$SCRATCH_DIR/content-hash-after-${ROUND}.txt"
+cmp -s "$SCRATCH_DIR/content-hash-before-${ROUND}.txt" "$SCRATCH_DIR/content-hash-after-${ROUND}.txt" \
+  || diff "$SCRATCH_DIR/content-hash-before-${ROUND}.txt" "$SCRATCH_DIR/content-hash-after-${ROUND}.txt"
 ```
 
 gating で決まった観点 + architecture-guard を**同一メッセージ内の複数 Agent tool_use** として並列起動する。全呼び出しに共通で付ける末尾指示:
@@ -213,7 +235,7 @@ Rust のインラインテスト (src ファイル内の `#[cfg(test)]`) はこ�
 
 ## 4.2e: implementer 報告の JSONL 一括転記
 
-SKILL.md 4.2e 手順 5 の転記は、**項目ごとに Bash を呼ばず 1 回の実行で全件を流し込む**。実測 (mind、4 フェーズ) で JSONL 239 件中 121 件が `design_decision` / `open_question` の転記で、これを逐次実行すると main の往復がフェーズあたり 30 回近く増える。
+SKILL.md 4.2e 手順 6 の転記は、**項目ごとに Bash を呼ばず 1 回の実行で全件を流し込む**。実測 (mind、4 フェーズ) で JSONL 239 件中 121 件が `design_decision` / `open_question` の転記で、これを逐次実行すると main の往復がフェーズあたり 30 回近く増える。
 
 `REPORT_PATH` は implementer 報告 (`report_path`) の絶対パス、`JSONL` は当該 run の `decisions.jsonl`、`PHASE_NAME` は `## 4.2: 事前判定` で PHASE_CONTEXT から代入したフェーズ識別子だが、**JSONL の `phase` には 1 行ログと同じ短い識別子 (`phase-3` 形式) を入れる** (フェーズ名そのままだと同じフェーズが別表記で混ざり、HTML レポートのフェーズ集計が割れる)。
 
