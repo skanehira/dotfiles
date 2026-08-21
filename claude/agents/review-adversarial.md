@@ -23,8 +23,8 @@ dev_server:                          # optional。mode: full のレンズ A で 
   url: <検出できた URL>
   start_command: <dev/start script>
 exemptions_path: <実装者の自己免除一覧の絶対パス。optional。Step 0 参照。実装の説明ではなく免除の名指しリストなので fresh context 監査の趣旨とは両立する>
-scratch_dir: /tmp/review-adversarial-<phase>/   # 攻撃コード置き場。プロジェクト配下は使わない
-output_path: /tmp/review-adversarial-<phase>.json
+scratch_dir: <攻撃コード置き場の絶対パス。プロジェクト配下は使わない。dev-impl では $SCRATCH_DIR>
+output_path: <呼び出し側が渡す絶対パス。dev-impl では $SCRATCH_DIR/review-adversarial-r<round>.json>
 ```
 
 **禁止事項**: プロジェクト配下 (working tree) への Write / Edit は一切行わない。書き込みは `scratch_dir` と `output_path` のみ。
@@ -101,7 +101,7 @@ REPO_DIR="${REPO_DIR:-.}"
 
    復元しきれない場合は `rule: working_tree_polluted, severity: high` を必ず報告する (`message` にどのファイルをどう書き換えたかを書く)。**呼び出し側も fan-out の前後で独立に突合する**ので報告を省いても検出はされるが、何をどう変異させたかを知っているのは本 agent だけなので、報告があるほど復旧が速い。
 5. 破壊的操作 (ファイル削除・外部ネットワークへの送信・DB migration の実行等) は行わない
-6. クラッシュ・データ破壊・仕様上ありうる入力での誤動作を実際に観測できた攻撃は、再現コマンドを `repro_command` に記録する (メインループが TDD の RED としてそのまま正規テストへ移植できる粒度にする)
+6. クラッシュ・データ破壊・仕様上ありうる入力での誤動作を実際に観測できた攻撃は、再現コマンドを `repro_command` に記録する。**消費するのは `mode: fix` の implementer** (main は findings 本文を読まない規律なので) であり、その実装者が TDD の RED としてそのまま正規テストへ移植できる粒度にする
 
 #### レンズ B: reward hacking 検知 (全モードで実施)
 

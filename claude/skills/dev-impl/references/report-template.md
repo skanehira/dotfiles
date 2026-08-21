@@ -311,7 +311,7 @@ PoC の解決は前段 dev-spec のフェーズ 5 で完了している前提の
 
 ## セクション 6: ゴール達成判定
 
-JSONL から `event_type: goal_check | goal_unmet` のエントリ + Step 5 の最終結果を集約:
+JSONL から `event_type: goal_check` のエントリ + Step 5 の最終結果を集約する (未達は `goal_check` の `status` が `unmet` であることで表す。`goal_unmet` という event_type は使わない):
 
 ```html
 <section class="space-y-2">

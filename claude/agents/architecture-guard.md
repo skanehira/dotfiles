@@ -171,15 +171,18 @@ stdout に `output_path` の絶対パスを 1 行だけ出す。
 ## 呼び出し例 (dev-impl から)
 
 ```javascript
+// 正典は dev-impl の references/phase-execution.md 「4.2c: 検査 fan-out の起動」。
+// パスはすべて絶対、output_path はラウンド番号で分ける (固定名だと再検査で上書きされる)
 const guardResult = await Agent({
   description: "Clean Arch / DDD 境界の検査",
   subagent_type: "architecture-guard",
   model: "haiku",
-  prompt: `target_diff: phase:phase-3
+  prompt: `target_diff: phase:${phaseName}
 PHASE_START_SHA: ${phaseStartSha}
-design_path: docs/DESIGN.md
-design_detail_path: docs/DESIGN_DETAIL_APP.md
-output_path: /tmp/guard-phase3.json`
+design_path: ${absDocsDir}/DESIGN.md
+design_detail_path: ${absDocsDir}/DESIGN_DETAIL_APP.md
+repo_dir: ${absRepoDir}
+output_path: ${absScratchDir}/guard-r${round}.json`
 })
 // guardResult は stdout の output_path (パス)
 const result = JSON.parse(await Read(guardResult.trim()))

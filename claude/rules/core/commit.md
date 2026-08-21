@@ -22,7 +22,7 @@
 
 読み替えないと、原則側だけを読んだ第三者やレビュー agent がフェーズ内コミットを違反と判定してしまう。
 
-フェーズ内コミットの subject・prefix・本文の規定は `skills/dev-impl/SKILL.md` の「ラウンドごとのコミット」に置く。**この例外は dev-impl のフェーズ内コミット (`[phase-<識別子>]` prefix を持つもの) に限る** — 通常の作業では条件 1 と原則をそのまま適用する。
+フェーズ内コミットの subject・prefix・本文の規定は `skills/dev-impl/SKILL.md` の「ラウンドごとのコミット」に置く。**この例外は dev-impl が打つコミットに限る** — `[phase-<識別子>]` prefix を持つラウンド / フェーズ最終コミットに加え、P1/P2 の動的修正と実行レポートの docs コミットを含む (後者 2 つも `[STRUCTURAL]` / `[BEHAVIORAL]` を付けない)。通常の作業では条件 1 と原則をそのまま適用する。
 
 ## Conventional Commit 形式
 

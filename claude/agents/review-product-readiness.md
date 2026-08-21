@@ -31,7 +31,7 @@ design_detail: |
 dev_server:
   url: http://localhost:5173/   # デフォルト、dev-impl が project 別に渡す
   start_command: pnpm dev        # 起動コマンド
-output_path: /tmp/review-product-readiness-<phase>.json
+output_path: <呼び出し側が渡す絶対パス。dev-impl では $SCRATCH_DIR/review-product-readiness-r<round>.json>
 snapshot_dir: <呼び出し側が渡す絶対パス。dev-impl では $SCRATCH_DIR/product-readiness-snapshots/>
 ```
 

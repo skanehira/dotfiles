@@ -28,7 +28,7 @@ PHASE_CONTEXT:
     - rules/core/implementation.md         # 外科的変更 / 最小実装 / 仕様外実装の明示 (観点 B の原文)
     - rules/frontend/react/hooks.md       # (TypeScript/React なら)
     - rules/backend/go/...                 # (Go なら)
-  output_path: /tmp/review-quality-<phase>.json
+  output_path: <呼び出し側が渡す絶対パス。dev-impl では $SCRATCH_DIR/review-quality-r<round>.json>
 ```
 
 ## 検査観点
