@@ -49,7 +49,7 @@ PHASE_CONTEXT:
 - **仕様外実装の明示**: デフォルト値・パス形式など仕様未指定の選択が明示されているか
 - **外界 (IO) の DI**: グローバル / 直接呼び出し違反、IO を持つカスタム hook (`useFetchX`) の新規追加
 - **path 別 rules**: フェーズ差分のファイルが `rules/frontend/**` / `rules/backend/**` の `paths` frontmatter にマッチする場合のみ、該当 rules を Read してチェック
-- **コミット規約**: Review ステップ時点ではフェーズのコミットが存在しないため no-op。コミットが存在する場合 (`/workflow-review` の事後レビュー等) のみ `rules/core/commit.md` に照らして検査
+- **コミット規約**: **dev-impl のフェーズ内コミット (ラウンドごとのコミット) は検査対象外。** `[phase-<識別子>]` prefix を持つコミットがこれにあたり、`rules/core/commit.md`「例外: dev-impl のフェーズ内コミット」と `skills/dev-impl/SKILL.md`「ラウンドごとのコミット」の規定が一般規約に優先する (全体スイート未実行のままコミットする・`[STRUCTURAL]` / `[BEHAVIORAL]` を付けない のはいずれも規定どおりで違反ではない)。**これを一般規約で指摘すると、実装者はコミットを禁止されていて直せないため修正ラウンドが空回りする。** `/workflow-review` の事後レビュー等、dev-impl 外のコミットだけを `rules/core/commit.md` に照らして検査する
 
 ### C. アーキテクチャ heuristic
 

@@ -38,6 +38,8 @@ JSON スキーマ:
     { "file": "src/domain/user/User.ts", "layer": "domain", "import_lines_checked": 5, "violation_count": 1 },
     { "file": "src/api/app.ts", "layer": "api", "import_lines_checked": 8, "violation_count": 0 }
   ],
+  "unchecked_files": [],
+  "skipped_by_design": ["src/domain/user/User.test.ts", "vite.config.ts"],
   "skip_reason": null,
   "violations": [
     {
@@ -63,7 +65,9 @@ JSON スキーマ:
 - `ok: true` は違反ゼロ。`ok: false` は 1 件以上の違反あり
 - `severity`: `high` (即修正必須) / `medium` (修正推奨) / `low` (情報レベル)。dev-impl は high と medium を修正対象として渡す
 - `checked_file_list`: **実際に import 行を読んだファイルを 1 件も省略せず列挙する (必須)。** これが無いと、呼び出し側は「違反が無い」と「そのファイルを見ていない」を区別できない。検出できていないことと異常が無いことが区別できない検査は、実行しても情報が増えていない (`rules/core/verification.md`)。実測では、型のみの cross-layer import 1 行を 5 回中 4 回見落としながら毎回 `ok: true` を返し、呼び出し側はそれを「境界は健全」と読んでいた。`violation_count: 0` のファイルも必ず載せる (違反があったファイルだけを列挙すると `violations` と同じ情報にしかならない)。件数は `checked_files` と一致させる
-- 呼び出し側は `git diff <PHASE_START_SHA>` のソースファイルのうち `checked_file_list` に無いものを**未検証として扱う** (パス扱いにしない)
+- `unchecked_files`: **差分に含まれるソースファイルのうち、自分が import 行を読まなかったものの配列 (必須)。** `checked_file_list` から呼び出し側に差集合を取らせると、呼び出し側は結果 JSON 全体を読む必要が生じ、main のコンテキスト規律 (射影だけを読む) と両立しない。**自分で差集合を計算してトップレベルに出す。** 未検証が 0 件なら `[]`。テスト・設定・ドキュメント等、レイヤ分類の対象外として意図的に見なかったファイルはここに入れず、`skipped_by_design` に分ける
+- `skipped_by_design`: 検査対象外として意図的に見なかったファイルの配列 (テスト・設定・ドキュメント等)。`unchecked_files` と合わせて、差分の全ファイルが「検査した / 対象外 / 未検証」のどれかに必ず分類される状態にする
+- 呼び出し側は `unchecked_files` が非空なら**未検証として扱う** (パス扱いにしない)
 - `skip_reason`: `checked_files: 0` の理由を区別するためのフィールド。`null` (差分が実際に空、正常) / `"no_layer_convention"` (DESIGN 文書にも慣例にも一致するレイヤ構造が無く Clean Arch チェック自体を skip、ステップ1参照) / `"diff_command_failed"` (ステップ2の git diff コマンドが失敗、下記参照)。`skip_reason` が `null` 以外なら `ok` の値に関わらず「正常に検査できていない」ことを表す
 
 ## 進捗ログ
@@ -158,6 +162,8 @@ DDD 検出は heuristic なので、確信度が低い場合は `severity: low` 
 ### ステップ 5: JSON 出力
 
 検出した violations を集約して `output_path` に Write。`ok` は violations が全て severity: low なら true、それ以外 (high/medium が 1 件でもあれば) false。
+
+**書き出す前に、ステップ 2 で列挙した差分ファイルが全て「検査した (`checked_file_list`) / 対象外 (`skipped_by_design`) / 未検証 (`unchecked_files`)」のどれかに分類されていることを確認する。** どれにも入らないファイルが残るのは、呼び出し側から見て「見たのか見ていないのか分からない」状態であり、検査の空虚化そのものである。
 
 stdout に `output_path` の絶対パスを 1 行だけ出す。
 

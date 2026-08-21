@@ -22,6 +22,7 @@ model: opus
 ```yaml
 phase_name: <フェーズN: 名前>
 phase_start_sha: <SHA>
+repo_dir: <検査対象リポジトリの絶対パス>   # 必須。以降の git / cd はすべてこの値を基準にする
 related_source_files: [...]
 design_overview: |
   <DESIGN.md 抜粋。特に「ゴール」セクション (G_E2E のシナリオ含む)>
@@ -116,14 +117,17 @@ rg -n 'useSWR|useQuery|fetch\(|await ' apps/src/components/ apps/src/pages/
 
 `PHASE_CONTEXT.dev_server` が無い (Web プロダクトでない) 場合は本 Step 全体を skip し、`ok: true` で素通りする。
 
-`$PROJECT_ROOT` は本 subagent 自身の作業ディレクトリ (Agent ツール起動時に parent と同じプロジェクトルートを引き継ぐため、明示的な受け渡しは不要)。`$DEV_SERVER_START_COMMAND` は `PHASE_CONTEXT.dev_server.start_command` をそのまま使う:
+`$REPO_DIR` は**入力の `repo_dir` (絶対パス)**。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` したつもりのまま実行すると別のディレクトリで動く。** `$DEV_SERVER_START_COMMAND` は `PHASE_CONTEXT.dev_server.start_command` をそのまま使う:
 
 ```bash
-cd "$PROJECT_ROOT" && $DEV_SERVER_START_COMMAND &
+cd "$REPO_DIR" && $DEV_SERVER_START_COMMAND &
+echo $! > "$SNAPSHOT_DIR/dev-server.pid"     # 停止用に PID を残す
 # 起動完了を待つ (PORT が listen するまで)
 ```
 
-dev サーバが既に起動中なら skip。起動失敗 → `findings` に `severity: high`, `rule: dev_server_unavailable` のエントリを1件追加した上で Step 4 (JSON 出力) に進み終了する (他の観点の Step 2/3 は skip)。`workflow-review` / `dev-impl` の fatal 判定は `findings[].severity` のみを見るため、**この finding を省略すると dev サーバ起動失敗が `findings: []` の「問題なし」として素通りしてしまう**。
+**自分で起動した dev サーバは、検査を終える前に必ず停止する** (`kill "$(cat "$SNAPSHOT_DIR/dev-server.pid")"`)。停止しないとプロセスが agent 終了後も残り、以降のフェーズ・以降の run が「既に起動中」と誤認して**古いコードのサーバを検査し続ける**。既に起動中だった場合は自分では起動も停止もしない (PID ファイルを作らない)。
+
+起動失敗 → `findings` に `rule: dev_server_unavailable`, **`severity: medium`** のエントリを 1 件追加した上で Step 4 (JSON 出力) に進み終了する (他の観点の Step 2/3 は skip)。**`high` にしない** — dev-impl の fatal 判定は `severity: high` を修正ラウンドに載せるが、これは環境起因で実装者が直せる問題ではなく、修正ラウンドが空回りするため (architecture-guard の `diff_command_failed` と同じ扱い)。呼び出し側はこの rule を見たら当該フェーズの product-readiness を**未検証**として `verification_skipped` (source: `dev_server_missing`) に記録する。`findings: []` の「問題なし」として素通りさせないことが要点なので、severity を下げても finding 自体は必ず出す。
 
 ### Step 2: 静的解析 (観点 2-5)
 

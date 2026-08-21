@@ -26,7 +26,7 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
   "timestamp": "2026-06-30T10:00:00+09:00",
   "phase": "phase-3",
   "step": "architecture-guard",
-  "event_type": "start|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|spec_lookup|self_review|gating_decided|spawn|fix_dispatch|run_facts_updated|impl_report|impl_done",
+  "event_type": "start|run_done|done|p1_fix|p2_fix|p3_escalate|poc_pending|goal_check|goal_unmet|phase_added|review_low|verification_skipped|spec_compliance|design_decision|open_question|spec_lookup|self_review|gating_decided|spawn|fix_dispatch|run_facts_updated|impl_report|impl_done|working_tree_polluted",
   "severity": "info|warn|error",
   "summary": "1 行サマリ (テキストログにも残る内容)",
   "context": {
@@ -114,13 +114,15 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 | `impl_done` | info | **1 issue の完了時** (SKILL.md 4.2e のコミット後。**issue 完了はこのイベントだけ**で表す。`done` はステップ単位の完了に使い、issue 完了には使わない) | `phase` / `summary` / `commit_sha` / `review_outputs` (main が確認した検査結果 JSON のパス配列、監査証跡) / `phase_fix_round` (このフェーズで回した修正ラウンド数、0〜3) / `phase_spawns` |
 | `p2_fix` | warn | P2 動的修正で詳細設計を書き換えた時 (SKILL.md 4.6) | `section` (更新したセクション名) / `what` (何をどう変えたか 1 行) / `why` (実装から判明した事実) / `commit_sha` (設計変更のコミット) / `p2_fixes_total` (この時点の通算)。**P2 は回数で停止しない**ので、このエントリが「承認済みの設計が実装に合わせてどう書き換わったか」をユーザーが後から追える唯一の記録になる。Step 6 の完了サマリと HTML レポートのセクション 4 がこれを読む |
 | `p1_fix` | info | P1 動的修正で TODO.md を書き換えた時 (SKILL.md 4.6) | `section` / `what` / `commit_sha` / `p1_fixes_in_phase` |
-| `gating_decided` | info | フェーズの初回検査 fan-out の直前 (SKILL.md 4.2c。**フェーズごとに 1 件だけ**) | `phase` / `gating_set` (このフェーズで起動しうる **review-\* の観点名**の配列。`architecture-guard` は gating 対象外で常に実行するので含めない。再 fan-out はこの部分集合しか起動できない) / `adversarial_mode` (`full` / `weakening_only` / `skipped`) / `basis` (判定根拠の真偽値。キー名は同 run 内の `criteria_result` と揃える: `{test_changed: $TEST_FILE_CHANGED か $TEST_CONTENT_CHANGED が非空, consumable: $CONSUMABLE_CHANGED が非空, auth: $AUTH_CHANGED が非空, ui_phase: uiPhase, final_phase: 自分以外に open issue が無い}`) |
-| `spawn` | info | **Agent ツールで起動する直前** (**例外なく全て**。起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。実測で再 fan-out の記録が phase-5 は 7 回中 0 件だった。SKILL.md 4.2c の事前ブロックで他の必須処理とまとめて書く) | `phase` / `agent` (`dev-impl-implementer` / `architecture-guard` / `review-*` / `fix-lsp-warnings`) / `model` (`opus` / `sonnet` / `haiku`) / `mode` (implementer は `implement` / `fix`、review-adversarial は `full` / `weakening_only`) / `phase_spawns` (このフェーズの累計、起動後の値) / `run_spawns` (run 全体の累計) |
+| `gating_decided` | info | フェーズの初回検査 fan-out の直前 (SKILL.md 4.2c。**フェーズごとに 1 件だけ**) | `phase` / `gating_set` (このフェーズで起動しうる **review-\* の観点名**の配列。`architecture-guard` は gating 対象外で常に実行するので含めない。再 fan-out はこの部分集合しか起動できない) / `adversarial_mode` (`full` / `weakening_only` / `skipped`) / `basis` (判定根拠の真偽値: `{test_changed: $TEST_FILE_CHANGED か $TEST_CONTENT_CHANGED が非空, consumable: $CONSUMABLE_CHANGED が非空, auth: $AUTH_CHANGED が非空, ui_phase: uiPhase, final_phase: 自分以外に open issue が無い}`)。**`verification_skipped` の `criteria_result` と共通するキー (`test_changed` / `final_phase`) は同名で揃える**が、両者はキー集合そのものは異なる (`basis` は gating の判定根拠、`criteria_result` は skip 述語の判定結果) |
+| `spawn` | info | **Agent ツールで起動する直前** (**例外なく全て**。起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。実測で再 fan-out の記録が phase-5 は 7 回中 0 件だった。SKILL.md 4.2c の事前ブロックで他の必須処理とまとめて書く) | `phase` / `agent` (`dev-impl-implementer` / `architecture-guard` / `review-*` / `fix-lsp-warnings`) / `model` (`opus` / `fable` / `sonnet` / `haiku`。`fable` は修正ラウンド 2 以降の implementer = SKILL.md「修正ラウンドのモデル昇格」) / `mode` (implementer は `implement` / `fix`、review-adversarial は `full` / `weakening_only`) / `round` (fan-out / 修正ラウンドの番号。初回 fan-out は 0) / `phase_spawns` (このフェーズの累計、**起動前に書くので「これから起動する 1 件を含めた値」**) / `run_spawns` (run 全体の累計、同上) |
 | `fix_dispatch` | warn | 修正ラウンド (SKILL.md 4.2d) で `mode: fix` の implementer を起動した時 | `phase` / `phase_fix_round` (このラウンドの番号、1〜3) / `findings_paths` (渡した結果 JSON のパス配列) / `fatal_summary` (`{severity, rule, file, line}` の射影配列。**findings の本文は入れない**) |
 | `self_review` | info | implementer 報告の一括転記時 (Step 4.2e 手順 6) | `checklist_applied` / `tests_revised` / `notes`。実装者が `rules/core/testing.md` のセルフレビューチェックリストを自分のテストへ適用した結果。HTML レポートには出さず、事後の振り返りで人が読むために残す |
 | `spec_lookup` | info | 同上 | `path` (PHASE_CONTEXT の抜粋で足りず implementer が自分で Read した設計書のパスと節)。抜粋精度を事後に確認するために残す |
 | `verification_skipped` | warn | 検証を実行しなかった / できなかった時 (記録箇所は下表) | **`source` を必ず入れる** (context の形が発生源ごとに違うため、Step 5.6 の集約はこれで分岐する)。値と形は下表 |
 | `run_facts_updated` | info | RUN_FACTS.md への追記後 (SKILL.md 4.2e のコミット後) | `phase` / `sections` (更新した節名の配列: `commands` / `artifacts` / `design_decisions` / `pitfalls`) / `bytes` (更新後のファイルサイズ。4KB 上限の監視用) |
+| `working_tree_polluted` | warn | 検査 fan-out の後に作業ツリーが非クリーンだった時 (SKILL.md 4.2d 手順 8) | `phase` / `round` / `files` (`git status --porcelain` の出力) / `restored` (`git restore` で戻せたか) / `rerun` (fatal 0 件のため検査をやり直したか) / `occurrence` (このフェーズで何回目か。2 回目はエスカレ停止) |
+| `run_done` | info | **run の完了時 (Step 6 の完了サマリ出力時) に 1 件だけ**。Step 0 の再入判定はこのイベントの有無だけを見る | `status` (`done` / `partial`) / `phases_completed` / `goal_summary`。**`done` (ステップ単位の完了) と混同しない** — 再入判定のセンチネルは `run_done` であって `done` ではない |
 
 
 `verification_skipped` の `source` は記録箇所と 1 対 1 に対応させる:
@@ -142,6 +144,10 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 `event_type: start` (run 開始時の 1 件。再入した run では再入のたびに 1 件) の `context` には **`repo_root` (`git rev-parse --show-toplevel` の絶対パス)** と `start_sha` を必ず入れる。`~/.claude/logs/dev-impl/` は全プロジェクト共通のディレクトリなので、これが無いと SKILL.md Step 0 の「同一プロジェクトで未完了の run があるか」を機械判定できない。
 
 **あわせて `run_spawns_budget` (SKILL.md Step 1 で確定した `run_spawns` の上限) を入れる。** この値と `phase_added` の同名フィールドだけが予算の記録先で、再入時の復元は両者に記録された値の**最大**を採る (予算は上方向にしか動かないため一意に決まる)。記録が無いと、compaction や再入をまたいだ時点で上限を「記憶」で判断することになる。
+
+**`event_type: start` はフェーズ開始時にも 1 件書く** (`phase` に短縮識別子、`step: "start"`)。この場合の `context` には **`phase_start_sha` (SKILL.md 4.1 で取った `git rev-parse HEAD`) と `issue` (issue 番号) を必ず入れる**。`phase_start_sha` は、中断したフェーズの提示 (`git log <SHA>..HEAD`)・破棄 (`git reset --hard <SHA>`)・検査 agent への基準点の受け渡し のすべての起点で、**再入時にこれを復元できないと Step 0 の「続きとして取り込む / 捨てる」分岐が成立しない**。run 単位の `start` とはどちらも `phase` の値で区別する (run 単位は `"run"`)。
+
+**`run_spawns` / `phase_spawns` の復元は `spawn` イベントの件数を数える方式に統一する** (`context.run_spawns` の最大値を採る方式と併用しない)。件数方式なら、フィールドを書き損ねた行があっても実態に近い値が出るうえ、4.2e 手順 4 の突合と同じ数え方になる。`context` のフィールドはリアルタイム監視と事後分析のために残すが、復元の正はあくまで件数である。
 
 書き込みは `jq -nc --arg ... '{...}' >> $JSONL` で 1 行 1 エントリの append-only。`context` は event_type に応じて中身が変わる (`done` ではほぼ空でも良い)。
 

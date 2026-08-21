@@ -49,10 +49,13 @@ UI/UX gap: <未実装画面数> 画面 / <未実装ナビ経路数> 経路 / fro
 
 停止時点の状態:
 - close 済み issue: <このループで閉じた issue 番号、無ければ「なし」>
-- 停止した issue: #<N> (ラベルは in-progress のまま。再実行時に Step 2 が再開対象として拾う)
+- 停止した issue: #<N> (ラベル: <in-progress | needs-human>)
+  - `in-progress` = 再実行で解決しうる停止。`/dev-impl` の再実行で Step 2 が再開対象として拾う
+  - `needs-human` = 人間の判断が要る停止。対応後、次の `/dev-impl` 起動時に Step 0 が確認してラベルを戻す
+  - どちらを貼るかは SKILL.md「エスカレ停止時の挙動」の停止理由別の表に従う
 - ラウンドのコミット: `git log --oneline <PHASE_START_SHA>..HEAD` の結果 (フェーズ最終コミットは未実施 = 全体スイートと DoD を通っていない)
 - 未コミットの変更: `git status --porcelain` の結果 (通常は空。非空なら検査 agent の汚染)
-- レビュー結果 JSON: ~/.claude/logs/dev-impl/<run_id>/reviews/issue-<N>/
+- レビュー結果 JSON: ~/.claude/logs/dev-impl/<run_id>/reviews/phase-<識別子>/ (issue 番号ではなくフェーズ識別子)
 
 次のステップ:
 - 上記詳細を踏まえ DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md を見直す

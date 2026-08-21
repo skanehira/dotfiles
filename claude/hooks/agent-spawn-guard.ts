@@ -22,7 +22,16 @@
  * 緊急脱出: 環境変数 AGENT_SPAWN_GUARD=off で素通り。
  */
 
-/** skill 側の方針で model が固定されている agent (skills/dev-impl/SKILL.md「モデル方針」)。 */
+/**
+ * model の明示が必要な agent と、未指定時の deny メッセージで案内する既定値
+ * (skills/dev-impl/SKILL.md「モデル方針」)。
+ *
+ * この hook が弾くのは **model の未指定だけ**で、規定と違う値でも明示されていれば
+ * 意図的な override として通す。したがってここの値は「固定値」ではなく
+ * 「未指定を叱るときに提示する既定値」である。
+ * 例: dev-impl-implementer は implement と fix ラウンド 1 が opus、
+ *     fix ラウンド 2 以降は fable (SKILL.md「修正ラウンドのモデル昇格」)。
+ */
 export const MANDATED_MODEL: Record<string, string> = {
   "dev-impl-implementer": "opus",
   "architecture-guard": "haiku",
@@ -126,7 +135,11 @@ export function validateAgentSpawn(input: AgentSpawnInput): SpawnValidation {
       reason:
         `[agent-spawn-guard] ${type} の起動に model が指定されていません。` +
         `未指定だと agent 定義ではなく親のセッションモデルを継承します。` +
-        `model: "${mandated}" を明示してください。`,
+        `model: "${mandated}" を明示してください。` +
+        (type === "dev-impl-implementer"
+          ? ` (mode: implement と mode: fix のラウンド 1 は "opus"、` +
+            `mode: fix のラウンド 2 以降は "fable"。SKILL.md「修正ラウンドのモデル昇格」)`
+          : ""),
     };
   }
 
