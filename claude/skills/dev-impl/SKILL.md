@@ -20,13 +20,23 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 | subagent | model | 根拠 |
 | --- | --- | --- |
 | dev-impl-implementer (4.2a `mode: implement`) | `opus` | フェーズ 1 本を TDD で完結させる実装器 |
-| dev-impl-implementer (4.2d `mode: fix`) | `opus` | fatal findings の修正。実装と同じ判断力を要する |
+| dev-impl-implementer (4.2d `mode: fix`、ラウンド 1) | `opus` | fatal findings の修正。実装と同じ判断力を要する |
+| dev-impl-implementer (4.2d `mode: fix`、ラウンド 2 以降) | `fable` | 1 ラウンドで閉じなかった fatal は局所修正では閉じない。下記「修正ラウンドのモデル昇格」参照 |
 | architecture-guard (4.2c) | `haiku` | レイヤ境界違反の検出は機械的・宣言的な判定でモデル性能に依存しない |
 | fix-lsp-warnings (4.2b) | `haiku` | LSP が出した警告を規則どおりに潰す機械作業 |
 | tech-investigation (Step 1.5 の個別呼び出し) | `opus` | 検証範囲の設計を自分で行う探索的な調査 |
 | review-adversarial (4.2c) | `sonnet` | 下記のとおり実測で opus の優位が確認できず、同額でより多くのターンを回せる sonnet が有利 |
 | review-tdd / review-quality / review-product-readiness (4.2c) | `opus` | 設計意図とテストの対応づけなど、規約の機械照合に還元されない判断を含む |
 | review-spec-compliance (5.2) | `opus` | 承認ハッシュ照合と成果物 ↔ 詳細設計の突合を伴う受入監査 |
+
+### 修正ラウンドのモデル昇格 (ラウンド 2 以降は `fable`)
+
+**ラウンド 1 で解消しなかった fatal は、指摘箇所の局所修正では閉じない性質のものが多い。** 実測 (mind の run 20260820-065019 のフェーズ6): `opus` の fix は毎ラウンド「指摘された high」を必ず解消したが、そのたびに同じ族の隣接箇所に新しい high が出た (round 1 `MapEditorPage.tsx:100` → round 2 `autosave.ts:79` → round 3 `MapEditorPage.tsx:134` と `autosave.ts:116` → 検査で `autosave.ts:113`)。個別のエッジケースを潰す作業になっていて、状態遷移の不変条件という根が閉じていなかった。
+
+そこで**ラウンド 2 以降は `model: "fable"` に上げ、指示文で「指摘箇所を局所的に塞ぐ前に、当該箇所が属する不変条件を洗い出して族ごと閉じる」ことを求める** (指示文の全文は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 修正ラウンドの implementer 起動`)。ラウンド 3 でも解消しなければ従来どおり `phase_fix_exceeded` でエスカレ停止する — **モデルを上げても閉じない fatal は、実装の腕ではなく設計の問題である**可能性が高く、人間の判断を仰ぐべき局面だと見なす。
+
+- `agent-spawn-guard` hook は **model の未指定だけを弾き、規定と違う値でも明示されていれば意図的な override として通す** (`claude/hooks/agent-spawn-guard.ts` の `validateAgentSpawn`)。この昇格に hook の改修は要らない
+- この昇格により、当該ラウンドだけ「実行器のモデル > 検証器のモデル」となり `rules/core/orchestration.md` の原則を満たさなくなる。**検証器 (review-*) を上げるのではなく実行器だけを上げるのは、ラウンド 2 に至った時点で不足しているのが検出力ではなく修正の設計力だと実測で分かっているため** (検出は毎ラウンド機能しており、新しい high を実行証拠つきで出し続けている)
 
 - **review-adversarial が `sonnet` である理由**: 同一セッション・同一フェーズ群での直接比較 (2026-08 のセッションログ実測) で、opus は 20 spawn・2.55 ドル/spawn で high 3 件 (0.15 件/spawn)、sonnet は 21 spawn・2.51 ドル/spawn で high 19 件 (0.90 件/spawn) だった。**1 spawn あたりの金額はほぼ同一で、単価が 1/5 の sonnet は同じ予算で 3.8 倍のターンを回せるため、実際に壊して確かめる本 agent の作業様式と噛み合う**。sonnet の findings は空虚ではなく、TOCTOU 並行削除を実際に再現し修正前ロジックで 20/20 再現するところまで確認する等、実行証拠を伴っていた。この 1 点で `rules/core/orchestration.md` の原則「実行器のモデル ≤ 検証器のモデル」を満たさなくなるが、当該原則は「検証が実行より弱いと骨抜きになる」ことを避けるための代理指標であり、**検出力の実測が代理指標に優先する**。切り替え後は high 検出件数の推移を監視し、opus 時の 0.15 件/spawn を下回り続けるようなら opus に戻す。
 
@@ -506,7 +516,7 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
 
    ただし **fatal が 1 件以上あって既に fix を起動する場合に限り、同じフェーズの medium を `findings_paths` に同梱してよい** (相乗り。追加の spawn を生まないため無料)。相乗りさせた medium は再検証しないので解消は主張せず、結果に関わらず `review_low` として記録する。
 3. fatal あり → `phase_fix_round += 1` する。**この時点で `phase_fix_round > 3` なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)
-4. **`mode: fix` の `dev-impl-implementer` を `model: "opus"` 明示で起動**する。渡すのは `findings_paths` (fatal を含む結果 JSON の絶対パスの配列) / `phase_context_path` / `repo_dir` / `report_path`。main は findings の本文を読まないし、修正内容を指示しない (fixer が JSON を自分で Read する)。**fixer が直す対象は「review-* の high」と「architecture-guard の high/medium」**で、fatal の定義と一致させてある (guard の medium が誰にも直されず空回りするのを防ぐため)
+4. **`mode: fix` の `dev-impl-implementer` を起動**する。**モデルはラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (上記「修正ラウンドのモデル昇格」)。ラウンド 2 以降は指示文に「指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを確認せよ。族として閉じられない残りは報告の `open_questions` に明記せよ」を加える。渡すのは `findings_paths` (fatal を含む結果 JSON の絶対パスの配列) / `phase_context_path` / `repo_dir` / `report_path`。main は findings の本文を読まないし、修正内容を指示しない (fixer が JSON を自分で Read する)。**fixer が直す対象は「review-* の high」と「architecture-guard の high/medium」**で、fatal の定義と一致させてある (guard の medium が誰にも直されず空回りするのを防ぐため)
 5. 修正完了後、**再 fan-out は「fatal を出した観点 + architecture-guard」に絞って 4.2c に戻る**。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は**原則として `gating_decided` に記録した `gating_set` の部分集合**とする (`architecture-guard` は gating 対象外で常に実行するため、この判定の対象に含めない)。下記 2 つの場合に限り集合外の review-adversarial を追加してよく、追加したときは `gating_decided` を追記して事後に正当な例外だと分かるようにする:
 
    - **fix がテストに触れた場合は review-adversarial を必ず追加する** (`mode: weakening_only` で足りる)。判定は **fix 起動の直前と完了直後にテストファイル群の署名を取って比較する** ([references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: fix がテストに触れたかの判定` 節)。4.2e までコミットしないため fix 差分だけを切り出す SHA は存在せず、`$TEST_CONTENT_CHANGED` (フェーズ開始 SHA 比) では「implement 段階で触れたか」しか分からない。修正の過程でテストが弱体化されるのはレンズ B が守る対象そのもので、ここに穴を作らない。既に adversarial が `full` で起動していたフェーズでは `full` のまま再実行する
@@ -884,7 +894,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
 ### 内部呼び出し (subagent)
 
-- **dev-impl-implementer**: フェーズ 1 本を TDD で実装する葉の agent (Step 4.2a `mode: implement` / Step 4.2d `mode: fix`、`model: opus` 明示)。`tools` に `Agent` を持たないため子 subagent を起動できず、5 分 TTL のキャッシュ失効を構造的に避ける。フェーズスコープのテストのみ実行し、コミット・`docs/` 編集・全体スイート実行はしない。全文報告を `report_path` に Write し、SendMessage では要約だけを返す (規約の全文は `claude/agents/dev-impl-implementer.md`)
+- **dev-impl-implementer**: フェーズ 1 本を TDD で実装する葉の agent (Step 4.2a `mode: implement` は `model: opus`、Step 4.2d `mode: fix` はラウンド 1 が `opus` でラウンド 2 以降が `fable`。いずれも明示)。`tools` に `Agent` を持たないため子 subagent を起動できず、5 分 TTL のキャッシュ失効を構造的に避ける。フェーズスコープのテストのみ実行し、コミット・`docs/` 編集・全体スイート実行はしない。全文報告を `report_path` に Write し、SendMessage では要約だけを返す (規約の全文は `claude/agents/dev-impl-implementer.md`)
 - **tech-investigation**: 実装中に新たな技術検証が必要になった場合の個別呼び出しのみ (起動前の PoC は dev-spec フェーズ 5 の責務)
 - **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.2c の fan-out に毎フェーズ含める、haiku)
 - **fix-lsp-warnings**: Lua/Neovim の LSP 警告修正 (Step 4.2b、haiku)。修正する agent なので検査 fan-out には混ぜず単独・逐次で走らせる
