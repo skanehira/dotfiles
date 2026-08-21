@@ -13,6 +13,8 @@ model: opus
 
 ## 入力 (PHASE_CONTEXT、簡易版)
 
+**呼び出し側からは `phase_context_path` (PHASE_CONTEXT ファイルの絶対パス) と、下記のうちファイル外で渡される値 (`exemptions_path` / `dev_server` / `snapshot_dir` / `output_path` 等) を受け取る。** PHASE_CONTEXT の中身はインラインでは渡らないので、**自分で Read して下記のキーを読む**。受け渡しの正は `skills/dev-impl/references/phase-context.md` の `## 渡し方` 表。
+
 ```
 PHASE_CONTEXT:
   phase_name: <フェーズN: 名前>

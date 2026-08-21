@@ -13,7 +13,7 @@
 | `SCRATCH_DIR` | Step 4.1 | `$RUN_DIR/reviews/phase-<識別子>` |
 | `PHASE_START_SHA` | Step 4.1 | そのフェーズ開始時の `git rev-parse HEAD`。**JSONL のフェーズ `start` イベントにも記録する** (再入時の復元元) |
 | `PHASE` | Step 4.1 | 短縮識別子 (`phase-4-a` 形式)。JSONL の `phase` に入れる値 |
-| `PHASE_NAME` | Step 4.1.5 | issue タイトル形式 (`フェーズ4-a: 名前`)。agent へ渡す `phase_name` と `target_diff: phase:<...>` に使う |
+| `PHASE_NAME` | Step 4.1 (env.sh 書き出しブロック) | issue タイトル形式 (`フェーズ4-a: 名前`)。agent へ渡す `phase_name` と `target_diff: phase:<...>` に使う |
 | `ISSUE` | Step 4 の着手時 | 着手中の issue 番号 |
 | `ROUND` | 各 fan-out / implementer 起動の直前 | **文字列として扱う**。初回 fan-out は `"0"`、修正ラウンド後の再検査は `phase_fix_round` の値、テストゲート再試行は `"tg<test_gate_retry>"`、報告不整合の再起動は `"retry<phase_fix_round>"`。`--argjson` で数値として書くと後 2 者が JSON エラーになる |
 | `AGENTS_TO_SPAWN` | 各 fan-out の直前 | `<agent>:<model>:<mode>` を**改行区切り**で並べた文字列 (mode 無しは `-`)。空白区切りにしない — zsh は `$VAR` を単語分割しない |

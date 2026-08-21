@@ -419,15 +419,7 @@ gh issue close <N> --repo "$REPO_SLUG" --comment "DoD がすべて通過した�
 
 **この値を JSONL のフェーズ `start` イベントに必ず書く** (`context.phase_start_sha`)。**Step 0 手順 2 の復元元はこの記録だけ**で、書き忘れると再入時に「続きとして取り込む / 捨てる」の分岐が成立しない:
 
-```bash
-jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
-   --arg sha "$PHASE_START_SHA" --argjson issue "$ISSUE" '{
-  timestamp:$ts, phase:$p, step:"start", event_type:"start", severity:"info",
-  summary:("フェーズ開始 (issue #" + ($issue|tostring) + ")"),
-  context:{issue:$issue, phase_start_sha:$sha}}' >> "$JSONL"
-```
-
-あわせて**作業ファイル置き場を作り、フェーズスコープの変数を `$SCRATCH_DIR/env.sh` に書き出す** (Bash の呼び出しをまたぐと変数が消えるため。値の一覧と意味は [references/phase-execution.md](./references/phase-execution.md) の `## 変数の定義`)。**この順序で行う** — `SCRATCH_DIR` を作る前に env.sh は書けない:
+**まず変数を確定し、作業ファイル置き場を作り、`$SCRATCH_DIR/env.sh` に書き出してから、`start` イベントを書く** (Bash の呼び出しをまたぐと変数が消えるため。値の一覧と意味は [references/phase-execution.md](./references/phase-execution.md) の `## 変数の定義`)。**この順序で行う** — `SCRATCH_DIR` を作る前に env.sh は書けない:
 
 ```bash
 # 値は着手中の issue から取る (下は「フェーズ4-a: ノードの編集と階層操作」= issue #15 の例)
@@ -449,6 +441,16 @@ export ISSUE=$ISSUE
 export SCRATCH_DIR="$SCRATCH_DIR"
 export PHASE_START_SHA="$PHASE_START_SHA"
 EOF
+```
+
+変数が揃ったところで、JSONL のフェーズ `start` イベントを書く (**この順序を守る** — 先に書こうとすると `$PHASE` も `$ISSUE` も未定義で、`--argjson issue "$ISSUE"` が JSON パースエラーで落ちる):
+
+```bash
+jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
+   --arg sha "$PHASE_START_SHA" --argjson issue "$ISSUE" '{
+  timestamp:$ts, phase:$p, step:"start", event_type:"start", severity:"info",
+  summary:("フェーズ開始 (issue #" + ($issue|tostring) + ")"),
+  context:{issue:$issue, phase_start_sha:$sha}}' >> "$JSONL"
 ```
 
 以降このフェーズで Bash を呼ぶときは、冒頭で run スコープと合わせて `source` する:
@@ -722,7 +724,7 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
 
    **main は agent が付けた severity を変更しない (昇格も降格もしない)。** 修正ラウンドを起こすのは上記の fatal だけで、medium / low を「重要そうだから」と high 扱いにして新ラウンドを起こすことはしない。過小評価は agent 側の severity 基準 (各 agent 定義の「severity の判定基準」節 (節を持たない agent は該当する判定記述)) を直して解決する問題であり、実行時の裁量で埋めるとラウンド数が判定基準なしに増える (実測で 9 ラウンド中 2 ラウンド以上が裁量昇格のみで起動していた)。
 
-   ただし **fatal が 1 件以上あって既に fix を起動する場合に限り、同じフェーズの medium を `findings_paths` に同梱してよい** (相乗り。追加の spawn を生まないため無料)。相乗りさせた medium は再検証しないので解消は主張せず、結果に関わらず `review_low` として記録する。
+   **medium の「相乗り」は行わない。** implementer は review-* の `findings[]` を high だけ、architecture-guard の `violations[]` を high/medium 直す規約なので、review-* の medium を渡しても no-op になる (guard の medium は fatal の定義に入っているので通常の経路で直る)。medium は `review_low` として記録し、Step 6 のサマリと HTML レポートに残す。
 3. fatal あり → `phase_fix_round += 1` する。**この時点で `phase_fix_round > 3` なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)。
 
    **続けて JSONL に `event_type: fix_dispatch` を記録する** (context は logging.md の規定)。`spawn` と同じく**起動する前に書く**。このイベントは 2 箇所が読む load-bearing な記録である: Step 0 の再入で `phase_fix_round` を復元する唯一のソースであり、ラウンド 2 以降の implementer へ渡す「過去ラウンドの経過」の材料でもある (references/phase-execution.md の `ROUND2_PLUS_BRIEF`)。
@@ -737,9 +739,9 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
         | select(.severity=="high" or .severity=="medium")]}' \
      "$SCRATCH_DIR/review-<観点>-r${ROUND}.json" > "$SCRATCH_DIR/fatal-<観点>-r${ROUND}.json"
 
-   # fatal を出していない観点: 相乗りの medium だけを残す (解消は主張せず review_low として記録する)
-   jq '{ok, dimension, findings: [.findings[] | select(.severity=="medium")]}' \
-     "$SCRATCH_DIR/review-<観点>-r${ROUND}.json" > "$SCRATCH_DIR/ride-<観点>-r${ROUND}.json"
+   # fatal を出していない観点の medium は **fixer に渡さない**。implementer は review-* の
+   # findings[] を high しか直さない規約 (claude/agents/dev-impl-implementer.md) なので、
+   # 渡しても構造的に no-op になり、spawn 予算だけを消費する。medium は review_low に記録して残す
    ```
 
    architecture-guard の分は**キーを `violations` のまま出す** (`jq '{ok, violations: [.violations[] | select(.severity=="high" or .severity=="medium")]}'`)。`findings` に付け替えてはならない — implementer は `violations[]` を high/medium、`findings[]` を high だけ拾う規約なので (`claude/agents/dev-impl-implementer.md`)、付け替えると **guard の medium が誰にも直されず毎ラウンド再検出される**。**これらのファイルの生成者はこの手順だけ**で、4.2e 手順 4 の突合はこれらを spawn の成果物として数えない (main が書いたものなので)
@@ -762,7 +764,7 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
      fi
      ```
 
-     Rust のインラインテスト (`#[cfg(test)]`) はこのファイル名パターンで捕まらないので、Rust プロジェクトでは同じ差分に対して `git diff -U0 HEAD~1 HEAD | rg '#\[cfg\(test\)\]'` も見る。修正の過程でテストが弱体化されるのはレンズ B が守る対象そのもので、ここに穴を作らない。既に adversarial が `full` で起動していたフェーズでは `full` のまま再実行する
+     Rust のインラインテスト (`#[cfg(test)]`) はこのファイル名パターンで捕まらないので、Rust プロジェクトでは同じ差分に対して `git -C "$REPO_DIR" diff -U0 "$BEFORE_FIX" HEAD -- '*.rs' | rg '^\+.*#\[cfg\(test\)\]'` も見る (`HEAD~1` を使わない理由は上と同じ)。修正の過程でテストが弱体化されるのはレンズ B が守る対象そのもので、ここに穴を作らない。既に adversarial が `full` で起動していたフェーズでは `full` のまま再実行する
    **`gating_decided` を追記するときは `gating_set` を全体で再掲する** (追加分だけを書かない)。同一 phase に複数あるときは**最新の 1 件を採る**規定 (logging.md) なので、追加分だけの部分集合を書くと、以後その部分集合しか起動できなくなり、初回に決まった観点が無音で落ちる。
 
    - review-adversarial のスキップ述語が「skip → 実行」に転じた場合 (既存規定どおり、降格は禁止)。**この転換で起動するときの `mode` は、その時点で「review-adversarial の mode 決定」表を評価して決める** (初回に skip したフェーズは mode を確定しておらず `adversarial_mode: "skipped"` しか記録が無いため)。決まった値で `gating_decided` を追記する
@@ -864,7 +866,7 @@ bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
 
    **件数ではなく集合の差で見る。** 件数比較だと過剰と不足が相殺して一致してしまい、両方見逃す。差集合なら**どちらの向きにずれたか**が出るので対処を分けられる: 「成果物はあるが記録が無い」は記録漏れなので `context.backfilled: true` を付けて補記する。「記録はあるが成果物が無い」は起動が失敗したか記録が過剰なので、**補記ではなく 4.2d 手順 1 の未検証扱い**に回す (成果物の無い観点は検査されていない)。
 
-   `fatal-*.json` / `ride-*.json` / `self-exemptions.json` / `_spawn-*.txt` は main が書いたもので spawn ではないため、上の glob には含めない。
+   `fatal-*.json` / `self-exemptions.json` / `_spawn-*.txt` は main が書いたもので spawn ではないため、上の glob には含めない。
 5. **JSONL に `event_type: impl_done` を記録する** (context: `phase` / `summary` / `commit_sha` / `phase_fix_round` / `phase_spawns` / `review_outputs`)。これが issue 完了の唯一のイベントで、`prev_phase_summary` (次フェーズの PHASE_CONTEXT) と HTML レポートのフェーズタイムラインがこれを読む
 6. implementer 報告の `verification_skipped` / `design_decisions` / `open_questions` / `spec_lookups` / `self_review` を `report_path` から `jq` で JSONL に転記する (`verification_skipped` は Step 5.6 の未検証項目集約に合流する)。**転記は 1 回の Bash 実行で全件を流し込む** — コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2e: implementer 報告の JSONL 一括転記` 節を使う (項目ごとに Bash を呼ぶと main の往復がフェーズあたり 30 回近く増える)
 7. **当該 issue を close する** (`gh issue close <N> --comment "DoD がすべて通過したため close する"`)
@@ -946,7 +948,16 @@ implementer 報告 (`mode: implement` / `mode: fix` 双方) の `deviation_signa
 
 ```bash
 git add docs/TODO.md            # P2 では編集した DESIGN_DETAIL_APP.md / _INFRA.md も含める
-git commit -m "📝 docs: <P1|P2> 動的修正 — <何をどう変えたかの 1 行>"
+git commit -m "$(cat <<'EOF'
+📝 docs: <P1|P2> 動的修正 — <何をどう変えたかの 1 行>
+
+<なぜ変えたか。実装から判明した事実を 2〜3 行>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
 ```
 
 **実装差分とは別コミットにする** (`rules/core/commit.md` の関心事分割。設計の更新と実装は別の関心事であり、混ぜると後から「設計がいつ変わったか」を追えなくなる)。type は `docs` を使い、`[STRUCTURAL]` / `[BEHAVIORAL]` は付けない — この 2 つはプロダクトコードの動作変更の有無を表す区分で、設計書の更新はどちらでもない (Step 7 の HTML レポートのコミットと同じ扱い)。
@@ -1155,7 +1166,7 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 2. テンプレ関数 (single-page Tailwind CDN HTML) でレポート HTML を組み立て
 3. `mkdir -p docs/dev-impl-reports/` で出力先確保
 4. Write で `docs/dev-impl-reports/${run_id}.html` に書き出し
-5. `git add docs/dev-impl-reports/${run_id}.html` してコミット (HTML レポートは履歴管理する): `git commit -m "📝 docs: dev-impl ${run_id} 実行レポート"`
+5. `git add docs/dev-impl-reports/${run_id}.html` してコミット (HTML レポートは履歴管理する): `git commit` する。**本文には `rules/core/commit.md` が全コミットに要求するフッタ (`🤖 Generated with ...` と `Co-Authored-By: ...`) を必ず入れる** — 本スキルが打つコミットは例外なくこの規約に従う (subject の形式だけは commit-msg-guard が機械検証するが、フッタは検証されないので落としやすい)
 
 レポート内容: ヘッダー (run_id / SHA / 所要時間) / 全体サマリ / フェーズタイムライン / 動的修正詳細 (P1/P2/P3) / レビュー残課題 (low/medium) / 実装ノート (設計判断 / 未解決の質問) / POC_NEEDED 残存状況 (pending non-blocker) / ゴール達成判定 / 受入監査結果 (spec_compliance findings) / フッター。
 
