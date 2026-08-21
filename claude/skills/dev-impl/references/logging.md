@@ -139,7 +139,9 @@ dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.cla
 
 `spawn` を全件記録するのは、`phase_spawns` の上限判定を「記憶」ではなくログから復元できる状態に保つため (compaction をまたいでもカウンタが失われない)。`gating_decided` も同じ理由で必ず記録する — 再 fan-out で起動してよい観点の集合はこのエントリが唯一のソースであり、記録が無ければ「記憶」で判断することになって仕様外の観点が起動する (実測で review-quality が規定外に 3 フェーズで起動していた)。
 
-`event_type: start` (run 開始時の 1 件) の `context` には **`repo_root` (`git rev-parse --show-toplevel` の絶対パス)** と `start_sha` を必ず入れる。`~/.claude/logs/dev-impl/` は全プロジェクト共通のディレクトリなので、これが無いと SKILL.md Step 0 の「同一プロジェクトで未完了の run があるか」を機械判定できない。
+`event_type: start` (run 開始時の 1 件。再入した run では再入のたびに 1 件) の `context` には **`repo_root` (`git rev-parse --show-toplevel` の絶対パス)** と `start_sha` を必ず入れる。`~/.claude/logs/dev-impl/` は全プロジェクト共通のディレクトリなので、これが無いと SKILL.md Step 0 の「同一プロジェクトで未完了の run があるか」を機械判定できない。
+
+**あわせて `run_spawns_budget` (SKILL.md Step 1 で確定した `run_spawns` の上限) を入れる。** この値と `phase_added` の同名フィールドだけが予算の記録先で、再入時の復元は両者に記録された値の**最大**を採る (予算は上方向にしか動かないため一意に決まる)。記録が無いと、compaction や再入をまたいだ時点で上限を「記憶」で判断することになる。
 
 書き込みは `jq -nc --arg ... '{...}' >> $JSONL` で 1 行 1 エントリの append-only。`context` は event_type に応じて中身が変わる (`done` ではほぼ空でも良い)。
 
