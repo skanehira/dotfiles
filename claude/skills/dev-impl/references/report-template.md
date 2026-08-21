@@ -162,7 +162,7 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
           <td class="py-2 font-mono">${p.name}</td>
           <td class="py-2 font-mono">${p.duration}</td>
           <td class="py-2 font-mono">${p.phase_fix_round}/3</td>
-          <td class="py-2 font-mono">${p.phase_spawns}/24</td>
+          <td class="py-2 font-mono">${p.phase_spawns}/33</td>
           <td class="py-2 font-mono">${p.commit_sha.slice(0,7)}</td>
           <td class="py-2">${p.status_badge}</td>
         </tr>
