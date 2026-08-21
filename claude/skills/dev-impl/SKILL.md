@@ -43,32 +43,22 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 
 ## 入力
 
-- `$ARGUMENTS` で docs ディレクトリパスが指定されていればそれを基点にする。省略時は `docs/` を使う
-- 必須ファイル:
-  - `docs/DESIGN.md` (概要)
-  - `docs/DESIGN_DETAIL_APP.md` (アプリ詳細)
-  - `docs/DESIGN_DETAIL_INFRA.md` (インフラ詳細)
-  - `docs/TODO.md` (タスクリスト、フェーズ単位)
-
-詳細設計 2 ファイルが無ければ dev-spec のフォールバック (`../dev-spec/references/todo-generation.md`。旧形式 DESIGN_DETAIL.md からの分割移行 = フォールバック A、DESIGN.md からの抽出 = フォールバック B) でまず生成するよう促してから dev-impl 起動を再案内する。
+`$ARGUMENTS` で docs ディレクトリパスが指定されていればそれを基点にする (省略時は `docs/`)。必須ファイルは `docs/DESIGN.md` (概要) / `docs/DESIGN_DETAIL_APP.md` (アプリ詳細) / `docs/DESIGN_DETAIL_INFRA.md` (インフラ詳細) / `docs/TODO.md` (タスクリスト、フェーズ単位)。詳細設計 2 ファイルが無ければ dev-spec のフォールバック (`../dev-spec/references/todo-generation.md`。旧形式 DESIGN_DETAIL.md からの分割移行 = フォールバック A、DESIGN.md からの抽出 = フォールバック B) でまず生成するよう促してから dev-impl 起動を再案内する。
 
 ## 参照ルール
 
-- TDD: `rules/core/tdd.md`
-- 設計原則: `rules/core/design.md`
-- テスト戦略: `rules/core/testing.md`
-- コミット規約: `rules/core/commit.md`
+TDD: `rules/core/tdd.md` / 設計原則: `rules/core/design.md` / テスト戦略: `rules/core/testing.md` / コミット規約: `rules/core/commit.md`
 
 ## 進捗ログ (2 系統)
 
 **リアルタイム監視用の 1 行テキストログ**と**事後振り返り用の構造化 JSONL** を並走させる。各ステップの「開始 / 完了 / 動的修正 / エスカレ」発生時に両方へ同期して書き込む (1 行ログ = summary のみ、JSONL = summary + context を構造化)。終了時に JSONL から HTML レポート (Step 7) を生成する。`START_SHA` は Step 5.2 の監査 agent 呼び出しと Step 6 / エスカレ通知のテンプレート ([references/goal-audit.md](./references/goal-audit.md) / [references/notification-template.md](./references/notification-template.md)) から参照される。
 
-- **run スコープの変数は Step 0 の再入判定を済ませてから確定する** (再入なら `run_id` を引き継ぐので、先に発行すると捨てる羽目になる)。順序は「Step 0 で再入かを決める → run スコープを確定する → Step 1 へ」
-- **シェル変数は Bash ツールの呼び出しをまたいで消える** (呼び出しごとに新しいシェルが立つ)。run スコープの値は `$RUN_DIR/env.sh`、フェーズスコープの値 (`PHASE` / `PHASE_NAME` / `PHASE_START_SHA` / `SCRATCH_DIR` / `ISSUE`) は Step 4.1 で `$SCRATCH_DIR/env.sh` に書き、各ブロックの冒頭で両方を `source` して再確立する
-- **`ROUND` とカウンタは env.sh に書かない。** ラウンドごとに変わる値で、フェーズ開始時に 1 度書く env.sh の性質と合わない。カウンタは `spawn` イベントの件数から数え直す。**導出式の正は [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 0: カウンタ・予算・gating_decided の復元`** で、本文でも logging.md でも再定義しない
+- **run スコープの変数は Step 0 の再入判定を済ませてから確定する** (再入なら `run_id` を引き継ぐので、先に発行すると捨てる羽目になる)
+- **シェル変数は Bash ツールの呼び出しをまたいで消える。** run スコープの値は `$RUN_DIR/env.sh`、フェーズスコープの値 (`PHASE` / `PHASE_NAME` / `PHASE_START_SHA` / `SCRATCH_DIR` / `ISSUE`) は Step 4.1 で `$SCRATCH_DIR/env.sh` に書き、各ブロックの冒頭で両方を `source` して再確立する
+- **`ROUND` とカウンタは env.sh に書かない** (ラウンドごとに変わる値で、フェーズ開始時に 1 度書く env.sh の性質と合わない)。カウンタは `spawn` イベントの件数から数え直す。**導出式の正は [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 0: カウンタ・予算・gating_decided の復元`** で、本文でも logging.md でも再定義しない
 - **`$HOME` を使い、`~` を変数に入れない。** `~` はシェルの展開に依存するので、subagent への受け渡しや `jq --arg` を経由すると文字列 `~/...` のまま渡り、存在しないパスを指す
 
-**「Agent の起動をまたいで比較する値」は env.sh ではなく専用のファイルに落とす** (env.sh はフェーズ開始時に 1 度書くもので、ラウンドごとに変わる値の置き場ではない)。該当するのは次の 3 つで、**いずれも「取った時点」と「使う時点」の間に必ず Agent の待ちが挟まる**:
+**「Agent の起動をまたいで比較する値」は env.sh ではなく専用のファイルに落とす。** 該当するのは次の 3 つで、**いずれも「取った時点」と「使う時点」の間に必ず Agent の待ちが挟まる**:
 
 | 値 | 置き場 | 取る時点 → 使う時点 |
 | --- | --- | --- |
@@ -84,34 +74,24 @@ env.sh の生成コマンドと専用ファイルの詳細規律は [references/
 
 ### Step 0: 再入チェック (エスカレ後の再開対応)
 
-`~/.claude/logs/dev-impl/` の全 run を走査し、**同一プロジェクトで未完了の run** があれば再入モードで動く。判定は 2 条件の AND:
-
-- `event_type: start` の `context.repo_root` が現在の `git rev-parse --show-toplevel` と一致する (このディレクトリは全プロジェクト共通なので、パスで絞らないと他プロジェクトの run を拾う)
-- **run 完了イベント `run_done` が無い** (Step 6 の完了サマリ出力時に 1 件だけ記録する専用の event_type)
-
-判定スクリプトは [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 0: 再入判定スクリプト` を Read してから実行する (**最新の 1 件だけを見る近似で代替すると**、他プロジェクトで dev-impl を回した直後に自分の未完了 run が最新ではなくなり、新規 run として起動してカウンタが 0 に戻る)。**センチネルに `done` を使わない** — `done` はステップ単位の完了にも使う値なので、run が未完了でも途中のステップ完了で真になり、「未完了である」ことを検出できない。
+`~/.claude/logs/dev-impl/` の全 run を走査し、**同一プロジェクトで未完了の run** があれば再入モードで動く。判定は 2 条件の AND — ① `event_type: start` の `context.repo_root` が現在の `git rev-parse --show-toplevel` と一致する (このディレクトリは全プロジェクト共通なので、パスで絞らないと他プロジェクトの run を拾う) ② **run 完了イベント `run_done` が無い** (Step 6 の完了サマリ出力時に 1 件だけ記録する専用の event_type)。判定スクリプトは [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 0: 再入判定スクリプト` を Read してから実行する (**最新の 1 件だけを見る近似で代替すると**、他プロジェクトで dev-impl を回した直後に自分の未完了 run が最新ではなくなり、新規 run として起動してカウンタが 0 に戻る)。**センチネルに `done` を使わない** — `done` はステップ単位の完了にも使う値なので、run が未完了でも途中のステップ完了で真になる。
 
 再入と判定したら次の 4 手順を行う。各手順の詳細は run-bootstrap.md の対応節を Read する:
 
-1. **run_id とカウンタ・予算を引き継ぐ** (新規発行しない)。run 全体の `p2_fixes_total` / `goal_loop` / `run_spawns` / `run_spawns_budget` と、進行中フェーズの `phase_spawns` / `phase_fix_round` / `test_gate_retry` / `p1_fixes_in_phase` / `phase_spawns_budget` / `phase_fix_budget` / `gating_decided` を decisions.jsonl から復元する。**カウンタだけ復元して予算を復元しないと、上限を超えたカウンタだけが戻り、再入した瞬間に同じ理由で再停止する** (`## Step 0: カウンタ・予算・gating_decided の復元`)
-2. **進行中フェーズの突合**: `PHASE_START_SHA` の上に積まれた `[phase-<識別子>]` コミット列を提示し、AskUserQuestion で「続きとして取り込む / 捨ててフェーズをやり直す」を確認する (再入時 1 回だけの人間確認)。**捨てる場合の `git reset --hard` は、対象範囲の全件が `[phase-*]` prefix を持つことを確認してから打つ** — HTML レポートや設計書のコミットが同じ範囲に混ざるため (`## Step 0: 進行中フェーズと TODO の突合`)
-3. **TODO チェックの突合**: `- [x]` だが issue が open のフェーズは「最終コミットまでは済んだが close 未到達」として **4.2e の手順 3 から再開する** (手順 7 から再開しない)。`impl_done` の SHA を基準にしない (同上の節)
-4. **Step 5 系の停止からの再開**: `goal_loop_exceeded` などゴール判定段階の停止では in-progress issue が無く駐車が使えないので、最後の `p3_escalate` を提示して AskUserQuestion で「対応済み / まだ」を確認する。**「対応済み」の回答があったときだけ `goal_loop` を 0 に戻す。Claude の判断で戻さない** (`## Step 0: Step 5 系の停止からの再開`)
+1. **run_id とカウンタ・予算を引き継ぐ** (新規発行しない)。run 全体の `p2_fixes_total` / `goal_loop` / `run_spawns` / `run_spawns_budget` と、進行中フェーズの `phase_spawns` / `phase_fix_round` / `test_gate_retry` / `p1_fixes_in_phase` / `phase_spawns_budget` / `phase_fix_budget` / `gating_decided` を decisions.jsonl から復元する。**カウンタだけ復元して予算を復元しないと、上限を超えたカウンタだけが戻り、再入した瞬間に同じ理由で再停止する**
+2. **進行中フェーズの突合**: `PHASE_START_SHA` の上に積まれた `[phase-<識別子>]` コミット列を提示し、AskUserQuestion で「続きとして取り込む / 捨ててフェーズをやり直す」を確認する (再入時 1 回だけの人間確認)。**捨てる場合の `git reset --hard` は、対象範囲の全件が `[phase-*]` prefix を持つことを確認してから打つ** — HTML レポートや設計書のコミットが同じ範囲に混ざるため
+3. **TODO チェックの突合**: `- [x]` だが issue が open のフェーズは「最終コミットまでは済んだが close 未到達」として **4.2e の手順 3 から再開する** (手順 7 から再開しない)。`impl_done` の SHA を基準にしない
+4. **Step 5 系の停止からの再開**: `goal_loop_exceeded` などゴール判定段階の停止では in-progress issue が無く駐車が使えないので、最後の `p3_escalate` を提示して AskUserQuestion で「対応済み / まだ」を確認する。**「対応済み」の回答があったときだけ `goal_loop` を 0 に戻す。Claude の判断で戻さない**
 
 未完了 run が無ければ通常起動 (新規 run_id 発行) で Step 1 へ。
 
 #### needs-human で駐車中の issue の再開
 
-`needs-human` ラベルの open issue があれば、**着手する前に**その issue 番号・停止理由 (issue コメントに記録済み) をユーザーに提示し、AskUserQuestion で「解決した (ready に戻して着手する) / まだ (駐車したまま他の issue を進める) / 中止」を確認する。
-
-「解決した」を選ばれた場合だけ、`gh issue edit <N> --add-label ready --remove-label needs-human` でラベルを戻す。**Claude の判断で勝手に外さない** — 駐車の解除は人間の回答が入ったことの証拠であり、ここを自動化すると停止条件が実質無効になる。
+`needs-human` ラベルの open issue があれば、**着手する前に**その issue 番号・停止理由 (issue コメントに記録済み) をユーザーに提示し、AskUserQuestion で「解決した (ready に戻して着手する) / まだ (駐車したまま他の issue を進める) / 中止」を確認する。「解決した」を選ばれた場合だけ `gh issue edit <N> --add-label ready --remove-label needs-human` でラベルを戻す。**Claude の判断で勝手に外さない** — 駐車の解除は人間の回答が入ったことの証拠であり、ここを自動化すると停止条件が実質無効になる。
 
 ### Step 1: 前提ドキュメントの確認
 
-1. `docs/DESIGN.md` を Read
-2. `docs/DESIGN_DETAIL_APP.md` を Read
-3. `docs/DESIGN_DETAIL_INFRA.md` を Read
-4. `docs/TODO.md` を Read
+`docs/DESIGN.md` / `docs/DESIGN_DETAIL_APP.md` / `docs/DESIGN_DETAIL_INFRA.md` / `docs/TODO.md` を Read する。
 
 #### プロダクトモードの判定
 
@@ -122,46 +102,23 @@ PRODUCT_MODE=$(sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DES
 PRODUCT_MODE=${PRODUCT_MODE:-unknown}
 ```
 
-- `cli` / `webapp`: dev-spec がスタンプを書いた新形式 docs
-- `unknown` (スタンプ不在、旧形式 docs): 後方互換のため、UI 系判定は従来どおり `dev_server` 推定 (references/phase-context.md) にフォールバックする
+`cli` / `webapp` は dev-spec がスタンプを書いた新形式 docs。`unknown` (スタンプ不在の旧形式) では後方互換のため、UI 系判定を `dev_server` 推定 ([references/phase-context.md](./references/phase-context.md)) にフォールバックする。
 
 #### GitHub の前提条件
 
-**実装対象は GitHub issue** なので、docs の確認と同時に次を解決する。1 つでも失敗したらエスカレ停止し、「`/dev-spec` を先に実行して issue を作ってください」と案内する。確認コマンドは [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 1: GitHub 前提条件の確認コマンド` を Read してから実行する (**`--limit` に張り付いていないことの確認を省くと**、上限ちょうどの件数が「全部取れた」と「切り捨てられた」のどちらか区別できず、見えない issue が未実装のまま「全 issue 完了済み」と判定されうる)。同節で次も併せて扱う:
+**実装対象は GitHub issue** なので、docs の確認と同時に次を解決する。1 つでも失敗したらエスカレ停止し、「`/dev-spec` を先に実行して issue を作ってください」と案内する。確認コマンドは [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 1: GitHub 前提条件の確認コマンド` を Read してから実行する (**`--limit` に張り付いていないことの確認を省くと**、上限ちょうどの件数が「全部取れた」と「切り捨てられた」のどちらか区別できず、見えない issue が未実装のまま「全 issue 完了済み」と判定されうる)。同節では `OPEN` / `CLOSED` の算出 (**`uc-tracking` の親 issue は数に入れない**)、`docs/.dev-impl/` の `.gitignore` 追記と単独コミット (Step 4 に入ってから追記すると `.gitignore` の変更がフェーズの差分に紛れ込む)、親 issue がある構成での「紐付けの差集合」の run ごと 1 回の実行 (前回 run が issue 作成直後・紐付け前に落ちた子を回収する唯一の経路) も併せて扱う。
 
-- `OPEN` / `CLOSED` の算出。**`uc-tracking` ラベルの親 issue は数に入れない** (実装対象ではないため。除外しないと親が残っているだけで未完了と誤判定する)
-- `docs/.dev-impl/` の `.gitignore` 追記と単独コミット (Step 4 に入ってから追記すると `.gitignore` の変更がフェーズの差分に紛れ込む)
-- 親 issue がある構成での「紐付けの差集合」の run ごと 1 回の実行 (前回 run が issue 作成直後・紐付け前に落ちた子を回収する唯一の経路)
-
-`OPEN` が 0 で closed も 0 件なら **issue が未生成**である (`/dev-spec` のフェーズ 12 が走っていない)。`OPEN` が 0 で closed が 1 件以上なら**全 issue 完了済み**なので、Step 5 (ゴール達成判定) から再開する。
-
-**`OPEN` が確定したこの時点で `run_spawns_budget` を確定する。式は Step 3 の「spawn 予算の意図」の更新表が正**で、ここでは繰り返さない (2 箇所に式を書くと片方だけが更新されて食い違う)。確定した値は JSONL の `start` の `context` に記録する。**再入で予算を足さないと、前回が `spawn_budget_exceeded` で止まっていた場合に再実行が構造的に何も解決しない** (`run_spawns` は Step 0 で復元され、リセットされないため)。
+`OPEN` が 0 で closed も 0 件なら **issue が未生成**である (`/dev-spec` のフェーズ 12 が走っていない)。`OPEN` が 0 で closed が 1 件以上なら**全 issue 完了済み**なので Step 5 (ゴール達成判定) から再開する。**`OPEN` が確定したこの時点で `run_spawns_budget` を確定する。式は Step 3 の「spawn 予算の意図」の更新表が正**で、ここでは繰り返さない (2 箇所に式を書くと片方だけが更新されて食い違う)。確定した値は JSONL の `start` の `context` に記録する。**再入で予算を足さないと、前回が `spawn_budget_exceeded` で止まっていた場合に再実行が構造的に何も解決しない**。
 
 #### 不在時の挙動
 
-| 不在ファイル                                  | 対処                                                                                                                     |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| TODO.md                                       | エスカレ停止: 「TODO.md が無い。`/dev-spec` (フェーズ 10) で生成してから再実行」とユーザー通知                           |
-| DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md | エスカレ停止: 上記「入力」節のフォールバック案内でユーザー通知 (旧形式の単一 `docs/DESIGN_DETAIL.md` しか無い場合も同じ) |
-| DESIGN.md                                     | エスカレ停止: 「DESIGN.md が無い。`/dev-spec` で生成」とユーザー通知                                                     |
+判定表は [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 1: 前提ファイル不在時の挙動` を Read して従う。
 
 #### 構造ゲート (fail fast)
 
-ファイルが揃っていても、以下に欠けがあれば**実装に入らずエスカレ停止**する。全フェーズ実装後に発覚しても手遅れなので、起動時に機械判定する:
+ファイルが揃っていても、以下に欠けがあれば**実装に入らずエスカレ停止**する (全フェーズ実装後に発覚しても手遅れなので、起動時に機械判定する)。判定表は [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 1: 構造ゲートの判定表`、**ゴール行の抽出コマンドと 1:1 照合コマンド**は同ファイルの `## Step 1: ゴール行の抽出と 1:1 照合` を Read して使う (**表のセルに埋めない** — Markdown の表セルではパイプを `\|` にエスケープする必要があり、それがそのまま正規表現へ渡ると「リテラルのパイプ文字」を要求する。実測で、ゴールが 13 行ある DESIGN.md に対して表セル形のコマンドは 0 件、エスケープを外すと 13 件を返した)。
 
-| チェック                | 判定                                                                                                    | 欠落時の reason / 対処                                                                                                                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 承認スタンプ            | TODO.md 先頭に `<!-- dev-spec:approved` がある                                                          | `design_not_approved`: 「dev-spec フェーズ 11 の承認ゲートを通してから再実行」                                                                                                                    |
-| 承認ハッシュ            | スタンプの `goals_sha=<値>` と再計算値 (下記) が一致する                                                | `approval_stale`: 「承認後に受入基準 (ゴール / 検証手順) が変更されている。dev-spec フェーズ 9 → 11 で再承認してから再実行」。スタンプに `goals_sha=` が無い旧形式は警告ログのみで通過 (後方互換) |
-| ゴール定義              | 下記「ゴール行の抽出コマンド」が 1 件以上を返す                                                          | `goals_missing`: 「dev-spec フェーズ 9 でゴールを定義してから再実行」                                                                                                                             |
-| ゴール ↔ 検証手順の 1:1 | 抽出した各 `G<n>` に対応する `G<n> 検証` 行が DESIGN_DETAIL_APP.md または DESIGN_DETAIL_INFRA.md にある | `verification_missing`: 欠落ゴール ID を列挙して dev-spec フェーズ 9 へ差し戻し                                                                                                                   |
-| G_E2E (必須・モード非依存) | `PRODUCT_MODE` が `cli`/`webapp` なら常に必須。`unknown` は Web プロダクト判定 (phase-context.md の dev_server 判定と同じ基準) が真なら必須 | `verification_missing` (同上)                                                                                                                                                                     |
-
-**ゴール行の抽出コマンドと 1:1 照合コマンドは表のセルに埋めず、[references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 1: ゴール行の抽出と 1:1 照合` を Read して使う** (**Markdown の表セルではパイプを `\|` にエスケープする必要があり、それがそのまま正規表現へ渡ると「リテラルのパイプ文字」を要求してしまう** — 実測で、ゴールが 13 行ある DESIGN.md に対して表セル形のコマンドは 0 件、エスケープを外すと 13 件を返した)。
-
-承認ハッシュの再計算コマンド (dev-spec 11.3 の生成と同一定義。P2 ガードでも使う)。
-
-**この 2 本の正規表現は `skills/dev-spec/SKILL.md` の生成側および `agents/review-spec-compliance.md` の独立照合側と 1 文字も違えてはならない。** ハッシュはバイト比較なので、抽出される行が 1 行でも違えば承認スタンプと一致せず `approval_stale` が常に発火する。**上の「ゴール行の抽出コマンド」とは別物**で、あちらはゴールの存在と 1:1 の照合に使う (ハッシュには関わらないので書き方が違ってよい):
+承認ハッシュの再計算コマンド (dev-spec 11.3 の生成と同一定義。P2 ガードでも使う)。**この 2 本の正規表現は `skills/dev-spec/SKILL.md` の生成側および `agents/review-spec-compliance.md` の独立照合側と 1 文字も違えてはならない** — ハッシュはバイト比較なので、抽出される行が 1 行でも違えば承認スタンプと一致せず `approval_stale` が常に発火する。**上のゴール行の抽出とは別物**で、あちらはゴールの存在と 1:1 の照合に使う (ハッシュには関わらないので書き方が違ってよい):
 
 ```bash
 GOALS_SHA=$(
@@ -174,17 +131,14 @@ GOALS_SHA=$(
 
 ### Step 1.5: 未解決 PoC マーカーの残存ガード
 
-技術検証 (PoC) は前段の dev-spec フェーズ 5 (PoC 検証) で完了していることが前提。ここでは未解決マーカーの残存だけを機械チェックする:
+技術検証 (PoC) は前段の dev-spec フェーズ 5 で完了していることが前提。ここでは未解決マーカーの残存だけを機械チェックする:
 
 ```bash
 rg -n '<!-- POC_NEEDED: .* -->' docs/DESIGN.md docs/DESIGN_DETAIL_APP.md docs/DESIGN_DETAIL_INFRA.md
 ```
 
-| 検出結果             | 対処                                                                                                                                                                                                                                                                                        |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0 件                 | Step 2 へ (no-op)                                                                                                                                                                                                                                                                           |
-| `blocker=false` のみ | テキストログに `[dev-impl] POC_NEEDED ${id} pending (non-blocker)`、JSONL に `event_type: poc_pending` (context に id / scope / risk) を記録して Step 2 へ (実装中に検証が必要になったら `tech-investigation` subagent を `model: "opus"` 明示で個別に呼ぶ。HTML レポートのセクション 5 がこのエントリを表示する) |
-| `blocker=true` あり  | **エスカレ停止** (`poc_marker_unresolved`)。「未解決の blocker マーカーが残っています。`/dev-spec` のフェーズ 5 (PoC 検証) で解決してから `/dev-impl` を再実行してください」とユーザー通知                                                                                                  |
+判定表は [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 1.5: PoC マーカー検出結果の分岐` を Read して従う。
+
 ### Step 2: issue の抽出と着手順の決定
 
 **実装の単位は GitHub issue** であり、**着手対象の抽出に TODO.md は使わない** (issue はフェーズ 12 が TODO.md から転記したもので、着手順と進捗の原本は GitHub の側にある)。TODO.md は Step 1 で読み、4.2e のチェック更新と P1 動的修正の書き込み先としては引き続き使う。
@@ -194,9 +148,7 @@ gh issue list --repo "$REPO_SLUG" --state open  --limit $LIMIT --json number,tit
 gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --jq '[.[].number]' > "$RUN_DIR/issues-closed.json"
 ```
 
-取得した open issue には UC 親 issue も混ざる。下の表の 1 行目 (`uc-tracking`) で先に除外してから着手判定に入る。
-
-着手対象の決め方:
+取得した open issue には UC 親 issue も混ざる。下表の 1 行目 (`uc-tracking`) で先に除外してから着手判定に入る。
 
 | 条件 | 扱い |
 | --- | --- |
@@ -206,11 +158,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 | `in-progress` ラベル | 前回の run が中断したもの。**Step 0 が decisions.jsonl から run 記録を復元できた場合だけそのまま再開する。** 対応する run 記録が無い (別マシン・別クローン・ログ削除後) 場合は未着手とみなし、`gh issue edit <N> --add-label ready --remove-label in-progress` でラベルを戻してから通常フローで着手する |
 | ラベルが無い open issue (`uc-tracking` でもない) | フェーズ 12 が作成直後に落ちた未完成の issue。`issue_incomplete` でエスカレ停止し、`/dev-spec` の再実行 (12.3 の突き合わせが冪等に貼り直す) を案内する |
 
-候補のうち、本文の `## 依存` にある **`Depends on #N` の参照先がすべて closed になっているものだけが着手可能**。複数あれば issue 番号の昇順で 1 件選ぶ。
-
-**並列化はしない。** 1 件実装して close し、次の判定に戻る、を繰り返す。フェーズを同時に走らせる wave / worktree fan-out は持たない。
-
-着手可能な issue が 1 件も無いのに open issue (`uc-tracking` を除く) が残っている場合は、依存が循環しているか、依存先が `needs-human` で駐車している。どちらかを判別して `dependency_blocked` でエスカレ停止する (JSONL の `context` に残りの issue 番号と各々の未解決依存を残す)。
+候補のうち、本文の `## 依存` にある **`Depends on #N` の参照先がすべて closed になっているものだけが着手可能**。複数あれば issue 番号の昇順で 1 件選ぶ。**並列化はしない** — 1 件実装して close し、次の判定に戻る、を繰り返す (wave / worktree fan-out は持たない)。着手可能な issue が 1 件も無いのに open issue (`uc-tracking` を除く) が残っている場合は、依存の循環か、依存先が `needs-human` で駐車している。どちらかを判別して `dependency_blocked` でエスカレ停止する (JSONL の `context` に残りの issue 番号と各々の未解決依存を残す)。
 
 ### Step 3: ループ全体の状態管理
 
@@ -226,9 +174,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 | `phase_spawns` (現フェーズの累計 subagent 起動数) | `phase_spawns_budget` (既定 33。**再入時は `max(33, 復元値 + 16)` に引き上げ、フェーズの `start` イベントの `context.phase_spawns_budget` に記録する。復元は記録値の最大**) — `spawn_budget_exceeded` は「再実行で解決しうる」停止で、復元されたカウンタが上限を超えたままだと再実行が構造的に何も解決しない (`run_spawns_budget` と同じ理由。16 は fix 1 + 再検査 5 の 2 ラウンド分 + 予備) | `spawn_budget_exceeded` でエスカレ停止          |
 | `run_spawns` (run 全体の累計 subagent 起動数)   | `run_spawns_budget` (下記「spawn 予算の意図」で定義)      | 同上                                            |
 
-**再入で予算が増える 3 つ (`phase_fix_budget` / `phase_spawns_budget` / `run_spawns_budget`) は同じ理屈で動く。** いずれの停止理由も「再実行で解決しうる」か「人間が対応した後に再開する」ものなので、**再入しても予算が一切増えないなら再実行が構造的に何も解決できず、即座に同じ理由で再停止する**。予算の追加付与を人間の再起動に紐づけることで、1 セッション内の暴走は有限の予算で止めたまま、人間の判断を挟んだ継続だけが前進する。
-
-`phase_fix_budget` の増分が **+1** なのは、`phase_fix_exceeded` が `needs-human` に分類される停止だからである。人間が 1 回対応したら 1 ラウンド分だけ直す余地を与える、という対応付けにする (人間の関与なしには増えない)。
+**再入で予算が増える 3 つ (`phase_fix_budget` / `phase_spawns_budget` / `run_spawns_budget`) は同じ理屈で動く。** いずれの停止理由も「再実行で解決しうる」か「人間が対応した後に再開する」ものなので、**再入しても予算が一切増えないなら再実行が構造的に何も解決できず、即座に同じ理由で再停止する**。予算の追加付与を人間の再起動に紐づけることで、1 セッション内の暴走は有限の予算で止めたまま、人間の判断を挟んだ継続だけが前進する。`phase_fix_budget` の増分が **+1** なのは `phase_fix_exceeded` が `needs-human` に分類される停止だからで、人間が 1 回対応したら 1 ラウンド分だけ直す余地を与える対応付けにしてある。
 
 スコープ別のリセット時点:
 
@@ -238,13 +184,11 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 | run 全体 | `p2_fixes_total` / `goal_loop` / `run_spawns` | リセットしない。**再入時は Step 0 で decisions.jsonl から復元した値を初期値にする** |
 | run 全体 (上限値) | `run_spawns_budget` | リセットしない。**上方向にのみ再計算する** (更新時点は下記「spawn 予算の意図」の表。issue が close されても下げない) |
 
-**run 全体の経過時間では打ち切らない。** 発散は試行回数の上限 (`phase_fix_round` / `test_gate_retry` / `goal_loop` / `phase_spawns` / `run_spawns`) で止める。長時間走ること自体は、フェーズ数の多いプロジェクトでは正常な状態であり停止理由にしない。個々の subagent が応答しないケースは、run の経過時間ではなく **spawn からの経過時間**で打ち切る (Step 4.2a)。
-
-カウンタと findings / deviation_signals の集約は**メインセッションが管理する**。各カウンタの現在値と集約結果は都度 1 行テキストログ + JSONL に書き出して外部化する (コンテキストが長くなり compaction をまたいでも、ログから状態を復元できるように)。
+**run 全体の経過時間では打ち切らない。** 発散は試行回数の上限で止める。長時間走ること自体はフェーズ数の多いプロジェクトでは正常であり停止理由にしない。個々の subagent が応答しないケースは **spawn からの経過時間**で打ち切る (4.2a)。カウンタと findings / deviation_signals の集約は**メインセッションが管理し**、現在値と集約結果は都度 1 行テキストログ + JSONL に書き出して外部化する (compaction をまたいでもログから状態を復元できるように)。
 
 **spawn 予算の意図**:
 
-- 1 フェーズは最小構成でも implementer 1 + architecture-guard 1 + review 1〜4 の subagent を起動する。フェーズ数だけ積み上がるため、上限を機械ゲートとして置く。**`phase_spawns` の上限 33・`run_spawns` の上限係数 20 (spawn / issue) はいずれも実測から取った値**で、測定と算出の内訳は [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## spawn 予算の根拠` にある (値を変えるときはそこの実測と突き合わせる)
+- 1 フェーズは最小構成でも implementer 1 + architecture-guard 1 + review 1〜4 を起動し、フェーズ数だけ積み上がるため上限を機械ゲートとして置く。**`phase_spawns` の上限 33・`run_spawns` の上限係数 20 (spawn / issue) はいずれも実測から取った値**で、測定と算出の内訳は [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## spawn 予算の根拠` にある (値を変えるときはそこの実測と突き合わせる)
 - **`run_spawns` の上限は `run_spawns_budget` という別の値で保持し、残作業ベースで上方向にのみ更新する。** 更新するのは次の 3 時点だけで、**issue が close されても下げない**:
 
   | 更新時点 | 計算 |
@@ -253,13 +197,11 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
   | run 再入時 (Step 1 で `OPEN` を数えた直後) | `run_spawns_budget = max(復元値, run_spawns + OPEN × 20, run_spawns + 16)` |
   | issue 追加時 (P1 / P2 動的修正・Step 5.5) | `run_spawns_budget = max(現在値, run_spawns + その時点の OPEN × 20)` (Step 4.6「新フェーズの issue 化」手順 3) |
 
-  `OPEN` はいずれも Step 1 で数える **`uc-tracking` を除いた実装対象の open issue 件数**を指す (親 issue は実装しないので予算を消費しない)。予算の母数をこう取ることは本スキルを通じて一貫している。
+  `OPEN` はいずれも Step 1 で数える **`uc-tracking` を除いた実装対象の open issue 件数**を指す (親 issue は実装しないので予算を消費しない)。**下限 16 を置くのは `OPEN = 0` で Step 5 から再開する経路があるため**で、そのまま `OPEN × 20` を使うと予算が 0 になり監査 agent を 1 体も起動できない。16 は Step 5 の監査 2 体 + 未達対応ループ (`goal_loop` 上限 2 周 × 追加フェーズ 1 本) が回る最小限で、**係数とは独立に決まる**。
 
-  **下限 16 を置くのは、`OPEN = 0` で Step 5 (ゴール達成判定) から再開する経路があるため** (Step 1 の「`OPEN` が 0 で closed が 1 件以上なら全 issue 完了済み」)。この経路で `OPEN × 20` をそのまま使うと予算が 0 になり、Step 5.2 の監査 agent を 1 体も起動できない。16 は Step 5 の監査 2 体 + 未達対応ループ (`goal_loop` 上限 2 周 × 追加フェーズ 1 本) が回る最小限として置いた値で、**係数とは独立に決まる** (係数を変えてもこの下限は動かさない)。
-
-- **`OPEN × 20` を `run_spawns` と直接比べてはならない。** 前者は「これから使ってよい量」、後者は「すでに使った量」で、比べる単位が違う。直接比べると issue を close するたびに上限が下がるので、**正常に完了した作業そのものが停止理由になる**。さらに Step 5 (ゴール達成判定) では定義上 `OPEN` が 0 件になるため上限も 0 になり、監査 agent の起動が必ず上限違反になる
-- `run_spawns_budget` は更新のたびに JSONL の `start` / `phase_added` の `context` に記録する (compaction や再入をまたいでも値を復元できるように)。復元は記録済みの値の**最大**を採る (上方向にしか動かないので一意に決まる)
-- **Agent ツールで subagent を起動する箇所は、本スキルに 7 つある** — 4.2a (implementer)、4.2b (fix-lsp-warnings)、4.2c (検査 fan-out)、4.2d 手順 4 (`mode: fix` の implementer)、4.2e のテストゲート再試行 (`mode: fix` の implementer)、Step 5.2 (監査 agent)、Step 1.5 の `tech-investigation`。**この 7 つすべてで、起動する直前に `event_type: spawn` を JSONL へ書き、`phase_spawns` / `run_spawns` を進める。** 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる (4.2c 参照)。記録が欠けると予算判定が実態より小さい値で走るので、**フェーズを閉じる直前 (4.2e 手順 4) の成果物との突合が二段目の歯止め**になる (成果物 JSON を出さない fix-lsp-warnings は補記でも拾えないため、一段目を落とさないことが要点)
+- **`OPEN × 20` を `run_spawns` と直接比べてはならない。** 前者は「これから使ってよい量」、後者は「すでに使った量」で単位が違う。直接比べると issue を close するたびに上限が下がり、**正常に完了した作業そのものが停止理由になる**。Step 5 では定義上 `OPEN` が 0 件になるため上限も 0 になり、監査 agent の起動が必ず上限違反になる
+- `run_spawns_budget` は更新のたびに JSONL の `start` / `phase_added` の `context` に記録する。復元は記録済みの値の**最大**を採る (上方向にしか動かないので一意に決まる)
+- **Agent ツールで subagent を起動する箇所は本スキルに 7 つある** — 4.2a / 4.2b / 4.2c / 4.2d 手順 4 / 4.2e のテストゲート再試行 / Step 5.2 / Step 1.5 の `tech-investigation`。**この 7 つすべてで、起動する直前に `event_type: spawn` を JSONL へ書き、`phase_spawns` / `run_spawns` を進める** (起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる)。記録が欠けると予算判定が実態より小さい値で走るので、**4.2e 手順 4 の成果物との突合が二段目の歯止め**になる (成果物 JSON を出さない fix-lsp-warnings は補記でも拾えないため、一段目を落とさないことが要点)
 
 ### main のコンテキスト規律
 
@@ -277,13 +219,9 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 
 ### Step 4: 各 issue の実行
 
-Step 2 で選んだ issue を 1 件実装し、close してから Step 2 に戻る。**同時に複数の issue を走らせない。** implementer は main の working tree で直接編集し、統合の手順は無い (main がそのままコミットする)。
+Step 2 で選んだ issue を 1 件実装し、close してから Step 2 に戻る。**同時に複数の issue を走らせない。** implementer は main の working tree で直接編集し、統合の手順は無い (main がそのままコミットする)。骨格は「issue に `in-progress` を貼る → PHASE_CONTEXT を組み立てる → implementer 起動 → 待つ → 検査 fan-out 起動 → 待つ → 修正ラウンド → テストゲート → コミット → issue を close」。
 
-骨格は「issue に `in-progress` を貼る → PHASE_CONTEXT を組み立てる → implementer 起動 → 待つ → 検査 fan-out 起動 → 待つ → 修正ラウンド → テストゲート → コミット → issue を close」。
-
-**PHASE_CONTEXT の実装指示は issue 本文から組み立てる。** `## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` をそのまま使う (節名は dev-spec のフェーズ 12 が固定している)。設計の抜粋が必要な場合だけ `## 参照すべき docs` が指す節を docs から読む。
-
-着手時と完了時の GitHub 操作:
+**PHASE_CONTEXT の実装指示は issue 本文から組み立てる。** `## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` をそのまま使う (節名は dev-spec のフェーズ 12 が固定している)。設計の抜粋が必要な場合だけ `## 参照すべき docs` が指す節を docs から読む。着手時と完了時の GitHub 操作:
 
 ```bash
 gh issue edit <N> --repo "$REPO_SLUG" --add-label in-progress --remove-label ready
@@ -293,21 +231,20 @@ gh issue edit <N> --repo "$REPO_SLUG" --add-label in-progress --remove-label rea
 gh issue close <N> --repo "$REPO_SLUG" --comment "DoD がすべて通過したため close する"
 ```
 
-**子を close したら、続けて親 issue の自動 close sweep を回す** (4.2e の手順 6 → 7)。
+**子を close したら、続けて親 issue の自動 close sweep を回す** (4.2e の手順 7 → 8)。
 
 **main が行うこと** (implementer には渡さない): PHASE_CONTEXT と RUN_FACTS の組み立て、事前判定と観点 gating の確定、検査 fan-out の起動と待機、fatal 判定、全テストゲート、テスト弱体化の機械検知、コミット、issue のラベル操作と close、decisions.jsonl への書き込み、Step 4.6 の P1/P2/P3 判定。
 
-**完了判定は main が自分で行う。** implementer の `status: done` を完了根拠にせず、次の 2 点を main が確認する:
+**完了判定は main が自分で行う。** implementer の `status: done` を完了根拠にせず、次の 2 点を main が確認する。何も実装せず `status: done` を返した場合に「差分ゼロ → 全テスト green → `- [x]` 化」まで素通りするのを防ぐための判定である:
 
-- (a) **実装が実在すること** — 次の 3 つを**すべて**確認する。**`files_changed` が空でないことを先に見る** — 空配列に対する「全要素が差分に現れる」は空集合の包含として無条件に成立し、**この判定が防ぐと宣言している当のケース (何も実装せず `status: done`) で空虚になる**:
-  1. `files_changed` が**非空**であること。空なら `impl_report_invalid` として扱う (4.2a の表。`mode: implement` で再起動し、3 回で `phase_fix_exceeded`)
+- (a) **実装が実在すること** — 次の 3 つを**すべて**確認する。**`files_changed` が空でないことを先に見る** — 空配列に対する「全要素が差分に現れる」は空集合の包含として無条件に成立し、**この判定が防ぐと宣言している当のケースで空虚になる**:
+  1. `files_changed` が**非空**であること。空なら `impl_report_invalid` として扱う (4.2a の分岐。`mode: implement` で再起動し、3 回で `phase_fix_exceeded`)
   2. `files_changed` の各パスが、実際に `git diff --name-only <PHASE_START_SHA>` + `git ls-files --others --exclude-standard` の結果に現れること
-  3. そのラウンドのコミットで変更行数が実際に増えたこと。**起動の直前に `$SCRATCH_DIR/before-<round>.sha` へ落とした SHA と比較する** (コミット後に `git diff --shortstat "$(cat "$SCRATCH_DIR/before-$ROUND.sha")" HEAD` が非空であることを見る。ファイルが無ければ判定不能として `impl_report_invalid` に倒す)。working tree が非空であることだけでは足りない (`.gitignore` 追記や作業ファイルで非空になりうるため)
+  3. そのラウンドのコミットで変更行数が実際に増えたこと。**起動の直前に `$SCRATCH_DIR/before-<round>.sha` へ落とした SHA と比較する** (`git diff --shortstat "$(cat "$SCRATCH_DIR/before-$ROUND.sha")" HEAD` が非空。ファイルが無ければ判定不能として `impl_report_invalid` に倒す)。working tree が非空であることだけでは足りない (`.gitignore` 追記や作業ファイルで非空になりうるため)
 - (b) **fatal が 0 件であること** — 判定基準は 4.2d の fatal の定義に従う (review-* の high と architecture-guard の high/medium)
 
-何も実装せず `status: done` を返した場合に「差分ゼロ → 全テスト green → `- [x]` 化」まで素通りするのを防ぐための判定。
-
 着手対象の各 issue について以下を順次実行する:
+
 
 #### Step 4.1: フェーズ開始の SHA を記録
 
@@ -327,54 +264,30 @@ implementer と検査 subagent (architecture-guard / review-*) は parent のコ
 
 #### RUN_FACTS.md の初期作成 (run の最初のフェーズのみ)
 
-`docs/.dev-impl/<run_id>/RUN_FACTS.md` が存在しなければ、PHASE_CONTEXT を書く前に main が作成する。テンプレートと規則は [references/phase-context.md](./references/phase-context.md) の `## RUN_FACTS.md`。この時点で埋めるのは「プロジェクトコマンド」表だけで、他の節は見出しだけを置く (implementer が必ず Read する必須入力なので、不在ファイルを指さないようにするため)。
+`docs/.dev-impl/<run_id>/RUN_FACTS.md` が無ければ、PHASE_CONTEXT を書く前に main が作成する。テンプレートと規則は [references/phase-context.md](./references/phase-context.md) の `## RUN_FACTS.md`。この時点で埋めるのは「プロジェクトコマンド」表だけで、他の節は見出しだけを置く (implementer が必ず Read する必須入力なので、不在ファイルを指さないようにするため)。「run の最初のフェーズか」は**ファイルの存在で判定する** (フェーズ番号や再入状態では判定しない) — 再入した run では前回作った RUN_FACTS.md が残っているので、再作成もコマンド再検証も走らない。
 
-「run の最初のフェーズか」は**ファイルの存在で判定する** (フェーズ番号や再入状態では判定しない)。再入した run では前回作った RUN_FACTS.md がそのまま残っているので、再作成もコマンド再検証も走らない。
-
-PHASE_CONTEXT の YAML テンプレートと抜粋ロジック (design 節の抜粋上限 4KB・dev_server 推定・poc_results の出典を含む) は [references/phase-context.md](./references/phase-context.md) を Read して従う。
-
-組み立てた PHASE_CONTEXT ファイルの path は implementer (4.2a) と review-tdd / review-quality / review-product-readiness (4.2c) の prompt に**絶対パスで**渡す。**architecture-guard と review-adversarial には渡さない** (前者は入力仕様が PHASE_CONTEXT を受け取らず `design_path` 等を取るため、後者は fresh context 監査のため)。受け渡しの一覧は [references/phase-context.md](./references/phase-context.md) の `## 渡し方`。
+PHASE_CONTEXT の YAML テンプレートと抜粋ロジック (design 節の抜粋上限 4KB・dev_server 推定・poc_results の出典) は [references/phase-context.md](./references/phase-context.md) を Read して従う。組み立てたファイルの path は implementer (4.2a) と review-tdd / review-quality / review-product-readiness (4.2c) の prompt に**絶対パスで**渡し、**architecture-guard と review-adversarial には渡さない** (前者は入力仕様が `design_path` 等を取るため、後者は fresh context 監査のため)。受け渡しの一覧は同ファイルの `## 渡し方`。
 
 #### Step 4.2: フェーズの実装と検査
 
 ##### 事前判定 (main)
 
-判定基準: `IS_NEOVIM_PLUGIN` は init.lua / lua ディレクトリ / plugin/*.lua の有無で決まる (LSP 警告修正ステップ 4.2b の要否)。`uiPhase` は `phase_tasks` / フェーズ名の UI キーワード、または `related_source_files` のフロントエンド dir 有無で決まる (4.2c の観点 gating に使う)。**`PRODUCT_MODE=cli` の場合は `uiPhase` を判定せず常に `false` 固定**とする (CLI 実装の「コマンド」「フラグ」等の語がキーワード判定に誤爆するのを防ぐ)。
+`IS_NEOVIM_PLUGIN` は init.lua / lua ディレクトリ / plugin/*.lua の有無で決まる (4.2b の要否)。`uiPhase` は `phase_tasks` / フェーズ名の UI キーワード、または `related_source_files` のフロントエンド dir 有無で決まる (4.2c の観点 gating に使う)。**`PRODUCT_MODE=cli` では `uiPhase` を判定せず常に `false` 固定**とする (CLI 実装の「コマンド」「フラグ」等の語がキーワード判定に誤爆するのを防ぐ)。実行コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2: 事前判定`。
 
-実行コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2: 事前判定` 節を Read してから実行する。
-
-**RUN_FACTS.md を新規作成したフェーズでのみ** (= run の最初のフェーズ。判定は Step 4.1.5 参照)、gate コマンド (`full_test_command` / `lint_command` / `format_command`) を main が 1 回実行して exit code を確認する。未検証のコマンドを渡すと、implementer が自分の実装のせいで失敗していると誤認して発散する。
-
-確認結果を RUN_FACTS.md の「プロジェクトコマンド」表の「確認済み」列に書き、**その後で** PHASE_CONTEXT を `gate_commands_verified: true` (全コマンドが exit 0) または `false` で書く。2 フェーズ目以降は RUN_FACTS.md の同列から値を引き継ぐ。`false` を渡された implementer の挙動は `claude/agents/dev-impl-implementer.md` に規定がある。
+**RUN_FACTS.md を新規作成したフェーズでのみ**、gate コマンド (`full_test_command` / `lint_command` / `format_command`) を main が 1 回実行して exit code を確認する。**未検証のコマンドを渡すと、implementer が自分の実装のせいで失敗していると誤認して発散する。** 結果を RUN_FACTS.md の「確認済み」列に書き、**その後で** PHASE_CONTEXT に `gate_commands_verified` を `true` (全コマンドが exit 0) / `false` で書く。2 フェーズ目以降は同列から引き継ぐ。
 
 ##### 4.2a: TDD 実装 (implementer subagent)
 
-`dev-impl-implementer` を `model: "opus"` 明示で 1 フェーズにつき 1 つ起動し、**main は完了を待つ**。渡すのは `mode: implement` / `phase_context_path` / `repo_dir` / `report_path` と、最終メッセージを 1 行に制限する指示 (「main のコンテキスト規律」参照)。指示文の全文テンプレートは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: implementer の起動` 節を Read して使う。
-
-implementer 側の規約 (TDD の順序、フェーズスコープのテストのみ実行、コミット・`docs/` 編集の禁止、報告 JSON のスキーマ、停止条件) は `claude/agents/dev-impl-implementer.md` に常駐しているので、指示文で繰り返さない。
+`dev-impl-implementer` を `model: "opus"` 明示で 1 フェーズにつき 1 つ起動し、**main は完了を待つ**。渡すのは `mode: implement` / `phase_context_path` / `repo_dir` / `report_path` と、最終メッセージを 1 行に制限する指示 (「main のコンテキスト規律」参照)。指示文の全文テンプレートは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: implementer の起動`。implementer 側の規約 (TDD の順序、フェーズスコープのテストのみ実行、コミット・`docs/` 編集の禁止、報告 JSON のスキーマ、停止条件) は `claude/agents/dev-impl-implementer.md` に常駐しているので指示文で繰り返さない。
 
 - **起動する直前に** `phase_spawns += 1` / `run_spawns += 1` し、JSONL に `event_type: spawn` を記録する (起動後に書く規定だと構造的に落ちる。理由は 4.2c の事前ブロック)
 - **報告を受けたら main がその差分をコミットする** (下記「ラウンドごとのコミット」)
 - 報告受領時に JSONL へ `event_type: impl_report` (context に要約 JSON + `report_path`) を記録する。**報告要約は main のコンテキストに載るが、全文 JSON は載せない** (P1/P2/P3 判定と JSONL 転記に必要なフィールドは `jq` で `report_path` から直接引く)
-- `status: failed` の場合は `reason` に応じて分岐する:
+- `status: failed` の分岐表は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: implementer が status: failed を返したときの分岐`
 
-| `reason` | 対処 |
-| --- | --- |
-| `design_overview_break` | **即エスカレ停止** (P3、commit しない) |
-| `test_weakening_suspected` | 4.2e と同じトレース確認を main が行い、トレース不能なら `test_weakening_detected` でエスカレ停止 |
-| `tests_failing` | 下記「fix ブリーフ」を書いて `mode: fix` で再起動する (4.2d の修正ラウンドと同じ扱い。`phase_fix_round` を共有する) |
-| `spec_insufficient` | **fix で再起動しない。** 足りないのは設計情報であって修正の指示ではなく、fix ブリーフが運べるのは reason 文字列とテスト出力だけなので、同じ情報で再実行しても同じ理由で止まる。**Step 4.6 の P2 (`design_detail_gap`) として扱い**、報告の `reason` が指す不足を DESIGN_DETAIL に補ってから `mode: implement` で再起動する (`phase_fix_round` を進める。**`report_path` と `spawn` の `context.round` は `impl_report_invalid` の再起動と同じ retry 系** — `impl-report-retry-<phase_fix_round>.json` / `"retry<phase_fix_round>"`)。補うべき内容が概要設計に及ぶなら P3 |
+**fix ブリーフ**: `mode: fix` の implementer は `findings_paths` の JSON しか入力に取らないので、検査結果 JSON が存在しないこの経路でも main が同じ形式のファイル (`<SCRATCH_DIR>/impl-failure-<phase_fix_round>.json`) を書いて渡す。スキーマは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a / 4.2e: fix ブリーフのスキーマ`。`rule` には報告の `reason` (`tests_failing` / `spec_insufficient`) をそのまま入れる。4.2e のテストゲート失敗で書く `<SCRATCH_DIR>/test-failure-<test_gate_retry>.json` も同じスキーマ (`rule: "tests_failing_before_commit"`)。
 
-**fix ブリーフ**: `mode: fix` の implementer は `findings_paths` の JSON しか入力に取らないので、検査結果 JSON が存在しないこの経路でも main が同じ形式のファイルを書いて渡す。書き出し先は `<SCRATCH_DIR>/impl-failure-<phase_fix_round>.json` で、スキーマは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a / 4.2e: fix ブリーフのスキーマ`。`rule` には implementer 報告の `reason` (`tests_failing` / `spec_insufficient`) をそのまま入れる。4.2e のテストゲート失敗で書く `<SCRATCH_DIR>/test-failure-<test_gate_retry>.json` も同じスキーマを使う (`rule: "tests_failing_before_commit"`)。
-
-**implementer が期待どおりに終わらなかった場合は、原因で 2 つに分ける。** 混ぜると「フェーズ内で再起動する」のか「issue を駐車して次へ行く」のかが決まらない:
-
-| reason | 該当する状況 | 対処 |
-| --- | --- | --- |
-| `impl_report_invalid` | `report_path` が不在 / `jq` でパース不能 / 必須フィールド (`status` / `summary` / `files_changed` / `test_result`) の欠落 / `files_changed` が空 (完了判定 (a)) | **フェーズ内で処理する。** `phase_fix_round += 1` して `mode: implement` で再起動 (fix ではない — 何が実装されたか分からないため)。**`report_path` は `impl-report-retry-<phase_fix_round>.json`、`spawn` 記録の `context.round` は文字列 `"retry<phase_fix_round>"`** にする (4.2e 手順 4 の集合突合が成果物と 1:1 で対応するようにするため。変換は同手順の sed の `impl-report-retry-` 行が対応する — 定義済みなので足さない)。3 回で `phase_fix_exceeded` でエスカレ停止。issue は `in-progress` のまま |
-| `impl_timeout` | spawn から **30 分**応答が無い (計測は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: subagent の応答待ち時間` 節) | **run は止めない。** その issue に `gh issue comment <N>` で停止理由 (何分待って応答が無かったか・そのラウンドまでに積まれたコミット) を残し、`gh issue edit <N> --add-label needs-human --remove-label in-progress` で駐車して、**次の着手可能な issue に移る** (Step 0 の再開確認は issue コメントに理由が書かれている前提で「解決したか」を尋ねるので、コメントが無いと人間が何を判断すればよいか分からない) (`in-progress` を外さないとラベルが併記になり Step 2 の判定が割れる)。着手可能な issue が他に無ければ `dependency_blocked` と同じ扱いで停止する |
-
-どちらも検査 agent の `guard_agent_failed` / `review_agent_failed` と同じく、**パス扱いにしない**。**`impl_timeout` は「エスカレ停止」ではない** (run は次の issue へ進む) ので、フェーズ内エスカレ条件の表にも停止条件のリストにも載せない。載せるのは `impl_report_invalid` から昇格した `phase_fix_exceeded` の側である。
+**implementer が期待どおりに終わらなかった場合は、原因で 2 つに分ける** (混ぜると「フェーズ内で再起動する」のか「issue を駐車して次へ行く」のかが決まらない)。`impl_report_invalid` はフェーズ内で再起動し 3 回で `phase_fix_exceeded`、`impl_timeout` は run を止めず issue を `needs-human` で駐車して次へ進む。判定表は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: implementer が期待どおりに終わらなかった場合の分岐`。どちらも検査 agent の `guard_agent_failed` / `review_agent_failed` と同じく**パス扱いにしない**。**`impl_timeout` は「エスカレ停止」ではない**ので、フェーズ内エスカレ条件の表にも停止条件のリストにも載せない (載せるのは `impl_report_invalid` から昇格した `phase_fix_exceeded` の側)。
 
 ##### ラウンドごとのコミット (4.2a / 4.2d 共通)
 
@@ -393,84 +306,39 @@ prefix を付けるのは `git log --oneline` でどのコミットがどのフ�
 
 ##### 実装ノートの受け取り (design_decision / open_question)
 
-implementer 報告の `design_decisions` (設計が沈黙・あいまいな箇所での自律判断) と `open_questions` (確信が持てずユーザの事後確認が必要な選択) を、main が JSONL に `event_type: design_decision` / `open_question` として**`report_path` から `jq` で転記する** (スキーマは [references/logging.md](./references/logging.md) を参照)。ループは止めない。
-
-これらは `deviation_signals` (設計と*矛盾する*変更) とは別物で、混ぜない。同一の判断・質問を後続フェーズが踏襲するだけの場合、implementer は再記録しない規約になっている (RUN_FACTS の「累積 design_decisions」を読むため)。
+implementer 報告の `design_decisions` (設計が沈黙・あいまいな箇所での自律判断) と `open_questions` (確信が持てずユーザの事後確認が必要な選択) を、main が JSONL に `event_type: design_decision` / `open_question` として**`report_path` から `jq` で転記する** (スキーマは [references/logging.md](./references/logging.md))。ループは止めない。これらは `deviation_signals` (設計と*矛盾する*変更) とは別物で、混ぜない。
 
 ##### 4.2b: LSP 警告修正 (Lua/Neovim のみ)
 
-`IS_NEOVIM_PLUGIN=true` なら `fix-lsp-warnings` agent を `model: "haiku"` 明示で起動する (対象はフェーズ差分ファイルのみ)。**起動の直前に `spawn` を記録する** (4.2c と同じ理由 — 記録は起動前に書く)。失敗は警告ログのみで継続し、`verification_skipped` (source: `lsp_fix_failed`) を記録する。
-
-**修正が入った場合は、main が `phase_test_command` を再実行して緑を確認したうえでコミットする** (「ラウンドごとのコミット」に従う。subject は `<emoji> style: [phase-<識別子>] LSP 警告を解消する`)。**コミットせずに 4.2c へ進んではならない** — 4.2c は fan-out 直前にツリーが clean であることを前提にしており、ここでの修正が未コミットのまま残ると、その clean 確認が必ず失敗して「直前のラウンドのコミットが漏れている」という事実と違う診断を出す。
-
-**このステップだけは検査 fan-out に混ぜない。** fix-lsp-warnings は修正する agent なので、レビューと同時に走らせるとレビュー対象のファイルが検査中に書き換わる。
+`IS_NEOVIM_PLUGIN=true` なら `fix-lsp-warnings` agent を `model: "haiku"` 明示で起動する (対象はフェーズ差分ファイルのみ)。**起動の直前に `spawn` を記録する。** 失敗は警告ログのみで継続し、`verification_skipped` (source: `lsp_fix_failed`) を記録する。**修正が入った場合は main が `phase_test_command` を再実行して緑を確認したうえでコミットする** (subject は `<emoji> style: [phase-<識別子>] LSP 警告を解消する`)。**コミットせずに 4.2c へ進んではならない** — 4.2c の clean 確認が必ず失敗し、「直前のラウンドのコミットが漏れている」という事実と違う診断を出す。**このステップだけは検査 fan-out に混ぜない** (修正する agent なので、レビューと同時に走らせるとレビュー対象のファイルが検査中に書き換わる)。
 
 ##### 4.2c: 検査 fan-out (main が起動して待つ)
 
-**fan-out の前後で作業ツリーが clean であることを確認する。初回だけでなく 4.2d の再 fan-out でも毎回行う。** 同じ「`status --porcelain` が非空」でも観測する時点で意味が違い、**処方が正反対 (前はコミットする / 後は `git restore` で捨てる) なので、取り違えると実装を捨てるか変異をコミットすることになる**。コマンドと 3 つの前提は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2c: fan-out 前後の clean 確認` を Read してから実行する。
+**fan-out の前後で作業ツリーが clean であることを確認する。初回だけでなく 4.2d の再 fan-out でも毎回行う。** 同じ「`status --porcelain` が非空」でも観測する時点で意味が違い、**処方が正反対 (前はコミットする / 後は `git restore` で捨てる) なので、取り違えると実装を捨てるか変異をコミットすることになる**。コマンドと 3 つの前提は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2c: fan-out 前後の clean 確認`。
 
 fan-out 前の事前ブロックでは、続けて次の 3 つを行う (いずれも phase-gates.md の同名節が正):
 
-- **implementer の自己免除を抽出して検査 agent へ渡す** (`## 4.2c: 自己免除の抽出`)。実装者が「検証しない」と宣言した項目は、記録するだけでは誰も裁定しない。**抽出元は当該フェーズの全 report であって最新の 1 本ではない**。出力が `[]` でもファイルは必ず作り、`exemptions_path` として review-tdd と review-adversarial に渡す (免除が無かったことと渡し忘れたことを区別するため)。**失敗と「免除 0 件」を同じ `[]` に潰すと、4.2d 手順 1 の裁定チェックが常に 0 件と比較することになり自分で自分を無効化する**
-- **`EXEMPTIONS_COUNT` が 1 以上なのに review-tdd と review-adversarial のどちらも起動しないフェーズ**では、免除が誰にも裁定されないまま通過する。その場合は `verification_skipped` (source: `exemptions_unadjudicated`) を記録し、Step 5.6 の集約に載せる (沈黙させない)
+- **implementer の自己免除を抽出して検査 agent へ渡す** (`## 4.2c: 自己免除の抽出`)。実装者が「検証しない」と宣言した項目は、記録するだけでは誰も裁定しない。**抽出元は当該フェーズの全 report であって最新の 1 本ではない**。出力が `[]` でもファイルは必ず作り、`exemptions_path` として review-tdd と review-adversarial に渡す。**失敗と「免除 0 件」を同じ `[]` に潰すと、4.2d 手順 1 の裁定チェックが常に 0 件と比較することになり自分で自分を無効化する**
+- **`EXEMPTIONS_COUNT` が 1 以上なのに review-tdd と review-adversarial のどちらも起動しないフェーズ**では免除が誰にも裁定されないまま通過するので、`verification_skipped` (source: `exemptions_unadjudicated`) を記録して Step 5.6 の集約に載せる
 - **この fan-out で起動する agent の `spawn` を JSONL に先に書く** (`## 4.2c: spawn の事前記録`)。**起動した後ではなくこの事前ブロックの中で行う** — 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。`run_spawns` の予算ゲートはこの記録を唯一のソースにしている
 
-**`mode: full` の review-adversarial は fan-out に入れず、単独で先に走らせてから残りを fan-out する。** レンズ A は**共有の作業ツリー上でソースを直接書き換えて実行し、終える前に戻す**ので、その間に並列で走る観点は変異後のコードを読みうる。読んだかどうかは事後に判別できず (戻ってしまえば `status` は clean)、その観点の結果が「fatal なし」でも「fatal あり」でも信用できない。**影響は dev サーバを立てる review-product-readiness に限らない** — guard も tdd も quality も同じツリーを読む。`mode: weakening_only` の adversarial は変異を行わないので通常どおり fan-out に入れてよい。
+**`mode: full` の review-adversarial は fan-out に入れず、単独で先に走らせてから残りを fan-out する。** レンズ A は**共有の作業ツリー上でソースを直接書き換えて実行し、終える前に戻す**ので、その間に並列で走る観点は変異後のコードを読みうる。読んだかどうかは事後に判別できず (戻ってしまえば `status` は clean)、その観点の結果が「fatal なし」でも「fatal あり」でも信用できない。**影響は dev サーバを立てる review-product-readiness に限らない** — guard も tdd も quality も同じツリーを読む。`weakening_only` は変異を行わないので通常どおり fan-out に入れてよい。起動順序の表は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: adversarial_mode 別の起動順序`。
 
-| `adversarial_mode` | 起動のしかた |
-| --- | --- |
-| `full` | ① review-adversarial を単独起動して完了を待つ → ② 汚染の突合 → ③ 残りの観点 + architecture-guard を fan-out |
-| `weakening_only` / `skipped` | 全観点 + architecture-guard を 1 回の fan-out で並列起動 |
-
-gating された観点と `architecture-guard` を**同一メッセージ内の複数 Agent tool_use として並列起動**し、main が全部の完了を待つ。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 検査 fan-out の起動` 節を Read してから実行する。guard を review と同じ fan-out に入れるのは待ちを 2 回から 1 回に減らすためで、guard の違反も review の fatal も同じ修正ラウンド (4.2d) で処理する。検査 agent も implementer と同じく **30 分応答が無ければ打ち切り**、打ち切った観点は 4.2d 手順 1 の `guard_agent_failed` / `review_agent_failed` で扱う。
+gating された観点と `architecture-guard` を**同一メッセージ内の複数 Agent tool_use として並列起動**し、main が全部の完了を待つ。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 検査 fan-out の起動`。guard を review と同じ fan-out に入れるのは待ちを 2 回から 1 回に減らすためで、guard の違反も review の fatal も同じ修正ラウンド (4.2d) で処理する。検査 agent も implementer と同じく **30 分応答が無ければ打ち切り**、打ち切った観点は 4.2d 手順 1 で扱う。
 
 **観点 gating (トークン削減の要):**
 
-**gating はフェーズごとに 1 回だけ確定する。** 4.2c の初回 fan-out の直前に下表と述語を評価し、決まった観点の集合 (review-adversarial の `mode` を含む) を JSONL に `event_type: gating_decided` で記録する。**4.2d の再 fan-out はこの記録された集合の部分集合しか起動できない** (毎ラウンド評価し直すと判定が揺れて仕様外の観点が起動する。実測で review-quality が「最後の issue のみ」の規定に反して 3 フェーズで起動していた)。`context` のスキーマは [references/logging.md](./references/logging.md) の `gating_decided` の行が正 (ここでは重ねて定義しない)。
+**gating はフェーズごとに 1 回だけ確定する。** 初回 fan-out の直前に述語を評価し、決まった観点の集合 (review-adversarial の `mode` を含む) を JSONL に `event_type: gating_decided` で記録する。**4.2d の再 fan-out はこの記録された集合の部分集合しか起動できない** (毎ラウンド評価し直すと判定が揺れて仕様外の観点が起動する。実測で review-quality が「最後の issue のみ」の規定に反して 3 フェーズで起動していた)。`context` のスキーマは [references/logging.md](./references/logging.md) の `gating_decided` の行が正。判定に使う 3 表 — **観点 gating 表 / review-adversarial の mode 決定表 / スキップ述語表** — はいずれも [references/phase-execution.md](./references/phase-execution.md) の同名節にあり、述語の算出コマンド (`## 4.2c: 観点 gating 述語の算出コマンド`) と同じファイルなので 1 回の Read で揃う (**近似コマンドで代替すると**、untracked ファイルや言語別インラインテストの検知漏れにより review-adversarial を不当に skip する)。**「最後の issue」の判定コマンド**は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2c: 「最後の issue」の判定` (自分自身がまだ open なので、出力が `1` なら最後。`0` と比較しない)。
 
-| タイミング        | 実行観点                                                                                            |
-| ----------------- | --------------------------------------------------------------------------------------------------- |
-| 毎フェーズ        | architecture-guard (gating 対象外、常に実行) + review-adversarial (`mode` は下表で決める。下記スキップ述語で skip 可) |
-| テスト差分があるフェーズ (`$TEST_FILE_CHANGED` または `$TEST_CONTENT_CHANGED` が非空) | 上記 + review-tdd                              |
-| UI を触るフェーズ (`uiPhase == true`) | 上記 + review-product-readiness (dev_server が無ければ skip)                     |
-| **最後の issue** | 全観点フル (tdd / quality / product-readiness / adversarial)                                        |
-
-**review-adversarial の mode 決定** (`claude/agents/review-adversarial.md` の「モード」節が受け側の規定):
-
-| 条件 (いずれかが真なら `full`) | 述語 |
-| --- | --- |
-| 消費型資源を扱う差分 | `$CONSUMABLE_CHANGED` が非空 |
-| 認証・認可・セッションの処理を含む差分 | `$AUTH_CHANGED` が非空 |
-| **テスト差分が無く、実装が 20 行を超えて積まれたフェーズ** | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空、かつ `$LINES` > 20 |
-| 最後の issue | 自分以外に open issue が残らない |
-| 上記のいずれでもない | → `weakening_only` (レンズ B のみ。docs を読まず攻撃も実行しない) |
-
-3 行目の条件は **review-tdd の gating と対になっている**。テストを伴わない実装だけが積まれたフェーズは review-tdd が起動せず (判定対象のテストが無い)、レンズ B も検査対象の差分が無いため実質何も検査されない。この穴をレンズ C (完了主張の反証) で埋めるため `full` に上げる。
-
-**review-adversarial のスキップ述語 (機械判定、actor の裁量では skip しない):**
-
-| # | 条件                                                                                                                                              | 意図                                                                                                                                                 |
-| - | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空                                                                                        | テスト変更時はレンズ B 必須。ファイル名 + 差分内容の 2 層、tracked/untracked 両方で判定 (言語別の具体パターンは phase-execution.md の実コマンドが正) |
-| 2 | `$LINES` ≤ 20 (`$NON_DOC_CHANGED` が空、つまり `.md` / `docs/` のみの差分なら行数不問で skip 可)                                                  | typo・軽微修正の機械近似                                                                                                                             |
-| 3 | `$CI_FILES_CHANGED` が空 (CI・ビルド/テスト設定 `.github/`, `*config*`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, `justfile`, `deno.json` 等の変更なし) | 検証器設定の改変は必ず監査                                                                                                                           |
-| 4 | 最後の issue でない (自分以外に open issue が残る。`uc-tracking` の親は数えない)                                                                  | 最後の issue は全観点フル                                                                                                                            |
-
-全条件が真の場合のみ skip 可 (skip は権利であって義務ではない。1 つでも「実行」と出れば actor はスキップできない)。skip 時は JSONL に `event_type: verification_skipped`、`context: {target: "review-adversarial", source: "adversarial_skip", changed_files: $CHANGED, changed_lines: $LINES, criteria_result: {...}}` を記録する (Step 5.6 の未検証項目集約に自動合流させ、沈黙スキップを構造的に不可能にするため)。
-
-述語 (`$CHANGED` / `$LINES` / `$TEST_FILE_CHANGED` / `$TEST_CONTENT_CHANGED` / `$NON_DOC_CHANGED` / `$CI_FILES_CHANGED` / `$CONSUMABLE_CHANGED` / `$AUTH_CHANGED`) の算出コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 観点 gating 述語の算出コマンド` 節を Read してから実行する (この節を読まず近似コマンドで代替すると、untracked ファイルや言語別インラインテストの検知漏れにより review-adversarial を不当に skip するリスクがある)。**「最後の issue」の判定コマンド**は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2c: 「最後の issue」の判定` にある (自分自身がまだ open なので、出力が `1` なら最後。`0` と比較しない)。
-
-**述語を評価するのは初回 fan-out の前の 1 回だけ**で、結果は `gating_decided` に固定する。修正ラウンドで再検査する観点は 4.2d 手順 5 が決める (fatal を出した観点 + guard)。**初回に「実行」と判定された観点が次ラウンドで再検査されないことは「実行 → skip への降格」ではない** — 初回の検査は実施済みで、以降は fatal の解消確認に絞るという意味である。例外は **初回評価で skip だったフェーズだけ**で、各修正ラウンドの fan-out 直前に述語一式 (mode 決定に要る `$CONSUMABLE_CHANGED` / `$AUTH_CHANGED` も含む) を再算出し、skip → 実行 に転じたら起動する (降格は禁止)。
-
-gating の各行の理由:
-
-- **review-tdd をテスト差分の有無で gating する**のは、判定対象が「書かれたテストの質」でテスト差分の無いフェーズには対象が存在しないため。テストを伴わない実装だけのフェーズは mode 決定表 3 行目が adversarial を `full` に上げ、レンズ C がテスト不在を検出する
+- mode 決定表の 3 行目は **review-tdd の gating と対になっている**。テストを伴わない実装だけが積まれたフェーズは review-tdd が起動せず (判定対象のテストが無い)、レンズ B も検査対象の差分が無いため実質何も検査されない。この穴をレンズ C (完了主張の反証) で埋めるため `full` に上げる
 - **`PRODUCT_MODE=cli` では review-product-readiness を一切起動しない** (`uiPhase` が常に `false`。最後の issue の「全観点フル」からも除外する。cli の G_E2E は Step 5.2 で review-spec-compliance が担当する)
 - **review-quality は最後の issue のみ** (機械判定可能な境界違反は毎フェーズの architecture-guard が担保するため)。**ただし `$CONSUMABLE_CHANGED` が非空のフェーズ** (ローテーション有効な refresh token・nonce・ワンタイムコード・べき等キー・使い捨て署名 URL など、消費すると無効化される資源を扱う差分) **では最後の issue でなくても起動する** — 多重消費・恒久エラー分岐の漏れが復帰不能障害に直結し、guard の境界検査では検知できないため
+- スキップ述語は**全条件が真の場合のみ skip 可** (skip は権利であって義務ではない。1 つでも「実行」と出れば actor はスキップできない)。skip 時は `verification_skipped` (source: `adversarial_skip`、context に `changed_files` / `changed_lines` / `criteria_result`) を記録する (Step 5.6 の集約に自動合流させ、沈黙スキップを構造的に不可能にするため)
+- **述語を評価するのは初回 fan-out の前の 1 回だけ。** 修正ラウンドで再検査する観点は 4.2d 手順 5 が決める。**初回に「実行」と判定された観点が次ラウンドで再検査されないことは「実行 → skip への降格」ではない** — 初回の検査は実施済みで、以降は fatal の解消確認に絞るという意味である。例外は**初回評価で skip だったフェーズだけ**で、各修正ラウンドの fan-out 直前に述語一式 (mode 決定に要る `$CONSUMABLE_CHANGED` / `$AUTH_CHANGED` も含む) を再算出し、skip → 実行 に転じたら起動する (降格は禁止)
 
-**結果を受け取ったら、`skipped_lenses` が非空なら JSONL に `event_type: verification_skipped` を書く** (`context: {target: "review-adversarial", source: "mode_degraded", lenses: [...], mode: "..."}`)。これが Step 5.6 の未検証項目集約に合流する経路で、書かなければモード縮退が沈黙する。スキップ述語で adversarial を起動しなかった場合は `gating_decided` の `adversarial_mode` に `"skipped"` を記録する。**mode の判定根拠は `basis` に残す。**
+**結果を受け取ったら、`skipped_lenses` が非空なら `verification_skipped` (source: `mode_degraded`) を書く。** これが Step 5.6 の集約に合流する経路で、書かなければモード縮退が沈黙する。スキップ述語で adversarial を起動しなかった場合は `gating_decided` の `adversarial_mode` に `"skipped"` を記録する。**mode の判定根拠は `basis` に残す。**
 
-各 Agent 呼び出しには **「モデル方針」の表どおり `model` を明示**する。呼び出し時の model 指定は agent 定義側のデフォルトより優先され、**未指定にすると親のセッションモデルを継承してしまう** (`agent-spawn-guard` hook が未指定を deny する)。**review-adversarial には PHASE_CONTEXT の path を渡さない** — fresh context 監査のため、`mode` / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / **exemptions_path** / output_path のみを渡す (**集合の正は phase-context.md「渡し方」の行**。この列挙とずれたらあちらに従う)。**`mode` を渡し忘れると agent 側の既定で `full` に戻り、縮退が無音で効かなくなる**。
+各 Agent 呼び出しには **「モデル方針」の表どおり `model` を明示**する。呼び出し時の指定は agent 定義側のデフォルトより優先され、**未指定にすると親のセッションモデルを継承してしまう** (`agent-spawn-guard` hook が未指定を deny する)。**review-adversarial には PHASE_CONTEXT の path を渡さない** — fresh context 監査のため、`mode` / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / **exemptions_path** / output_path のみを渡す (**集合の正は phase-context.md「渡し方」の行**)。**`mode` を渡し忘れると agent 側の既定で `full` に戻り、縮退が無音で効かなくなる**。
 
 ##### 4.2d: fatal 判定と修正ラウンド (最大 3)
 
@@ -533,16 +401,7 @@ severity: low/medium の findings は修正せず JSONL に `event_type: review_
 
 ##### フェーズ内エスカレ条件まとめ
 
-| 条件                                                                                                             | reason                                       |
-| ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| 修正ラウンド 3 回でも fatal 残存 (guard 違反 / review high のいずれも)                                           | `phase_fix_exceeded`                         |
-| 検査 agent が結果を返せない (未検証をパス扱いにしない)                                                           | `guard_agent_failed` / `review_agent_failed` |
-| implementer の報告が読めない / 実装が実在しない (`files_changed` が空) が 3 回続いた                             | `phase_fix_exceeded` (原因は `impl_report_invalid`)  |
-| `phase_spawns > phase_spawns_budget` (既定 33) または `run_spawns > run_spawns_budget` (Step 3 のカウンタ規定)                              | `spawn_budget_exceeded`                      |
-| テストゲート 3 回不通過                                                                                          | `tests_failing_before_commit`                |
-| 自己免除の抽出が成立しない (report はあるが配列が得られない)                                                     | `exemptions_extract_failed`                  |
-| `design_overview_break` 検知 (実装・修正中いずれでも、commit 前に停止)                                           | `design_overview_break` (P3)                 |
-| テストファイル削除 / skip 追加 / assertion の弱体化・空虚化が設計にトレースできない (4.2e の機械検知 / 4.2c の review-adversarial 検知 / implementer の `test_weakening_suspected` 報告のいずれも) | `test_weakening_detected`                    |
+判定表は [references/phase-gates.md](./references/phase-gates.md) の `## フェーズ内エスカレ条件まとめ` を Read して従う。
 
 #### Step 4.6: 設計乖離の判定 (P1 / P2 / P3)
 
@@ -550,11 +409,7 @@ implementer 報告 (`mode: implement` / `mode: fix` 双方) の `deviation_signa
 
 **シグナル元と分類対応**:
 
-| シグナル元                                                                          | type                    | 分類                | 対処                                                           |
-| ----------------------------------------------------------------------------------- | ----------------------- | ------------------- | -------------------------------------------------------------- |
-| implementer 報告                                                                    | `todo_minor`            | P1 (TODO 軽微)      | 下記「P1 動的修正」へ                                          |
-| implementer 報告 / review-quality の design 整合 finding (severity: medium)         | `design_detail_gap`     | P2 (詳細設計の不足) | 下記「P2 動的修正」へ                                          |
-| implementer 報告の `design_overview_break`                                          | `design_overview_break` | P3 (概要設計の破綻) | エスカレ停止 (Step 4.2 内で検知した時点で commit 前に停止済み) |
+判定表は [references/issue-ops.md](./references/issue-ops.md) の `## Step 4.6: 設計乖離のシグナル元と分類` を Read して従う。
 
 **review-quality の `design_mismatch` が high の場合は、4.2d の fatal として修正ラウンドで処理する** (review-* の high は fatal の定義に入るため)。**同じ finding を 4.6 で P3 のエスカレ停止にも回さない** — 両方に載せると「修正ラウンドを起動する」と「即座に停止する」という排他的な処方が同時に成立してしまう。**設計そのものが破綻しているという判断は implementer の `deviation_signals` の `design_overview_break` からのみ入る** (実装しようとして初めて分かる性質のもので、差分を外から見るレビューが単独で決めることではない)。修正ラウンドで直せなかった high は通常どおり `phase_fix_exceeded` で停止し、そこで人間が設計の問題かを判断する。
 
@@ -630,48 +485,17 @@ DESIGN.md の「ゴール」セクションを Read してゴール一覧を抽�
 
 #### Step 5.3: 監査結果の集約と gate 分岐
 
-review-spec-compliance の `goal_results` (自動系) + review-product-readiness の判定 (G_E2E) + 手動系 (`G<n> 検証 (手動):` は manual_pending のまま) を統合し、JSONL に `event_type: goal_check` で記録する (各ゴールの `id / status / evidence`)。findings は `event_type: spec_compliance` で記録する。
-
-findings ごとの分岐:
-
-| findings (rule)                                                              | 対処                                                                                                                                            |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `verification_tampered` (high)                                               | **即エスカレ停止 (P3、修正ループなし)**。受入基準の改変は実行者に直させる対象ではなく、人間の再承認 (dev-spec フェーズ 11) 事案                 |
-| `goal_result_mismatch` (high)                                                | 監査 agent の実行結果を正とし、当該ゴールを unmet として未達対応ループへ (自己申告ログとの食い違い自体も JSONL に残す)                          |
-| unmet ゴール / `unimplemented_api` / `schema_drift` / `infra_missing` (high) | Step 5.5 の未達対応ループへ (finding の `fix_proposal` / `evidence` を新フェーズの内容に使う)                                                   |
-| `vacuous_verification` (high)                                                | **自動修正させない** (検証コマンドを実行者が「直す」のは骨抜きの温床)。当該ゴールを手動 pending に落とし、Step 6 サマリで人間確認要求として明示 |
-| `holdout_test_failed` (high)                                                 | 監査 agent が TODO.md に無いエッジケースを生成して落としたもの。**未達対応ループへ回す** (`holdout_enabled` を有効にした run でのみ出る。実装の穴なので直せる) |
-| medium / low のみ                                                            | JSONL 記録 + POST_MVP.md へ転記 (Step 5.6)。status `partial` 判定に反映                                                                         |
-| agent エラー / JSON 解釈不能                                                 | `review_agent_failed` でエスカレ停止 (未検証をパス扱いにしない)                                                                                 |
+review-spec-compliance の `goal_results` (自動系) + review-product-readiness の判定 (G_E2E) + 手動系 (`G<n> 検証 (手動):` は manual_pending のまま) を統合し、JSONL に `event_type: goal_check` で記録する (各ゴールの `id / status / evidence`)。findings は `event_type: spec_compliance` で記録する。findings ごとの分岐表は [references/goal-audit.md](./references/goal-audit.md) の `## Step 5.3: 監査結果の findings 別の対処` を Read して従う。
 
 #### Step 5.4: 結果分岐
 
-**上から順に評価し、最初に当てはまった行の対処を採る** (複数に当てはまりうるため、順序が意味を持つ):
-
-| # | 状況                                                    | 対処                   |
-| - | ------------------------------------------------------- | ---------------------- |
-| 1 | `verification_tampered` (**severity: high**) が 1 件以上 | 即エスカレ停止 (5.3 の表。修正ループなし)。low/medium の同 rule は改変ではなく書式の揺れ等なので、`spec_compliance` に記録して次の行の判定へ進む |
-| 2 | unmet ゴール、または**修正可能な** high findings (`unimplemented_api` / `schema_drift` / `infra_missing` / `goal_result_mismatch` / `holdout_test_failed`) が 1 件以上 | Step 5.5 の未達対応ループへ |
-| 3 | 残る high が**修正対象外のものだけ** (`vacuous_verification`) で、ゴールは achieved か手動 pending | **Step 6 へ**。当該ゴールを手動 pending に落とし、`status` は `partial`。完了サマリに人間確認要求として明示する |
-| 4 | 全ゴール achieved (or 手動 pending のみ) かつ high 0 件 | Step 6 へ (完了サマリ、`status` は 5.6 の判定に従う) |
-
-**3 行目を落とさない。** `vacuous_verification` は 5.3 で「自動修正させない = 未達対応ループに載せない」と定めているので、これが残ったまま「high が 0 件でない」を理由に 2 行目へ送ると、**直しようのない finding で `goal_loop` を空に消費し、2 周を使い切って 3 周目の入口で必ず停止する**。
+**上から順に評価し、最初に当てはまった行の対処を採る** (複数に当てはまりうるため順序が意味を持つ)。判定表は [references/goal-audit.md](./references/goal-audit.md) の `## Step 5.4: 結果分岐`。**3 行目を落とさない** — `vacuous_verification` は 5.3 で「自動修正させない = 未達対応ループに載せない」と定めているので、これが残ったまま「high が 0 件でない」を理由に 2 行目へ送ると、**直しようのない finding で `goal_loop` を空に消費し、2 周を使い切って 3 周目の入口で必ず停止する**。
 
 #### Step 5.5: 未達対応ループ
 
-`goal_loop += 1`。`goal_loop > 2` なら `goal_loop_exceeded` で停止 (エスカレ)。
+`goal_loop += 1`。`goal_loop > 2` なら `goal_loop_exceeded` で停止 (エスカレ)。それ以外:
 
-それ以外:
-
-1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing` / `holdout_test_failed`) ごとに **`docs/TODO.md` にフェーズを追記し、Step 4.6 の「新フェーズの issue 化」を実行する** (issue 作成・親への紐付け・`phase_added` の記録・Step 2 の再抽出まで、手順はすべてそこに集約してある)。本ステップ固有の中身は次のとおり:
-
-   - **`## DoD`**: 未達を検出した検証コマンドをそのまま入れる
-   - **`## 対応ゴール`**: その未達ゴールの識別子を書く
-   - **フェーズ内容**: 「G2 が未達。検証コマンド `<cmd>` が exit code != 0。失敗ログ: `<evidence>`。これを満たす実装を追加する」(findings 由来は `message` + `fix_proposal` を使う)
-   - **`<!-- ucs: ... -->` の決め方**: **未達ゴール (`G<n>`) から UC への対応表はどの成果物にも無い**ので TODO.md から引く — そのゴールを `goals` に含むフェーズの `ucs` を採り、複数あって一致しなければ `none` (横断) に倒す
-
-   TODO.md への追記を省かない (issue の生成元と実体が食い違わないようにするため。判定基準は `../dev-spec/references/todo-generation.md` の「各フェーズが持つメタ情報」)。
-
+1. 未達ゴール・修正可能な high finding (`unimplemented_api` / `schema_drift` / `infra_missing` / `holdout_test_failed`) ごとに **`docs/TODO.md` にフェーズを追記し、Step 4.6 の「新フェーズの issue 化」を実行する** (issue 作成・親への紐付け・`phase_added` の記録・Step 2 の再抽出まで手順はそこに集約してある)。本ステップ固有の中身は、`## DoD` に未達を検出した検証コマンドをそのまま入れること、`## 対応ゴール` にその未達ゴールの識別子を書くこと、フェーズ内容に検証コマンドと失敗ログ (findings 由来は `message` + `fix_proposal`) を書くこと、の 3 点。**`<!-- ucs: ... -->` は TODO.md から引く** — 未達ゴール (`G<n>`) から UC への対応表はどの成果物にも無いので、そのゴールを `goals` に含むフェーズの `ucs` を採り、複数あって一致しなければ `none` (横断) に倒す。TODO.md への追記を省かない (issue の生成元と実体が食い違わないようにするため)
 2. Step 4 のフェーズループに戻る (新規追加フェーズだけが pending)
 3. 完了後、Step 5.1 に戻って再判定 (Step 5.2 の監査 agent も**再起動**する。前回結果の使い回しは不可 — 修正が別の乖離を生んでいないかを再監査する)
 
@@ -679,30 +503,19 @@ findings ごとの分岐:
 
 #### Step 5.6: POST_MVP.md の更新と status 判定
 
-Step 5 のゴール判定後、`docs/POST_MVP.md` に **「UI/UX gap」セクション**を書き出す。**`PRODUCT_MODE=cli` の場合は本セクションを省略する** (status 判定の「UI/UX gap 全項目空」条件は自動的に満たされる)。`webapp` では常に書き出す。`unknown` では dev_server 推定が真の場合のみ書き出す (推定できなければ cli と同様に省略)。
+Step 5 のゴール判定後、`docs/POST_MVP.md` に **「UI/UX gap」セクション**を書き出す。**`PRODUCT_MODE=cli` では本セクションを省略する** (status 判定の「UI/UX gap 全項目空」条件は自動的に満たされる)。`webapp` では常に書き出し、`unknown` では dev_server 推定が真の場合のみ書き出す。
 
 ##### UI/UX gap セクションの内容
 
-セクションの必須項目テンプレート (未実装画面 / 未実装ナビ経路 / frontend-design 未適用フラグ / a11y 未対応項目 / 視覚的回帰参照) は [references/post-mvp-template.md](./references/post-mvp-template.md) を Read して従う。各項目は **dev-impl が自動でログ / review 結果から収集して埋める** (decisions.jsonl / review-product-readiness の findings / G_E2E 判定結果から)。
+必須項目テンプレート (未実装画面 / 未実装ナビ経路 / frontend-design 未適用フラグ / a11y 未対応項目 / 視覚的回帰参照) は [references/post-mvp-template.md](./references/post-mvp-template.md) を Read して従う。各項目は **dev-impl が自動でログ / review 結果から収集して埋める** (decisions.jsonl / review-product-readiness の findings / G_E2E 判定結果から)。
 
 ##### 未検証項目の集約
 
-**実行しなかった検証は「成功」と区別できるよう必ず可視化する** (沈黙は成功に見えるため)。以下の事象は発生時に JSONL へ `event_type: verification_skipped` を記録し、ここで集約して Step 6 サマリに列挙する。**集約は `context.source` で分類して並べる** (値と context の形は [references/logging.md](./references/logging.md) の `verification_skipped` の `source` 表が正):
-
-**集約の対象は [references/logging.md](./references/logging.md) の `verification_skipped` の `source` 表が正**で、ここでは列挙し直さない (2 箇所に列挙を持つと片方だけが更新されて取りこぼす)。`source` ごとにまとめ、それぞれ「何を検証しなかったか」と「なぜか」を 1 行で書く。
+**実行しなかった検証は「成功」と区別できるよう必ず可視化する** (沈黙は成功に見えるため)。対象の事象は発生時に JSONL へ `event_type: verification_skipped` を記録し、ここで集約して Step 6 サマリに列挙する。**集約の対象は [references/logging.md](./references/logging.md) の `verification_skipped` の `source` 表が正**で、ここでは列挙し直さない (2 箇所に列挙を持つと片方だけが更新されて取りこぼす)。`source` ごとにまとめ、それぞれ「何を検証しなかったか」と「なぜか」を 1 行で書く。
 
 ##### status 判定
 
-UI/UX gap セクションが**空でなければ** dev-impl の終了 status を `partial` にする:
-
-| 状況                                            | status                              |
-| ----------------------------------------------- | ----------------------------------- |
-| 全ゴール達成 + UI/UX gap 全項目空 + 未検証 0 件 | `done`                              |
-| 全ゴール達成だが UI/UX gap または未検証項目あり | `partial` (未仕上げ / 未検証が残る) |
-| 自動ゴール未達ありで未達対応ループ実行中        | (Step 5 内ループ継続)               |
-| 未達ゴールで goal_loop > 2                      | `escalated` (Step 5 で P3 停止)     |
-
-`partial` でも commit と HTML レポート生成は実行 (中途半端でも記録は残す)。
+UI/UX gap セクションが**空でなければ** dev-impl の終了 status を `partial` にする。判定表は [references/goal-audit.md](./references/goal-audit.md) の `## Step 5.6: status 判定`。`partial` でも commit と HTML レポート生成は実行する (中途半端でも記録は残す)。
 
 ### Step 6: 全フェーズ完了サマリ
 
@@ -775,15 +588,14 @@ dev-impl 終了時 (Step 6 完了後、またはエスカレ停止時) に `docs
 
 ### 内部呼び出し (subagent)
 
-- **dev-impl-implementer**: フェーズ 1 本を TDD で実装する葉の agent (Step 4.2a `mode: implement` は `model: opus`、Step 4.2d `mode: fix` はラウンド 1 が `opus` でラウンド 2 以降が `fable`。いずれも明示)。`tools` に `Agent` を持たないため子 subagent を起動できず、5 分 TTL のキャッシュ失効を構造的に避ける。フェーズスコープのテストのみ実行し、コミット・`docs/` 編集・全体スイート実行はしない。全文報告を `report_path` に Write し、SendMessage では要約だけを返す (規約の全文は `claude/agents/dev-impl-implementer.md`)
-- **tech-investigation**: 実装中に新たな技術検証が必要になった場合の個別呼び出しのみ (起動前の PoC は dev-spec フェーズ 5 の責務)
-- **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.2c の fan-out に毎フェーズ含める、haiku)
-- **fix-lsp-warnings**: Lua/Neovim の LSP 警告修正 (Step 4.2b、haiku)。修正する agent なので検査 fan-out には混ぜず単独・逐次で走らせる
-- **review-tdd / review-quality / review-product-readiness**: Step 4.2c から `model: opus` 明示で並列起動 (観点 gating・起動条件は Step 4.2c 参照)。review-quality は rules 準拠 + アーキテクチャ heuristic を統合。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査 (Step 5.2 の G_E2E 判定も担当)
-- **review-adversarial**: Step 4.2c から `model: sonnet` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・アサーションの空虚化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず `docs_dir` の TODO.md から当該フェーズの節を自分で読み直し、その完了主張に反証を試みる) で検査。**毎フェーズは `mode: weakening_only` (レンズ B のみ) で走り、消費型資源・認証・テスト差分なしの大量実装・最後の issue のフェーズだけ `mode: full` (A+B+C) に上げる** (Step 4.2c の mode 決定表)。機械スキップ述語 (Step 4.2c 参照) を満たせば skip 可。`test_weakened` / `vacuous_assertion` / `skip_added` / `tautological_test` は severity と confidence に関わらず修正ラウンドに乗せず、トレース確認の経路に直結する (詳細は Step 4.2d)
+各 agent の役割と検査内容の詳細は [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## 内部呼び出し subagent の役割詳細` にある。model の割当と根拠は上記「モデル方針」の表が正。
 
-- **review-spec-compliance**: Step 5.2 から `model: opus` 明示で起動する第三者受入監査 (mode: post-impl)。承認ハッシュの独立照合・自動系ゴール検証コマンドの独立再実行・成果物全体 ↔ 詳細設計の突合・検証コマンドの空虚性検査。PHASE_CONTEXT 抜粋は渡さず docs を自分で全文 Read させる (被監査者が編纂した入力を信用しない)。`PRODUCT_MODE=cli` では G_E2E 検証コマンドの実行もこの agent が担当する (review-product-readiness は起動しないため)
-- **security-guidance プラグイン**: セキュリティレビューはこのプラグイン (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review) に委譲。自作 subagent は持たない
+- **dev-impl-implementer** (4.2a / 4.2d / 4.2e のテストゲート再試行) — フェーズ 1 本を TDD で実装する**葉**の agent
+- **architecture-guard** (4.2c) / **fix-lsp-warnings** (4.2b) — 機械判定と機械修正
+- **review-tdd / review-quality / review-product-readiness / review-adversarial** (4.2c) — 観点別レビュー。gating と mode 決定は 4.2c
+- **review-spec-compliance** (5.2) — 第三者受入監査。`PRODUCT_MODE=cli` では G_E2E の実行もこの agent が担当する
+- **tech-investigation** (Step 1.5 の個別呼び出し) — 実装中に新たな技術検証が必要になった場合のみ (起動前の PoC は dev-spec フェーズ 5 の責務)
+- **security-guidance プラグイン** — セキュリティレビューはこのプラグイン (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review) に委譲。自作 subagent は持たない
 
 **空虚テスト検出の分担**: review-tdd の `vacuous_negative_assertion` は**新規に書かれたテストそのものの空虚性**を、review-adversarial レンズ B の `vacuous_assertion` は**基準時点 (PHASE_START_SHA) からの空虚化**を見る。同一フェーズで両者が同種の指摘を上げることがあるが、検査している次元が違うため統合しない (統合するとどちらか一方の次元が検査されなくなる)。
 

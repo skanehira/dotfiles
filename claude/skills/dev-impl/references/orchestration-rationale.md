@@ -8,6 +8,7 @@
 - [review-adversarial が sonnet である根拠](#review-adversarial-が-sonnet-である根拠)
 - [フェーズ実装を subagent に委譲する根拠](#フェーズ実装を-subagent-に委譲する根拠)
 - [spawn 予算の根拠](#spawn-予算の根拠)
+- [内部呼び出し subagent の役割詳細](#内部呼び出し-subagent-の役割詳細)
 
 ## 修正ラウンドのモデル昇格の根拠
 
@@ -44,3 +45,19 @@
 - **再入で予算が増えるのは意図した挙動である。** `spawn_budget_exceeded` は「再実行で解決しうる」停止理由に分類されている (「エスカレ停止時の挙動」の表) ので、再入で予算が一切増えないなら、再実行しても同じ状態のまま即座に再停止して何も解決しない。予算の追加付与を人間の再起動に紐づけることで、1 セッション内の暴走は有限の `run_spawns_budget` で止めたまま、正当な継続だけが人間の判断を挟んで前進する
 
 - 記録が欠けると `run_spawns` の予算判定が実態より小さい値で走る。**フェーズを閉じる直前 (4.2e 手順 4) に成果物と突合して補記する**のが二段目の歯止めだが、成果物 JSON を出さない fix-lsp-warnings は補記でも拾えないので、一段目 (起動前の記録) を落とさないことが要点である
+
+## 内部呼び出し subagent の役割詳細
+
+SKILL.md 「関連スキル / agent」から参照する。model の割当と根拠は SKILL.md 本体の「モデル方針」の表が正で、ここには各 agent が何を検査・実装するかを置く。
+
+- **dev-impl-implementer**: フェーズ 1 本を TDD で実装する葉の agent (Step 4.2a `mode: implement` は `model: opus`、Step 4.2d `mode: fix` はラウンド 1 が `opus` でラウンド 2 以降が `fable`。いずれも明示)。`tools` に `Agent` を持たないため子 subagent を起動できず、5 分 TTL のキャッシュ失効を構造的に避ける。フェーズスコープのテストのみ実行し、コミット・`docs/` 編集・全体スイート実行はしない。全文報告を `report_path` に Write し、SendMessage では要約だけを返す (規約の全文は `claude/agents/dev-impl-implementer.md`)
+- **tech-investigation**: 実装中に新たな技術検証が必要になった場合の個別呼び出しのみ (起動前の PoC は dev-spec フェーズ 5 の責務)
+- **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.2c の fan-out に毎フェーズ含める、haiku)
+- **fix-lsp-warnings**: Lua/Neovim の LSP 警告修正 (Step 4.2b、haiku)。修正する agent なので検査 fan-out には混ぜず単独・逐次で走らせる
+- **review-tdd / review-quality / review-product-readiness**: Step 4.2c から `model: opus` 明示で並列起動 (観点 gating・起動条件は Step 4.2c 参照)。review-quality は rules 準拠 + アーキテクチャ heuristic を統合。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査 (Step 5.2 の G_E2E 判定も担当)
+- **review-adversarial**: Step 4.2c から `model: sonnet` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・アサーションの空虚化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず `docs_dir` の TODO.md から当該フェーズの節を自分で読み直し、その完了主張に反証を試みる) で検査。**毎フェーズは `mode: weakening_only` (レンズ B のみ) で走り、消費型資源・認証・テスト差分なしの大量実装・最後の issue のフェーズだけ `mode: full` (A+B+C) に上げる** (Step 4.2c の mode 決定表)。機械スキップ述語 (Step 4.2c 参照) を満たせば skip 可。`test_weakened` / `vacuous_assertion` / `skip_added` / `tautological_test` は severity と confidence に関わらず修正ラウンドに乗せず、トレース確認の経路に直結する (詳細は Step 4.2d)
+
+- **review-spec-compliance**: Step 5.2 から `model: opus` 明示で起動する第三者受入監査 (mode: post-impl)。承認ハッシュの独立照合・自動系ゴール検証コマンドの独立再実行・成果物全体 ↔ 詳細設計の突合・検証コマンドの空虚性検査。PHASE_CONTEXT 抜粋は渡さず docs を自分で全文 Read させる (被監査者が編纂した入力を信用しない)。`PRODUCT_MODE=cli` では G_E2E 検証コマンドの実行もこの agent が担当する (review-product-readiness は起動しないため)
+- **security-guidance プラグイン**: セキュリティレビューはこのプラグイン (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review) に委譲。自作 subagent は持たない
+
+**空虚テスト検出の分担**: review-tdd の `vacuous_negative_assertion` は**新規に書かれたテストそのものの空虚性**を、review-adversarial レンズ B の `vacuous_assertion` は**基準時点 (PHASE_START_SHA) からの空虚化**を見る。同一フェーズで両者が同種の指摘を上げることがあるが、検査している次元が違うため統合しない (統合するとどちらか一方の次元が検査されなくなる)。

@@ -230,3 +230,18 @@ bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
    **件数ではなく集合の差で見る。** 件数比較だと過剰と不足が相殺して一致してしまい、両方見逃す。差集合なら**どちらの向きにずれたか**が出るので対処を分けられる: 「成果物はあるが記録が無い」は記録漏れなので `context.backfilled: true` を付けて補記する。「記録はあるが成果物が無い」は起動が失敗したか記録が過剰なので、**補記ではなく 4.2d 手順 1 の未検証扱い**に回す (成果物の無い観点は検査されていない)。
 
    `fatal-*.json` / `self-exemptions.json` / `_spawn-*.txt` は main が書いたもので spawn ではないため、上の glob には含めない。
+
+## フェーズ内エスカレ条件まとめ
+
+4.2a〜4.2e のいずれかで下記に当たったらエスカレ停止する。run 全体の停止理由の網羅リストは SKILL.md 本体の「エスカレ停止時の挙動」が正。
+
+| 条件                                                                                                             | reason                                       |
+| ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 修正ラウンド 3 回でも fatal 残存 (guard 違反 / review high のいずれも)                                           | `phase_fix_exceeded`                         |
+| 検査 agent が結果を返せない (未検証をパス扱いにしない)                                                           | `guard_agent_failed` / `review_agent_failed` |
+| implementer の報告が読めない / 実装が実在しない (`files_changed` が空) が 3 回続いた                             | `phase_fix_exceeded` (原因は `impl_report_invalid`)  |
+| `phase_spawns > phase_spawns_budget` (既定 33) または `run_spawns > run_spawns_budget` (Step 3 のカウンタ規定)                              | `spawn_budget_exceeded`                      |
+| テストゲート 3 回不通過                                                                                          | `tests_failing_before_commit`                |
+| 自己免除の抽出が成立しない (report はあるが配列が得られない)                                                     | `exemptions_extract_failed`                  |
+| `design_overview_break` 検知 (実装・修正中いずれでも、commit 前に停止)                                           | `design_overview_break` (P3)                 |
+| テストファイル削除 / skip 追加 / assertion の弱体化・空虚化が設計にトレースできない (4.2e の機械検知 / 4.2c の review-adversarial 検知 / implementer の `test_weakening_suspected` 報告のいずれも) | `test_weakening_detected`                    |

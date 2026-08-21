@@ -421,3 +421,66 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 ```
 
 `rule` には implementer 報告の `reason` (`tests_failing` / `spec_insufficient`) をそのまま入れる。4.2e のテストゲート失敗で書く `<SCRATCH_DIR>/test-failure-<test_gate_retry>.json` も同じスキーマを使う (`rule: "tests_failing_before_commit"`)。
+
+## 4.2a: implementer が status: failed を返したときの分岐
+
+報告の `reason` に応じて分岐する。
+
+| `reason` | 対処 |
+| --- | --- |
+| `design_overview_break` | **即エスカレ停止** (P3、commit しない) |
+| `test_weakening_suspected` | 4.2e と同じトレース確認を main が行い、トレース不能なら `test_weakening_detected` でエスカレ停止 |
+| `tests_failing` | 下記「fix ブリーフ」を書いて `mode: fix` で再起動する (4.2d の修正ラウンドと同じ扱い。`phase_fix_round` を共有する) |
+| `spec_insufficient` | **fix で再起動しない。** 足りないのは設計情報であって修正の指示ではなく、fix ブリーフが運べるのは reason 文字列とテスト出力だけなので、同じ情報で再実行しても同じ理由で止まる。**Step 4.6 の P2 (`design_detail_gap`) として扱い**、報告の `reason` が指す不足を DESIGN_DETAIL に補ってから `mode: implement` で再起動する (`phase_fix_round` を進める。**`report_path` と `spawn` の `context.round` は `impl_report_invalid` の再起動と同じ retry 系** — `impl-report-retry-<phase_fix_round>.json` / `"retry<phase_fix_round>"`)。補うべき内容が概要設計に及ぶなら P3 |
+
+## 4.2a: implementer が期待どおりに終わらなかった場合の分岐
+
+**原因で 2 つに分ける。** 混ぜると「フェーズ内で再起動する」のか「issue を駐車して次へ行く」のかが決まらない。どちらも検査 agent の `guard_agent_failed` / `review_agent_failed` と同じく**パス扱いにしない**。**`impl_timeout` は「エスカレ停止」ではない** (run は次の issue へ進む) ので、フェーズ内エスカレ条件の表にも停止条件のリストにも載せない。
+
+| reason | 該当する状況 | 対処 |
+| --- | --- | --- |
+| `impl_report_invalid` | `report_path` が不在 / `jq` でパース不能 / 必須フィールド (`status` / `summary` / `files_changed` / `test_result`) の欠落 / `files_changed` が空 (完了判定 (a)) | **フェーズ内で処理する。** `phase_fix_round += 1` して `mode: implement` で再起動 (fix ではない — 何が実装されたか分からないため)。**`report_path` は `impl-report-retry-<phase_fix_round>.json`、`spawn` 記録の `context.round` は文字列 `"retry<phase_fix_round>"`** にする (4.2e 手順 4 の集合突合が成果物と 1:1 で対応するようにするため。変換は同手順の sed の `impl-report-retry-` 行が対応する — 定義済みなので足さない)。3 回で `phase_fix_exceeded` でエスカレ停止。issue は `in-progress` のまま |
+| `impl_timeout` | spawn から **30 分**応答が無い (計測は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: subagent の応答待ち時間` 節) | **run は止めない。** その issue に `gh issue comment <N>` で停止理由 (何分待って応答が無かったか・そのラウンドまでに積まれたコミット) を残し、`gh issue edit <N> --add-label needs-human --remove-label in-progress` で駐車して、**次の着手可能な issue に移る** (Step 0 の再開確認は issue コメントに理由が書かれている前提で「解決したか」を尋ねるので、コメントが無いと人間が何を判断すればよいか分からない) (`in-progress` を外さないとラベルが併記になり Step 2 の判定が割れる)。着手可能な issue が他に無ければ `dependency_blocked` と同じ扱いで停止する |
+
+## 4.2c: adversarial_mode 別の起動順序
+
+`mode: full` のレンズ A は共有の作業ツリー上でソースを直接書き換えるため、fan-out に入れず単独で先に走らせる。
+
+| `adversarial_mode` | 起動のしかた |
+| --- | --- |
+| `full` | ① review-adversarial を単独起動して完了を待つ → ② 汚染の突合 → ③ 残りの観点 + architecture-guard を fan-out |
+| `weakening_only` / `skipped` | 全観点 + architecture-guard を 1 回の fan-out で並列起動 |
+
+## 4.2c: 観点 gating 表
+
+フェーズごとに 1 回だけ評価し、決まった集合を `gating_decided` に記録する。
+
+| タイミング        | 実行観点                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| 毎フェーズ        | architecture-guard (gating 対象外、常に実行) + review-adversarial (`mode` は下表で決める。下記スキップ述語で skip 可) |
+| テスト差分があるフェーズ (`$TEST_FILE_CHANGED` または `$TEST_CONTENT_CHANGED` が非空) | 上記 + review-tdd                              |
+| UI を触るフェーズ (`uiPhase == true`) | 上記 + review-product-readiness (dev_server が無ければ skip)                     |
+| **最後の issue** | 全観点フル (tdd / quality / product-readiness / adversarial)                                        |
+
+## 4.2c: review-adversarial の mode 決定表
+
+`claude/agents/review-adversarial.md` の「モード」節が受け側の規定。
+
+| 条件 (いずれかが真なら `full`) | 述語 |
+| --- | --- |
+| 消費型資源を扱う差分 | `$CONSUMABLE_CHANGED` が非空 |
+| 認証・認可・セッションの処理を含む差分 | `$AUTH_CHANGED` が非空 |
+| **テスト差分が無く、実装が 20 行を超えて積まれたフェーズ** | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空、かつ `$LINES` > 20 |
+| 最後の issue | 自分以外に open issue が残らない |
+| 上記のいずれでもない | → `weakening_only` (レンズ B のみ。docs を読まず攻撃も実行しない) |
+
+## 4.2c: review-adversarial のスキップ述語表
+
+機械判定であり、actor の裁量では skip しない。全条件が真の場合のみ skip 可。
+
+| # | 条件                                                                                                                                              | 意図                                                                                                                                                 |
+| - | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空                                                                                        | テスト変更時はレンズ B 必須。ファイル名 + 差分内容の 2 層、tracked/untracked 両方で判定 (言語別の具体パターンは phase-execution.md の実コマンドが正) |
+| 2 | `$LINES` ≤ 20 (`$NON_DOC_CHANGED` が空、つまり `.md` / `docs/` のみの差分なら行数不問で skip 可)                                                  | typo・軽微修正の機械近似                                                                                                                             |
+| 3 | `$CI_FILES_CHANGED` が空 (CI・ビルド/テスト設定 `.github/`, `*config*`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, `justfile`, `deno.json` 等の変更なし) | 検証器設定の改変は必ず監査                                                                                                                           |
+| 4 | 最後の issue でない (自分以外に open issue が残る。`uc-tracking` の親は数えない)                                                                  | 最後の issue は全観点フル                                                                                                                            |
