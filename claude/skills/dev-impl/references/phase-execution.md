@@ -39,6 +39,8 @@
 | `ROUND` | 各 fan-out / implementer 起動の直前 | **文字列として扱う**。初回 fan-out は `"0"`、修正ラウンド後の再検査は `phase_fix_round` の値、テストゲート再試行は `"tg<test_gate_retry>"`、報告不整合の再起動は `"retry<phase_fix_round>"`。`--argjson` で数値として書くと後 2 者が JSON エラーになる |
 | `AGENTS_TO_SPAWN` | 各 fan-out の直前 | `<agent>:<model>:<mode>` を**改行区切り**で並べた文字列 (mode 無しは `-`)。空白区切りにしない — zsh は `$VAR` を単語分割しない |
 | `PHASE_SPAWNS` / `RUN_SPAWNS` | Step 4.1 (フェーズ) / Step 0 か Step 1 (run) | カウンタの現在値。復元の正は `spawn` イベントの件数 (logging.md) |
+| `REPO_SLUG` / `LIMIT` | Step 1 (run) | `<owner>/<repo>` と `gh issue list` の取得上限 (1000 件)。代入は run-bootstrap.md の `## run スコープ変数と env.sh の生成` |
+| `PHASE_ID` | Step 4.1 (フェーズ) | issue タイトル `フェーズ<識別子>: <名前>` の識別子。`$SCRATCH_DIR` のパスと `### フェーズ<識別子>:` の引き当てに使う |
 | `REPORT_PATH` | implementer 起動の直前 | 起動の種類ごとに分ける: `impl-report.json` (初回) / `impl-report-fix-<round>.json` (修正ラウンド) / `impl-report-testgate-<test_gate_retry>.json` (4.2e の再試行) / `impl-report-retry-<phase_fix_round>.json` (`impl_report_invalid` の再起動)。**衝突させない** — 4.2e 手順 4 の突合が成果物とラウンドを 1:1 で対応させるため |
 | `EXEMPTIONS_COUNT` | 4.2c の事前ブロック | `jq 'length' "$SCRATCH_DIR/self-exemptions.json"`。**消えても再算出できる** (ファイルが残るため) ので env.sh には入れず、4.2d 手順 1 で使う直前に取り直してよい |
 | `RESULT_JSON` | 検査結果を読む時 | 検査 agent が `output_path` に書いた結果 JSON のパス |
@@ -147,7 +149,7 @@ TDD の順序・フェーズスコープのテストのみ実行・コミット�
 
 ## 4.2c: 検査 fan-out の起動
 
-**起動の形は `adversarial_mode` で変わる** (SKILL.md 4.2c の表が正):
+**起動の形は `adversarial_mode` で変わる** (正は本ファイルの `## 4.2c: adversarial_mode 別の起動順序`):
 
 | `adversarial_mode` | 起動のしかた |
 | --- | --- |
@@ -220,7 +222,7 @@ repo_dir: ${absRepoDir}
 output_path: ${absScratchDir}/guard-r${round}.json
 git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。` }
 
-// スキップ述語を満たさなければ実行。mode は SKILL.md 4.2c の「review-adversarial の mode 決定」表で決め、
+// スキップ述語を満たさなければ実行。mode は 本ファイルの `## 4.2c: review-adversarial の mode 決定表` で決め、
 // gating_decided に記録した値をそのまま渡す (再 fan-out でも同じ値を使う)
 { subagent_type: "review-adversarial", model: "sonnet",
   prompt: `mode: ${adversarialMode}
@@ -302,7 +304,7 @@ UNTRACKED_AUTH=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs
 AUTH_CHANGED="${TRACKED_AUTH}${UNTRACKED_AUTH}"
 ```
 
-判定条件テーブル (review-adversarial の skip/実行の遷移規則と mode 決定、`$CONSUMABLE_CHANGED` による review-quality の起動) は SKILL.md 側の 4.2c を参照。
+判定条件テーブル (review-adversarial の skip/実行の遷移規則と mode 決定、`$CONSUMABLE_CHANGED` による review-quality の起動) は 本ファイルの `## 4.2c: review-adversarial のスキップ述語表` を参照。
 
 ## 4.2e: テスト弱体化検知コマンド
 
@@ -436,7 +438,7 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 | --- | --- |
 | `design_overview_break` | **即エスカレ停止** (P3、commit しない) |
 | `test_weakening_suspected` | 4.2e と同じトレース確認を main が行い、トレース不能なら `test_weakening_detected` でエスカレ停止 |
-| `tests_failing` | 下記「fix ブリーフ」を書いて `mode: fix` で再起動する (4.2d の修正ラウンドと同じ扱い。`phase_fix_round` を共有する) |
+| `tests_failing` | 本ファイルの `## 4.2a / 4.2e: fix ブリーフのスキーマ`を書いて `mode: fix` で再起動する (4.2d の修正ラウンドと同じ扱い。`phase_fix_round` を共有する) |
 | `spec_insufficient` | **fix で再起動しない。** 足りないのは設計情報であって修正の指示ではなく、fix ブリーフが運べるのは reason 文字列とテスト出力だけなので、同じ情報で再実行しても同じ理由で止まる。**Step 4.6 の P2 (`design_detail_gap`) として扱い**、報告の `reason` が指す不足を DESIGN_DETAIL に補ってから `mode: implement` で再起動する (`phase_fix_round` を進める。**`report_path` と `spawn` の `context.round` は `impl_report_invalid` の再起動と同じ retry 系** — `impl-report-retry-<phase_fix_round>.json` / `"retry<phase_fix_round>"`)。補うべき内容が概要設計に及ぶなら P3 |
 
 ## 4.2a: implementer が期待どおりに終わらなかった場合の分岐
@@ -467,6 +469,8 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 | テスト差分があるフェーズ (`$TEST_FILE_CHANGED` または `$TEST_CONTENT_CHANGED` が非空) | 上記 + review-tdd                              |
 | UI を触るフェーズ (`uiPhase == true`) | 上記 + review-product-readiness (dev_server が無ければ skip)                     |
 | **最後の issue** | 全観点フル (tdd / quality / product-readiness / adversarial)                                        |
+| **`$CONSUMABLE_CHANGED` が非空のフェーズ** | 上記 + review-quality (最後の issue でなくても起動する。多重消費・恒久エラー分岐の漏れは architecture-guard の境界検査では検知できないため) |
+| `PRODUCT_MODE=cli` | review-product-readiness を**一切起動しない** (`uiPhase` が常に `false`。「最後の issue」の全観点フルからも除外する。cli の G_E2E は Step 5.2 で review-spec-compliance が担当する) |
 
 ## 4.2c: review-adversarial の mode 決定表
 

@@ -24,7 +24,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] <message>" >> "$LOG"
 
 ## 構造化 JSONL ログ (事後振り返り)
 
-dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.claude/logs/dev-impl/${run_id}/decisions.jsonl` に追記する。終了時にこの JSONL から HTML レポート (SKILL.md の Step 7) を生成する。
+run_id の発行・引き継ぎは run-bootstrap.md の `## run スコープ変数と env.sh の生成` が正 (再入では引き継ぐ)。dev-impl 起動時に `run_id = $(date '+%Y%m%d-%H%M%S')` を発行し、`~/.claude/logs/dev-impl/${run_id}/decisions.jsonl` に追記する。終了時にこの JSONL から HTML レポート (SKILL.md の Step 7) を生成する。
 
 各エントリのスキーマ:
 
