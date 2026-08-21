@@ -551,129 +551,39 @@ gating の各行の理由:
 
 main は各 agent の結果 JSON を「main のコンテキスト規律」の `jq` 射影で読む。
 
-1. いずれかの agent が結果を返せない → その観点は「未検証」。**パス扱いにせず** `guard_agent_failed` (architecture-guard) / `review_agent_failed` (review-*) でエスカレ停止する。high 0 件と同一視しない。該当するのは次のいずれか:
-   - agent がエラー終了した、または 30 分応答しない (implementer と同じ打ち切り基準)
-   - `output_path` の JSON が実在しない、`jq` でパースできない
-   - **スキーマ不適合**: architecture-guard は `ok` が読めない、review-* は `findings` が配列として読めない
-   - architecture-guard が `skip_reason: "diff_command_failed"` を返した (差分が取れておらず検査が成立していない。**修正ラウンドに乗せない** — 実装を直しても解消しない性質のため)
-   - **architecture-guard の `unchecked_files` が非空** (差分の一部を見ていない。「違反 0 件」と「そのファイルを見ていない」を区別するための値なので、非空を `ok: true` と同一視しない)
-   - **architecture-guard が `skip_reason: "no_layer_convention"` を返した**場合は**未検証にしない**。DESIGN 文書にも慣例にもレイヤ構造が無いプロジェクトで誤検知を出さないための意図的な素通りで、`checked_files: 0, ok: true` が正しい結果である (guard 側の規定と揃える)。ただし `verification_skipped` (source: `no_layer_convention`) には記録し、「レイヤ境界を検査していない run」であることを Step 5.6 の集約から読めるようにする
-   - **`exemptions_path` を渡した agent (review-tdd と review-adversarial の 2 つだけ) について、`jq 'length' "$SCRATCH_DIR/self-exemptions.json"` で取り直した件数より `adjudicated` が少ない** (免除の裁定が実行されていない。裁定は実装者が「検証しない」と宣言した項目を第三者が裁く仕掛けで、実行を検証しないと自己申告のまま通る)。**`exemptions_path` を渡していない agent (architecture-guard / review-quality / review-product-readiness) にこの条件を適用しない** — 渡していないものを裁定できるはずがなく、免除が 1 件でもあるフェーズが全て偽の停止になる
-
-   **review-product-readiness の `dev_server_unavailable` は未検証扱いにするが、修正ラウンドには乗せない。** 環境起因で実装者が直せる問題ではないため (architecture-guard の `diff_command_failed` と同じ性質)。そのフェーズの product-readiness を `verification_skipped` (source: `dev_server_unavailable`) として記録し、他の観点の fatal 判定は通常どおり続ける。
-
-   **agent の失敗は「一過性」と「決定的」を分けて扱う。** タイムアウト・JSON 破損・一時的なエラー終了は `in-progress` のまま再実行で解決しうるが、**`TOO_MANY_FILES` / `NO_DESIGN_DOCS` / スキーマ不適合 / `diff_command_failed` / `unchecked_files` 非空 / `adjudicated` 不足 は決定的**で、同じ入力なら何度再実行しても同じ結果になる。決定的な失敗と、同一フェーズで同じ agent が 2 回続けて失敗した場合は **`needs-human` に振り分ける** (「エスカレ停止時の挙動」の表)。決定的な失敗を「再実行で解決しうる」に入れると、人間に渡る経路が無いまま同じ停止を繰り返す
+1. **いずれかの agent が結果を返せない → その観点は「未検証」。パス扱いにせず** `guard_agent_failed` (architecture-guard) / `review_agent_failed` (review-*) でエスカレ停止する。high 0 件と同一視しない。該当は「エラー終了か 30 分無応答」「`output_path` の JSON が不在かパース不能」「スキーマ不適合 (guard は `ok`、review-* は `findings` が読めない)」「guard の `skip_reason: "diff_command_failed"`」「guard の `unchecked_files` が非空」「**`exemptions_path` を渡した agent (review-tdd と review-adversarial の 2 つだけ) の `adjudicated` が、取り直した免除件数を下回る**」。
+   - **guard の `skip_reason: "no_layer_convention"` は未検証にしない** — レイヤ構造の無いプロジェクトで誤検知を出さないための意図的な素通りで、`checked_files: 0, ok: true` が正しい結果。ただし `verification_skipped` (source: `no_layer_convention`) には記録する
+   - **`exemptions_path` を渡していない agent (architecture-guard / review-quality / review-product-readiness) に `adjudicated` の条件を適用しない** — 渡していないものを裁定できるはずがなく、免除が 1 件でもあるフェーズが全て偽の停止になる
+   - **review-product-readiness の `dev_server_unavailable` は未検証扱いにするが、修正ラウンドには乗せない** (環境起因で実装者が直せないため。guard の `diff_command_failed` と同じ性質)
+   - **agent の失敗は「一過性」と「決定的」を分けて扱う。** タイムアウト・JSON 破損・一時的なエラー終了は `in-progress` のまま再実行で解決しうるが、**`TOO_MANY_FILES` / `NO_DESIGN_DOCS` / スキーマ不適合 / `diff_command_failed` / `unchecked_files` 非空 / `adjudicated` 不足は決定的**で、同じ入力なら何度でも同じ結果になる。決定的な失敗と、同一フェーズで同じ agent が 2 回続けて失敗した場合は **`needs-human` に振り分ける** (決定的な失敗を「再実行で解決しうる」に入れると、人間に渡る経路が無いまま同じ停止を繰り返す)
 2. **fatal の定義**: review-* の severity: high、または architecture-guard の `violations` のうち severity が high / medium のもの。fatal 0 件 → 4.2e へ。**ただし review-adversarial の `test_weakened` / `vacuous_assertion` / `skip_added` / `tautological_test` は confidence と severity に関わらず fatal に数えない** — 手順 7 のトレース確認・エスカレ経路が優先する (実装者自身に弱体化を直させないため)。**この 4 つの rule 名は `claude/agents/review-adversarial.md` の `rule` enum を正とし、本手順・手順 7・「関連スキル / agent」節・`claude/agents/dev-impl-implementer.md` の 4 箇所を同じ集合に保つ** (どこか 1 つに漏れると、その rule だけが実装者に直させる経路へ流れて必ず空回りする)。
+   - **main は agent が付けた severity を変更しない (昇格も降格もしない)。** medium / low を「重要そうだから」と high 扱いにして新ラウンドを起こさない。過小評価は agent 側の severity 基準を直して解決する問題で、実行時の裁量で埋めるとラウンド数が判定基準なしに増える (実測で 9 ラウンド中 2 ラウンド以上が裁量昇格のみで起動していた)
+   - **medium の「相乗り」は行わない。** implementer は review-* を high だけ、guard を high/medium 直す規約なので、review-* の medium を渡しても no-op になる。medium は `review_low` として記録し、Step 6 のサマリと HTML レポートに残す
+3. fatal あり → `phase_fix_round += 1`。**この時点で `phase_fix_round > phase_fix_budget` (既定 3) なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)。続けて **JSONL に `event_type: fix_dispatch` を記録する**。`spawn` と同じく**起動する前に書く** — Step 0 の再入で `phase_fix_round` を復元する唯一のソースであり、ラウンド 2 以降の implementer へ渡す「過去ラウンドの経過」の材料でもある。fixer に渡す findings ファイルの切り出しは [references/phase-gates.md](./references/phase-gates.md) の `## 4.2d 手順 3: fixer へ渡す findings の切り出し` を Read してから実行する (**guard の分をキー `findings` に付け替えると、implementer が high しか拾わない規約により guard の medium が誰にも直されず毎ラウンド再検出される**)。
+4. **`mode: fix` の `dev-impl-implementer` を起動**する。**モデルはラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (上記「修正ラウンドのモデル昇格」)。ラウンド 2 以降は指示文に「指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを確認せよ。族として閉じられない残りは報告の `open_questions` に明記せよ」を加える。渡すのは `findings_paths` / `phase_context_path` / `repo_dir` / `report_path`。main は findings の本文を読まないし、修正内容を指示しない。**報告を受けたら 4.2a と同じく main がコミットする**
+5. 修正完了後、**再 fan-out は「fatal を出した観点 + architecture-guard」に絞って 4.2c に戻る**。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は**原則として `gating_decided` の `gating_set` の部分集合**とする (guard は gating 対象外なので判定に含めない)。集合外の review-adversarial を追加してよいのは次の 3 つだけで、追加したら `gating_decided` を追記する:
+   - **fix がテストに触れた場合** (`mode: weakening_only` で足りる)。判定コマンドは [references/phase-gates.md](./references/phase-gates.md) の `## 4.2d 手順 5: fix がテストに触れたかの判定` を Read してから実行する (**`HEAD~1` で代替すると**、fix が差分ゼロでコミットを生まなかったとき 1 つ前のラウンドを指して誤判定し、最初のコミットでは解決自体に失敗する)。**判定不能なら安全側に倒して起動する**
+   - **self-exemptions の claim 差分に新規の免除があった場合** (`mode: weakening_only` で足りる) — 修正ラウンドで新たに宣言された免除を裁く者を確保するため
+   - **スキップ述語が「skip → 実行」に転じた場合** (降格は禁止)。この転換で起動するときの `mode` はその時点で mode 決定表を評価して決める (初回 skip したフェーズは `adversarial_mode: "skipped"` しか記録が無いため)
 
-   **main は agent が付けた severity を変更しない (昇格も降格もしない)。** 修正ラウンドを起こすのは上記の fatal だけで、medium / low を「重要そうだから」と high 扱いにして新ラウンドを起こすことはしない。過小評価は agent 側の severity 基準 (各 agent 定義の「severity の判定基準」節 (節を持たない agent は該当する判定記述)) を直して解決する問題であり、実行時の裁量で埋めるとラウンド数が判定基準なしに増える (実測で 9 ラウンド中 2 ラウンド以上が裁量昇格のみで起動していた)。
-
-   **medium の「相乗り」は行わない。** implementer は review-* の `findings[]` を high だけ、architecture-guard の `violations[]` を high/medium 直す規約なので、review-* の medium を渡しても no-op になる (guard の medium は fatal の定義に入っているので通常の経路で直る)。medium は `review_low` として記録し、Step 6 のサマリと HTML レポートに残す。
-3. fatal あり → `phase_fix_round += 1` する。**この時点で `phase_fix_round > phase_fix_budget` (既定 3) なら fix を起動せず `phase_fix_exceeded` でエスカレ停止**する (JSONL の context に guard 由来 / review 由来の内訳を残す)。
-
-   **続けて JSONL に `event_type: fix_dispatch` を記録する** (context は logging.md の規定)。`spawn` と同じく**起動する前に書く**。このイベントは 2 箇所が読む load-bearing な記録である: Step 0 の再入で `phase_fix_round` を復元する唯一のソースであり、ラウンド 2 以降の implementer へ渡す「過去ラウンドの経過」の材料でもある (references/phase-execution.md の `ROUND2_PLUS_BRIEF`)。
-
-   続けて、fixer に渡す findings ファイルを**観点ごとに 1 本ずつ** `jq` で作る (main は findings 本文を読まず、`jq` の出力をファイルへ直行させる):
-
-   ```bash
-   # fatal を出した観点の findings を渡す。ただし手順 7 の 4 rule は除く
-   #   (実装者に直させない規定なので、渡すと必ず test_weakening_suspected で停止して 1 ラウンド無駄になる)。
-   #   review-* は high だけを渡す (medium は implementer が直さない規約なので渡しても no-op = 4.2d 手順 2)
-   jq '{ok, dimension, mode, findings: [.findings[]
-        | select((.rule | test("^(test_weakened|vacuous_assertion|skip_added|tautological_test)$")) | not)
-        | select(.severity=="high")]}' \
-     "$SCRATCH_DIR/review-<観点>-r${ROUND}.json" > "$SCRATCH_DIR/fatal-<観点>-r${ROUND}.json"
-
-   # fatal を出していない観点の medium は **fixer に渡さない**。implementer は review-* の
-   # findings[] を high しか直さない規約 (claude/agents/dev-impl-implementer.md) なので、
-   # 渡しても構造的に no-op になり、spawn 予算だけを消費する。medium は review_low に記録して残す
-   ```
-
-   architecture-guard の分は**キーを `violations` のまま出す** (`jq '{ok, violations: [.violations[] | select(.severity=="high" or .severity=="medium")]}'`)。`findings` に付け替えてはならない — implementer は `violations[]` を high/medium、`findings[]` を high だけ拾う規約なので (`claude/agents/dev-impl-implementer.md`)、付け替えると **guard の medium が誰にも直されず毎ラウンド再検出される**。**これらのファイルの生成者はこの手順だけ**で、4.2e 手順 4 の突合はこれらを spawn の成果物として数えない (main が書いたものなので)
-4. **`mode: fix` の `dev-impl-implementer` を起動**する。**モデルはラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (上記「修正ラウンドのモデル昇格」)。ラウンド 2 以降は指示文に「指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを確認せよ。族として閉じられない残りは報告の `open_questions` に明記せよ」を加える。渡すのは `findings_paths` (fatal を含む結果 JSON の絶対パスの配列) / `phase_context_path` / `repo_dir` / `report_path`。main は findings の本文を読まないし、修正内容を指示しない (fixer が JSON を自分で Read する)。**fixer が直す対象は「review-* の high」と「architecture-guard の high/medium」**で、fatal の定義と一致させてある (guard の medium が誰にも直されず空回りするのを防ぐため)。**報告を受けたら 4.2a と同じく main がコミットする** (「ラウンドごとのコミット」)
-5. 修正完了後、**再 fan-out は「fatal を出した観点 + architecture-guard」に絞って 4.2c に戻る**。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は**原則として `gating_decided` に記録した `gating_set` の部分集合**とする (`architecture-guard` は gating 対象外で常に実行するため、この判定の対象に含めない)。下記 3 つの場合に限り集合外の review-adversarial を追加してよく、追加したときは `gating_decided` を追記して事後に正当な例外だと分かるようにする:
-
-   - **fix がテストに触れた場合は review-adversarial を必ず追加する** (`mode: weakening_only` で足りる)。判定は**その fix のコミット差分にテストファイルが含まれるか**を見るだけでよい (ラウンドごとにコミットしているので、fix 差分を切り出す SHA が存在する):
-
-     ```bash
-     # fix 起動の直前に控えた SHA と比較する。HEAD~1 を使わない —
-     # (a) fix の差分が空でコミットが打たれなかった場合、HEAD~1..HEAD は 1 つ前のラウンドを指して誤判定する
-     # (b) そのコミットがリポジトリの最初のコミットだと HEAD~1 が解決できずコマンド自体が失敗する
-     # mode: fix を起動する直前にファイルへ落とす (シェル変数は Agent の待ちをまたぐと消える)
-     git -C "$REPO_DIR" rev-parse HEAD > "$SCRATCH_DIR/before-$ROUND.sha"
-     # ... fix の完了とコミット ...
-     if [ ! -f "$SCRATCH_DIR/before-$ROUND.sha" ]; then
-       # 規則 (「進捗ログ」節): ファイルの不在を沈黙で通さない。判定不能は「触れていない」ではない
-       echo "起動前の SHA が残っていない。テスト接触は判定不能 — 安全側に倒し review-adversarial (mode: weakening_only 以上) を必ず起動する"
-     else
-       BEFORE_FIX=$(cat "$SCRATCH_DIR/before-$ROUND.sha")
-       if [ "$BEFORE_FIX" = "$(git -C "$REPO_DIR" rev-parse HEAD)" ]; then
-         echo "fix はコミットを生まなかった (差分なし)。テストには触れていない"
-       else
-         git -C "$REPO_DIR" diff --name-only "$BEFORE_FIX" HEAD \
-           | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)'
-       fi
-     fi
-     ```
-
-     Rust のインラインテスト (`#[cfg(test)]`) はこのファイル名パターンで捕まらないので、Rust プロジェクトでは同じ差分に対して `git -C "$REPO_DIR" diff -U0 "$BEFORE_FIX" HEAD -- '*.rs' | rg '^\+.*#\[cfg\(test\)\]'` も見る (`HEAD~1` を使わない理由は上と同じ)。修正の過程でテストが弱体化されるのはレンズ B が守る対象そのもので、ここに穴を作らない。既に adversarial が `full` で起動していたフェーズでは `full` のまま再実行する
-   **`gating_decided` を追記するときは `gating_set` を全体で再掲する** (追加分だけを書かない)。同一 phase に複数あるときは**最新の 1 件を採る**規定 (logging.md) なので、追加分だけの部分集合を書くと、以後その部分集合しか起動できなくなり、初回に決まった観点が無音で落ちる。
-
-   - **self-exemptions の claim 差分に新規の免除があった場合** (4.2c の作り直しで検出する。`mode: weakening_only` で足りる) — 修正ラウンドで新たに宣言された免除を裁く者を確保するため
-   - review-adversarial のスキップ述語が「skip → 実行」に転じた場合 (既存規定どおり、降格は禁止)。**この転換で起動するときの `mode` は、その時点で「review-adversarial の mode 決定」表を評価して決める** (初回に skip したフェーズは mode を確定しておらず `adversarial_mode: "skipped"` しか記録が無いため)。決まった値で `gating_decided` を追記する
-
-   「修正が別観点を壊す」リスクは、最後の issue の全観点フル検査と Step 5 の第三者監査 (`review-spec-compliance`) で受け止める
+   **`gating_decided` を追記するときは `gating_set` を全体で再掲する** (追加分だけを書かない)。同一 phase では最新の 1 件を採る規定 (logging.md) なので、部分集合を書くと以後それしか起動できず、初回に決まった観点が無音で落ちる。「修正が別観点を壊す」リスクは、最後の issue の全観点フル検査と Step 5 の第三者監査で受け止める。
 6. 修正中に `design_overview_break` を検知 → 即エスカレ停止 (commit しない)
-7. review-adversarial の `test_weakened` / `vacuous_assertion` / `skip_added` / `tautological_test` は **severity と confidence に関わらず**修正ラウンドに乗せない (これらは medium で出ることが多く、rule 名だけで判定する。severity を条件にすると medium の弱体化が黙って通る) (`dev-impl-implementer` 側も rule 名だけで無条件に `test_weakening_suspected` で停止する規約なので、confidence で線を引くと fix を起動しても必ず空振りして 1 ラウンド無駄になる)。弱体化を実装者自身に直させると骨抜きの温床になるため、4.2e と同じトレース確認 (TODO.md / DESIGN_DETAIL_APP.md に意図的な変更としてトレースできるか) を main が行い、トレース不能なら `test_weakening_detected` でエスカレ停止する。`dev-impl-implementer` 側もこれらの finding を渡されたら修正せず `test_weakening_suspected` で停止する規約になっている (二重の歯止め)
-8. **作業ツリーの汚染は、agent の自己申告ではなく main が検出する** (4.2c の検査後ブロック)。`working_tree_polluted` の報告が無くても必ず `git status --porcelain` で突合する。実装はラウンドごとにコミット済みで fan-out 直前のツリーは clean なので、**検査 agent が書き換えたまま戻さなければ必ず変更として現れる**。
+7. review-adversarial の `test_weakened` / `vacuous_assertion` / `skip_added` / `tautological_test` は **severity と confidence に関わらず**修正ラウンドに乗せない (これらは medium で出ることが多く、rule 名だけで判定する。severity を条件にすると medium の弱体化が黙って通る)。弱体化を実装者自身に直させると骨抜きの温床になるため、4.2e と同じトレース確認 (TODO.md / DESIGN_DETAIL_APP.md に意図的な変更としてトレースできるか) を **main が**行い、トレース不能なら `test_weakening_detected` でエスカレ停止する。`dev-impl-implementer` 側もこれらを渡されたら修正せず `test_weakening_suspected` で停止する規約 (二重の歯止め)
+8. **作業ツリーの汚染は、agent の自己申告ではなく main が検出する。** `working_tree_polluted` の報告が無くても必ず突合する。手順は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2d 手順 8: 作業ツリーの汚染の検出と復元`。**この検出が捕まえるのは「戻し忘れた汚染」だけ**で、検査中に変異させて正しく戻した一過性の窓は捕まらない — それを構造的に閉じるのが 4.2c の「変異を伴う観点を同じ fan-out に入れない」規定であり、検出は二重の歯止めである。**汚染を検出したラウンドの検査結果は fatal の有無に関わらず全て破棄して 1 回やり直す** (「fatal なし」を通せば検査していないコードを通し、「fatal あり」を載せれば変異が原因の偽の fatal を実装者に直させる)。やり直しの spawn は `phase_spawns` に計上するが `phase_fix_round` は進めない。**同一フェーズで 2 回目の汚染を検出したらエスカレ停止する** (`working_tree_polluted`)
 
-   **この検出が捕まえるのは「戻し忘れた汚染」だけである。** 攻撃の途中で変異させ、検査を終える前に正しく戻した場合は `status` が clean に戻るので検出できない — その間に別の観点が変異後のコードを読んでいても分からない。この一過性の窓を構造的に閉じるのが「変異を伴う観点と実行環境を共有する観点を同じ fan-out に入れない」規定 (下記) で、検出はあくまで二重の歯止めである。
-
-   差分が出たら `git restore <該当ファイル>` で直前のコミットの状態に戻す。**実装は既に履歴に入っているので、この復元で失われるのは agent が加えた変異だけである** (フェーズ中に何もコミットしない設計では、実装と変異が同じ未コミット差分に混ざるため機械復元ができなかった)。復元したら JSONL に `working_tree_polluted` を記録する。
-
-   **汚染を検出したラウンドの検査結果は fatal の有無に関わらず全て破棄し、同じ観点で 1 回やり直す。** 並列に走った他の観点が変異後のコードを読んでいた可能性があり、そのラウンドの結果は「fatal なし」も「fatal あり」も信用できない — 前者をそのまま通せば検査していないコードをコミットへ通すことになり、後者をそのまま修正ラウンドへ載せれば**変異が原因の偽の fatal を実装者に直させる**ことになる (実在しない不具合を追わせるので必ず空回りする)。やり直しの spawn は `phase_spawns` に計上するが `phase_fix_round` は進めない (修正ラウンドではないため)。**同一フェーズで 2 回目の汚染を検出したらエスカレ停止する** (`working_tree_polluted`。並列実行と変異が構造的に噛み合っていない状態なので、3 回目を試す価値が無い)
-
-severity: low/medium の findings は修正せず JSONL に `event_type: review_low` で記録する。**転記は `jq` で結果 JSON から JSONL へ直接流し込み、`message` を含む本文も入れる** — HTML レポートのレビュー残課題セクションが `message` を表示するため、落とすと「どのファイルの何行目か」しか残らず読めない。**main のコンテキスト規律に反しない**のは、`jq` の出力を標準出力に流さずファイルへ直行させるから (main が読むのは射影した `{severity, rule, file, line}` だけで、本文は main を経由せずに JSONL へ入る)。
+severity: low/medium の findings は修正せず JSONL に `event_type: review_low` で記録する。**転記は `jq` で結果 JSON から JSONL へ直接流し込み、`message` を含む本文も入れる** — HTML レポートのレビュー残課題セクションが `message` を表示するため、落とすと「どのファイルの何行目か」しか残らず読めない。**main のコンテキスト規律に反しない**のは、`jq` の出力を標準出力に流さずファイルへ直行させるから。
 
 ##### 4.2e: テストゲート + コミット (main)
 
-コミット前に **main が `full_test_command` を Bash で直接実行し、exit code 0 を確認する** (自己申告ではなく実行結果で判定)。implementer にはフェーズスコープのテストしか実行させていないので、全体スイートの実行はここが初回になる。
+コミット前に **main が `full_test_command` を Bash で直接実行し、exit code 0 を確認する** (自己申告ではなく実行結果で判定)。implementer にはフェーズスコープのテストしか実行させていないので、全体スイートの実行はここが初回になる。main が実行するのは cache write が 1 時間 TTL で長時間の実行に耐えるため (subagent は 5 分 TTL)。**ただし Bash の 600 秒上限は主体によらず効く**ので、超えるプロジェクトでは `run_in_background: true` で起動してポーリングし、**タイムアウトした実行は「未検証」として `verification_skipped` に記録して成功扱いにしない**。失敗時の再試行経路 (`test_gate_retry`、上限 3 で `tests_failing_before_commit`) は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2e: 全体スイートのテストゲート` が正。
 
-全体スイートを main が実行する理由は、main の cache write が 1 時間 TTL で長時間の実行に耐えるため (subagent は 5 分 TTL なので、長いスイートを subagent 内で回すと自分のコンテキストを失効させる)。ただし **Bash の 600 秒上限は主体によらず効く** (実測: `swift test` が 608〜614 秒で上限に張り付いた事例が失効 29 件の主因)。`full_test_command` が 600 秒を超えるプロジェクトでは `run_in_background: true` で起動してポーリングする。**タイムアウトした実行は「未検証」として `verification_skipped` に記録し、成功扱いにしない**。
+続けて **issue 本文の `## DoD` ブロックを実行する**。全体スイートが緑でも、その issue 固有の受入基準は別に確認しなければならない (`## DoD` は dev-spec のフェーズ 10 が著作し 10.5 の監査が実行可能性まで検査した唯一の issue 単位の受入基準で、ここで実行しないと誰も実行しない)。抽出と実行のコマンドは [references/phase-gates.md](./references/phase-gates.md) の `## 4.2e: DoD ブロックの抽出と実行` を Read してから実行する (**抽出が空でないことの確認を省くと**、空の `dod.sh` への `bash -e` は必ず exit 0 を返すので「1 件も実行していない」が「全通過」と区別できなくなる)。同節の規定:
 
-- 失敗 → `test_gate_retry += 1` し、失敗出力 (末尾 30 行) を 4.2a の「fix ブリーフ」と同じスキーマで `<SCRATCH_DIR>/test-failure-<test_gate_retry>.json` に書いて `mode: fix` の implementer に渡す (main は実装差分を読まない)。`test_gate_retry > 3` で `tests_failing_before_commit` でエスカレ停止。**`test_gate_retry` は `phase_fix_round` とは別カウンタ**にする (検査ラウンドを使い切ったフェーズでもテストゲートの再試行が残るように)。この経路の implementer 起動も**通常のラウンドと同じ扱い**にする:
-  - `report_path` は `<SCRATCH_DIR>/impl-report-testgate-<test_gate_retry>.json` (修正ラウンドの `impl-report-fix-<round>.json` と衝突させない。カウンタが別なので番号が重なる)。**`spawn` 記録の `context.round` には文字列 `"tg<test_gate_retry>"` を入れる** (4.2e 手順 4 の突合が成果物のファイル名と 1:1 で対応するようにするため)
-  - `model` は `test_gate_retry` が 1 なら `opus`、2 以降は `fable` (「修正ラウンドのモデル昇格」と同じ考え方)
-  - 起動の直前に `spawn` を記録し、**報告を受けたら「ラウンドごとのコミット」に従ってコミットする** (コミットしないと作業ツリーが非クリーンなまま次の手順へ進み、4.2c の clean 前提と 4.2d 手順 8 の汚染検知がどちらも壊れる)
-  - fix がテストに触れた場合は、修正ラウンドと同じく review-adversarial (`mode: weakening_only` 以上) を 1 回起動してから最終コミットへ進む
+- **`DOD_CMDS` が 0 のときは通過扱いにしない。** `verification_skipped` (source: `dod_no_automated`) を記録し、close コメントから「DoD がすべて通過した」の文言を外して手動確認待ちとして Step 6 のサマリに載せる
+- `DoD (手動):` の行は実行できないので、**その本文をそのまま Step 6 のサマリに残して人間に確認を求める** (自動系がすべて通っていれば実装は前進しているので、手動系の存在自体を停止理由にしない)
+- **close コメントで「DoD がすべて通過した」と書けるのは、抽出したブロックが exit 0 になったときだけである**
 
-続けて **issue 本文の `## DoD` ブロックを実行する**。全体スイートが緑でも、その issue 固有の受入基準は別に確認しなければならない (`## DoD` は dev-spec のフェーズ 10 が著作し、フェーズ 10.5 の監査が実行可能性まで検査した唯一の issue 単位の受入基準であり、ここで実行しないと誰も実行しない):
-
-```bash
-# CRLF を落としてから抽出する。GitHub の Web 画面で編集された issue 本文は CRLF になり、
-# 行末の \r のせいで `/^## DoD$/` が一致せず、抽出が丸ごと空振りする
-gh issue view "$ISSUE" --repo "$REPO_SLUG" --json body -q .body | tr -d '\r' > "$SCRATCH_DIR/issue-body.md"
-awk '/^## DoD$/{f=1;next} /^## /{f=0} f' "$SCRATCH_DIR/issue-body.md" > "$SCRATCH_DIR/dod.md"
-# フェンスの言語指定は bash 以外 (sh / shell / console) も許容する
-awk '/^```(bash|sh|shell|console)$/{f=1;next} /^```$/{f=0} f' "$SCRATCH_DIR/dod.md" > "$SCRATCH_DIR/dod.sh"
-
-# **抽出が空でないことを先に確認する。** 空の dod.sh に対する `bash -e` は必ず exit 0 を返すので、
-# これが無いと「1 件も実行していない」が「全通過」と区別できない (陽性対照の無い検査になる)。
-# コメント行と空行を除いて数える (非空白行を数えるだけだと `# 期待: exit 0` のような
-# コメントしか無いブロックが「1 件ある」と読めてしまう)
-DOD_CMDS=$(rg -v '^\s*(#|$)' "$SCRATCH_DIR/dod.sh" | rg -c '\S' || echo 0)
-echo "DoD の自動コマンド数: $DOD_CMDS"
-bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
-```
-
-**`DOD_CMDS` が 0 のときは通過扱いにしない。** issue 本文に自動系の DoD が本当に無い (手動系だけ) のか、抽出が空振りしたのかを区別できないため、`verification_skipped` (source: `dod_no_automated`) を記録し、**close コメントから「DoD がすべて通過した」の文言を外して手動確認待ちとして Step 6 のサマリに載せる**。`DOD_CMDS` は close コメントにも書き、「0 件」と「N 件成功」が後から区別できるようにする。
-
-`DoD (手動):` の行は実行できないので、**その本文をそのまま Step 6 のサマリに残して人間に確認を求める** (自動系がすべて通っていれば実装は前進しているので、手動系の存在自体を停止理由にしない)。
-
-自動系が失敗したら `test_gate_retry` と同じ再試行経路に載せる (失敗出力を `mode: fix` の implementer に渡す)。**close コメントで「DoD がすべて通過した」と書けるのは、このブロックが exit 0 になったときだけである。**
-
-続けて**テスト弱体化の機械検知**を行う (reward hacking 対策。review-tdd の LLM 判定に頼らず、編集権限の外で機械判定する)。検知コマンド (テストファイル削除の検出 + skip/only/ignore 追加の検出) は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2e: テスト弱体化検知コマンド` 節を Read してから実行する (この節を読まず近似コマンドで代替すると、言語別 skip/ignore パターンの見落としにより test_weakening 検知が漏れるリスクがある)。
-
-ヒットした場合、その削除・skip が TODO.md / DESIGN_DETAIL_APP.md にトレースできる意図的な変更 (設計変更で仕様ごと削除等) か確認し、トレースできなければ `test_weakening_detected` でエスカレ停止する (パス扱いしない)。
+続けて**テスト弱体化の機械検知**を行う (reward hacking 対策。review-tdd の LLM 判定に頼らず、編集権限の外で機械判定する)。検知コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2e: テスト弱体化検知コマンド` 節を Read してから実行する (この節を読まず近似コマンドで代替すると、言語別 skip/ignore パターンの見落としにより test_weakening 検知が漏れるリスクがある)。ヒットしたら TODO.md / DESIGN_DETAIL_APP.md にトレースできる意図的な変更か確認し、トレースできなければ `test_weakening_detected` でエスカレ停止する (パス扱いしない)。
 
 緑を確認したら、以下を **main が**この順で行う:
 
@@ -683,42 +593,8 @@ bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
    - 本文に `Fixes #<issue 番号>` を入れる
    - **`rules/core/commit.md` の条件をフェーズ単位で満たすのはこのコミットである。** 本ステップ冒頭の全体スイートと DoD がここまでに緑になっているためで、途中で全体スイートが落ちた場合はその修正が新しいラウンドのコミットとして積まれ、緑になってから最終コミットを打つ
    - **コミットは必ず main が行う** — 形式を機械検証する commit-msg-guard hook は親にしか効かないため。ただし hook が実際に検証するのは `$GHQ_ROOT/github.com/skanehira/` 配下のリポジトリで作業しているときだけで、それ以外では fail-open で素通りする。push はしない (ユーザ手動)
-3. **RUN_FACTS.md を更新する** (書式と規則は [references/phase-context.md](./references/phase-context.md) の `## RUN_FACTS.md`)。implementer 報告の `report_path` から `jq` で引いて「完了フェーズの成果物」「累積 design_decisions」「既知の落とし穴」に追記する。**この更新がフェーズ間の文脈再注入を代替する**ので省略しない (省略すると次フェーズの implementer がプロジェクトの作り方を探索し直す)。追記後にファイルサイズを測り、**4096 バイトを超えていたら最新 3 フェーズ以外の「完了フェーズの成果物」行を要約に畳む**。JSONL に `event_type: run_facts_updated` (context に `sections` / `bytes`) を記録する
-4. **`impl_done` を書く前に spawn 記録を突合する。** 当該フェーズの `event_type: spawn` の件数と、`$SCRATCH_DIR` にある検査結果 JSON の本数 + implementer 報告 (`impl-report*.json`) の本数を突き合わせ、食い違ったら不足分を補記する (`context.backfilled: true` を付ける)。予算ゲートの前提を、フェーズを閉じる時点で 1 回だけ機械的に復元する:
-
-   ```bash
-   # 記録された spawn を「agent 名 + ラウンド」の集合として取る
-   jq -r --arg p "$PHASE" 'select(.event_type=="spawn" and .phase==$p)
-     | "\(.context.agent)-r\(.context.round // 0)"' "$JSONL" | sort -u > "$SCRATCH_DIR/_spawn-recorded.txt"
-
-   # 実際に残った成果物を同じ形の集合にする。**ファイル名はラウンド番号を含む** (guard-r0.json 等)
-   # ので、修正ラウンドを回しても上書きで潰れず、起動回数と 1:1 で対応する。
-   # 変換先は JSONL の context.agent と同じ綴りに揃える (guard → architecture-guard、
-   # impl-report → dev-impl-implementer)。揃えないと差集合が全件ずれる
-   # zsh は未マッチの glob を NOMATCH エラーにし `2>/dev/null` では抑止できないので、
-   # ls + glob ではなく find を使う (4.2c の self-exemptions 抽出と同じ形)
-   { find "$SCRATCH_DIR" -maxdepth 1 -name 'guard-r*.json' \
-       | sed 's|.*/||; s|\.json$||; s|^guard-|architecture-guard-|';
-     find "$SCRATCH_DIR" -maxdepth 1 -name 'review-*-r*.json' \
-       | sed 's|.*/||; s|\.json$||';
-     find "$SCRATCH_DIR" -maxdepth 1 -name 'impl-report*.json' \
-       | sed 's|.*/||; s|\.json$||;
-              s|^impl-report$|dev-impl-implementer-r0|;
-              s|^impl-report-fix-|dev-impl-implementer-r|;
-              s|^impl-report-testgate-|dev-impl-implementer-rtg|;
-              s|^impl-report-retry-|dev-impl-implementer-rretry|'
-   } | sort -u > "$SCRATCH_DIR/_spawn-actual.txt"
-
-   echo "--- 記録はあるが成果物が無い (起動に失敗したか、記録が過剰) ---"
-   # fix-lsp-warnings と tech-investigation は結果 JSON を出さない仕様なので、記録側から除いて突合する
-   comm -23 "$SCRATCH_DIR/_spawn-recorded.txt" "$SCRATCH_DIR/_spawn-actual.txt" | rg -v '^(fix-lsp-warnings|tech-investigation)-'
-   echo "--- 成果物はあるが記録が無い (記録漏れ。補記する) ---"
-   comm -13 "$SCRATCH_DIR/_spawn-recorded.txt" "$SCRATCH_DIR/_spawn-actual.txt"
-   ```
-
-   **件数ではなく集合の差で見る。** 件数比較だと過剰と不足が相殺して一致してしまい、両方見逃す。差集合なら**どちらの向きにずれたか**が出るので対処を分けられる: 「成果物はあるが記録が無い」は記録漏れなので `context.backfilled: true` を付けて補記する。「記録はあるが成果物が無い」は起動が失敗したか記録が過剰なので、**補記ではなく 4.2d 手順 1 の未検証扱い**に回す (成果物の無い観点は検査されていない)。
-
-   `fatal-*.json` / `self-exemptions.json` / `_spawn-*.txt` は main が書いたもので spawn ではないため、上の glob には含めない。
+3. **RUN_FACTS.md を更新する。この更新がフェーズ間の文脈再注入を代替する**ので省略しない (省略すると次フェーズの implementer がプロジェクトの作り方を探索し直す)。書式・畳み込み規則は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2e 手順 3: RUN_FACTS.md の更新`
+4. **`impl_done` を書く前に spawn 記録を突合する。** 手順は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2e 手順 4: spawn 記録の突合` を Read してから実行する (**件数比較で代替すると**過剰と不足が相殺して一致してしまい両方見逃す。集合の差なら**どちらの向きにずれたか**が出るので、「成果物はあるが記録が無い」= 記録漏れを補記、「記録はあるが成果物が無い」= 手順 1 の未検証扱い、と対処を分けられる)
 5. **JSONL に `event_type: impl_done` を記録する** (context: `phase` / `summary` / `commit_sha` / `phase_fix_round` / `phase_spawns` / `review_outputs`)。これが issue 完了の唯一のイベントで、`prev_phase_summary` (次フェーズの PHASE_CONTEXT) と HTML レポートのフェーズタイムラインがこれを読む
 6. implementer 報告の `verification_skipped` / `design_decisions` / `open_questions` / `spec_lookups` / `self_review` を `report_path` から `jq` で JSONL に転記する (`verification_skipped` は Step 5.6 の未検証項目集約に合流する)。**転記は 1 回の Bash 実行で全件を流し込む** — コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2e: implementer 報告の JSONL 一括転記` 節を使う (項目ごとに Bash を呼ぶと main の往復がフェーズあたり 30 回近く増える)
 7. **当該 issue を close する** (`gh issue close <N> --comment "DoD がすべて通過したため close する"`)
