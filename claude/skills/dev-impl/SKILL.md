@@ -75,7 +75,7 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 - `event_type: start` の `context.repo_root` が現在の `git rev-parse --show-toplevel` と一致する (このディレクトリは全プロジェクト共通なので、パスで絞らないと他プロジェクトの run を拾う)
 - 完了イベント (Step 6 の完了サマリ出力時に記録する `done`) が無い (最後が `p3_escalate` 等)
 
-1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値を復元する — `goal_loop` / `run_spawns` は再実行のたびに 0 に戻ると発散上限 (Step 3) が実質無効化されるため、`p2_fixes_total` は上限こそ無いが run をまたいだ通算件数を Step 6 で提示するため。**進行中フェーズの `gating_decided` (最新の 1 件) も復元する** — 再 fan-out で起動してよい観点の唯一のソースなので、失うと記憶で判断することになる。当該フェーズの `gating_decided` が無ければ 4.2c の初回 fan-out からやり直す。
+1. **run_id とカウンタを引き継ぐ** (新規発行しない)。decisions.jsonl から `p2_fixes_total` / `goal_loop` / `run_spawns` の現在値と `run_spawns_budget` (記録済みの値の最大) を復元する — `goal_loop` / `run_spawns` は再実行のたびに 0 に戻ると発散上限 (Step 3) が実質無効化されるため、`p2_fixes_total` は上限こそ無いが run をまたいだ通算件数を Step 6 で提示するため、`run_spawns_budget` はこの復元値を下限として Step 1 で再計算するため。**進行中フェーズの `gating_decided` (最新の 1 件) も復元する** — 再 fan-out で起動してよい観点の唯一のソースなので、失うと記憶で判断することになる。当該フェーズの `gating_decided` が無ければ 4.2c の初回 fan-out からやり直す。
 2. **working tree の突合**: `git status --porcelain` が非クリーンなら前回停止時の残骸。**逐次モードでも implementer が main の working tree で直接編集するため、停止時の未コミット実装はここに残る**。内容を確認し、AskUserQuestion で「続きとして取り込む / `git restore` で捨ててフェーズをやり直す」を確認する (再入時 1 回だけの人間確認)
    - 何が実装されたかは `~/.claude/logs/dev-impl/<前回の run_id>/reviews/phase-<識別子>/impl-report.json` に残っているので、判断材料としてこれを `jq` で読む (`summary` / `files_changed` / `test_result`)
    - 捨てる場合は 3 段階で行う。**`git reset` + `git restore` だけでは実装ファイルが残る** — 新規実装フェーズの成果物は全て未追跡で、intent-to-add (`git add -N`、Step 4.2c) 済みのファイルも `git reset` 後は未追跡に戻るだけでディスクに残り、`git restore` は未追跡ファイルを削除しないため (実測確認済み):
@@ -131,6 +131,8 @@ CLOSED=$(gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json num
 **`uc-tracking` ラベルの issue は数に入れない。** これは `/dev-spec` のフェーズ 12 が作るユースケース単位の**親 issue** であり、実装対象ではない (詳細は Step 2)。除外しないと、親が残っているだけで「まだ未完了の issue がある」と誤判定する。親 issue が 1 件も無いリポジトリ (フラット構造) でもこのフィルタは無害に通る。
 
 `OPEN` が 0 で、かつ closed issue も 0 件なら **issue が未生成**である (`/dev-spec` のフェーズ 12 が走っていない)。`OPEN` が 0 で closed が 1 件以上なら**全 issue 完了済み**なので、Step 5 (ゴール達成判定) から再開する。
+
+**`OPEN` が確定したこの時点で `run_spawns_budget` を確定する** (Step 3 の「spawn 予算の意図」の更新表)。新規 run なら `OPEN × 8`、再入 run なら `max(復元値, run_spawns + OPEN × 8)` で、いずれも JSONL の `start` の `context` に記録する。**再入で予算を足さないと、前回が `spawn_budget_exceeded` で止まっていた場合に再実行が構造的に何も解決しない** (`run_spawns` は Step 0 で復元され、リセットされないため)。
 
 **続けて、親 issue がある構成なら「紐付けの差集合」を run ごとに 1 回流す** (手順は Step 4.6「新フェーズの issue 化」の同名ブロック)。前回の run が issue を作った直後・紐付け前に落ちると、その子は `ready` ラベルを持つので Step 2 が拾って実装・close するが、**親には永久に紐付かないまま完了してしまう** (4.2e の sweep からも見えないので、親が先に close される)。ここで 1 回回すことが、その取りこぼしを回収する唯一の経路である。
 
@@ -218,7 +220,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq 
 | `phase_fix_round` (現フェーズの検査 → 修正の周回数) | 3 (回)                                                | `phase_fix_exceeded` でエスカレ停止 (context に guard 由来 / review 由来の内訳を残す) |
 | `test_gate_retry` (現フェーズの 4.2e テストゲート再試行回数) | 3 (回)                                       | `tests_failing_before_commit` でエスカレ停止    |
 | `phase_spawns` (現フェーズの累計 subagent 起動数) | 24 (回)                                                | `spawn_budget_exceeded` でエスカレ停止          |
-| `run_spawns` (run 全体の累計 subagent 起動数)   | open issue 数 × 8 (回)                                    | 同上                                            |
+| `run_spawns` (run 全体の累計 subagent 起動数)   | `run_spawns_budget` (下記「spawn 予算の意図」で定義)      | 同上                                            |
 
 スコープ別のリセット時点:
 
@@ -226,6 +228,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq 
 | --- | --- | --- |
 | issue | `p1_fixes_in_phase` / `phase_fix_round` / `test_gate_retry` / `phase_spawns` | **その issue の Step 4.1 (最初の subagent を起動する前)** |
 | run 全体 | `p2_fixes_total` / `goal_loop` / `run_spawns` | リセットしない。**再入時は Step 0 で decisions.jsonl から復元した値を初期値にする** |
+| run 全体 (上限値) | `run_spawns_budget` | リセットしない。**上方向にのみ再計算する** (更新時点は下記「spawn 予算の意図」の表。issue が close されても下げない) |
 
 **run 全体の経過時間では打ち切らない。** 発散は試行回数の上限 (`phase_fix_round` / `test_gate_retry` / `goal_loop` / `phase_spawns` / `run_spawns`) で止める。長時間走ること自体は、フェーズ数の多いプロジェクトでは正常な状態であり停止理由にしない。個々の subagent が応答しないケースは、run の経過時間ではなく **spawn からの経過時間**で打ち切る (Step 4.2a)。
 
@@ -236,8 +239,20 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit 200 --json number --jq 
 - 1 フェーズは最小構成でも implementer 1 + architecture-guard 1 + review 1〜4 の subagent を起動する。フェーズ数だけ積み上がるため、上限を機械ゲートとして置く
 - 根拠: subagent を最も使ったセッションは 129 spawn でフェーズ単価が最悪 (116.4 ドル / フェーズ、subagent が全体の 66.8%) だった (2026-07 の実測)。2026-08 の実測でも、4 フェーズで 66 spawn (16.5 spawn / フェーズ) のうち 53 がレビュー系で、全体コストの 35% を占めていた。**このとき JSONL に記録されていた `spawn` は 44 件で、実際の 66 件に対し 22 件 (33%) が記録漏れしていた** — 記録が欠けると `phase_spawns` の上限判定が実態より小さい値で走るので、下記の全件記録は予算ゲートの前提そのものである
 - `phase_spawns` の上限 24 の内訳 (最悪ケース = 最後の issue): implementer 1 + 初回検査 5 (guard 1 + review 最大 4) + (fix 1 + 再検査 最大 5) × 3 ラウンド = 24。**この内訳は 4.2c / 4.2d の検査ラウンドだけを数えたもの**で、4.2b の `fix-lsp-warnings` (最大 1)・4.2e のテストゲート再試行 (`test_gate_retry` で最大 3)・4.2a の implementer 失敗による再起動も `phase_spawns` に計上されるため、正当な経路でも上限に届きうる。上限に当たったら `spawn_budget_exceeded` で止めてよい (安全網として機能させる)。再検査は 4.2d 手順 5 のとおり「fatal を出した観点 + guard」に絞るため通常は 2〜3 に収まるが、全観点が同時に fatal を出す最悪ケースを上限に据える (上限は安全網であって想定値ではない)
-- 中央値の想定は 4 (implementer 1 + guard 1 + review-adversarial 1 + review-tdd 1)。`run_spawns` の上限係数 8 はこの中央値に修正ラウンド 1 回分 (fix 1 + 再検査 2〜3) を見込んだ値で、**issue が追加される (P1/P2 動的修正・Step 5.5) たびに「その時点の open issue 数 × 8」で再計算する**
-- 上限の母数となる「open issue 数」は、本スキルを通じて一貫して **`uc-tracking` を除いた実装対象の件数**を指す (親 issue は実装しないので予算を消費しない)
+- 中央値の想定は 4 (implementer 1 + guard 1 + review-adversarial 1 + review-tdd 1)。`run_spawns` の上限係数 8 はこの中央値に修正ラウンド 1 回分 (fix 1 + 再検査 2〜3) を見込んだ値
+- **`run_spawns` の上限は `run_spawns_budget` という別の値で保持し、残作業ベースで上方向にのみ更新する。** 更新するのは次の 3 時点だけで、**issue が close されても下げない**:
+
+  | 更新時点 | 計算 |
+  | --- | --- |
+  | 新規 run の開始時 (Step 1 で `OPEN` を数えた直後) | `run_spawns_budget = OPEN × 8` (このとき `run_spawns` は 0) |
+  | run 再入時 (Step 1 で `OPEN` を数えた直後) | `run_spawns_budget = max(復元値, run_spawns + OPEN × 8)` |
+  | issue 追加時 (P1 / P2 動的修正・Step 5.5) | `run_spawns_budget = max(現在値, run_spawns + その時点の OPEN × 8)` (Step 4.6「新フェーズの issue 化」手順 3) |
+
+  `OPEN` はいずれも Step 1 で数える **`uc-tracking` を除いた実装対象の open issue 件数**を指す (親 issue は実装しないので予算を消費しない)。予算の母数をこう取ることは本スキルを通じて一貫している。
+
+- **`OPEN × 8` を `run_spawns` と直接比べてはならない。** 前者は「これから使ってよい量」、後者は「すでに使った量」で、比べる単位が違う。直接比べると issue を close するたびに上限が下がるので、**正常に完了した作業そのものが停止理由になる** (実測: 5 フェーズ完了・`run_spawns` 74 の run で残 `OPEN` が 10 件 → 上限 80。次の 1 件を close した瞬間に `OPEN` 9 件 → 上限 72 となり、消費済み 80 を下回って breach する)。さらに Step 5 (ゴール達成判定) では定義上 `OPEN` が 0 件になるため上限も 0 になり、`review-spec-compliance` / `review-product-readiness` の起動が必ず上限違反になる
+- **再入で予算が増えるのは意図した挙動である。** `spawn_budget_exceeded` は「再実行で解決しうる」停止理由に分類されている (「エスカレ停止時の挙動」の表) ので、再入で予算が一切増えないなら、再実行しても同じ状態のまま即座に再停止して何も解決しない。予算の追加付与を人間の再起動に紐づけることで、1 セッション内の暴走は有限の `run_spawns_budget` で止めたまま、正当な継続だけが人間の判断を挟んで前進する
+- `run_spawns_budget` は更新のたびに JSONL の `start` / `phase_added` の `context` に記録する (compaction や再入をまたいでも値を復元できるように)。復元は記録済みの値の**最大**を採る (上方向にしか動かないので一意に決まる)
 - 全 spawn を JSONL に `event_type: spawn` (context に `agent` / `model` / `phase`) で記録し、事後にフェーズ単価と突合できるようにする
 
 ### main のコンテキスト規律
@@ -578,7 +593,7 @@ done
 | 修正ラウンド 3 回でも fatal 残存 (guard 違反 / review high のいずれも)                                           | `phase_fix_exceeded`                         |
 | 検査 agent が結果を返せない (未検証をパス扱いにしない)                                                           | `guard_agent_failed` / `review_agent_failed` |
 | implementer が 30 分応答しない / 実装が実在しない                                                                | `impl_failed`                                |
-| `phase_spawns > 24` または `run_spawns > open issue 数 (uc-tracking を除く) × 8`                            | `spawn_budget_exceeded`                      |
+| `phase_spawns > 24` または `run_spawns > run_spawns_budget` (Step 3 のカウンタ規定)                              | `spawn_budget_exceeded`                      |
 | テストゲート 3 回不通過                                                                                          | `tests_failing_before_commit`                |
 | `design_overview_break` 検知 (実装・修正中いずれでも、commit 前に停止)                                           | `design_overview_break` (P3)                 |
 | テストファイル削除 / skip 追加 / assertion の弱体化・空虚化が設計にトレースできない (4.2e の機械検知 / 4.2c の review-adversarial 検知 / implementer の `test_weakening_suspected` 報告のいずれも) | `test_weakening_detected`                    |
@@ -657,9 +672,9 @@ git commit -m "📝 docs: <P1|P2> 動的修正 — <何をどう変えたかの 
    **識別子は既存と衝突しない値を採る** (例: 元フェーズが `4` なら `4-a`)。識別子は issue タイトル・`$SCRATCH_DIR` のパス・4.2e の `### フェーズ<識別子>:` 引き当ての 3 箇所で鍵になるため、衝突するとフェーズを取り違える。**複数フェーズを同時に追加するときは TODO.md の出現順に 1 件ずつ作る** (12.4.2 と同じ理由: deps は前方参照を禁じているので、出現順に作れば依存先の issue 番号が常に確定済みになる)
 
 2. **親 issue がある構成なら紐付ける** (下記「紐付けの差集合」)
-3. **JSONL に `event_type: phase_added` を記録する** (`context`: `phase` / `issue_number` / `parent_number` (紐付けた親。フラット構成なら省略) / `origin` (`p1` / `p2` / `goal_unmet`))
-4. **Step 2 の issue 抽出を再実行**して、追加したフェーズを着手対象に含める
-5. **`run_spawns` の上限を「その時点の open issue 数 (`uc-tracking` を除く) × 8」で再計算する** (Step 3 のカウンタ規定。issue が増えたのに上限が据え置きだと、正当な実装の途中で `spawn_budget_exceeded` に当たる)
+3. **`run_spawns_budget` を `max(現在値, run_spawns + その時点の open issue 数 (`uc-tracking` を除く) × 8)` で再計算する** (Step 3 のカウンタ規定)。issue が増えたのに上限が据え置きだと、正当な実装の途中で `spawn_budget_exceeded` に当たる。**手順 4 の記録より前に行う** (再計算した値を `phase_added` に載せるため)
+4. **JSONL に `event_type: phase_added` を記録する** (`context`: `phase` / `issue_number` / `parent_number` (紐付けた親。フラット構成なら省略) / `origin` (`p1` / `p2` / `goal_unmet`) / `run_spawns_budget` (手順 3 で再計算した値))
+5. **Step 2 の issue 抽出を再実行**して、追加したフェーズを着手対象に含める
 
 **紐付けの差集合**
 

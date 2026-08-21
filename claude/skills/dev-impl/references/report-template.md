@@ -123,9 +123,11 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
 | ゴール達成 | `${achieved}/${total_goals} (手動待 ${pending})` | goal |
 | 設計判断 | `${design_decision_count} 件` | note (indigo) |
 | 未解決の質問 | `${open_question_count} 件` | 0 件なら gray、1 件以上なら amber |
-| subagent 起動 | `${run_spawns} 回 (${spawns_per_phase} / フェーズ)` | 上限 (フェーズ数 × 8) の 80% 超なら amber |
+| subagent 起動 | `${run_spawns} 回 / 上限 ${run_spawns_budget} (${spawns_per_phase} / フェーズ)` | `run_spawns` が `run_spawns_budget` の 80% 超なら amber |
 
 エスカレ停止時は P3 カードを赤強調 + 「停止理由」を見出し直下に出す。
+
+`run_spawns` は `event_type: spawn` の件数、`run_spawns_budget` は `event_type` が `start` / `phase_added` の `context.run_spawns_budget` に記録された値の**最大**を採る (予算は上方向にしか動かないため。SKILL.md Step 3「spawn 予算の意図」)。記録が 1 件も無い旧 run では上限を `-` と表示し、80% 判定は行わない。
 
 サマリカードの下に **subagent 起動の内訳表**を出す (`event_type: spawn` を agent × model で集計)。コストの多くが subagent 側にあるため、フェーズ単価の事後分析にこの内訳が要る:
 
