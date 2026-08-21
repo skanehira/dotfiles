@@ -178,7 +178,7 @@ DESIGN.md のプロダクトモードスタンプで判定する。**webapp モ�
 
 ### 画面遷移マップ
 
-[Mermaid flowchart で全画面 + 遷移を可視化。UI_SKETCH.md のフロー図と整合させる]
+[Mermaid flowchart で全画面 + 遷移を可視化。UI_SKETCH.html のフロー図と整合させる]
 
 ### ナビゲーション仕様
 

@@ -60,7 +60,7 @@ sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DESIGN.md | head -
 | #    | フェーズ             | 手順書                                 | 出力                                                                   | クイックモード | cli モード |
 | ---- | -------------------- | -------------------------------------- | ---------------------------------------------------------------------- | -------------- | ---------- |
 | 1    | ユーザーストーリー   | `references/user-story.md`             | docs/USER_STORIES.md                                                   | スキップ       | 実行       |
-| 2    | UI スケッチ          | `references/ui-sketch.md`              | docs/UI_SKETCH.md                                                      | スキップ       | スキップ   |
+| 2    | UI スケッチ          | `references/ui-sketch.md`              | docs/UI_SKETCH.html                                                      | スキップ       | スキップ   |
 | 3    | ユースケース記述     | `references/usecase-description.md`    | docs/USECASES.md                                                       | スキップ       | 実行       |
 | 4    | 実現可能性検証       | `references/feasibility-check.md`      | docs/FEASIBILITY.md (PoC 計画)                                         | 条件付き実行   | 実行       |
 | 5    | PoC 検証             | `references/poc-verification.md`       | FEASIBILITY.md 更新 (PoC 結果)                                         | 条件付き実行   | 実行       |
@@ -123,11 +123,11 @@ AskUserQuestion({
 
 ### 0.2 既存ドキュメントの確認と開始点の決定
 
-docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.md / USECASES.md / FEASIBILITY.md / GLOSSARY.md / DOMAIN_MODEL.md / DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) を確認する。
+docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / GLOSSARY.md / DOMAIN_MODEL.md / DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) を確認する。
 
 旧形式の単一 `docs/DESIGN_DETAIL.md` を見つけたら、`references/todo-generation.md` のフォールバック A (APP / INFRA への分割移行) を案内してから続行する。
 
-DESIGN.md が存在する場合、プロダクトモードは 0.1 の推論・質問を行わず「プロダクトモード」節の判定コマンドでスタンプから復元する (再開時は再質問しない)。DESIGN.md が無く UI_SKETCH.md がある場合は webapp 確定。どちらも無い場合は 0.1 のとおり推論・確認する。
+DESIGN.md が存在する場合、プロダクトモードは 0.1 の推論・質問を行わず「プロダクトモード」節の判定コマンドでスタンプから復元する (再開時は再質問しない)。DESIGN.md が無く UI_SKETCH.html がある場合は webapp 確定。どちらも無い場合は 0.1 のとおり推論・確認する。
 
 - **DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md が揃い、TODO.md 先頭に承認スタンプ (`<!-- dev-spec:approved ... -->`) がある** → 設計は完成している。**フェーズ 12 だけを実行する。** 承認は取得済みなので取り直さない。issue 化済みかの判定は 12.3 の突き合わせが冪等に行うので、ここで自前の確認をしない (全件スキップなら「作成済み」と報告され、`/dev-impl` の案内に進む)
 - **4 点は揃っているが承認スタンプが無い** → 未承認。フェーズ 10.5 (設計整合監査) から再開する
@@ -136,7 +136,7 @@ DESIGN.md が存在する場合、プロダクトモードは 0.1 の推論・�
 | 最も下流の既存成果物                                      | 再開フェーズ                                                  |
 | --------------------------------------------------------- | --------------------------------------------------------------- |
 | USER_STORIES.md                                           | 2 (UI スケッチ)。cli モードでは 2 をスキップし 3 (ユースケース) |
-| UI_SKETCH.md                                               | 3 (ユースケース)                                              |
+| UI_SKETCH.html                                             | 3 (ユースケース)                                              |
 | USECASES.md                                                | 4 (実現可能性)                                                 |
 | FEASIBILITY.md (blocker=true が unresolved)                | 5 (PoC 検証)                                                    |
 | FEASIBILITY.md (全件解決済み)                               | 6 (DDD)。クイックモードなら 7                                   |
