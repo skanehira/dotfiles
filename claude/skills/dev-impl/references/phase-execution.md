@@ -15,7 +15,7 @@
 | `PHASE` | Step 4.1 | 短縮識別子 (`phase-4-a` 形式)。JSONL の `phase` に入れる値 |
 | `PHASE_NAME` | Step 4.1.5 | issue タイトル形式 (`フェーズ4-a: 名前`)。agent へ渡す `phase_name` と `target_diff: phase:<...>` に使う |
 | `ISSUE` | Step 4 の着手時 | 着手中の issue 番号 |
-| `ROUND` | 各 fan-out の直前 | 初回 fan-out は `0`、修正ラウンド後の再検査は `phase_fix_round` と同値 |
+| `ROUND` | 各 fan-out / implementer 起動の直前 | **文字列として扱う**。初回 fan-out は `"0"`、修正ラウンド後の再検査は `phase_fix_round` の値、テストゲート再試行は `"tg<test_gate_retry>"`、報告不整合の再起動は `"retry<phase_fix_round>"`。`--argjson` で数値として書くと後 2 者が JSON エラーになる |
 | `AGENTS_TO_SPAWN` | 各 fan-out の直前 | `<agent>:<model>:<mode>` を**改行区切り**で並べた文字列 (mode 無しは `-`)。空白区切りにしない — zsh は `$VAR` を単語分割しない |
 | `PHASE_SPAWNS` / `RUN_SPAWNS` | Step 4.1 (フェーズ) / Step 0 か Step 1 (run) | カウンタの現在値。復元の正は `spawn` イベントの件数 (logging.md) |
 | `REPORT_PATH` | implementer 起動の直前 | 起動の種類ごとに分ける: `impl-report.json` (初回) / `impl-report-fix-<round>.json` (修正ラウンド) / `impl-report-testgate-<test_gate_retry>.json` (4.2e の再試行) / `impl-report-retry-<phase_fix_round>.json` (`impl_report_invalid` の再起動)。**衝突させない** — 4.2e 手順 4 の突合が成果物とラウンドを 1:1 で対応させるため |
@@ -131,6 +131,10 @@ AGENTS_TO_SPAWN='architecture-guard:haiku:-
 review-tdd:opus:-
 review-adversarial:sonnet:full'
 
+# (0) カウンタを JSONL から数え直す (env.sh の値ではなく spawn イベントの件数が正 = logging.md)
+PHASE_SPAWNS=$(jq -r --arg p "$PHASE" 'select(.event_type=="spawn" and .phase==$p)|1' "$JSONL" | wc -l | tr -d ' ')
+RUN_SPAWNS=$(jq -r 'select(.event_type=="spawn")|1' "$JSONL" | wc -l | tr -d ' ')
+
 # (1) ツリーが clean であること。非空なら直前のラウンドのコミット漏れ (SKILL.md 4.2c)。
 #     実装がコミット済みであることが「全 agent の git diff が同じ差分を返す」ことと
 #     「検査 agent の書き換えが status に現れる」ことの前提になっている
@@ -145,10 +149,10 @@ while IFS= read -r a; do
   NAME="${a%%:*}"; REST="${a#*:}"; MODEL="${REST%%:*}"; MODE="${REST#*:}"
   PHASE_SPAWNS=$((PHASE_SPAWNS + 1)); RUN_SPAWNS=$((RUN_SPAWNS + 1))
   jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
-     --arg n "$NAME" --arg m "$MODEL" --arg mo "$MODE" --argjson r "$ROUND" \
+     --arg n "$NAME" --arg m "$MODEL" --arg mo "$MODE" --arg r "$ROUND" \
      --argjson ps "$PHASE_SPAWNS" --argjson rs "$RUN_SPAWNS" '{
     timestamp:$ts, phase:$p, step:"review", event_type:"spawn", severity:"info",
-    summary:("spawn " + $n + " (" + $m + ", round " + ($r|tostring) + ")"),
+    summary:("spawn " + $n + " (" + $m + ", round " + $r + ")"),
     context:{phase:$p, agent:$n, model:$m, mode:(if $mo == "-" then null else $mo end),
              round:$r, phase_spawns:$ps, run_spawns:$rs}}' >> "$JSONL"
 done <<< "$AGENTS_TO_SPAWN"
