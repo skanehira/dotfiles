@@ -35,8 +35,12 @@ subagent が応答しないまま 30 分経過したかの判定に使う (SKILL
 date +%s > "$SCRATCH_DIR/spawn-$NAME-$ROUND.epoch"
 # ... 応答を待つ ...
 EPOCH_FILE="$SCRATCH_DIR/spawn-$NAME-$ROUND.epoch"
-[ -f "$EPOCH_FILE" ] || { echo "起動時刻が残っていない。タイムアウト判定は行わず待ちを継続する"; }
-waited_minutes=$(( ($(date +%s) - $(cat "$EPOCH_FILE")) / 60 ))
+if [ -f "$EPOCH_FILE" ]; then
+  waited_minutes=$(( ($(date +%s) - $(cat "$EPOCH_FILE")) / 60 ))
+else
+  # 不在のまま計算すると cat が空を返し「現在時刻 ÷ 60 分待った」ことになり、正常な agent を必ず打ち切る
+  echo "起動時刻が残っていない。タイムアウト判定は行わず待ちを継続する"
+fi
 ```
 
 ## 4.2: 事前判定
@@ -122,7 +126,16 @@ TDD の順序・フェーズスコープのテストのみ実行・コミット�
 
 ## 4.2c: 検査 fan-out の起動
 
-**起動前に 2 つを 1 ブロックで行う** (作業ツリーが clean であることの確認 / spawn の先行記録)。**どちらも「起動する前」でなければ意味を成さない**ので、fan-out ごとに必ずこのブロックを流す:
+**起動の形は `adversarial_mode` で変わる** (SKILL.md 4.2c の表が正):
+
+| `adversarial_mode` | 起動のしかた |
+| --- | --- |
+| `full` | ① 下の事前ブロックを adversarial 1 件で流し、単独起動して完了を待つ → ② 汚染の突合 → ③ 事前ブロックを残りの観点で流し、fan-out |
+| `weakening_only` / `skipped` | 事前ブロックを全観点で流し、1 回の fan-out で並列起動 |
+
+`full` の adversarial はレンズ A が共有の作業ツリーを書き換えるため、並列にすると他観点が変異後のコードを読みうる (SKILL.md 4.2c)。`AGENTS_TO_SPAWN` は段ごとに作る — `full` の段 1 は `review-adversarial:sonnet:full` の 1 行だけ、段 3 はそれを除いた残り。
+
+**起動前に 2 つを 1 ブロックで行う** (作業ツリーが clean であることの確認 / spawn の先行記録)。**どちらも「起動する前」でなければ意味を成さない**ので、上のどの段でも起動の前に必ずこのブロックを流す:
 
 ```bash
 # このブロックが前提にする変数 (フェーズ / ラウンドのスコープ。値の出どころは冒頭「変数の定義」)
@@ -224,7 +237,7 @@ jq -c '{
 }' "$RESULT_JSON"
 ```
 
-architecture-guard については、main 側で `checked + sbd + (unchecked の件数)` が**フェーズ差分のソースファイル数と一致すること**を突き合わせる (`git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | wc -l` と比較)。一致しなければ guard の自己申告に漏れがある = 未検証として扱う。
+architecture-guard については、main 側で `checked + sbd + (unchecked の件数)` が**フェーズ差分のソースファイル数と一致すること**を突き合わせる (`git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | wc -l` と比較)。一致しなければ guard の自己申告に漏れがある = 未検証として扱う。**ただし `skip_reason` が非 null のときはこの突合を行わない** — `no_layer_convention` は検査自体を意図的に省いた状態 (checked 0 が正)、`diff_command_failed` は差分が取れていない状態で、どちらも件数の一致を期待できない (各々の扱いは SKILL.md 4.2d 手順 1)。
 
 `message` / `fix_proposal` は main では読まない (修正する implementer が JSON を自分で Read する)。
 

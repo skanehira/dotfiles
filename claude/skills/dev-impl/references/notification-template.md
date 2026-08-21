@@ -51,7 +51,7 @@ UI/UX gap: <未実装画面数> 画面 / <未実装ナビ経路数> 経路 / fro
 
 停止時点の状態:
 - close 済み issue: <このループで閉じた issue 番号、無ければ「なし」>
-- 停止した issue: #<N> (ラベル: <in-progress | needs-human>)
+- 停止した issue: #<N> (ラベル: <in-progress | needs-human>)、または「なし (着手中の issue が無い時点の停止 — Step 1 / 1.5 / 2 / Step 5 系。ラベル操作なし)」
   - `in-progress` = 再実行で解決しうる停止。`/dev-impl` の再実行で Step 2 が再開対象として拾う
   - `needs-human` = 人間の判断が要る停止。対応後、次の `/dev-impl` 起動時に Step 0 が確認してラベルを戻す
   - どちらを貼るかは SKILL.md「エスカレ停止時の挙動」の停止理由別の表に従う
