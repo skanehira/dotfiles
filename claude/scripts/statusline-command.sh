@@ -2,7 +2,7 @@
 # Claude Code の statusLine コマンド。stdin の JSON (フィールドは 2026-08-22 に
 # v2.1.238 の実出力をダンプして確認) を 1 行のステータスラインに整形する。
 #
-#   4m24s | $5.28 | ctx:11% | 5h:36% 7d:51% | Opus 5, high, think | ~/dev/... (master) #4398e15b
+#   4m24s | $5.28 | ctx:11% | 5h:36% →8/22 18:00, 7d:51% →8/27 17:00 | Opus 5, high, think
 #
 # 欠落しうるフィールド (effort はモデル非対応時に不在、context_window の各値は
 # セッション初期に null、rate_limits は Claude.ai サブスクリプション外では不在) が
@@ -15,19 +15,22 @@ input=$(cat)
 # 区切りに \x1f (unit separator) を使うのは、IFS が空白文字だと空フィールドが
 # 詰められて以降の代入位置がずれるため。
 IFS=$'\x1f' read -r -d '' \
-  api_duration_ms cost_usd ctx_pct rate_5h rate_7d model_name effort thinking fast cwd session_id \
+  api_duration_ms cost_usd ctx_pct rate_5h reset_5h rate_7d reset_7d model_name effort thinking fast \
   < <(printf '%s' "$input" | jq -j '
+        # resets_at は Unix epoch 秒。date の書式が BSD (-r) と GNU (-d @) で割れるため
+        # jq 側でローカル時刻に整形して渡す。
+        def reset_at: if . then strflocaltime("%-m/%-d %H:%M") else "" end;
         [ (.cost.total_api_duration_ms // ""),
           (.cost.total_cost_usd // ""),
           (.context_window.used_percentage // ""),
           (.rate_limits.five_hour.used_percentage // ""),
+          (.rate_limits.five_hour.resets_at | reset_at),
           (.rate_limits.seven_day.used_percentage // ""),
+          (.rate_limits.seven_day.resets_at | reset_at),
           (.model.display_name // .model.id // ""),
           (.effort.level // ""),
           (if .thinking.enabled == true then "1" else "" end),
-          (if .fast_mode == true then "1" else "" end),
-          (.workspace.current_dir // .cwd // ""),
-          (.session_id // "")
+          (if .fast_mode == true then "1" else "" end)
         ] | map(tostring) | join("\u001f")
       '; printf '\0')
 
@@ -77,10 +80,17 @@ fi
 # 4. レートリミット使用率
 # rate_limits は Claude.ai サブスクリプションのセッションにしか渡らず、渡る場合も
 # 最初の API 応答までは不在なので、片方だけ来ても表示できるようにしておく。
-rate_parts=()
-[[ -n $rate_5h ]] && rate_parts+=("5h:${rate_5h}%")
-[[ -n $rate_7d ]] && rate_parts+=("7d:${rate_7d}%")
-((${#rate_parts[@]} > 0)) && groups+=("${rate_parts[*]}")
+format_rate() {
+  local label=$1 pct=$2 reset=$3
+  [[ -z $pct ]] && return
+  if [[ -n $reset ]]; then
+    printf '%s:%s%% →%s' "$label" "$pct" "$reset"
+  else
+    printf '%s:%s%%' "$label" "$pct"
+  fi
+}
+rate_group=$(join_comma "$(format_rate 5h "$rate_5h" "$reset_5h")" "$(format_rate 7d "$rate_7d" "$reset_7d")")
+[[ -n $rate_group ]] && groups+=("$rate_group")
 
 # 5. モデル / effort / thinking / fast mode
 # display_name の "Opus 5 (1M context)" のような括弧付き注記は落として短縮する
@@ -91,16 +101,6 @@ fast_label=""
 [[ -n $fast ]] && fast_label="fast"
 model_group=$(join_comma "$model_short" "$effort" "$thinking_label" "$fast_label")
 [[ -n $model_group ]] && groups+=("$model_group")
-
-# 6. カレントディレクトリ / git ブランチ / セッション ID
-location_parts=()
-if [[ -n $cwd ]]; then
-  location_parts+=("${cwd/#$HOME/\~}")
-  branch=$(git -C "$cwd" branch --show-current 2>/dev/null)
-  [[ -n $branch ]] && location_parts+=("($branch)")
-fi
-[[ -n $session_id ]] && location_parts+=("#${session_id:0:8}")
-((${#location_parts[@]} > 0)) && groups+=("${location_parts[*]}")
 
 line=""
 for group in "${groups[@]}"; do
