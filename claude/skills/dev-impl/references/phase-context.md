@@ -68,7 +68,7 @@ snapshot_dir: <$SCRATCH_DIR/product-readiness-snapshots/ の絶対パス>  # 視
 
 - `phase_tasks`: `gh issue view <N> --json body -q .body` の出力から `## ゴール` / `## DoD` / `## 非スコープ` / `## 実装タスク` の 4 節を切り出す (`## 参照すべき docs` は設計の該当節を読む入口なので、必要な節だけ docs から読んで `design_detail` に入れる)
 - `design_overview` / `design_detail`: フェーズ名から推測した key term (例: 「認証」「ユーザー登録」「CI」「デプロイ」) で DESIGN / DETAIL_APP / DETAIL_INFRA を grep、ヒット節とその前後を抜粋。**抜粋は必須、全文フォールバックは禁止** (1 フェーズにつき implementer + 最大 4 検査 subagent がそれぞれ Read するため、全文だとコストが大きい)。抜粋の目安上限は 1 ファイルあたり 4KB、超える場合は該当節の見出し + 要約のみ残す。抜粋に加えて「このフェーズに関連しそうな DESIGN / DETAIL_APP / DETAIL_INFRA の見出し一覧」を必ず列挙し、抜粋に本文が無い見出しが必要になったら subagent が `*_path` を自分で Read する (抜粋漏れを silent にしない。Read した subagent は報告の `spec_lookups` に記録し、親が抜粋精度を事後に確認できるようにする)
-- `related_source_files`: フェーズ名 / phase_tasks から推測したキーワードで Glob (`src/**/*<key>*`) + git diff で過去フェーズで触ったファイル
+- `related_source_files`: **issue 本文の `## 変更が想定されるファイル` を初期値として取り込む** (dev-spec が設計時に特定したファイルなので、推測より確度が高い)。そのうえでフェーズ名 / phase_tasks から推測したキーワードで Glob (`src/**/*<key>*`) + git diff で過去フェーズで触ったファイルを足す。**この節を取り込まないと、dev-spec が書いた変更想定ファイルが implementer に一切届かない** (`phase_tasks` の抽出は 4 節だけなので、そちらにも入らない)
 - `prev_phase_summary`: decisions.jsonl の直前 issue の `event_type: impl_done` エントリ summary を引く
 
 ### 言語別 rules の選択

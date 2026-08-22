@@ -65,10 +65,10 @@ TDD: `rules/core/tdd.md` / 設計原則: `rules/core/design.md` / テスト戦�
 
 ## 進捗ログ (2 系統)
 
-**リアルタイム監視用の 1 行テキストログ**と**事後振り返り用の構造化 JSONL** を並走させる。各ステップの「開始 / 完了 / 動的修正 / エスカレ」発生時に両方へ同期して書き込む (1 行ログ = summary のみ、JSONL = summary + context を構造化)。終了時に JSONL から HTML レポート (Step 7) を生成する。`START_SHA` は Step 5.2 の監査 agent 呼び出しと Step 6 / エスカレ通知のテンプレート ([references/goal-audit.md](./references/goal-audit.md) / [references/notification-template.md](./references/notification-template.md)) から参照される。
+**リアルタイム監視用の 1 行テキストログ**と**事後振り返り用の構造化 JSONL** を並走させる。各ステップの「開始 / 完了 / 動的修正 / エスカレ」発生時に両方へ同期して書き込む (1 行ログ = summary のみ、JSONL = summary + context を構造化)。終了時に JSONL から HTML レポート (Step 7) を生成する。`START_SHA` は Step 5.2 の監査 agent 呼び出し ([references/goal-audit.md](./references/goal-audit.md)) と Step 6 の完了サマリ ([references/notification-template.md](./references/notification-template.md) の `## 完了サマリ (Step 6)`) から参照される (エスカレ停止通知が使うのは `<SHA>` と `<PHASE_START_SHA>` で、`START_SHA` は使わない)。
 
 - **run スコープの変数は Step 0 の再入判定を済ませてから確定する** (再入なら `run_id` を引き継ぐので、先に発行すると捨てる羽目になる)
-- **シェル変数は Bash ツールの呼び出しをまたいで消える。** run スコープの値は `$RUN_DIR/env.sh`、フェーズスコープの値 (`PHASE` / `PHASE_NAME` / `PHASE_START_SHA` / `SCRATCH_DIR` / `ISSUE`) は Step 4.1 で `$SCRATCH_DIR/env.sh` に書き、各ブロックの冒頭で両方を `source` して再確立する
+- **シェル変数は Bash ツールの呼び出しをまたいで消える。** run スコープの値は `$RUN_DIR/env.sh`、フェーズスコープの値 (`PHASE` / `PHASE_NAME` / `PHASE_ID` / `PHASE_START_SHA` / `SCRATCH_DIR` / `ISSUE`) は Step 4.1 で `$SCRATCH_DIR/env.sh` に書き、各ブロックの冒頭で両方を `source` して再確立する
 - **`ROUND` とカウンタは env.sh に書かない** (ラウンドごとに変わる値で、フェーズ開始時に 1 度書く env.sh の性質と合わない)。カウンタは `spawn` イベントの件数から数え直す。**導出式の正は [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 0: カウンタ・予算・gating_decided の復元`** で、本文でも logging.md でも再定義しない
 - **`$HOME` を使い、`~` を変数に入れない。** `~` はシェルの展開に依存するので、subagent への受け渡しや `jq --arg` を経由すると文字列 `~/...` のまま渡り、存在しないパスを指す
 
@@ -162,7 +162,7 @@ gh issue list --repo "$REPO_SLUG" --state open  --limit $LIMIT --json number,tit
 gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --jq '[.[].number]' > "$RUN_DIR/issues-closed.json"
 ```
 
-取得した open issue には UC 親 issue も混ざる。下表の 1 行目 (`uc-tracking`) で先に除外してから着手判定に入る。
+以降の着手判定と `Depends on #N` の closed 判定は、この 2 ファイルを `jq` で引く (`gh` を再実行しない)。取得した open issue には UC 親 issue も混ざる。下表の 1 行目 (`uc-tracking`) で先に除外してから着手判定に入る。
 
 | 条件 | 扱い |
 | --- | --- |
@@ -185,7 +185,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 | `goal_loop` (ゴール達成判定 → 未達対応の周回数) | 2 (周)                                                    | P3 として停止                                   |
 | `phase_fix_round` (現フェーズの検査 → 修正の周回数) | `phase_fix_budget` (既定 3。**再入時は `max(3, 復元値 + 1)` に引き上げ、フェーズの `start` イベントの `context.phase_fix_budget` に記録する。復元は記録値の最大**) | `phase_fix_exceeded` でエスカレ停止 (context に guard 由来 / review 由来の内訳を残す) |
 | `test_gate_retry` (現フェーズの 4.2e テストゲート再試行回数) | 3 (回)                                       | `tests_failing_before_commit` でエスカレ停止    |
-| `phase_spawns` (現フェーズの累計 subagent 起動数) | `phase_spawns_budget` (既定 33。**再入時は `max(33, 復元値 + 16)` に引き上げ、フェーズの `start` イベントの `context.phase_spawns_budget` に記録する。復元は記録値の最大**) — `spawn_budget_exceeded` は「再実行で解決しうる」停止で、復元されたカウンタが上限を超えたままだと再実行が構造的に何も解決しない (`run_spawns_budget` と同じ理由。16 は fix 1 + 再検査 5 の 2 ラウンド分 + 予備) | `spawn_budget_exceeded` でエスカレ停止          |
+| `phase_spawns` (現フェーズの累計 subagent 起動数) | `phase_spawns_budget` (既定 33 (spawn)。**再入時は `max(33, 復元値 + 16)` に引き上げ、フェーズの `start` イベントの `context.phase_spawns_budget` に記録する。復元は記録値の最大**) — `spawn_budget_exceeded` は「再実行で解決しうる」停止で、復元されたカウンタが上限を超えたままだと再実行が構造的に何も解決しない (`run_spawns_budget` と同じ理由。16 は fix 1 + 再検査 5 の 2 ラウンド分 + 予備) | `spawn_budget_exceeded` でエスカレ停止          |
 | `run_spawns` (run 全体の累計 subagent 起動数)   | `run_spawns_budget` (下記「spawn 予算の意図」で定義)      | 同上                                            |
 
 **再入で予算が増える 3 つ (`phase_fix_budget` / `phase_spawns_budget` / `run_spawns_budget`) は同じ理屈で動く。** いずれの停止理由も「再実行で解決しうる」か「人間が対応した後に再開する」ものなので、**再入しても予算が一切増えないなら再実行が構造的に何も解決できず、即座に同じ理由で再停止する**。予算の追加付与を人間の再起動に紐づけることで、1 セッション内の暴走は有限の予算で止めたまま、人間の判断を挟んだ継続だけが前進する。`phase_fix_budget` の増分が **+1** なのは `phase_fix_exceeded` が `needs-human` に分類される停止だからで、人間が 1 回対応したら 1 ラウンド分だけ直す余地を与える対応付けにしてある。
@@ -207,7 +207,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 
   | 更新時点 | 計算 |
   | --- | --- |
-  | 新規 run の開始時 (Step 1 で `OPEN` を数えた直後) | `run_spawns_budget = max(OPEN × 20, 16)` (このとき `run_spawns` は 0) |
+  | 新規 run の開始時 (Step 1 で `OPEN` を数えた直後) | `run_spawns_budget = max(OPEN × 20 (spawn/issue), 16 (spawn))` (このとき `run_spawns` は 0) |
   | run 再入時 (Step 1 で `OPEN` を数えた直後) | `run_spawns_budget = max(復元値, run_spawns + OPEN × 20, run_spawns + 16)` |
   | issue 追加時 (P1 / P2 動的修正・Step 5.5) | `run_spawns_budget = max(現在値, run_spawns + その時点の OPEN × 20)` (Step 4.6「新フェーズの issue 化」手順 3) |
 
@@ -272,7 +272,7 @@ gh issue close <N> --repo "$REPO_SLUG" --comment "DoD がすべて通過した�
 
 #### Step 4.1.5: PHASE_CONTEXT の組み立て
 
-implementer と検査 subagent (architecture-guard / review-*) は parent のコンテキストを継承しないため、dev-impl が「フェーズ 1 本を実装・検査するのに必要な情報パッケージ」を組み立てて **`docs/.dev-impl/<run_id>/phase-<識別子>-context.md` に Write** する (`<識別子>` は issue タイトル `フェーズ<識別子>: <名前>` の `フェーズ` 直後からコロンまでの文字列。`1` だけでなく `4-a` のような接尾辞付きもある。タイトル形式は dev-spec のフェーズ 12.4.2 が固定している)。subagent には prompt にこのファイルの絶対パスだけを渡し、各 agent が必要な節を自分で Read する (1 フェーズあたり implementer 1 + 検査 subagent 最大 5 への同一内容の重複埋め込みを避けるため)。**このファイルが implementer にとってフェーズの唯一の入力になる**ので、抜粋の不足はそのまま実装の質に出る。
+implementer と検査 subagent (architecture-guard / review-*) は parent のコンテキストを継承しないため、dev-impl が「フェーズ 1 本を実装・検査するのに必要な情報パッケージ」を組み立てて **`docs/.dev-impl/<run_id>/phase-<識別子>-context.md` に Write** する (`<識別子>` は issue タイトル `フェーズ<識別子>: <名前>` の `フェーズ` 直後からコロンまでの文字列。`1` だけでなく `4-a` のような接尾辞付きもある。タイトル形式は dev-spec のフェーズ 12.4.2 が固定している)。subagent には prompt にこのファイルの絶対パスだけを渡し、各 agent が必要な節を自分で Read する (1 フェーズあたり implementer 1 + 検査 subagent 最大 5 への同一内容の重複埋め込みを避けるため)。**このファイルが implementer にとってフェーズの唯一の入力になる**ので、抜粋の不足はそのまま実装の質に出る。**Write した直後に必須キーの充足を機械照合する** — `rg -c '^(product_mode|phase_name|phase_start_sha|phase_tasks|phase_test_command|full_test_command|gate_commands_verified|repo_state|related_rules_paths|run_facts_path):' <file>` が 10 件を返すこと。欠けたまま起動すると implementer は「書かれていない」と「調べていない」を区別できない。
 
 `docs/.dev-impl/` は `.gitignore` に追加する (無ければ追記)。**追記が必要なら Step 1 の構造ゲート通過直後に行い、その時点で 1 度コミットする** — Step 4 に入ってから追記すると、`.gitignore` の変更自体が working tree の差分として残り、Step 4 の完了判定に紛れ込む。
 
@@ -324,7 +324,7 @@ implementer 報告の `design_decisions` (設計が沈黙・あいまいな箇�
 
 ##### 4.2b: LSP 警告修正 (Lua/Neovim のみ)
 
-`IS_NEOVIM_PLUGIN=true` なら `fix-lsp-warnings` agent を `model: "haiku"` 明示で起動する (対象はフェーズ差分ファイルのみ)。**起動の直前に `spawn` を記録する。** 失敗は警告ログのみで継続し、`verification_skipped` (source: `lsp_fix_failed`) を記録する。**修正が入った場合は main が `phase_test_command` を再実行して緑を確認したうえでコミットする** (subject は `<emoji> style: [phase-<識別子>] LSP 警告を解消する`)。**コミットせずに 4.2c へ進んではならない** — 4.2c の clean 確認が必ず失敗し、「直前のラウンドのコミットが漏れている」という事実と違う診断を出す。**このステップだけは検査 fan-out に混ぜない** (修正する agent なので、レビューと同時に走らせるとレビュー対象のファイルが検査中に書き換わる)。
+`IS_NEOVIM_PLUGIN=true` なら `fix-lsp-warnings` agent を `model: "haiku"` 明示で起動する (対象はフェーズ差分ファイルのみ)。**起動の直前に `spawn` を記録する。** 失敗は警告ログのみで継続し、`verification_skipped` (source: `lsp_fix_failed`) を記録する。**修正が入った場合** (`git -C "$REPO_DIR" status --porcelain` が非空。fix-lsp-warnings は結果 JSON を出さないので報告からは判定できず、ツリーの差分で見る) **は main が `phase_test_command` を再実行して緑を確認したうえでコミットする** (subject は `<emoji> style: [phase-<識別子>] LSP 警告を解消する`)。**コミットせずに 4.2c へ進んではならない** — 4.2c の clean 確認が必ず失敗し、「直前のラウンドのコミットが漏れている」という事実と違う診断を出す。**このステップだけは検査 fan-out に混ぜない** (修正する agent なので、レビューと同時に走らせるとレビュー対象のファイルが検査中に書き換わる)。
 
 ##### 4.2c: 検査 fan-out (main が起動して待つ)
 
@@ -336,6 +336,7 @@ fan-out 前の事前ブロックでは、続けて次の 3 つを行う (いず�
 
 - **implementer の自己免除を抽出して検査 agent へ渡す** (`## 4.2c: 自己免除の抽出`)。実装者が「検証しない」と宣言した項目は、記録するだけでは誰も裁定しない。**抽出元は当該フェーズの全 report であって最新の 1 本ではない**。出力が `[]` でもファイルは必ず作り、`exemptions_path` として review-tdd と review-adversarial に渡す。**失敗と「免除 0 件」を同じ `[]` に潰すと、4.2d 手順 1 の裁定チェックが常に 0 件と比較することになり自分で自分を無効化する**
 - **`EXEMPTIONS_COUNT` が 1 以上なのに review-tdd と review-adversarial のどちらも起動しないフェーズ**では免除が誰にも裁定されないまま通過するので、`verification_skipped` (source: `exemptions_unadjudicated`) を記録して Step 5.6 の集約に載せる
+- **予算を比較してから起動する。** 事前ブロックで `phase_spawns` / `run_spawns` を JSONL の `spawn` 件数から数え直し、`phase_spawns_budget` (当該 phase の `start` の記録値の最大) / `run_spawns_budget` (`start` / `phase_added` の記録値の最大) と比較する。**この fan-out で起動する体数を足した結果が上限を超えるなら、1 体も起動せず `spawn_budget_exceeded` でエスカレ停止する** — 増分と上限は定義されているのに比較する地点が無いと、上限が一度も評価されないまま走る
 - **この fan-out で起動する agent の `spawn` を JSONL に先に書く** (`## 4.2c: spawn の事前記録`)。**起動した後ではなくこの事前ブロックの中で行う** — 起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。`run_spawns` の予算ゲートはこの記録を唯一のソースにしている
 
 **`mode: full` の review-adversarial は fan-out に入れず、単独で先に走らせてから残りを fan-out する。** レンズ A は**共有の作業ツリー上でソースを直接書き換えて実行し、終える前に戻す**ので、その間に並列で走る観点は変異後のコードを読みうる。読んだかどうかは事後に判別できず (戻ってしまえば `status` は clean)、その観点の結果が「fatal なし」でも「fatal あり」でも信用できない。**影響は dev サーバを立てる review-product-readiness に限らない** — guard も tdd も quality も同じツリーを読む。`weakening_only` は変異を行わないので通常どおり fan-out に入れてよい。起動順序の表は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: adversarial_mode 別の起動順序`。
@@ -384,7 +385,7 @@ severity: low/medium の findings は修正せず JSONL に `event_type: review_
 
 ##### 4.2e: テストゲート + コミット (main)
 
-コミット前に **main が `full_test_command` を Bash で直接実行し、exit code 0 を確認する** (自己申告ではなく実行結果で判定)。implementer にはフェーズスコープのテストしか実行させていないので、全体スイートの実行はここが初回になる。main が実行するのは cache write が 1 時間 TTL で長時間の実行に耐えるため (subagent は 5 分 TTL)。**ただし Bash の 600 秒上限は主体によらず効く**ので、超えるプロジェクトでは `run_in_background: true` で起動してポーリングし、**タイムアウトした実行は「未検証」として `verification_skipped` に記録して成功扱いにしない**。失敗時の再試行経路 (`test_gate_retry`、上限 3 で `tests_failing_before_commit`) は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2e: 全体スイートのテストゲート` が正。
+コミット前に **main が `full_test_command` を Bash で直接実行し、exit code 0 を確認する** (自己申告ではなく実行結果で判定)。**タイムアウトした実行は「未検証」として `verification_skipped` に記録し、成功扱いにしない。** 実行主体を main にする理由・600 秒上限の回避・失敗時の再試行経路 (`test_gate_retry`、上限 3 で `tests_failing_before_commit`) は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2e: 全体スイートのテストゲート` が正で、ここでは繰り返さない。
 
 続けて **issue 本文の `## DoD` ブロックを実行する**。全体スイートが緑でも、その issue 固有の受入基準は別に確認しなければならない (`## DoD` は dev-spec のフェーズ 10 が著作し 10.5 の監査が実行可能性まで検査した唯一の issue 単位の受入基準で、ここで実行しないと誰も実行しない)。抽出と実行のコマンドは [references/phase-gates.md](./references/phase-gates.md) の `## 4.2e: DoD ブロックの抽出と実行` を Read してから実行する (**抽出が空でないことの確認を省くと**、空の `dod.sh` への `bash -e` は必ず exit 0 を返すので「1 件も実行していない」が「全通過」と区別できなくなる)。同節の規定:
 
@@ -531,7 +532,7 @@ Step 5 のゴール判定後、`docs/POST_MVP.md` に **「UI/UX gap」セクシ
 
 ##### status 判定
 
-UI/UX gap セクションが**空でなければ** dev-impl の終了 status を `partial` にする。判定表は [references/goal-audit.md](./references/goal-audit.md) の `## Step 5.6: status 判定`。`partial` でも commit と HTML レポート生成は実行する (中途半端でも記録は残す)。
+UI/UX gap セクションが**空でなければ** dev-impl の終了 status を `partial` にする。**「空」は機械判定する** — 各見出しの配下に `- ` で始まる行が 0 件であること (post-mvp-template.md はプレースホルダ行を含むテンプレートなので、テンプレートのまま埋めなかった場合と本当に 0 件の場合を目視では区別できない。プレースホルダが残っていれば非空 = `partial` に倒す)。判定表は [references/goal-audit.md](./references/goal-audit.md) の `## Step 5.6: status 判定`。`partial` でも commit と HTML レポート生成は実行する (中途半端でも記録は残す)。
 
 ### Step 6: 全フェーズ完了サマリ
 

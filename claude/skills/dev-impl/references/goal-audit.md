@@ -79,6 +79,12 @@ output_path: ${absRunDir}/review-product-readiness-goal-e2e.json
 })
 ```
 
+**`devServerUrl` / `devServerStartCommand` はこの時点で 1 回推定して得る。** フェーズループを抜けているので PHASE_CONTEXT は使えない — phase-context.md の `## dev_server` の推定手順をここで実行する。推定できなければ G_E2E を実行せず `verification_skipped` (source: `dev_server_unavailable`) を記録して手動 pending に落とす (成功扱いにしない)。
+
+**`snapshot_dir` はフェーズ単位 (`product-readiness-snapshots/`) と Step 5.2 (`review-product-readiness-snapshots/`) で別ディレクトリを使う。** スコープが違うので意図的に分けてあるが、post-mvp-template.md の「視覚的回帰参照」が案内するのは前者だけなので、Step 5.2 の分を参照させたいときは明示する。
+
+**起動する直前に `event_type: spawn` を JSONL へ書く** (SKILL.md Step 3 の「7 箇所すべてで起動前に記録する」規定)。フェーズ外の起動なので `phase` には `"run"` を入れる (logging.md)。
+
 **パスはすべて絶対で渡す** (`absRepoDir` = `git rev-parse --show-toplevel`、`absRunDir` = `$HOME` 展開済みの `~/.claude/logs/dev-impl/<run_id>`)。subagent の Bash は呼び出しごとに cwd が親のものへ戻り、`~` もシェルを介さない受け渡しでは展開されないため、相対パスやチルダのままでは意図した場所を指さない。`agent-spawn-guard` の必須フィールド検査はキーの存在しか見ないので、**値の形式はこのテンプレート側でしか担保できない**。
 
 `holdout_enabled` は現時点でデフォルト無効。TODO.md に書かれていないエッジケースを review-spec-compliance が能動的に生成・検証する PoC 機能で (review-spec-compliance.md 参照)、効果測定後に有効化を検討する。

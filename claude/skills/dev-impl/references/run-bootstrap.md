@@ -49,6 +49,9 @@ export REPO_DIR="$(git rev-parse --show-toplevel)"   # Step 1 の REPO_ROOT と�
 export START_SHA="$(git rev-parse HEAD)"         # run 全体の開始 SHA (PHASE_START_SHA とは別スコープ)
 export REPO_SLUG="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 export LIMIT=1000                                # gh issue list の取得上限 (Step 1)
+# PRODUCT_MODE は Step 1 でスタンプを読んでから追記する (この時点では docs 未読)。
+# run 全体で参照する値なので、フェーズを抜けた Step 5.2 / 5.6 が引けるようファイルに置く:
+#   echo "export PRODUCT_MODE=\"$PRODUCT_MODE\"" >> "$RUN_DIR/env.sh"
 EOF
 . "$RUN_DIR/env.sh"
 fi
@@ -82,7 +85,11 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg root "$REPO_DIR" \
 
 **「Agent の起動をまたいで比較する値」は env.sh ではなく専用のファイルに落とす** (env.sh はフェーズ開始時に 1 度書くもので、ラウンドごとに変わる値の置き場ではない)。該当するのは次の 3 つで、**いずれも「取った時点」と「使う時点」の間に必ず Agent の待ちが挟まる**:
 
-(値と置き場の対応表は SKILL.md 本体の「進捗ログ (2 系統)」節にある。)
+該当する 3 つと置き場は次のとおり (対応表の正は SKILL.md 本体の「進捗ログ (2 系統)」節):
+
+- `BEFORE_FIX` / `BEFORE` (ラウンド前の HEAD) → `$SCRATCH_DIR/before-<round>.sha`
+- `SPAWN_EPOCH` (起動時刻) → `$SCRATCH_DIR/spawn-<agent>-<round>.epoch`
+- `EXEMPTIONS_COUNT` → `$SCRATCH_DIR/self-exemptions.json` から都度算出
 
 **読み出し側は「ファイルが無い」を沈黙で通さない。** `[ -f "$f" ] || { echo "起動前の値が残っていない。判定不能"; exit 1; }` を必ず置く — 無いまま進むと、たとえば「fix がテストに触れたか」の判定が `git diff` の失敗を経て 0 件 (= 触れていない) を返し、**reward hacking を守るためのゲートが沈黙して開く**。カウンタ (`PHASE_SPAWNS` / `RUN_SPAWNS`) は env.sh に書いた値ではなく **JSONL の `spawn` イベントの件数から数え直す** (logging.md が復元の正と定めている。ファイルの値は書き損ねると実態からずれるが、件数はイベントそのものから出る)。
 
@@ -150,15 +157,16 @@ printf '%s' "$REENTRY_JSONL" > "$HOME/.claude/logs/dev-impl/.reentry"
 
 ```bash
 REPO_ROOT="$REPO_DIR"   # 「進捗ログ」で代入済み。両者は同じ値で、subagent へ渡すときは REPO_DIR の名前を使う
-REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+# REPO_SLUG と LIMIT は env.sh で確定済み (`. "$RUN_DIR/env.sh"` を通していれば再代入は不要)。
+# 正は本ファイルの `## run スコープ変数と env.sh の生成` 側で、ここでは値を書かない
 NOT_UC='[.[] | select((.labels | map(.name) | index("uc-tracking")) | not)] | length'
-LIMIT=1000   # 上限に張り付くと一部の issue が見えないまま「全件」を装うため、実運用の最大想定より大きく取る
+# $LIMIT の意図: 上限に張り付くと一部の issue が見えないまま「全件」を装うため、実運用の最大想定より大きく取る
 OPEN=$(gh issue list --repo "$REPO_SLUG" --state open   --limit $LIMIT --json number,labels --jq "$NOT_UC")
 CLOSED=$(gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number,labels --jq "$NOT_UC")
 
 # 上限に達していないことを確認する (uc-tracking を含む生の件数で見る)
 RAW=$(gh issue list --repo "$REPO_SLUG" --state all --limit $LIMIT --json number --jq 'length')
-[ "$RAW" -lt "$LIMIT" ] || { echo "issue が $LIMIT 件の上限に達している。取得漏れの可能性があるため停止する"; exit 1; }
+[ "$RAW" -lt "$LIMIT" ] || { echo "issue_list_truncated: issue が $LIMIT 件の上限に達している。取得漏れの可能性があるため停止する"; exit 1; }
 ```
 
 **構造ゲート (下記) を通過したら、`docs/.dev-impl/` が `.gitignore` にあることを確認し、無ければ追記して 1 度コミットする** (`🔧 chore: [STRUCTURAL] dev-impl の作業ファイルを ignore する`)。PHASE_CONTEXT と RUN_FACTS の置き場で、Step 4.1.5 が書き始める前に ignore されている必要がある。**Step 4 に入ってから追記すると `.gitignore` の変更自体がフェーズの差分に紛れ込み**、完了判定と検査 agent の差分に無関係なファイルが混ざる。
