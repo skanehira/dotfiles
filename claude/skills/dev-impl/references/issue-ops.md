@@ -50,7 +50,7 @@ done
 **P1 / P2 が編集した docs は、その場でコミットする。** Step 4.6 は 4.2e のコミットより**後**に走るため、ここでコミットしないと変更は working tree に残ったまま次のフェーズへ進む。その run がエスカレ停止すれば、**設計をどう変えたかが git の履歴に一切残らない** (JSONL と HTML レポートには残るが、差分そのものは失われる)。
 
 ```bash
-git add docs/TODO.md            # P2 では編集した DESIGN_DETAIL_APP.md / _INFRA.md も含める
+git add docs/TODO.md            # P2 では編集した DESIGN_DETAIL_APP.md / _INFRA.md / docs/features/ 配下も含める
 git commit -m "$(cat <<'EOF'
 📝 docs: <P1|P2> 動的修正 — <何をどう変えたかの 1 行>
 

@@ -15,7 +15,7 @@ DESIGN.md (概要) と DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md (詳細) �
 
 ### 2. インタビューの実施
 
-**最初に機能仕様の未決定行を回収する。** `docs/features/` が存在すれば `rg -n '要判断:' docs/features/` で未決定行を全件拾い、**インタビューの必須質問として他の観点より先に出す**。これらは設計者 (フェーズ 7.5) が単独で決められないと判断したプロダクト判断であり、ここで人間に届けないと未決定のまま承認ゲートに流れる (最後の網はフェーズ 10.5 の `feature_spec_unresolved`)。回答は該当する機能仕様のエッジケース表の行に決定として書き戻し、`要判断:` のリテラルを消す。
+**最初に機能仕様の未決定行を回収する。** `docs/features/` が存在すれば `rg -n '要判断:' docs/features/` で未決定行を全件拾い、**インタビューの必須質問として他の観点より先に出す**。これらは設計者 (フェーズ 7.5) が単独で決められないと判断したプロダクト判断であり、ここで人間に届けないと未決定のまま承認ゲートに流れる (最後の網はフェーズ 10.5 の `feature_spec_unresolved`)。回答は該当する機能仕様の当該行 (エッジケース表に限らず、入出力契約など `要判断:` を置いた場所) に決定として書き戻し、`要判断:` のリテラルを消す。
 
 続けて、全ファイルの内容を踏まえた上で、AskUserQuestion ツールを使って深掘りインタビューを行う。
 
@@ -50,7 +50,7 @@ AskUserQuestion({
     header: "PoC 判断",
     options: [
       { label: "いま PoC で検証する", description: "実装方針を左右する要素。フェーズ 5 (poc-verification.md) に戻り tech-investigation で検証してから設計を確定する" },
-      { label: "blocker=false で残す", description: "継続可、後追い検証。POC_NEEDED マーカーとして DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側に残す" },
+      { label: "blocker=false で残す", description: "継続可、後追い検証。POC_NEEDED マーカーとして DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md (機能単体の契約なら docs/features/ の該当ファイル) に残す" },
       { label: "残さない", description: "現時点で方針を確定する (このインタビューで決める)" }
     ],
     multiSelect: false
@@ -58,7 +58,7 @@ AskUserQuestion({
 })
 ```
 
-「残す」を選択された場合、検証対象がアプリ実装なら DESIGN_DETAIL_APP.md、インフラ構成なら DESIGN_DETAIL_INFRA.md の該当セクションに以下を埋め込む:
+「残す」を選択された場合、検証対象がアプリ実装なら DESIGN_DETAIL_APP.md、インフラ構成なら DESIGN_DETAIL_INFRA.md、機能単体の契約なら docs/features/ の該当ファイルに以下を埋め込む:
 ```
 <!-- POC_NEEDED: id=<unique-id>, scope=<検証対象>, risk=<high|medium|low>, blocker=<true|false> -->
 ```

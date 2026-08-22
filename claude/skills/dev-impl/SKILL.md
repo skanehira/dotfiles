@@ -146,6 +146,7 @@ GOALS_SHA=$(
 
 ```bash
 rg -n '<!-- POC_NEEDED: .* -->' docs/DESIGN.md docs/DESIGN_DETAIL_APP.md docs/DESIGN_DETAIL_INFRA.md
+test -d docs/features && rg -n '<!-- POC_NEEDED: .* -->' docs/features/
 ```
 
 判定表は [references/run-bootstrap.md](./references/run-bootstrap.md) の `## Step 1.5: PoC マーカー検出結果の分岐` を Read して従う。
@@ -271,7 +272,7 @@ gh issue close <N> --repo "$REPO_SLUG" --comment "DoD がすべて通過した�
 
 #### Step 4.1.5: PHASE_CONTEXT の組み立て
 
-implementer と検査 subagent (architecture-guard / review-*) は parent のコンテキストを継承しないため、dev-impl が「フェーズ 1 本を実装・検査するのに必要な情報パッケージ」を組み立てて **`docs/.dev-impl/<run_id>/phase-<識別子>-context.md` に Write** する (`<識別子>` は issue タイトル `フェーズ<識別子>: <名前>` の `フェーズ` 直後からコロンまでの文字列。`1` だけでなく `4-a` のような接尾辞付きもある。タイトル形式は dev-spec のフェーズ 12.4.2 が固定している)。subagent には prompt にこのファイルの絶対パスだけを渡し、各 agent が必要な節を自分で Read する (1 フェーズあたり implementer 1 + 検査 subagent 最大 5 への同一内容の重複埋め込みを避けるため)。**このファイルが implementer にとってフェーズの唯一の入力になる**ので、抜粋の不足はそのまま実装の質に出る。**Write した直後に必須キーの充足を機械照合する** — `rg -c '^(product_mode|phase_name|phase_start_sha|phase_tasks|phase_test_command|full_test_command|gate_commands_verified|repo_state|related_rules_paths|run_facts_path|risk_faces|usecase_id):' <file>` が **12 件**を返すこと。欠けたまま起動すると implementer は「書かれていない」と「調べていない」を区別できない。
+implementer と検査 subagent (architecture-guard / review-*) は parent のコンテキストを継承しないため、dev-impl が「フェーズ 1 本を実装・検査するのに必要な情報パッケージ」を組み立てて **`docs/.dev-impl/<run_id>/phase-<識別子>-context.md` に Write** する (`<識別子>` は issue タイトル `フェーズ<識別子>: <名前>` の `フェーズ` 直後からコロンまでの文字列。`1` だけでなく `4-a` のような接尾辞付きもある。タイトル形式は dev-spec のフェーズ 12.4.2 が固定している)。subagent には prompt にこのファイルの絶対パスだけを渡し、各 agent が必要な節を自分で Read する (1 フェーズあたり implementer 1 + 検査 subagent 最大 5 への同一内容の重複埋め込みを避けるため)。**このファイルが implementer にとってフェーズの唯一の入力になる**ので、抜粋の不足はそのまま実装の質に出る。**Write した直後に必須キーの充足を機械照合する** — `rg -c '^(product_mode|phase_name|phase_start_sha|phase_tasks|phase_test_command|full_test_command|gate_commands_verified|repo_state|related_rules_paths|run_facts_path|risk_faces|usecase_id|feature_spec|usecase_detail):' <file>` が **14 件**を返すこと (`feature_spec` / `usecase_detail` は値が無くても `null` でキー自体を書く — 欠落と「無い構成」を区別するため)。欠けたまま起動すると implementer は「書かれていない」と「調べていない」を区別できない。
 
 `docs/.dev-impl/` は `.gitignore` に追加する (無ければ追記)。**追記が必要なら Step 1 の構造ゲート通過直後に行い、その時点で 1 度コミットする** — Step 4 に入ってから追記すると、`.gitignore` の変更自体が working tree の差分として残り、Step 4 の完了判定に紛れ込む。
 
@@ -453,14 +454,14 @@ implementer 報告 (`mode: implement` / `mode: fix` 双方) の `deviation_signa
 ##### P2 動的修正
 
 1. `p2_fixes_total += 1`。**回数では止めない** — 詳細設計の不足は実装しないと分からないことが多く、回数が増えること自体は異常ではない。代わりに**何をどう変えたかを後から追える形で残す**責任を負う (手順 6 のコミット / 手順 7 の JSONL / Step 6 の完了サマリ / HTML レポートのセクション 4 の 4 つが揃って初めて「確認できる」状態になる)。設計の前提そのものが崩れている場合は回数に関わらず P3 (`design_overview_break`) として停止する — これは回数ではなくシグナルの種類で判定する
-2. DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側 (境界基準: 変更に IaC・コンソール操作・環境設定変更が要るなら INFRA) のセクションを Edit
+2. 編集先を射程で決めて Edit する: 機能単体の契約 (出力形式・エッジケースの決定・fixture) なら `docs/features/UC-<n>.md` と `docs/features/fixtures/uc-<n>/` の該当箇所、横断関心事なら DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側 (境界基準: 変更に IaC・コンソール操作・環境設定変更が要るなら INFRA)。fixture を変更する場合も**実装の出力からの再生成は禁止** — 仕様として正しい期待値を書き直す
 3. **受入基準ガード**: Edit 直後に goals_sha を再計算 (Step 1 のコマンド) し、承認スタンプの値と照合する。不一致 = 受入基準 (ゴール / 検証手順行) を触った P2 であり、実装者による自己適用は禁止。Edit を revert せず `acceptance_criteria_change` でエスカレ停止する (「受入基準の変更が必要になった。dev-spec フェーズ 9 → 11 で再承認せよ」と通知。実装ガイド・スキーマ等の追記はハッシュ対象外なので通過する)
 4. **再生成の前にフェーズ見出しのスナップショットを取る** (再生成後では「前」の状態が失われ、増えたフェーズを特定できない)。そのうえで `../dev-spec/references/todo-generation.md` を Read し、その手順に従ってメインループで TODO.md を再生成する (完了済みフェーズのチェック状態は保つ)。**フェーズ見出しの `deps` / `goals` / (USECASES.md がある構成では) `ucs` の宣言を落とさない** — 再生成で `ucs` が消えると、次の `/dev-spec` 実行でフェーズ 12.0 がフラット判定に落ち、親 issue が作られなくなる。スナップショットと差分のコマンドは [references/issue-ops.md](./references/issue-ops.md) の `## P2 手順 4: フェーズ差分のスナップショットと TODO 再生成`
 5. **増えたフェーズがあれば、その各件に「新フェーズの issue 化」を実行する** (下記の共通手順)。closed の issue はそのまま完了扱いを維持する
-6. **編集した設計書 (`DESIGN_DETAIL_APP.md` / `_INFRA.md`) と `docs/TODO.md` をコミットする** (上記「動的修正のコミット」)
+6. **編集した設計書 (`DESIGN_DETAIL_APP.md` / `_INFRA.md` / `docs/features/` 配下) と `docs/TODO.md` をコミットする** (上記「動的修正のコミット」)
 7. ログに「P2 fix: <更新セクション>」を残す (JSONL は `event_type: p2_fix`)。**`context` には `section` / `what` (何をどう変えたか 1 行) / `why` (実装から判明した事実) / `commit_sha` (手順 6 のコミット) / `p2_fixes_total` (この時点の通算) を入れる** — 停止しない代わりに、ユーザーが後から「設計のどこが実装に合わせて書き換わったか」を追える唯一の記録になる
 8. 当該フェーズの再実行か次フェーズへ進むかを判定: 再生成後の TODO.md で **当該フェーズ内に新規の未完了タスク (`- [ ]`) が追加されていれば、P1 手順 4 と同じく issue を reopen して本文の `## 実装タスク` を更新し、`ready` に戻してから Step 2 の抽出をやり直す**。既存タスクが全て完了済みのまま (詳細設計の記述を補っただけで実装側の追加作業が無い) なら次フェーズへ進む
-9. ユーザに対する通知は「DESIGN_DETAIL_APP.md (または _INFRA.md) / TODO.md を更新しました (詳細はログ参照)」程度 (dev-impl は止まらない)
+9. ユーザに対する通知は「<編集した設計書のファイル名> / TODO.md を更新しました (詳細はログ参照)」程度 (dev-impl は止まらない)
 
 ##### 新フェーズの issue 化 (P1 / P2 / Step 5.5 の共通手順)
 
