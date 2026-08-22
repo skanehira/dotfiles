@@ -55,6 +55,22 @@ fi
 mkdir -p "$(dirname "$HOME/.claude/logs/dev-impl.log")"
 ```
 
+**続けて run 単位の `start` イベントを 1 件書く。** 新規 run でも再入でも毎回書く (再入は追記であって置き換えではない)。**Step 0 の再入判定は `context.repo_root` だけを見る**ので、これを書き忘れると次回の起動が同じプロジェクトの未完了 run を見つけられず、カウンタと予算を 0 から始めてしまう。`run_spawns_budget` は Step 1 で `OPEN` を数えた直後に確定するので、**この時点では書かず、確定した時点でもう 1 件 `start` を追記する** (復元は記録済みの値の最大を採るので、2 件あっても一意に決まる):
+
+```bash
+jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg root "$REPO_DIR" --arg sha "$START_SHA" '{
+  timestamp:$ts, phase:"run", step:"start", event_type:"start", severity:"info",
+  summary:"dev-impl 開始",
+  context:{repo_root:$root, start_sha:$sha}}' >> "$JSONL"
+
+# Step 1 で OPEN を数えて run_spawns_budget を確定した直後に、もう 1 件追記する
+jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg root "$REPO_DIR" \
+   --argjson budget "$RUN_SPAWNS_BUDGET" --argjson open "$OPEN" '{
+  timestamp:$ts, phase:"run", step:"start", event_type:"start", severity:"info",
+  summary:("spawn 予算を確定 (open " + ($open|tostring) + " 件)"),
+  context:{repo_root:$root, run_spawns_budget:$budget, open_issues:$open}}' >> "$JSONL"
+```
+
 ```bash
 # --- 以降、Bash を呼ぶたびに冒頭でこれを実行する ---
 . "$HOME/.claude/logs/dev-impl/<run_id>/env.sh"

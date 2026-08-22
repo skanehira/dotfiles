@@ -14,6 +14,7 @@
 - [セクション 4.7: 実装ノート — 未解決の質問](#セクション-47-実装ノート--未解決の質問)
 - [セクション 5: POC_NEEDED 残存状況](#セクション-5-poc_needed-残存状況)
 - [セクション 6: ゴール達成判定](#セクション-6-ゴール達成判定)
+- [セクション 6.5: 受入監査結果 (spec_compliance)](#セクション-65-受入監査結果-spec_compliance)
 - [セクション 7: フッター](#セクション-7-フッター)
 - [エスカレ停止時の差分](#エスカレ停止時の差分)
 - [CDN セキュリティ注意](#cdn-セキュリティ注意)
@@ -347,6 +348,39 @@ JSONL から `event_type: goal_check` のエントリ + Step 5 の最終結果�
 </section>
 ```
 
+`goal_loop_count` は `goal_check` の `context.goal_loop` の最大値 (logging.md の同イベント参照)。
+
+## セクション 6.5: 受入監査結果 (spec_compliance)
+
+SKILL.md の Step 7 が「レポート内容」に挙げている受入監査結果はこのセクションが描画する。**`goal_check` (ゴールごとの達成判定) とは別のイベント**で、`spec_compliance` は run スコープの findings (未実装 API・スキーマ乖離・インフラ欠落・検証コマンドの空虚性) を持つ。findings が 0 件なら「指摘なし」を出してセクション自体は残す — 監査を実行して 0 件だったことと、監査が走らなかったことを区別するため。
+
+```js
+`
+<section class="mb-8">
+  <h2 class="text-lg font-bold mb-3">受入監査結果 (review-spec-compliance)</h2>
+  ${spec_compliance.length === 0 ? `
+    <p class="text-sm" style="color: var(--fg-muted);">指摘なし (監査は実行済み)</p>
+  ` : `
+  <ul class="space-y-2">
+    ${spec_compliance.map(f => {
+      const color = f.severity === 'high' ? 'var(--red)' : f.severity === 'medium' ? 'var(--amber)' : 'var(--fg-muted)';
+      return `
+        <li class="p-2 bg-white rounded">
+          <div class="flex items-center gap-2 text-sm">
+            <span class="px-1.5 py-0.5 text-xs rounded" style="background: ${color}; color: white;">${f.severity}</span>
+            <span class="font-mono text-xs">${f.rule}</span>
+            ${f.file ? `<span class="text-xs" style="color: var(--fg-muted);">${escape(f.file)}</span>` : ''}
+          </div>
+          <div class="text-sm mt-1">${escape(f.message)}</div>
+        </li>
+      `;
+    }).join('')}
+  </ul>
+  `}
+</section>
+`
+```
+
 ## セクション 7: フッター
 
 ```html
@@ -392,7 +426,7 @@ function escape(s) {
 ## 生成プロセス (dev-impl 視点)
 
 1. JSONL を Read して entries 配列に
-2. entries を event_type で分類 (phases / decisions / review_low / design_decisions / open_questions / pocs / goals)。JSONL 記録時点で重複排除済みのため、`design_decision_count` / `open_question_count` は分類後の配列の件数 (`.length`) をそのまま使う。**issue 完了数は `impl_done` の件数**で数える
+2. entries を event_type で分類 (phases / decisions / review_low / design_decisions / open_questions / pocs / goals / **spec_compliance**)。`spec_compliance` は run スコープなのでフェーズ詳細には出ず、セクション 6.5 だけが描画する。JSONL 記録時点で重複排除済みのため、`design_decision_count` / `open_question_count` は分類後の配列の件数 (`.length`) をそのまま使う。**issue 完了数は `impl_done` の件数**で数える
 3. 上記テンプレ各セクションを順に組み立て (template literal で文字列構築)
 4. 1 つの HTML 文字列にして、`mkdir -p docs/dev-impl-reports/` で出力先を確保してから Write
 5. `git add` してコミットする。本文フッタは `rules/core/commit.md` の必須項目なので 1 行 `-m` にしない:

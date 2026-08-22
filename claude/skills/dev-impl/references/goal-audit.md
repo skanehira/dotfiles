@@ -104,7 +104,7 @@ output_path: ${absRunDir}/review-product-readiness-goal-e2e.json
 | # | 状況                                                    | 対処                   |
 | - | ------------------------------------------------------- | ---------------------- |
 | 1 | `verification_tampered` (**severity: high**) が 1 件以上 | 即エスカレ停止 (5.3 の表。修正ループなし)。low/medium の同 rule は改変ではなく書式の揺れ等なので、`spec_compliance` に記録して次の行の判定へ進む |
-| 2 | unmet ゴール、または**修正可能な** high findings (`unimplemented_api` / `schema_drift` / `infra_missing` / `goal_result_mismatch` / `holdout_test_failed`) が 1 件以上 | Step 5.5 の未達対応ループへ |
+| 2 | unmet ゴール、または**修正可能な** high findings (`unimplemented_api` / `schema_drift` / `infra_missing` / `holdout_test_failed`) が 1 件以上 (`goal_result_mismatch` は 5.3 で当該ゴールを unmet に変換済みなので、この列挙には入れず unmet ゴール側で数える) | Step 5.5 の未達対応ループへ |
 | 3 | 残る high が**修正対象外のものだけ** (`vacuous_verification`) で、ゴールは achieved か手動 pending | **Step 6 へ**。当該ゴールを手動 pending に落とし、`status` は `partial`。完了サマリに人間確認要求として明示する |
 | 4 | 全ゴール achieved (or 手動 pending のみ) かつ high 0 件 | Step 6 へ (完了サマリ、`status` は 5.6 の判定に従う) |
 

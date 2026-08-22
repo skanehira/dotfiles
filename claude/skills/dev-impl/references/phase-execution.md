@@ -110,6 +110,15 @@ report_path: ${absScratchDir}/impl-report.json
 })
 ```
 
+**起動する直前に、そのラウンドの HEAD と起動時刻をファイルへ落とす。初回ラウンド (`mode: implement`) でも必ず行う** — SKILL.md Step 4 の完了判定 (a)-3 は**全ラウンド**でこのファイルとの比較を要求しており、書かずに進むと初回のたびに「起動前の SHA が残っていない = 判定不能」に倒れて `impl_report_invalid` になり、偽の `phase_fix_exceeded` でフェーズが止まる:
+
+```bash
+# $ROUND は初回が 0、修正ラウンドは phase_fix_round の現在値、
+# テストゲート再試行は tg<n>、報告不整合の再起動は retry<n> (綴りは「変数の定義」節が正)
+git -C "$REPO_DIR" rev-parse HEAD > "$SCRATCH_DIR/before-$ROUND.sha"
+date +%s > "$SCRATCH_DIR/spawn-dev-impl-implementer-$ROUND.epoch"
+```
+
 ## 4.2d: 修正ラウンドの implementer 起動
 
 `mode: fix` は上記 4.2a の呼び出しに加えて `findings_paths` を渡す。**`model` はラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (SKILL.md「修正ラウンドのモデル昇格」):
@@ -393,11 +402,17 @@ EOF
 変数が揃ったところで、JSONL のフェーズ `start` イベントを書く (**この順序を守る** — 先に書こうとすると `$PHASE` も `$ISSUE` も未定義で、`--argjson issue "$ISSUE"` が JSON パースエラーで落ちる):
 
 ```bash
+# 予算は再入で引き上がる値なので必ず context に載せる。載せないと Step 0 の復元が
+# 既定 (33 / 3) にフォールバックし、再入のたびに引き上げが失われて同じ上限で止まり続ける
+PHASE_SPAWNS_BUDGET=${PHASE_SPAWNS_BUDGET:-33}
+PHASE_FIX_BUDGET=${PHASE_FIX_BUDGET:-3}
 jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
-   --arg sha "$PHASE_START_SHA" --argjson issue "$ISSUE" '{
+   --arg sha "$PHASE_START_SHA" --argjson issue "$ISSUE" \
+   --argjson psb "$PHASE_SPAWNS_BUDGET" --argjson pfb "$PHASE_FIX_BUDGET" '{
   timestamp:$ts, phase:$p, step:"start", event_type:"start", severity:"info",
   summary:("フェーズ開始 (issue #" + ($issue|tostring) + ")"),
-  context:{issue:$issue, phase_start_sha:$sha}}' >> "$JSONL"
+  context:{issue:$issue, phase_start_sha:$sha,
+           phase_spawns_budget:$psb, phase_fix_budget:$pfb}}' >> "$JSONL"
 ```
 
 以降このフェーズで Bash を呼ぶときは、冒頭で run スコープと合わせて `source` する:

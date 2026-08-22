@@ -66,12 +66,19 @@ run_id の発行・引き継ぎは run-bootstrap.md の `## run スコープ変�
 ```json
 "context": {
   "mode": "post-impl",
-  "goal_results": [{ "id": "G1", "status": "achieved", "exit_code": 0, "evidence": "..." }],
+  "goal_loop": 0,
+  "goal_results": [{ "id": "G1", "status": "achieved", "exit_code": 0,
+                     "description": "...", "verification": "<実行した検証コマンド>",
+                     "actual_output": "<失敗時の出力。成功時は null>", "evidence": "..." }],
   "findings": [{ "rule": "unimplemented_api", "severity": "high", "file": "...", "message": "..." }]
 }
 ```
 
 `event_type: goal_check` の判定主体は review-spec-compliance (自動系) / review-product-readiness (G_E2E) であり、メインループは集約して記録するだけ (Step 5.2〜5.3)。
+
+**`goal_loop` はこのイベントにしか載らない。** Step 0 の再入復元は「当該 run の `goal_check` のうち `context.goal_loop` の最大値」を現在値として採る。**書き忘れると再入のたびに 0 に戻り、上限 2 周が実質無効になる** (`goal_loop` を進めるのは Step 5.5 だが、記録の器は判定側の `goal_check` に置く — 5.5 に入らず 5.4 で終わる周回でも周回数を残すため)。
+
+**`goal_results` の `description` / `verification` / `actual_output` は HTML レポート (report-template.md のセクション 6) が描画するフィールドである。** 綴りを変えると検証コマンドと失敗ログの欄が黙って空になるので、両者を同時に直す。
 
 `event_type: verification_skipped` で review-adversarial をスキップした場合 (Step 4.2c のスキップ述語参照)、`context` には判定に使った値をそのまま入れる:
 
