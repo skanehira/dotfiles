@@ -9,6 +9,7 @@
 - [4.2c: spawn の事前記録](#42c-spawn-の事前記録)
 - [4.2c: 「最後の issue」の判定](#42c-「最後の-issue」の判定)
 - [4.2d 手順 3: fixer へ渡す findings の切り出し](#42d-手順-3-fixer-へ渡す-findings-の切り出し)
+- [4.2d 手順 3: traces_to の照合と verdict の判定](#42d-手順-3-traces_to-の照合と-verdict-の判定)
 - [4.2e: 累積テスト差分の弱体化監査](#42e-累積テスト差分の弱体化監査)
 - [4.2d 手順 8: 作業ツリーの汚染の検出と復元](#42d-手順-8-作業ツリーの汚染の検出と復元)
 - [4.2e: 全体スイートのテストゲート](#42e-全体スイートのテストゲート)
@@ -113,6 +114,42 @@ gh issue list --repo "$REPO_SLUG" --state open --limit $LIMIT --json number,labe
    ```
 
    architecture-guard の分は**キーを `violations` のまま出す** (`jq '{ok, violations: [.violations[] | select(.severity=="high" or .severity=="medium")]}'`)。`findings` に付け替えてはならない — implementer は `violations[]` を high/medium、`findings[]` を high だけ拾う規約なので (`claude/agents/dev-impl-implementer.md`)、付け替えると **guard の medium が誰にも直されず毎ラウンド再検出される**。**これらのファイルの生成者はこの手順だけ**で、4.2e 手順 4 の突合はこれらを spawn の成果物として数えない (main が書いたものなので)
+
+## 4.2d 手順 3: traces_to の照合と verdict の判定
+
+fatal の `traces_to` が実在する条文を指しているかを照合し、`phase_fix_exceeded` のときに
+「仕様の欠陥」か「実装の見落とし」かを決める材料にする。**agent の自己申告を信用しない** —
+`quote` を `rg -F` (固定文字列) で docs に当てて、当たらなければ `null` として扱う。
+
+```bash
+# 当該ラウンドの各検査結果 JSON について、fatal の traces_to を traced / null に分類する
+for RESULT_JSON in "$SCRATCH_DIR"/review-*-r${ROUND}.json; do
+  [ -f "$RESULT_JSON" ] || continue
+  jq -r '[.findings[]? | select(.severity=="high")] | .[] | (.traces_to.quote // "")' "$RESULT_JSON"
+done | while IFS= read -r q; do
+  if [ -z "$q" ]; then
+    echo null
+  elif rg -qF -- "$q" "$DOCS_DIR"; then
+    echo traced
+  else
+    # 条文名だけ書いて原文が docs に無い = でっち上げ。null と同じ扱いに倒す
+    echo null
+  fi
+done | sort | uniq -c > "$SCRATCH_DIR/traces-r${ROUND}.txt"
+cat "$SCRATCH_DIR/traces-r${ROUND}.txt"
+```
+
+**このラウンドの fatal がすべて `null` だったかを記録する。** 判定に使うのは
+「2 ラウンド連続で fatal が全件 `null`」であり、1 ラウンド分だけでは決まらない
+(1 巡目は仕様を読み切れていないだけの可能性がある)。
+
+| 直近 2 ラウンドの fatal | verdict | 意味 |
+| --- | --- | --- |
+| どちらも全件 `null` | `spec_defect` | 仕様がその状況を定めていない。**実装では閉じられない** |
+| 片方でも `traced` を含む | `implementation_gap` | 条文はあるのに実装が外れている。実装で閉じられる |
+
+**ファイルが 1 つも見つからなかった場合は判定不能**として `implementation_gap` に倒す
+(検査が走っていない状態を「仕様の欠陥」と読むと、実装の問題を設計へ押し付けることになる)。
 
 ## 4.2e: 累積テスト差分の弱体化監査
 

@@ -174,12 +174,15 @@ chrome-devtools MCP で:
       "confidence": "high|medium|low",
       "rule": "nav_unreachable|error_boundary_missing|empty_state_missing|loading_missing|seo_meta|page_404_deadloop|logout_missing|console_error|dev_server_unavailable",
       "message": "具体的な指摘 (画面名 / URL / 観測値)",
+      "traces_to": { "id": "<DoD 項目 / BR 番号 / DESIGN_DETAIL の節>", "quote": "<その条文の原文をそのまま引用した 1 文>" },
       "evidence": "族を走査した全要素の判定 (finding-coverage.md)。走査していない要素はその旨を明記する",
       "fix_proposal": "推奨修正"
     }
   ]
 }
 ```
+
+- `traces_to`: その指摘がどの仕様条文に紐づくか (`{id, quote}`)。紐づかなければ `null`。**`quote` は原文をそのまま引用する** (呼び出し側が `rg -F` で実在を照合するため)。規定は `~/.claude/rules/core/references/finding-coverage.md` の `## finding を仕様条文に紐づける (traces_to)`
 
 ## 進捗ログ
 
