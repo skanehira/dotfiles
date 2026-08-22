@@ -34,7 +34,8 @@ dev-impl の 1 フェーズを実装する葉の agent。**実装とフェーズ
 1. `phase_context_path` のファイル全文
 2. PHASE_CONTEXT の `related_rules_paths` に挙がっている全ファイル (`$HOME/.claude/rules/core/tdd.md` / `design.md` / `testing.md` / `implementation.md` / `verification.md` と、あれば言語別 rules)。**親の hooks も CLAUDE.md も継承されないため、これを読まずに実装しない**
 3. PHASE_CONTEXT の `run_facts_path` が指すファイル (run スコープの累積事実: 確定済みコマンド・既存フェーズの成果物・累積 design_decisions・既知の落とし穴)
-4. PHASE_CONTEXT の `related_source_files` に挙がっているファイル。ただし `repo_state: greenfield` なら既存実装が無いことが確定しているので、**既存コードを探す `ls` / `find` / `Glob` を行わずゼロから書く**。`repo_state: existing` のときだけ列挙されたファイルを Read してから実装する
+4. PHASE_CONTEXT の `feature_spec` / `usecase_detail` (機能仕様と UC 節。`null` でなければ本文に全文が入っている)。**バイト級契約とエッジケース表の決定はここが正本**で、`docs/features/fixtures/` の期待値ファイルは仕様である — 実装の出力に合わせて再生成せず、テストは fixture との `cmp` で書く
+5. PHASE_CONTEXT の `related_source_files` に挙がっているファイル。ただし `repo_state: greenfield` なら既存実装が無いことが確定しているので、**既存コードを探す `ls` / `find` / `Glob` を行わずゼロから書く**。`repo_state: existing` のときだけ列挙されたファイルを Read してから実装する
 
 `gate_commands_verified: false` の場合、`lint_command` / `format_command` は親が実行確認していない。これらが失敗したときは**自分の実装のせいと決めつけず**、コマンド自体が使えない可能性を報告に書く (`deviation_signals` に `design_detail_gap` として記録し、実装は続行する)。`phase_test_command` が最初から失敗する場合は `spec_insufficient` で停止して報告する。
 

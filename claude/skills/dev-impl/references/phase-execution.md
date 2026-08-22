@@ -47,7 +47,7 @@
 | `ROUND` | 検査 fan-out / 修正ラウンドを起動する直前 | 文字列。初回 fan-out は `"0"`、修正ラウンドは `"<phase_fix_round>"`、テストゲート再試行は `"tg<n>"`、報告不整合の再起動は `"retry<n>"`、フェーズ末の累積弱体化監査は `"final"` の **5 形式**。env.sh には書かない (カウンタと同じ理由) ので、必要な時点で JSONL から数え直す |
 | `RESULT_JSON` | 検査結果を読む時 | 検査 agent が `output_path` に書いた結果 JSON のパス |
 | `START_SHA` | Step 0 か Step 1 (run) | run 開始時の HEAD。**architecture-guard を最終フェーズで起動するときの差分の基準** (`BASE_SHA` として渡す)。代入は run-bootstrap.md の `## run スコープ変数と env.sh の生成`。**`PHASE_START_SHA` で代替しない** — フェーズ差分だけを見ると、過去フェーズで入って以降触られていない違反が検査対象から外れる |
-| `SPEC_TEXT` | Step 4.1 (フェーズ) | issue 本文 (`gh issue view`) と `DESIGN_DETAIL_APP.md` の該当節を連結した文字列。リスク面の一次算出の入力。**PHASE_CONTEXT を入力にしない** — PHASE_CONTEXT は 4.1.5 で組み立てるため循環する |
+| `SPEC_TEXT` | Step 4.1 (フェーズ) | issue 本文 (`gh issue view`) と、機能仕様 (`docs/features/UC-<n>.md`) + USECASES.md の該当 UC 節を連結した文字列 (無い構成では issue 本文のみ)。リスク面の一次算出の入力。**PHASE_CONTEXT を入力にしない** — PHASE_CONTEXT は 4.1.5 で組み立てるため循環する |
 | `DOCS_DIR` | Step 1 (run) | `$REPO_DIR/docs` の絶対パス。`traces_to` の照合 (`## 4.2d 手順 3`) とリスク面の一次算出が読む。代入は run-bootstrap.md の `## run スコープ変数と env.sh の生成` |
 | `RISK_FACES` | Step 4.1 (フェーズ) で一次、4.2c で二次を足して確定。**env.sh に `export` して Bash 呼び出しをまたいで保つ** | このフェーズが踏む攻撃面のカンマ区切り集合 (`## 4.2c: リスク面の表` の 5 つ)。PHASE_CONTEXT の `risk_faces` / adversarial の `mode` 決定 / 修正ラウンド上限の伸縮の 3 箇所で使う。空文字列は「どの面にも当たらない」を表す |
 
@@ -443,8 +443,18 @@ ISSUE_BODY=$(gh issue view "$ISSUE" --json body -q .body) || {
   # 面の有無は adversarial の mode と修正ラウンド上限の両方を決めるので影響が大きい
   echo "issue 本文を取得できない。リスク面の算出が成立しないので停止する"; exit 1
 }
+# 機能仕様と UC 節を連結する (面の語彙「締め出し」「中断」等は BR 側に住むため、
+# issue 本文だけでは一次シグナルが鳴らない)。無い構成では issue 本文のみで判定する
+UC_ID=$(rg -o "^### フェーズ${PHASE_ID}: .*<!-- ucs: (UC-[0-9]+)" -r '$1' "$DOCS_DIR/TODO.md" 2>/dev/null || true)
+FEATURE_SPEC_TEXT=""
+UC_SECTION_TEXT=""
+if [ -n "$UC_ID" ]; then
+  [ -f "$DOCS_DIR/features/$UC_ID.md" ] && FEATURE_SPEC_TEXT=$(cat "$DOCS_DIR/features/$UC_ID.md")
+  [ -f "$DOCS_DIR/USECASES.md" ] && UC_SECTION_TEXT=$(awk "/^## ${UC_ID}:/{f=1} f && /^## /&& !/^## ${UC_ID}:/{exit} f" "$DOCS_DIR/USECASES.md")
+fi
 SPEC_TEXT="$ISSUE_BODY
-$(rg -A 40 "^### フェーズ${PHASE_ID}:" "$DOCS_DIR/DESIGN_DETAIL_APP.md" 2>/dev/null || true)"
+$FEATURE_SPEC_TEXT
+$UC_SECTION_TEXT"
 RISK_FACES=""
 add_face() { RISK_FACES="${RISK_FACES}${RISK_FACES:+,}$1"; }
 echo "$SPEC_TEXT" | rg -qi '並行|同時|競合|中断|再開|締め出し|巻き戻し|順序|冪等|再試行|リトライ|応答待ち' \
