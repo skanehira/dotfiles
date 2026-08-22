@@ -130,7 +130,8 @@
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "claude-security@claude-plugins-official": true,
     "stripe@claude-plugins-official": true,
-    "eli5@claude-community": true
+    "eli5@claude-community": true,
+    "mattpocock-skills@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "agent-plugins-for-aws": {
