@@ -20,12 +20,15 @@ IFS=$'\x1f' read -r -d '' \
         # resets_at は Unix epoch 秒。date の書式が BSD (-r) と GNU (-d @) で割れるため
         # jq 側でローカル時刻に整形して渡す。
         def reset_at: if . then strflocaltime("%-m/%-d %H:%M") else "" end;
+        # used_percentage は 56.00000000000001 のような浮動小数点で来る。jq では 0 も
+        # truthy なので、この形で 0% を落とさずに切り捨てられる。
+        def pct: if . then floor else "" end;
         [ (.cost.total_api_duration_ms // ""),
           (.cost.total_cost_usd // ""),
-          (.context_window.used_percentage // ""),
-          (.rate_limits.five_hour.used_percentage // ""),
+          (.context_window.used_percentage | pct),
+          (.rate_limits.five_hour.used_percentage | pct),
           (.rate_limits.five_hour.resets_at | reset_at),
-          (.rate_limits.seven_day.used_percentage // ""),
+          (.rate_limits.seven_day.used_percentage | pct),
           (.rate_limits.seven_day.resets_at | reset_at),
           (.model.display_name // .model.id // ""),
           (.effort.level // ""),
