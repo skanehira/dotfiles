@@ -61,11 +61,16 @@ Deno.test("validateAgentSpawn denies every mandated agent spawned without model,
     });
 
     assertEquals(result.ok, false, type);
+    // implementer だけは修正ラウンドで model が変わるので、既定値に加えて昇格の条件も提示する
+    const escalationHint = type === "dev-impl-implementer"
+      ? ` (mode: implement と mode: fix のラウンド 1 は "opus"、` +
+        `mode: fix のラウンド 2 以降は "fable"。SKILL.md「修正ラウンドのモデル昇格」)`
+      : "";
     assertEquals(
       result.reason,
       `[agent-spawn-guard] ${type} の起動に model が指定されていません。` +
         "未指定だと agent 定義ではなく親のセッションモデルを継承します。" +
-        `model: "${model}" を明示してください。`,
+        `model: "${model}" を明示してください。` + escalationHint,
       type,
     );
   }
