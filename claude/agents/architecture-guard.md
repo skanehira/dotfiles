@@ -69,7 +69,7 @@ JSON スキーマ:
 - `unchecked_files`: **差分に含まれるソースファイルのうち、自分が import 行を読まなかったものの配列 (必須)。** `checked_file_list` から呼び出し側に差集合を取らせると、呼び出し側は結果 JSON 全体を読む必要が生じ、main のコンテキスト規律 (射影だけを読む) と両立しない。**自分で差集合を計算してトップレベルに出す。** 未検証が 0 件なら `[]`。テスト・設定・ドキュメント等、レイヤ分類の対象外として意図的に見なかったファイルはここに入れず、`skipped_by_design` に分ける
 - `skipped_by_design`: 検査対象外として意図的に見なかったファイルの配列 (テスト・設定・ドキュメント等)。`unchecked_files` と合わせて、差分の全ファイルが「検査した / 対象外 / 未検証」のどれかに必ず分類される状態にする
 - 呼び出し側は `unchecked_files` が非空なら**未検証として扱う** (パス扱いにしない)
-- `skip_reason`: `checked_files: 0` の理由を区別するためのフィールド。`null` (差分が実際に空、正常) / `"no_layer_convention"` (DESIGN 文書にも慣例にも一致するレイヤ構造が無く Clean Arch チェック自体を skip、ステップ1参照) / `"diff_command_failed"` (ステップ2の git diff コマンドが失敗、下記参照)。`skip_reason` が `null` 以外なら `ok` の値に関わらず「正常に検査できていない」ことを表す
+- `skip_reason`: `checked_files: 0` の理由を区別するためのフィールド。`null` (差分が実際に空、正常) / `"no_layer_convention"` (DESIGN 文書にも慣例にも一致するレイヤ構造が無く Clean Arch チェック自体を skip、ステップ1参照) / `"diff_command_failed"` (ステップ2の git diff コマンドが失敗、下記参照) / `"layer_check_failed"` (ステップ3の layer-check.ts が exit 2 で終了した = ファイルを読めず検査が成立していない)。`skip_reason` が `null` 以外なら `ok` の値に関わらず「正常に検査できていない」ことを表す
 
 ## 進捗ログ
 
@@ -85,11 +85,12 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] <message>" >> "$LOG"
 
 ### ステップ 1: レイヤ定義の抽出
 
-1. `design_path` (`docs/DESIGN.md`) と `design_detail_path` (`docs/DESIGN_DETAIL_APP.md`) を Read
-2. 「主要コンポーネント」「レイヤーアーキテクチャ」「ディレクトリ構造」セクションから、以下を抽出:
+1. **プロジェクト直下の `CLAUDE.md` を Read する (最優先)。** 境界チェックのやり方 (レイヤの定義、専用の lint コマンドの有無) はプロジェクトの CLAUDE.md に書かれている前提とする。**そこに境界を検査する lint / スクリプトが書かれている場合は、それを実行した結果を一次の根拠にし、本 agent の検査は補助に回る** (毎コミット走る検証器の方が、フェーズ末の抜き取りより密なため)
+2. `design_path` (`docs/DESIGN.md`) と `design_detail_path` (`docs/DESIGN_DETAIL_APP.md`) を Read
+3. 「主要コンポーネント」「レイヤーアーキテクチャ」「ディレクトリ構造」セクションから、以下を抽出:
    - **inner layer pattern** (依存される側): `domain/`, `entities/`, `application/`, `usecases/`, `usecase/` 等のディレクトリ pattern
    - **outer layer pattern** (依存する側): `infrastructure/`, `infra/`, `adapter/`, `adapters/`, `framework/`, `frameworks/`, `presentation/`, `ui/`, `interface/`, `web/`, `cli/`, `http/`, `persistence/`, `repository/` (実装のみ — interface は inner にあるべき) 等
-3. DESIGN 系ドキュメントに明示が無い場合は上記の**慣例 pattern** を採用 (それすら無い (= src/ がフラット) なら、Clean Arch チェックは skip して `checked_files: 0, skip_reason: "no_layer_convention", ok: true` を返す)
+4. DESIGN 系ドキュメントに明示が無い場合は上記の**慣例 pattern** を採用 (それすら無い (= src/ がフラット) なら、Clean Arch チェックは skip して `checked_files: 0, skip_reason: "no_layer_convention", ok: true` を返す)
 
 ### ステップ 2: 検査対象ファイルの列挙
 
@@ -119,28 +120,21 @@ esac
 
 ### ステップ 3: Clean Architecture レイヤ違反検出
 
-各 inner layer ファイルについて、`rg` で import 文を抽出:
+**import 行を自分で読んで判定してはならない。** `claude/scripts/layer-check.ts` を実行し、その出力をそのまま使う。
 
 ```bash
-rg -n '^(import|from|use|require)' "$file"
+~/.claude/scripts/layer-check.ts \
+  --repo "$REPO_DIR" \
+  --inner "<ステップ 1 の inner pattern をカンマ区切り>" \
+  --outer "<ステップ 1 の outer pattern をカンマ区切り>" \
+  <ステップ 2 で列挙したファイル...>
 ```
 
-import が outer layer pattern にマッチしたら違反として記録:
+出力は `{ ok, skip_reason, violations, checked_file_list }` の JSON で、本 agent の出力スキーマにそのまま流し込める形になっている。exit code は 違反なし=0 / 違反あり=1 / 入力不正 (ファイルが読めない)=2。**exit 2 は「違反なし」と区別する** — `ok: false, skip_reason: "layer_check_failed"` で返し、`message` に stderr を含める。
 
-- `rule: "clean_arch_layer"`
-- `severity: "high"`
-- `message`: ファイル名、行番号、問題の import を含む具体的な記述
-- `fix_proposal`: 「inner に Port (interface) を定義、outer に Adapter 実装を置き、DI で繋ぐ」
+判定をスクリプトに寄せるのは、**import の向きが完全に機械的な性質だから**である。実測では LLM に読ませていたために、型のみの cross-layer import 1 行を 5 回中 4 回見落としながら毎回 `ok: true` を返していた。見落としは「違反が無い」と区別が付かないため、検出器として機能していなかった (`rules/core/verification.md`)。スクリプトは TypeScript / JavaScript / Go / Rust / Python / Lua の import 書式に対応し、層の分類は最長一致で決める (`inner` の下に `outer` 名のディレクトリがある構成でも誤判定しない)。
 
-言語別の import pattern (補助情報):
-
-| 言語 | import pattern (rg 正規表現) |
-|---|---|
-| TypeScript / JavaScript | `^import .* from ['"]([^'"]+)['"]` |
-| Go | `^\s*(import\s+)?['"]([^'"]+)['"]` (import block 内) |
-| Rust | `^use\s+([^\s;]+)` |
-| Python | `^(from\s+(\S+)\s+import|import\s+(\S+))` |
-| Lua | `require\(['"]([^'"]+)['"]\)` |
+`violations` の各要素は `rule: "clean_arch_layer"` / `severity: "high"` / `message` (ファイル名・行番号・問題の import を含む) / `fix_proposal` (「inner に Port を定義、outer に Adapter を置き DI で繋ぐ」) を持つ。**`checked_file_list` はスクリプトの出力をそのまま使う** — 自分で件数を数え直さない。
 
 ### ステップ 4: DDD 集約境界違反検出
 

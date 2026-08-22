@@ -179,8 +179,8 @@ ROUND=0                              # 初回 fan-out は 0、修正ラウンド
 # 全体を 1 要素として扱い、記録が 1 件しか残らない (実行シェルが zsh のとき必ず起きる)
 # (例は weakening_only の一段 fan-out。full の場合は冒頭の表のとおり段ごとに作る —
 #  段 1 = 'review-adversarial:opus:full' の 1 行だけ、段 3 = それを除いた残り)
-AGENTS_TO_SPAWN='architecture-guard:haiku:-
-review-tdd:opus:-
+# architecture-guard は最後の issue のフェーズでだけこの一覧に加える
+AGENTS_TO_SPAWN='review-tdd:opus:-
 review-adversarial:opus:weakening_only'
 
 # (0) カウンタを JSONL から数え直す (env.sh の値ではなく spawn イベントの件数が正 = logging.md)
@@ -471,8 +471,10 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 
 | `adversarial_mode` | 起動のしかた |
 | --- | --- |
-| `full` | ① review-adversarial を単独起動して完了を待つ → ② 汚染の突合 → ③ 残りの観点 + architecture-guard を fan-out |
-| `weakening_only` / `skipped` | 全観点 + architecture-guard を 1 回の fan-out で並列起動 |
+| `full` | ① review-adversarial を単独起動して完了を待つ → ② 汚染の突合 → ③ 残りの観点を fan-out |
+| `weakening_only` / `skipped` | 全観点を 1 回の fan-out で並列起動 |
+
+`architecture-guard` は**最後の issue のフェーズでだけ** fan-out に加える (下の gating 表)。それ以外のフェーズでレイヤ境界を担保するのは、プロジェクト側の lint (`lint_command`) である。
 
 ## 4.2c: 観点 gating 表
 
@@ -480,11 +482,11 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 
 | タイミング        | 実行観点                                                                                            |
 | ----------------- | --------------------------------------------------------------------------------------------------- |
-| 毎フェーズ        | architecture-guard (gating 対象外、常に実行) + review-adversarial (`mode` は下表で決める。下記スキップ述語で skip 可) |
+| 毎フェーズ        | review-adversarial (`mode` は下表で決める。下記スキップ述語で skip 可) |
 | テスト差分があるフェーズ (`$TEST_FILE_CHANGED` または `$TEST_CONTENT_CHANGED` が非空) | 上記 + review-tdd                              |
 | UI を触るフェーズ (`uiPhase == true`) | 上記 + review-product-readiness (dev_server が無ければ skip)                     |
-| **最後の issue** | 全観点フル (tdd / quality / product-readiness / adversarial)                                        |
-| **`$CONSUMABLE_CHANGED` が非空のフェーズ** | 上記 + review-quality (最後の issue でなくても起動する。多重消費・恒久エラー分岐の漏れは architecture-guard の境界検査では検知できないため) |
+| **最後の issue** | 全観点フル (tdd / quality / product-readiness / adversarial) **+ architecture-guard** — 境界違反は累積的で、途中で入ったものも最終差分に残るため、ここで 1 回検査すれば足りる。毎フェーズ起動していた頃の実測は 28 回で違反 1 件だった |
+| **`$CONSUMABLE_CHANGED` が非空のフェーズ** | 上記 + review-quality (最後の issue でなくても起動する。多重消費・恒久エラー分岐の漏れはレイヤ境界の検査では検知できないため) |
 | `PRODUCT_MODE=cli` | review-product-readiness を**一切起動しない** (`uiPhase` が常に `false`。「最後の issue」の全観点フルからも除外する。cli の G_E2E は Step 5.2 で review-spec-compliance が担当する) |
 
 ## 4.2c: review-adversarial の mode 決定表
