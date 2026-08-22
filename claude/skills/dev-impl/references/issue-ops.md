@@ -95,7 +95,7 @@ EOF
    **識別子は既存と衝突しない値を採る** (例: 元フェーズが `4` なら `4-a`)。識別子は issue タイトル・`$SCRATCH_DIR` のパス・4.2e の `### フェーズ<識別子>:` 引き当ての 3 箇所で鍵になるため、衝突するとフェーズを取り違える。**複数フェーズを同時に追加するときは TODO.md の出現順に 1 件ずつ作る** (12.4.2 と同じ理由: deps は前方参照を禁じているので、出現順に作れば依存先の issue 番号が常に確定済みになる)
 
 2. **親 issue がある構成なら紐付ける** (下記「紐付けの差集合」)
-3. **`run_spawns_budget` を `max(現在値, run_spawns + その時点の open issue 数 (uc-tracking を除く) × 20)` で再計算する** (Step 3 のカウンタ規定。係数の正は Step 3)。issue が増えたのに上限が据え置きだと、正当な実装の途中で `spawn_budget_exceeded` に当たる。**手順 4 の記録より前に行う** (再計算した値を `phase_added` に載せるため)
+3. **`run_spawns_budget` を再計算する。式は SKILL.md Step 3「spawn 予算の意図」の更新表が正**で、ここでは書かない (2 箇所に式を持つと片方だけが更新されて食い違う)。issue が増えたのに上限が据え置きだと、正当な実装の途中で `spawn_budget_exceeded` に当たる。**手順 4 の記録より前に行う** (再計算した値を `phase_added` に載せるため)
 4. **JSONL に `event_type: phase_added` を記録する** (`context`: `phase` / `issue_number` / `parent_number` (紐付けた親。フラット構成なら省略) / `origin` (`p1` / `p2` / `goal_unmet`) / `run_spawns_budget` (手順 3 で再計算した値))
 5. **Step 2 の issue 抽出を再実行**して、追加したフェーズを着手対象に含める
 
