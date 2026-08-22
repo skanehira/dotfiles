@@ -165,7 +165,7 @@ TDD の順序・フェーズスコープのテストのみ実行・コミット�
 | `full` | ① 下の事前ブロックを adversarial 1 件で流し、単独起動して完了を待つ → ② 汚染の突合 → ③ 事前ブロックを残りの観点で流し、fan-out |
 | `weakening_only` / `skipped` | 事前ブロックを全観点で流し、1 回の fan-out で並列起動 |
 
-`full` の adversarial はレンズ A が共有の作業ツリーを書き換えるため、並列にすると他観点が変異後のコードを読みうる (SKILL.md 4.2c)。`AGENTS_TO_SPAWN` は段ごとに作る — `full` の段 1 は `review-adversarial:sonnet:full` の 1 行だけ、段 3 はそれを除いた残り。
+`full` の adversarial はレンズ A が共有の作業ツリーを書き換えるため、並列にすると他観点が変異後のコードを読みうる (SKILL.md 4.2c)。`AGENTS_TO_SPAWN` は段ごとに作る — `full` の段 1 は `review-adversarial:opus:full` の 1 行だけ、段 3 はそれを除いた残り。
 
 **起動前に 2 つを 1 ブロックで行う** (作業ツリーが clean であることの確認 / spawn の先行記録)。**どちらも「起動する前」でなければ意味を成さない**ので、上のどの段でも起動の前に必ずこのブロックを流す:
 
@@ -178,10 +178,10 @@ ROUND=0                              # 初回 fan-out は 0、修正ラウンド
 # **空白区切りの 1 変数にしない** — zsh は $VAR を単語分割しないため、`for a in $VAR` が
 # 全体を 1 要素として扱い、記録が 1 件しか残らない (実行シェルが zsh のとき必ず起きる)
 # (例は weakening_only の一段 fan-out。full の場合は冒頭の表のとおり段ごとに作る —
-#  段 1 = 'review-adversarial:sonnet:full' の 1 行だけ、段 3 = それを除いた残り)
+#  段 1 = 'review-adversarial:opus:full' の 1 行だけ、段 3 = それを除いた残り)
 AGENTS_TO_SPAWN='architecture-guard:haiku:-
 review-tdd:opus:-
-review-adversarial:sonnet:weakening_only'
+review-adversarial:opus:weakening_only'
 
 # (0) カウンタを JSONL から数え直す (env.sh の値ではなく spawn イベントの件数が正 = logging.md)
 PHASE_SPAWNS=$(jq -r --arg p "$PHASE" 'select(.event_type=="spawn" and .phase==$p)|1' "$JSONL" | wc -l | tr -d ' ')
@@ -233,7 +233,7 @@ git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_
 
 // スキップ述語を満たさなければ実行。mode は 本ファイルの `## 4.2c: review-adversarial の mode 決定表` で決め、
 // gating_decided に記録した値をそのまま渡す (再 fan-out でも同じ値を使う)
-{ subagent_type: "review-adversarial", model: "sonnet",
+{ subagent_type: "review-adversarial", model: "opus",
   prompt: `mode: ${adversarialMode}
 phase_name: ${phaseName}
 phase_start_sha: ${phaseStartSha}

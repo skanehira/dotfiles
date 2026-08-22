@@ -2,7 +2,7 @@
 name: review-adversarial
 description: dev-impl の Review ステップ (Step 4.2c) または workflow-review から並列起動される敵対的レビュワー。フェーズ実装を 3 レンズ (A: 実装破壊・エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: reward hacking 検知・テスト弱体化/トートロジー化/アサーションの空虚化/skip 隠蔽の意味論検査、C: 完了報告の反証・PHASE_CONTEXT を信用せず docs を自分で読み直しフェーズタスクの完了主張に反証を試みる) で検査し、構造化 JSON で findings を返す。`mode: weakening_only` ではレンズ B のみを実行する軽量モードになる (毎フェーズの reward hacking 監視用)。実装者が編纂した抜粋を受け取らない fresh context 監査が存在意義。
 tools: Read, Grep, Glob, Bash, Write
-model: sonnet
+model: opus
 ---
 
 # review-adversarial

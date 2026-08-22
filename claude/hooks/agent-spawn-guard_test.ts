@@ -39,7 +39,7 @@ const EXPECTED_MANDATED_MODELS: [string, string][] = [
   ["dev-impl-implementer", "opus"],
   ["architecture-guard", "haiku"],
   ["fix-lsp-warnings", "haiku"],
-  ["review-adversarial", "sonnet"],
+  ["review-adversarial", "opus"],
   ["review-tdd", "opus"],
   ["review-quality", "opus"],
   ["review-product-readiness", "opus"],
