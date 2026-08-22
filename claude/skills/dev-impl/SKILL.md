@@ -235,7 +235,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 
 Step 2 で選んだ issue を 1 件実装し、close してから Step 2 に戻る。**同時に複数の issue を走らせない。** implementer は main の working tree で直接編集し、統合の手順は無い (main がそのままコミットする)。骨格は「issue に `in-progress` を貼る → PHASE_CONTEXT を組み立てる → implementer 起動 → 待つ → 検査 fan-out 起動 → 待つ → 修正ラウンド → テストゲート → コミット → issue を close」。
 
-**PHASE_CONTEXT の実装指示は issue 本文から組み立てる。** `## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` をそのまま使う (節名は dev-spec のフェーズ 12 が固定している)。設計の抜粋が必要な場合だけ `## 参照すべき docs` が指す節を docs から読む。`ucs` を持つフェーズでは機能仕様 (`docs/features/UC-<n>.md`) と UC 節の全文が PHASE_CONTEXT の `feature_spec` / `usecase_detail` として implementer に届く ([references/phase-context.md](./references/phase-context.md))。issue 本文の設計節 (12.4.2 が転記する機能仕様のスナップショット) は人間向けなので抽出しない (docs 直読の `feature_spec` と二重に渡さない)。着手時と完了時の GitHub 操作:
+**PHASE_CONTEXT の実装指示は issue 本文から組み立てる。** `## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` をそのまま使う (節名は dev-spec のフェーズ 12 が固定している)。設計の抜粋が必要な場合だけ `## 参照すべき docs` が指す節を docs から読む。`ucs` が `UC-<n>` を指すフェーズでは機能仕様 (`docs/features/UC-<n>.md`) と UC 節の全文が PHASE_CONTEXT の `feature_spec` / `usecase_detail` として implementer に届く ([references/phase-context.md](./references/phase-context.md))。issue 本文の設計節 (12.4.2 が転記する機能仕様のスナップショット) は人間向けなので抽出しない (docs 直読の `feature_spec` と二重に渡さない)。着手時と完了時の GitHub 操作:
 
 ```bash
 gh issue edit <N> --repo "$REPO_SLUG" --add-label in-progress --remove-label ready
@@ -453,15 +453,15 @@ implementer 報告 (`mode: implement` / `mode: fix` 双方) の `deviation_signa
 
 ##### P2 動的修正
 
-1. `p2_fixes_total += 1`。**回数では止めない** — 詳細設計の不足は実装しないと分からないことが多く、回数が増えること自体は異常ではない。代わりに**何をどう変えたかを後から追える形で残す**責任を負う (手順 6 のコミット / 手順 7 の JSONL / Step 6 の完了サマリ / HTML レポートのセクション 4 の 4 つが揃って初めて「確認できる」状態になる)。設計の前提そのものが崩れている場合は回数に関わらず P3 (`design_overview_break`) として停止する — これは回数ではなくシグナルの種類で判定する
+1. `p2_fixes_total += 1`。**回数では止めない** — 詳細設計の不足は実装しないと分からないことが多く、回数が増えること自体は異常ではない。代わりに**何をどう変えたかを後から追える形で残す**責任を負う (手順 6 のコミット / 手順 8 の JSONL / Step 6 の完了サマリ / HTML レポートのセクション 4 の 4 つが揃って初めて「確認できる」状態になる)。設計の前提そのものが崩れている場合は回数に関わらず P3 (`design_overview_break`) として停止する — これは回数ではなくシグナルの種類で判定する
 2. 編集先を射程で決めて Edit する: 機能単体の契約 (出力形式・エッジケースの決定・fixture) なら `docs/features/UC-<n>.md` と `docs/features/fixtures/uc-<n>/` の該当箇所、横断関心事なら DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側 (境界基準: 変更に IaC・コンソール操作・環境設定変更が要るなら INFRA)。fixture を変更する場合も**実装の出力からの再生成は禁止** — 仕様として正しい期待値を書き直す
 3. **受入基準ガード**: Edit 直後に goals_sha を再計算 (Step 1 のコマンド) し、承認スタンプの値と照合する。不一致 = 受入基準 (ゴール / 検証手順行) を触った P2 であり、実装者による自己適用は禁止。Edit を revert せず `acceptance_criteria_change` でエスカレ停止する (「受入基準の変更が必要になった。dev-spec フェーズ 9 → 11 で再承認せよ」と通知。実装ガイド・スキーマ等の追記はハッシュ対象外なので通過する)
 4. **再生成の前にフェーズ見出しのスナップショットを取る** (再生成後では「前」の状態が失われ、増えたフェーズを特定できない)。そのうえで `../dev-spec/references/todo-generation.md` を Read し、その手順に従ってメインループで TODO.md を再生成する (完了済みフェーズのチェック状態は保つ)。**フェーズ見出しの `deps` / `goals` / (USECASES.md がある構成では) `ucs` の宣言を落とさない** — 再生成で `ucs` が消えると、次の `/dev-spec` 実行でフェーズ 12.0 がフラット判定に落ち、親 issue が作られなくなる。スナップショットと差分のコマンドは [references/issue-ops.md](./references/issue-ops.md) の `## P2 手順 4: フェーズ差分のスナップショットと TODO 再生成`
 5. **増えたフェーズがあれば、その各件に「新フェーズの issue 化」を実行する** (下記の共通手順)。closed の issue はそのまま完了扱いを維持する
 6. **編集した設計書 (`DESIGN_DETAIL_APP.md` / `_INFRA.md` / `docs/features/` 配下) と `docs/TODO.md` をコミットする** (上記「動的修正のコミット」)
-7. ログに「P2 fix: <更新セクション>」を残す (JSONL は `event_type: p2_fix`)。**`context` には `section` / `what` (何をどう変えたか 1 行) / `why` (実装から判明した事実) / `commit_sha` (手順 6 のコミット) / `p2_fixes_total` (この時点の通算) を入れる** — 停止しない代わりに、ユーザーが後から「設計のどこが実装に合わせて書き換わったか」を追える唯一の記録になる
-8. 当該フェーズの再実行か次フェーズへ進むかを判定: 再生成後の TODO.md で **当該フェーズ内に新規の未完了タスク (`- [ ]`) が追加されていれば、P1 手順 4 と同じく issue を reopen して本文の `## 実装タスク` を更新し、`ready` に戻してから Step 2 の抽出をやり直す**。既存タスクが全て完了済みのまま (詳細設計の記述を補っただけで実装側の追加作業が無い) なら次フェーズへ進む
-9. **`docs/features/UC-<n>.md` を編集した場合は、その UC を `ucs` に持つ open な issue の `## 設計` 節を再生成して貼り直す** (転記規則は dev-spec 12.4.2 — 全文を 2 段降格で `<details>` に包む。`gh issue edit <番号> --body-file`)。closed は触らない (後の `/dev-spec` 再実行時に 12.3 が不一致として報告する)。`in-progress` の issue はコメントで改訂を告知する (12.3 と同じ規則)
+7. **`docs/features/UC-<n>.md` を編集した場合は、該当 issue の `## 設計` 節を貼り直す。** 対象の特定: `ucs` は issue 本文に書かれないので、TODO.md の `<!-- ucs: UC-<n> -->` を持つフェーズ見出しから識別子を引き、タイトル `フェーズ<識別子>:` で `gh issue list --state open` から番号を得る。貼り直し: 現本文を `gh issue view <番号> --json body -q .body` で取得し、**`## 設計` 節 (次の `^## ` の直前まで) だけを dev-spec 12.4.2 の転記規則で差し替えた**本文を `gh issue edit <番号> --body-file` で送る — `--body-file` は全置換なので、他節 (P1 が追記した実装タスクを含む) は取得した本文から保持する。closed は触らない (後の `/dev-spec` 再実行時に 12.3 が不一致として報告する)。`in-progress` の issue はコメントで改訂を告知する (12.3 と同じ規則)
+8. ログに「P2 fix: <更新セクション>」を残す (JSONL は `event_type: p2_fix`)。**`context` には `section` / `what` (何をどう変えたか 1 行) / `why` (実装から判明した事実) / `commit_sha` (手順 6 のコミット) / `p2_fixes_total` (この時点の通算) を入れる** — 停止しない代わりに、ユーザーが後から「設計のどこが実装に合わせて書き換わったか」を追える唯一の記録になる
+9. 当該フェーズの再実行か次フェーズへ進むかを判定: 再生成後の TODO.md で **当該フェーズ内に新規の未完了タスク (`- [ ]`) が追加されていれば、P1 手順 4 と同じく issue を reopen して本文の `## 実装タスク` を更新し、`ready` に戻してから Step 2 の抽出をやり直す**。既存タスクが全て完了済みのまま (詳細設計の記述を補っただけで実装側の追加作業が無い) なら次フェーズへ進む
 10. ユーザに対する通知は「<編集した設計書のファイル名> / TODO.md を更新しました (詳細はログ参照)」程度 (dev-impl は止まらない)
 
 ##### 新フェーズの issue 化 (P1 / P2 / Step 5.5 の共通手順)

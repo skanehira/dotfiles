@@ -43,7 +43,7 @@ done
 
 ## P1 手順 4: issue の reopen と本文更新
 
-4. **当該フェーズにタスクを足す場合は、TODO.md だけでなく issue 本文も更新する。** Step 4.6 は 4.2e で issue を close した**後**に走るので、その issue は既に closed であり、**実装指示の実体は TODO.md ではなく issue 本文である** (PHASE_CONTEXT の `phase_tasks` は `gh issue view` から作る)。TODO.md だけ直しても実装器には届かない。手順は `gh issue reopen <N>` → `gh issue edit <N> --body-file` で `## 実装タスク` に追記 → ラベルを `ready` に戻す → Step 2 の抽出をやり直す。**フェーズを跨ぐ追加なら新フェーズを TODO.md に挿入し、続けて「新フェーズの issue 化」を実行する** (下記の共通手順。close 済み issue を再利用するより見通しがよいので、迷ったらこちら)。挿入する見出しには `<!-- deps: ... -->` と `<!-- goals: ... -->` を必ず付け、**`docs/USECASES.md` がある構成では `<!-- ucs: ... -->` も付ける**。メタ情報 5 項目 (ゴール / DoD / 参照 docs / 変更想定ファイル / 非スコープ) も書く (判定基準は `../dev-spec/references/todo-generation.md` の「フェーズ依存の宣言」「対応ゴールの宣言」「対応ユースケースの宣言」「各フェーズが持つメタ情報」)。`ucs` を落とすと、次に `/dev-spec` を再実行したときフェーズ 10.5 の監査が `phase_meta_missing` (high) で差し戻す
+4. **当該フェーズにタスクを足す場合は、TODO.md だけでなく issue 本文も更新する。** Step 4.6 は 4.2e で issue を close した**後**に走るので、その issue は既に closed であり、**実装指示の実体は TODO.md ではなく issue 本文である** (PHASE_CONTEXT の `phase_tasks` は `gh issue view` から作る)。TODO.md だけ直しても実装器には届かない。手順は `gh issue reopen <N>` → 現在本文を `gh issue view <N> --json body -q .body` で取得し、`## 実装タスク` 節に追記した本文を作って `gh issue edit <N> --body-file` で戻す (**`--body-file` は全置換なので、他節 — `## 設計` を含む — は取得した本文から保持する**) → ラベルを `ready` に戻す → Step 2 の抽出をやり直す。**フェーズを跨ぐ追加なら新フェーズを TODO.md に挿入し、続けて「新フェーズの issue 化」を実行する** (下記の共通手順。close 済み issue を再利用するより見通しがよいので、迷ったらこちら)。挿入する見出しには `<!-- deps: ... -->` と `<!-- goals: ... -->` を必ず付け、**`docs/USECASES.md` がある構成では `<!-- ucs: ... -->` も付ける**。メタ情報 5 項目 (ゴール / DoD / 参照 docs / 変更想定ファイル / 非スコープ) も書く (判定基準は `../dev-spec/references/todo-generation.md` の「フェーズ依存の宣言」「対応ゴールの宣言」「対応ユースケースの宣言」「各フェーズが持つメタ情報」)。`ucs` を落とすと、次に `/dev-spec` を再実行したときフェーズ 10.5 の監査が `phase_meta_missing` (high) で差し戻す
 
 ## 動的修正のコミット
 
@@ -82,7 +82,7 @@ EOF
 
 **TODO.md にフェーズを追加しただけでは、そのフェーズは永久に実装されない。** 着手対象の抽出は Step 2 が GitHub issue からしか行わないため、issue の無いフェーズは Step 2 に現れない。TODO.md にフェーズを足したら、**同じターンで必ず**次を行う。
 
-1. **issue を作る。** 本文の節構造・タイトル形式は `/dev-spec` のフェーズ 12.4.2 と同じ (`## ゴール` / `## DoD` / `## 参照すべき docs` / `## 設計` (ucs を持つフェーズのみ。機能仕様の転記) / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` / `## 依存` / `## 対応ゴール`)。**TODO.md に全フェーズ共通節がある場合の `## DoD` 直後への転記も 12.4.2 と同じく行う** — 落とすと DoD ブロックの実行規約 (`bash -e` 前提等) が追加した issue にだけ無い状態になる。ラベルは `ready`。メタ情報の書き方の判定基準は `../dev-spec/references/todo-generation.md` の「各フェーズが持つメタ情報」
+1. **issue を作る。** 本文の節構造・タイトル形式は `/dev-spec` のフェーズ 12.4.2 と同じ (`## ゴール` / `## DoD` / `## 参照すべき docs` / `## 設計` (`ucs` が `UC-<n>` を指すフェーズのみ。docs/features/ が無い構成では省略。機能仕様の転記) / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` / `## 依存` / `## 対応ゴール`)。**TODO.md に全フェーズ共通節がある場合の `## DoD` 直後への転記も 12.4.2 と同じく行う** — 落とすと DoD ブロックの実行規約 (`bash -e` 前提等) が追加した issue にだけ無い状態になる。ラベルは `ready`。メタ情報の書き方の判定基準は `../dev-spec/references/todo-generation.md` の「各フェーズが持つメタ情報」
 
    ```bash
    NEW_URL=$(gh issue create --repo "$REPO_SLUG" --title "フェーズ<識別子>: <名前>" \
