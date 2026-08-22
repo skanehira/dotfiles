@@ -386,7 +386,7 @@ REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 
 いずれかが失敗する (git リポジトリでない / GitHub リモートが無い / `gh` 未認証) 場合は**停止**し、状況を伝えて「リポジトリを用意してから `/dev-spec` を再実行してください」と案内する。issue を作れないまま成功したように振る舞わない。
 
-**`docs/features/` が存在する場合は `rg -n '要判断:' docs/features/` が 0 件であることも確認する。** 1 件以上あれば停止してフェーズ 8 へ差し戻す (0.2 の高速経路 (承認済み → 12 のみ実行) では 10.5 の `feature_spec_unresolved` が走らないため、ここが承認後改変に対する唯一の検査になる)。
+**`docs/features/` が存在する場合は `rg -n '要判断:' docs/features/` が 0 件であることも確認する。** 1 件以上あれば停止してフェーズ 8 へ差し戻す (0.2 の高速経路 (承認済み → 12 のみ実行) では 10.5 の `feature_spec_unresolved` が走らないため、ここが承認後改変に対する唯一の検査になる)。解消後は 9〜11 をやり直さずフェーズ 12 へ直行してよい — 機能仕様は goals_sha の対象外なので承認は有効のままで、issue への反映は 12.3 の貼り直しが行う。
 
 **`docs/` の push は求めない。** `/dev-impl` はローカルの working tree にある docs を読むので、issue の「参照すべき docs」を解決するのにリモートの状態は要らない。dotfiles の運用でも `git push` は人間が手で行う。
 
@@ -419,19 +419,19 @@ gh issue list --repo "$REPO_SLUG" --state all --limit 200 --json number,title,st
 | --- | --- | --- |
 | 無い | 未作成 | 12.4.2 で新規作成する |
 | タイトル一致・**ラベル無しの open** | **未完成** (作成直後に落ちた) | 本文を作り直して貼り直し、ラベルを付ける。ラベルが無いと `/dev-impl` の Step 2 が着手対象として拾わず、恒久的に不可視になる |
-| タイトル一致・ラベルあり・**本文が現在の TODO.md 転記内容と一致** | 最新 | 本文の更新はスキップする。**ただし 12.4.3 の紐付け検証からは除外しない** |
+| タイトル一致・ラベルあり・**本文が現在の転記内容 (TODO.md + 12.4.2 の設計節) と一致** | 最新 | 本文の更新はスキップする。**ただし 12.4.3 の紐付け検証からは除外しない** |
 | タイトル一致・ラベルあり・**本文が不一致** | **設計が改訂された** | `gh issue edit <番号> --body-file` で貼り直す (下記) |
-| closed | 完了済み | 本文の更新はスキップする (再オープンしない)。ただし**本文が現在の TODO.md 転記内容と不一致なら、その issue 番号を 12.6 の報告に列挙する** — フェーズ 10 へ戻って直した改訂が、既に完了した issue には届かないことを人間が把握できるようにするため |
+| closed | 完了済み | 本文の更新はスキップする (再オープンしない)。ただし**本文が現在の転記内容 (TODO.md + 12.4.2 の設計節) と不一致なら、その issue 番号を 12.6 の報告に列挙する** — フェーズ 10 へ戻って直した改訂が、既に完了した issue には届かないことを人間が把握できるようにするため |
 
 **本文の一致確認を省かない。** フェーズ 12 の冒頭で「情報が足りなければフェーズ 10 へ戻って TODO.md を直し 10.5 から再実行する」と定めているが、タイトル一致だけでスキップすると**その修正が issue に届かない**。修正した DoD が実装者に渡らなければ、戻った意味が消える。
 
 ```bash
-gh issue view "$ISSUE_NUM" --repo "$REPO_SLUG" --json body -q .body > /tmp/issue-current.md
+gh issue view "$ISSUE_NUM" --repo "$REPO_SLUG" --json body -q .body | sed 's/\r$//' > /tmp/issue-current.md
 cmp -s /tmp/issue-current.md /tmp/issue-body.md || \
   gh issue edit "$ISSUE_NUM" --repo "$REPO_SLUG" --body-file /tmp/issue-body.md
 ```
 
-比較にコマンド置換 (`$(...)`) を使わない — 末尾改行を捨てるため差分を取りこぼす (`rules/core/verification.md`)。
+比較にコマンド置換 (`$(...)`) を使わない — 末尾改行を捨てるため差分を取りこぼす (`rules/core/verification.md`)。取得側の `sed 's/\r$//'` は CRLF の除去 — GitHub の web UI で本文を一度でも編集すると改行が CRLF で保存され、無変更でも不一致になるため。`gh` 往復のバイト一致 (末尾改行・`<details>` の無変換) は未検証 — 不一致が毎回発生する場合はここを疑う。
 
 比較用の `/tmp/issue-body.md` は `## 設計` 節 (12.4.2) 込みで生成する。これにより**機能仕様 (docs/features/) の改訂も本文不一致として検出され、フェーズ 12 の再実行で issue の設計節が自動的に貼り直される** (issue 側の設計はスナップショット、正本は docs 側)。
 
@@ -511,7 +511,7 @@ ISSUE_URL=$(gh issue create --repo "$REPO_SLUG" --title "$TITLE" --body-file /tm
 ISSUE_NUM=$(printf '%s' "$ISSUE_URL" | grep -o '[0-9]*$')
 ```
 
-`$TITLE` と `/tmp/issue-body.md` はフェーズごとに用意する。本文は Write ツールで `/tmp/issue-body.md` に書き出してから渡す (改行を含むため `--body` にインラインで埋めない)。本文の構造は次に固定する — `/dev-impl` がこの見出しで読むため、**節名を変えない**:
+`$TITLE` と `/tmp/issue-body.md` はフェーズごとに用意する。本文は Write ツールで `/tmp/issue-body.md` に書き出してから渡す (改行を含むため `--body` にインラインで埋めない)。書き出したら `wc -c` で **65536 バイト未満**であることを確認する (GitHub issue 本文の上限。超えると `gh issue create` / `edit` が 422 で落ちる)。超える場合は `## 設計` 節の転記をやめ、`docs/features/UC-<n>.md 参照 (本文上限超過のため転記省略)` の 1 行に落とす。本文の構造は次に固定する — `/dev-impl` がこの見出しで読むため、**節名を変えない**:
 
 ```markdown
 ## ゴール
@@ -526,9 +526,9 @@ ISSUE_NUM=$(printf '%s' "$ISSUE_URL" | grep -o '[0-9]*$')
 ## 設計
 <details><summary>機能仕様 UC-<n> (docs/features/UC-<n>.md の転記。正本は docs 側)</summary>
 
-<docs/features/UC-<n>.md の全文を、見出しをすべて 2 段降格 (`sed 's/^#/###/'`) して転記>
+<docs/features/UC-<n>.md の全文を、コードフェンス外の見出しをすべて 2 段降格して転記: `awk '/^```/{c=!c} !c{sub(/^#/,"###")} 1'`>
 </details>
-<!-- ucs: none のフェーズ、または docs/features/ が無い構成では本節を省略する -->
+<!-- 本節の省略条件: フェーズの ucs 宣言が none / docs/features/ が無い構成 / docs/features/UC-<n>.md が単体で不在。単体不在で省略した場合は 12.6 の報告に列挙する -->
 
 ## 変更が想定されるファイル
 <TODO.md のメタ情報「変更想定ファイル」をそのまま>
@@ -546,14 +546,14 @@ Depends on #<issue番号>        <!-- deps: none なら「依存なし」と書�
 G1, G2                          <!-- goals: none なら本節を省略 -->
 ```
 
-本文は TODO.md のフェーズ (設計のみ docs/features/) から次を写す。**変換が要るのは依存と設計の 2 項目だけで、残りはそのまま転記する**:
+本文は TODO.md のフェーズ (設計のみ docs/features/) から次を写す。**変換が要るのは依存・設計・対応ゴールの 3 項目だけで、残りはそのまま転記する**:
 
 | issue 本文 | 転記元 | 変換 |
 | --- | --- | --- |
 | ゴール | メタ情報の**ゴール** | そのまま |
 | DoD | メタ情報の **DoD** / **DoD (手動)** | そのまま (両方あれば両方) |
 | 参照すべき docs | メタ情報の**参照 docs** | そのまま |
-| 設計 | `docs/features/UC-<n>.md` (フェーズの `ucs` が指す UC) | **見出しを 2 段降格** (`sed 's/^#/###/'`) して `<details>` に包む。1 段ではタイトル行 `# UC-<n>` が `##` になり issue の節構造 (`##` レベルの節境界) を壊す。人間向けスナップショットで、実装器の設計入力は PHASE_CONTEXT の `feature_spec` が正 |
+| 設計 | `docs/features/UC-<n>.md` (フェーズの `ucs` が指す UC) | **コードフェンス外の見出しを 2 段降格** (`awk '/^```/{c=!c} !c{sub(/^#/,"###")} 1'`。sed の全行置換はフェンス内のシェルコメントまで降格するので使わない) して `<details>` に包む。1 段ではタイトル行 `# UC-<n>` が `##` になり issue の節構造 (`##` レベルの節境界) を壊す。**`<summary>` 直後の空行は必須** (無いと details 内の markdown が描画されない)。人間向けスナップショットで、実装器の設計入力は PHASE_CONTEXT の `feature_spec` が正 (定義は dev-impl の references/phase-context.md) |
 | 変更が想定されるファイル | メタ情報の**変更想定ファイル** | そのまま |
 | 非スコープ | メタ情報の**非スコープ** | そのまま |
 | 実装タスク | チェックボックス群 | そのまま |
@@ -628,6 +628,7 @@ rg -q 'DoD \(未定義\):' <該当フェーズの本文> && LABEL=needs-human ||
 - [ ] 全フェーズ実行時: DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md が生成され、承認ゲートを通過した
 - [ ] フェーズ 10.5 の設計整合監査が実行された (high findings は解消、または未解消のまま人間判断に添付)
 - [ ] (docs/USECASES.md がある構成) UC 全件分の docs/features/UC-<n>.md が存在し、`要判断:` の残存が 0 件
+- [ ] (docs/features/ がある構成) `ucs` が `UC-<n>` を指すフェーズの子 issue すべての本文に `## 設計` 節がある (`gh issue list --json body` と `rg -c '^## 設計$'` で件数を突合する)
 - [ ] 承認時: TODO.md 先頭に承認スタンプ (goals_sha 付き) が書き込まれた
 - [ ] TODO.md の全フェーズが issue 化され、ラベル (`ready` または `needs-human`) が付いた
 - [ ] (`HIERARCHY=yes` の場合) 親 issue が作られ、全フェーズ issue がいずれかの親に sub-issue として紐付いた。次の 2 つの集合が一致することで確認する

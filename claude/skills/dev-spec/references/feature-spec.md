@@ -4,8 +4,8 @@
 
 UC (振る舞いの規則) と実装の間にある**機能単位の詳細設計**を成果物にする。1 UC = 1 ファイルで `docs/features/UC-<n>.md` に書く。DESIGN_DETAIL_APP.md は横断関心事 (API / スキーマ / エラー / UX) で編成されるため、機能がどういうバイト列・振る舞いになるかの契約はどの節にも居場所が無い。本フェーズがその居場所になる。
 
-- **生成者**: 本フェーズ。**更新者**: フェーズ 8 (`要判断:` 行の解消)、実装中の設計加筆 (`/dev-impl` の P1/P2 動的修正)
-- **消費者**: フェーズ 10 (TODO.md の参照 docs に載る)、フェーズ 10.5 (`review-spec-compliance` mode: pre-approval の Step 8 が監査する)、フェーズ 12 (子 issue の `## 設計` 節へ転記する。issue 側はスナップショットで正本は本ファイル)、`/dev-impl` (PHASE_CONTEXT の `feature_spec` として implementer に全文が渡り、`SPEC_TEXT` としてリスク面の一次算出が読む)
+- **生成者**: 本フェーズ。**更新者**: フェーズ 8 (`要判断:` 行の解消)、実装中の設計加筆 (`/dev-impl` の P2 動的修正。P1 は TODO.md と issue 本文のみを編集し本ファイルには触れない)
+- **消費者**: フェーズ 10 (TODO.md の参照 docs に載る)、フェーズ 10.5 (`review-spec-compliance` mode: pre-approval の Step 8 が監査する)、フェーズ 12 と `/dev-impl` の P2 (子 issue の `## 設計` 節へ転記・貼り直しする。issue 側はスナップショットで正本は本ファイル)、`/dev-impl` (PHASE_CONTEXT の `feature_spec` として implementer に全文が渡り、`SPEC_TEXT` としてリスク面の一次算出が読む)
 
 ### SSOT の線引き
 
