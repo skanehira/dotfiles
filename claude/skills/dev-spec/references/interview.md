@@ -10,12 +10,14 @@ DESIGN.md (概要) と DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md (詳細) �
 ### 1. 設計ドキュメントの読み込み
 
 - `$ARGUMENTS` で DESIGN.md のパスが指定されていればそれを基点に使用、なければ `docs/DESIGN.md`
-- 同じディレクトリの DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md も併せて読み込む
+- 同じディレクトリの DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md も併せて読み込む。`docs/features/` があれば機能仕様 (`UC-*.md`) も読み込む
 - 詳細設計ファイルが無い場合、ユーザーに「詳細設計 (DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md) が見つかりません。analyzing-requirements または todo-generation のフォールバックで生成してから再実行することをお勧めします」と伝えて続行 (概要のみで深掘りする)
 
 ### 2. インタビューの実施
 
-全ファイルの内容を踏まえた上で、AskUserQuestion ツールを使って深掘りインタビューを行う。
+**最初に機能仕様の未決定行を回収する。** `docs/features/` が存在すれば `rg -n '要判断:' docs/features/` で未決定行を全件拾い、**インタビューの必須質問として他の観点より先に出す**。これらは設計者 (フェーズ 7.5) が単独で決められないと判断したプロダクト判断であり、ここで人間に届けないと未決定のまま承認ゲートに流れる (最後の網はフェーズ 10.5 の `feature_spec_unresolved`)。回答は該当する機能仕様のエッジケース表の行に決定として書き戻し、`要判断:` のリテラルを消す。
+
+続けて、全ファイルの内容を踏まえた上で、AskUserQuestion ツールを使って深掘りインタビューを行う。
 
 **インタビューの観点**:
 - 技術実装
@@ -31,6 +33,7 @@ DESIGN.md (概要) と DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md (詳細) �
 | 質問の対象 | 書き出し先 |
 |---|---|
 | 主要コンポーネントの責務 / レイヤー方針 / 技術選定理由 / 非機能目標 / ゴール | DESIGN.md |
+| 特定機能の出力形式 / エッジケースの決定 / `要判断:` 行への回答 | docs/features/UC-\<n\>.md (機能仕様。無い構成では DESIGN_DETAIL_APP.md) |
 | API シグネチャ / スキーマ詳細 / シーケンス / エラーパス具体 / 実装パターン・ライブラリ / UX 仕様 / ローカル・CI の検証コマンド / トランザクション境界 | DESIGN_DETAIL_APP.md |
 | リソース構成 / IaC / workflow・デプロイフロー / シークレット / 監視閾値・通知先 / 環境依存の検証手順 | DESIGN_DETAIL_INFRA.md |
 
@@ -73,6 +76,7 @@ AskUserQuestion({
 判定基準:
 - 「**何を作るか**」(目的・スコープ・主要コンポーネント・前提・技術選定・非機能目標) → DESIGN.md
 - 「**どう実装するか**」(API・スキーマ・シーケンス・エラー実装・UX・ローカル/CI の検証コマンド・実装パターン) → DESIGN_DETAIL_APP.md
+- 「**特定機能の契約**」(出力形式・エッジケースの決定) → docs/features/UC-\<n\>.md (無い構成では DESIGN_DETAIL_APP.md)
 - 「**どう構築・運用するか**」(リソース・IaC・workflow・シークレット・監視・環境依存の検証手順) → DESIGN_DETAIL_INFRA.md
 
 インタビューで決めきれなかった非技術の未決定事項 (ビジネス判断待ち等) は、POC 判断の 3 択とは別に DESIGN.md の「未解決の論点 (Open Issues)」へ書き出す (技術検証系の未確定は POC_NEEDED マーカーのまま)。
