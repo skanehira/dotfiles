@@ -321,7 +321,7 @@ architecture-guard については、main 側で `checked + sbd + (unchecked の
 
 ## 4.2c: 観点 gating 述語の算出コマンド
 
-review-adversarial のスキップ述語と mode 判定、review-quality を最終フェーズ以外でも起動させる条件を算出する。**フェーズの初回 fan-out 前に 1 回だけ実行し、結果を `gating_decided` に記録する。** 4.2d の再 fan-out では再評価しない。例外は 1 つだけで、**初回評価で review-adversarial を skip したフェーズ**に限り、各修正ラウンドの fan-out 直前に本節の述語一式を再算出して skip → 実行 の転換を判定する (SKILL.md 4.2c の遷移規定)。fix がテストに触れたかの判定は本節の述語ではなく、その fix のコミット差分を見る (SKILL.md 4.2d 手順 5)。
+review-adversarial のスキップ述語と mode 判定、review-quality を最終フェーズ以外でも起動させる条件を算出する。**フェーズの初回 fan-out 前に 1 回だけ実行し、結果を `gating_decided` に記録する。** 4.2d の再 fan-out では再評価しない。例外は 1 つだけで、**初回評価で review-adversarial を skip したフェーズ**に限り、各修正ラウンドの fan-out 直前に本節の述語一式を再算出して skip → 実行 の転換を判定する (SKILL.md 4.2c の遷移規定)。テストへの接触を理由にした review-adversarial の起動は、ラウンドごとではなく**フェーズ末に 1 回**、累積差分に対して行う ([phase-gates.md](./phase-gates.md) の `## 4.2e: 累積テスト差分の弱体化監査`)。
 
 ```bash
 CHANGED=$({ git diff --name-only "${PHASE_START_SHA}"; git ls-files --others --exclude-standard; } | sort -u)

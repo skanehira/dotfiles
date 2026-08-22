@@ -9,7 +9,7 @@
 - [4.2c: spawn の事前記録](#42c-spawn-の事前記録)
 - [4.2c: 「最後の issue」の判定](#42c-「最後の-issue」の判定)
 - [4.2d 手順 3: fixer へ渡す findings の切り出し](#42d-手順-3-fixer-へ渡す-findings-の切り出し)
-- [4.2d 手順 5: fix がテストに触れたかの判定](#42d-手順-5-fix-がテストに触れたかの判定)
+- [4.2e: 累積テスト差分の弱体化監査](#42e-累積テスト差分の弱体化監査)
 - [4.2d 手順 8: 作業ツリーの汚染の検出と復元](#42d-手順-8-作業ツリーの汚染の検出と復元)
 - [4.2e: 全体スイートのテストゲート](#42e-全体スイートのテストゲート)
 - [4.2e: DoD ブロックの抽出と実行](#42e-dod-ブロックの抽出と実行)
@@ -114,32 +114,30 @@ gh issue list --repo "$REPO_SLUG" --state open --limit $LIMIT --json number,labe
 
    architecture-guard の分は**キーを `violations` のまま出す** (`jq '{ok, violations: [.violations[] | select(.severity=="high" or .severity=="medium")]}'`)。`findings` に付け替えてはならない — implementer は `violations[]` を high/medium、`findings[]` を high だけ拾う規約なので (`claude/agents/dev-impl-implementer.md`)、付け替えると **guard の medium が誰にも直されず毎ラウンド再検出される**。**これらのファイルの生成者はこの手順だけ**で、4.2e 手順 4 の突合はこれらを spawn の成果物として数えない (main が書いたものなので)
 
-## 4.2d 手順 5: fix がテストに触れたかの判定
+## 4.2e: 累積テスト差分の弱体化監査
 
-   - **fix がテストに触れた場合は review-adversarial を必ず追加する** (`mode: weakening_only` で足りる)。判定は**その fix のコミット差分にテストファイルが含まれるか**を見るだけでよい (ラウンドごとにコミットしているので、fix 差分を切り出す SHA が存在する):
+**フェーズ最終コミットの前に 1 回だけ**、`PHASE_START_SHA` からの累積差分に対して review-adversarial を
+`mode: weakening_only` で起動する。**ラウンドごとには起動しない** — 修正がテストに触れるのはほぼ毎ラウンドで、
+毎回起動すると再 fan-out を「fatal を出した観点に絞る」規定が実質無効になる (実測: 記録された検査 fan-out
+72 件のうち 39 件 = 54% が 2 巡目以降だった)。**弱体化はフェーズを閉じる前に累積差分へ残っていれば必ず
+捕まるので、検出は失わない** — ラウンド内で入って同じフェーズ内で消えた弱体化は、コミット列には残っても
+最終状態には無く、無害である。
 
-     ```bash
-     # fix 起動の直前に控えた SHA と比較する。HEAD~1 を使わない —
-     # (a) fix の差分が空でコミットが打たれなかった場合、HEAD~1..HEAD は 1 つ前のラウンドを指して誤判定する
-     # (b) そのコミットがリポジトリの最初のコミットだと HEAD~1 が解決できずコマンド自体が失敗する
-     # mode: fix を起動する直前にファイルへ落とす (シェル変数は Agent の待ちをまたぐと消える)
-     git -C "$REPO_DIR" rev-parse HEAD > "$SCRATCH_DIR/before-$ROUND.sha"
-     # ... fix の完了とコミット ...
-     if [ ! -f "$SCRATCH_DIR/before-$ROUND.sha" ]; then
-       # 規則 (「進捗ログ」節): ファイルの不在を沈黙で通さない。判定不能は「触れていない」ではない
-       echo "起動前の SHA が残っていない。テスト接触は判定不能 — 安全側に倒し review-adversarial (mode: weakening_only 以上) を必ず起動する"
-     else
-       BEFORE_FIX=$(cat "$SCRATCH_DIR/before-$ROUND.sha")
-       if [ "$BEFORE_FIX" = "$(git -C "$REPO_DIR" rev-parse HEAD)" ]; then
-         echo "fix はコミットを生まなかった (差分なし)。テストには触れていない"
-       else
-         git -C "$REPO_DIR" diff --name-only "$BEFORE_FIX" HEAD \
-           | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)'
-       fi
-     fi
-     ```
+```bash
+# フェーズ全体でテストに触れたか (触れていなければ監査を起動しない)
+git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" HEAD \
+  | rg '(_test\.(go|rs|py)|\.test\.|\.spec\.|_spec\.|__tests__/|(^|/)tests?/|(^|/)test_[^/]*\.py)'
+# Rust のインラインテストはファイル名で捕まらないので内容も見る
+git -C "$REPO_DIR" diff -U0 "$PHASE_START_SHA" HEAD -- '*.rs' | rg '^\+.*#\[cfg\(test\)\]'
+```
 
-     Rust のインラインテスト (`#[cfg(test)]`) はこのファイル名パターンで捕まらないので、Rust プロジェクトでは同じ差分に対して `git -C "$REPO_DIR" diff -U0 "$BEFORE_FIX" HEAD -- '*.rs' | rg '^\+.*#\[cfg\(test\)\]'` も見る (`HEAD~1` を使わない理由は上と同じ)。修正の過程でテストが弱体化されるのはレンズ B が守る対象そのもので、ここに穴を作らない。既に adversarial が `full` で起動していたフェーズでは `full` のまま再実行する
+判定不能なとき (`PHASE_START_SHA` が解決できない等) は**安全側に倒して起動する**。
+既に adversarial が `full` で起動していたフェーズでは `full` のまま実行する。
+
+**この監査は 4.2d 手順 5 の「初回 high 0 で打ち切り」の対象外**である。打ち切りが止めるのは
+実装への攻撃 (レンズ A / C) であって、累積テスト差分の意味論検査 (レンズ B) は仕事が違う。
+打ち切ったフェーズでも必ず 1 回走らせる。起動したら `spawn` を記録する (`round` は `"tg0"` ではなく
+`"final"` を使い、テストゲート再試行と区別する)。
 
 ## 4.2d 手順 8: 作業ツリーの汚染の検出と復元
 
