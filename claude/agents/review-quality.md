@@ -130,7 +130,7 @@ git -C "$REPO_DIR" ls-files --others --exclude-standard
       "rule": "srp|ocp|lsp|isp|dip|yagni|naming|cohesion|coupling|colocation|god_component|prop_drilling|feature_envy|shotgun_surgery|scope_creep|minimal_impl|spec_explicit|io_di|use_effect_misuse|function_size|file_size|class_size|responsibility_mix|over_abstraction|under_abstraction|design_mismatch|repository_bypass|domain_global|aggregate_internal_access|transaction_boundary_violation|consumable_resource_reuse|stale_snapshot_read|cross_context_state_desync|error_taxonomy_incomplete|...",
       "message": "具体的な指摘",
       "traces_to": { "id": "<DoD 項目 / BR 番号 / DESIGN_DETAIL の節>", "quote": "<その条文の原文をそのまま引用した 1 文>" },
-      "evidence": "該当箇所のコード引用、または判定に使ったコマンドと出力",
+      "evidence": "族を走査した全要素の判定 (finding-coverage.md)。該当箇所のコード引用や判定に使ったコマンドと出力も含める。走査していない要素はその旨を明記する",
       "fix_proposal": "推奨修正"
     }
   ]

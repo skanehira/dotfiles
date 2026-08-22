@@ -154,7 +154,7 @@ related_source_files が指定されていればそれを優先。それ以外�
       "rule": "behavior_assertion|vacuous_negative_assertion|naming|aaa|exact_match|mock_overuse|test_isolation",
       "message": "具体的な指摘内容",
       "traces_to": { "id": "<DoD 項目 / BR 番号 / DESIGN_DETAIL の節>", "quote": "<その条文の原文をそのまま引用した 1 文>" },
-      "evidence": "該当箇所のコード引用、または判定に使ったコマンドと出力",
+      "evidence": "族を走査した全要素の判定 (finding-coverage.md)。該当箇所のコード引用や判定に使ったコマンドと出力も含める。走査していない要素はその旨を明記する",
       "fix_proposal": "推奨修正"
     }
   ]

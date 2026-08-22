@@ -111,10 +111,12 @@ case "$TARGET" in
     # dev-impl は実装ラウンドごとにコミットするので、BASE_SHA との比較で対象範囲の
     # 全差分が取れる (phase: はフェーズ開始 SHA、run: は run 開始 SHA)。未コミットの残り
     # (コミット漏れ・検査中の書き換え) も取りこぼさないよう、working tree と untracked も併せて見る。
-    { git -C "$REPO_DIR" diff --name-only "$BASE_SHA"; git -C "$REPO_DIR" ls-files --others --exclude-standard; } | sort -u
+    { git -C "$REPO_DIR" diff --name-only --diff-filter=d "$BASE_SHA"; git -C "$REPO_DIR" ls-files --others --exclude-standard; } | sort -u
     ;;
 esac
 ```
+
+`--diff-filter=d` で削除されたパスを外す。外さないと実体の無いファイルがスクリプトに渡り、`missing_files` に積まれて `checked_files` との突合がずれる (スクリプト側は削除を入力不正にせず `missing_files` に記録して継続するので停止はしない)。
 
 `phase:*` / `run:*` ケースで `git diff --name-only "$BASE_SHA"` が非0 exit code を返した場合 (`$BASE_SHA` が未設定 / 存在しない SHA 等)、これは「差分が空」と区別する: `checked_files: 0` ではなく `ok: false, skip_reason: "diff_command_failed", violations: []`、`message` にコマンドの stderr を含めて返す。これにより「本当に変更なし」を装った偽陽性の `ok: true` を防ぐ。**呼び出し側 (dev-impl) はこれを未検証として扱い、修正ラウンドに乗せずに停止する** (実装を直しても解消しない性質のため。dev-impl SKILL.md 4.2d 手順 1)。
 
@@ -135,6 +137,8 @@ esac
 出力は `{ ok, skip_reason, violations, checked_file_list }` の JSON で、本 agent の出力スキーマにそのまま流し込める形になっている。exit code は 違反なし=0 / 違反あり=1 / 入力不正 (ファイルが読めない)=2。**exit 2 は「違反なし」と区別する** — `ok: false, skip_reason: "layer_check_failed"` で返し、`message` に stderr を含める。
 
 判定をスクリプトに寄せるのは、**import の向きが完全に機械的な性質だから**である。実測では LLM に読ませていたために、型のみの cross-layer import 1 行を 5 回中 4 回見落としながら毎回 `ok: true` を返していた。見落としは「違反が無い」と区別が付かないため、検出器として機能していなかった (`rules/core/verification.md`)。スクリプトは TypeScript / JavaScript / Go / Rust / Python / Lua の import 書式に対応し、層の分類は最長一致で決める (`inner` の下に `outer` 名のディレクトリがある構成でも誤判定しない)。
+
+`checked_files` は `checked_file_list | length` で埋め、`unchecked_files` / `skipped_by_design` はステップ 2 の列挙との差集合として**自分で**埋める (スクリプトはこの 3 つを出さない)。スクリプトの `missing_files` が非空なら、その分は `skipped_by_design` に入れる (削除されたファイルは検査対象が存在しないため)。
 
 `violations` の各要素は `rule: "clean_arch_layer"` / `severity: "high"` / `message` (ファイル名・行番号・問題の import を含む) / `fix_proposal` (「inner に Port を定義、outer に Adapter を置き DI で繋ぐ」) を持つ。**`checked_file_list` はスクリプトの出力をそのまま使う** — 自分で件数を数え直さない。
 

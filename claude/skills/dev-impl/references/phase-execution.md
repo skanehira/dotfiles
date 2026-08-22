@@ -44,6 +44,7 @@
 | `PHASE_ID` | Step 4.1 (フェーズ) | issue タイトル `フェーズ<識別子>: <名前>` の識別子。`$SCRATCH_DIR` のパスと `### フェーズ<識別子>:` の引き当てに使う |
 | `REPORT_PATH` | implementer 起動の直前 | 起動の種類ごとに分ける: `impl-report.json` (初回) / `impl-report-fix-<round>.json` (修正ラウンド) / `impl-report-testgate-<test_gate_retry>.json` (4.2e の再試行) / `impl-report-retry-<phase_fix_round>.json` (`impl_report_invalid` の再起動)。**衝突させない** — 4.2e 手順 4 の突合が成果物とラウンドを 1:1 で対応させるため |
 | `EXEMPTIONS_COUNT` | 4.2c の事前ブロック | `jq 'length' "$SCRATCH_DIR/self-exemptions.json"`。**消えても再算出できる** (ファイルが残るため) ので env.sh には入れず、4.2d 手順 1 で使う直前に取り直してよい |
+| `ROUND` | 検査 fan-out / 修正ラウンドを起動する直前 | 文字列。初回 fan-out は `"0"`、修正ラウンドは `"<phase_fix_round>"`、テストゲート再試行は `"tg<n>"`、報告不整合の再起動は `"retry<n>"`、フェーズ末の累積弱体化監査は `"final"` の **5 形式**。env.sh には書かない (カウンタと同じ理由) ので、必要な時点で JSONL から数え直す |
 | `RESULT_JSON` | 検査結果を読む時 | 検査 agent が `output_path` に書いた結果 JSON のパス |
 | `START_SHA` | Step 0 か Step 1 (run) | run 開始時の HEAD。**architecture-guard を最終フェーズで起動するときの差分の基準** (`BASE_SHA` として渡す)。代入は run-bootstrap.md の `## run スコープ変数と env.sh の生成`。**`PHASE_START_SHA` で代替しない** — フェーズ差分だけを見ると、過去フェーズで入って以降触られていない違反が検査対象から外れる |
 | `SPEC_TEXT` | Step 4.1 (フェーズ) | issue 本文 (`gh issue view`) と `DESIGN_DETAIL_APP.md` の該当節を連結した文字列。リスク面の一次算出の入力。**PHASE_CONTEXT を入力にしない** — PHASE_CONTEXT は 4.1.5 で組み立てるため循環する |
@@ -121,7 +122,8 @@ report_path: ${absScratchDir}/impl-report.json
 
 ```bash
 # $ROUND は初回が 0、修正ラウンドは phase_fix_round の現在値、
-# テストゲート再試行は tg<n>、報告不整合の再起動は retry<n> (綴りは「変数の定義」節が正)
+# テストゲート再試行は tg<n>、報告不整合の再起動は retry<n>、フェーズ末の累積弱体化監査は final
+# (綴りの正は本ファイルの `## 変数の定義` の ROUND 行)
 git -C "$REPO_DIR" rev-parse HEAD > "$SCRATCH_DIR/before-$ROUND.sha"
 date +%s > "$SCRATCH_DIR/spawn-dev-impl-implementer-$ROUND.epoch"
 ```
@@ -153,19 +155,19 @@ ${round === 1 ? "" : ROUND2_PLUS_BRIEF}
 下限とみなせ。族として閉じられない残りがあれば、その旨を報告の open_questions に明記せよ。
 ```
 
-族単位をラウンド 1 から求めるのは、**局所修正が族を閉じないことが周回の直接原因**だと実測で分かっているためである (`## 修正ラウンドのモデル昇格の根拠` の実測と、検査側の規範 `rules/core/references/finding-coverage.md`)。報告粒度と修正粒度は対になっていて、片方だけでは効かない。
+族単位をラウンド 1 から求めるのは、**局所修正が族を閉じないことが周回の直接原因**だと実測で分かっているためである ([orchestration-rationale.md](./orchestration-rationale.md) の `## 修正ラウンドのモデル昇格の根拠` の実測と、検査側の規範 `rules/core/references/finding-coverage.md`)。報告粒度と修正粒度は対になっていて、片方だけでは効かない。
 
 `ROUND2_PLUS_BRIEF` (ラウンド 2 以降だけ足す。**過去ラウンドの実績を必ず埋めて渡す** — 「同じ族の隣が出続けている」ことは実装者からは見えないため):
 
 ```text
-これはラウンド ${round}/3 で、ラウンド 1 では解消しきれなかった fatal である。3 ラウンド目でも fatal が残れば
-このフェーズはエスカレ停止となる。
+これはラウンド ${round}/${phaseFixBudget} で、ラウンド 1 では解消しきれなかった fatal である。
+${phaseFixBudget} ラウンド目でも fatal が残ればこのフェーズはエスカレ停止となる。
 
 過去ラウンドの経過: ${roundHistory}
 (例: 「round 1 は A:100 を指摘 → 解消したが round 2 で B:79 が新規に出た」)
 ```
 
-`roundHistory` は JSONL の `fix_dispatch` の `fatal_summary` と、その次ラウンドの検査結果から main が組み立てる (main は findings 本文を読まないので、`{rule, file, line}` の射影と解消 / 未解消の別だけで足りる)。
+`phaseFixBudget` はフェーズ `start` イベントに記録した `context.phase_fix_budget` から取る (基底は `RISK_FACES` の有無で 3 / 4 に振れるので 3 を決め打ちしない)。`roundHistory` は JSONL の `fix_dispatch` の `fatal_summary` と、その次ラウンドの検査結果から main が組み立てる (main は findings 本文を読まないので、`{rule, file, line}` の射影と解消 / 未解消の別だけで足りる)。
 
 すべて**絶対パス**で渡す。subagent の Bash は呼び出しごとに cwd が親のものへ戻るため、相対パスは意図したディレクトリで解決できない。
 
@@ -248,17 +250,18 @@ git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_
 
 // スキップ述語を満たさなければ実行。mode は 本ファイルの `## 4.2c: review-adversarial の mode 決定表` で決め、
 // gating_decided に記録した値をそのまま渡す (再 fan-out でも同じ値を使う)
-{ subagent_type: "review-adversarial", model: "opus",   // mode: full のときは risk_faces も渡す
+{ subagent_type: "review-adversarial", model: "opus",
   prompt: `mode: ${adversarialMode}
 phase_name: ${phaseName}
 phase_start_sha: ${phaseStartSha}
 repo_dir: ${absRepoDir}
 docs_dir: ${absDocsDir}
 dev_server: ${devServerOrNull}
+risk_faces: ${riskFaces}
 scratch_dir: ${absScratchDir}
 exemptions_path: ${absScratchDir}/self-exemptions.json
 output_path: ${absScratchDir}/review-adversarial-r${round}.json` }   // PHASE_CONTEXT は渡さない
-// mode: weakening_only のときは docs_dir / dev_server の行を省く (レンズ A/C を実行しないため不要)
+// mode: weakening_only のときは docs_dir / dev_server / risk_faces の行を省く (レンズ A/C を実行しないため不要)
 
 // gating に応じて review-tdd / review-quality / review-product-readiness を同様に (model: opus)
 //   共通で渡す: PHASE_CONTEXT の絶対パス / phase_name / phase_start_sha / repo_dir (絶対パス)
@@ -271,7 +274,7 @@ output_path: ${absScratchDir}/review-adversarial-r${round}.json` }   // PHASE_CO
 //      agent が起動した dev サーバを停止できず、以降のフェーズが古いサーバを検査し続ける)
 ```
 
-`target_diff` に渡せるのは `HEAD` / `working_tree` / `phase:<フェーズ名>` の 3 値のみ (`claude/agents/architecture-guard.md` の「入力」節)。それ以外の文字列は agent 側の分岐に該当せず未定義動作になる。
+`target_diff` に渡せるのは `HEAD` / `working_tree` / `phase:<フェーズ名>` / `run:<run_id>` の 4 値のみ (`claude/agents/architecture-guard.md` の「入力」節)。それ以外の文字列は agent 側の分岐に該当せず未定義動作になる。
 
 **結果の読み方** (SKILL.md「main のコンテキスト規律」):
 
@@ -563,9 +566,9 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 表に無い言語では一次だけで判定し、`gating_decided` の `basis.secondary_signal` に `false` を記録する**
 (判定材料が片方だけだったことを後から分かるようにする)。
 
-| 面 ID | 何を踏むか | 二次シグナル (コード差分。TypeScript / JavaScript の例) | 実測 |
+| 面 ID | 何を踏むか | 二次シグナル (コード差分。TypeScript / JavaScript の例) | 実測 (2026-08-22 mind の run。high 18 件中) |
 | --- | --- | --- | --- |
-| `async_roundtrip` | 非同期の往復と中断可能な状態。応答待ちの間に別の操作が通る / 中断の解除漏れ / 重複要求 | `AbortController` / `signal` / `debounce` / `setTimeout` / `setInterval` / `suspend`・`cancel`・`pending`・`inFlight` の識別子 / compare-and-set・`version`・`seq` | 2026-08-22 / mind の run: high 18 件中 **10 件 (56%)** |
+| `async_roundtrip` | 非同期の往復と中断可能な状態。応答待ちの間に別の操作が通る / 中断の解除漏れ / 重複要求 | `AbortController` / `signal` / `debounce` / `setTimeout` / `setInterval` / `suspend`・`cancel`・`pending`・`inFlight` の識別子 / compare-and-set・`version`・`seq` | **10 件 (56%)** |
 | `persistence_limit` | 永続化層の上限・境界。可変長の入力をそのまま DB へ渡す経路 | SQL の `inArray` / `IN (` / `LIMIT` / バッチ書き込み / 文字列長を文字数で数えている箇所 | 3 件 (17%) |
 | `auth_error_path` | 認証・認可・セッションとそのエラー経路 | `$AUTH_CHANGED` が非空 (`## 4.2c: 観点 gating 述語の算出コマンド`) | 2 件 (11%) |
 | `ui_consistency` | 画面間の不整合。遷移して戻ったときにキャッシュが古いまま | ルータ遷移とキャッシュ無効化 (`invalidate` / `refetch` / `revalidate`) が同じ差分にある | 2 件 (11%) |
@@ -583,7 +586,9 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 | **`RISK_FACES` が非空** | 上の表のいずれかの面を踏む (一次または二次のどちらかで当たれば非空) |
 | **テスト差分が無く、実装が 20 行を超えて積まれたフェーズ** | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空、かつ `$LINES` > 20 |
 | 最後の issue | 自分以外に open issue が残らない |
-| 上記のいずれでもない | → `weakening_only` (レンズ B のみ。docs を読まず攻撃も実行しない) |
+
+
+**どの行にも当たらなければ `weakening_only`** (レンズ B のみ。docs を読まず攻撃も実行しない)。
 
 **`full` で起動するときは `risk_faces` を prompt に渡し、その面を名指しで優先攻撃させる。** 面の名指しが
 無いと「一般的に攻撃せよ」としか伝わらず、最大クラスタに当たるかが運任せになる (渡し方は
@@ -595,7 +600,7 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 
 | # | 条件                                                                                                                                              | 意図                                                                                                                                                 |
 | - | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空                                                                                        | テスト変更時はレンズ B 必須。ファイル名 + 差分内容の 2 層、tracked/untracked 両方で判定 (言語別の具体パターンは phase-execution.md の実コマンドが正) |
+| 1 | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空                                                                                        | テスト変更時はレンズ B 必須。ファイル名 + 差分内容の 2 層、tracked/untracked 両方で判定 (言語別の具体パターンは本ファイルの `## 4.2c: 観点 gating 述語の算出コマンド` が正) |
 | 2 | `$LINES` ≤ 20 (`$NON_DOC_CHANGED` が空、つまり `.md` / `docs/` のみの差分なら行数不問で skip 可)                                                  | typo・軽微修正の機械近似                                                                                                                             |
 | 3 | `$CI_FILES_CHANGED` が空 (CI・ビルド/テスト設定 `.github/`, `*config*`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, `justfile`, `deno.json` 等の変更なし) | 検証器設定の改変は必ず監査                                                                                                                           |
 | 4 | 最後の issue でない (自分以外に open issue が残る。`uc-tracking` の親は数えない)                                                                  | 最後の issue は全観点フル                                                                                                                            |

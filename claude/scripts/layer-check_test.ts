@@ -36,6 +36,7 @@ Deno.test("checkLayers_with_inner_importing_outer_reports_a_violation", () => {
       import_lines_checked: 1,
       violation_count: 1,
     }],
+    missing_files: [],
   });
 });
 
@@ -69,6 +70,7 @@ Deno.test("checkLayers_with_inner_importing_inner_reports_no_violation", () => {
       import_lines_checked: 1,
       violation_count: 0,
     }],
+    missing_files: [],
   });
 });
 
@@ -126,6 +128,7 @@ Deno.test("checkLayers_with_no_layer_patterns_skips_and_says_why", () => {
     skip_reason: "no_layer_convention",
     violations: [],
     checked_file_list: [],
+    missing_files: [],
   });
 });
 
@@ -185,4 +188,35 @@ Deno.test("checkLayers_classifies_by_the_longest_matching_pattern", () => {
 
   assertEquals(result.checked_file_list[0].layer, "outer");
   assertEquals(result.violations, []);
+});
+
+// 差分の列挙には削除されたファイルも含まれる。読めないことを入力不正 (exit 2) にすると、
+// 削除を含む正常なフェーズが「検査が成立していない」と誤判定され停止する。
+Deno.test("checkLayers_with_a_deleted_file_records_it_as_missing_instead_of_failing", () => {
+  const result = checkLayers([
+    {
+      path: "src/domain/a.ts",
+      content: 'import { b } from "../infra/b.ts";\n',
+    },
+    { path: "src/domain/gone.ts", content: null },
+  ], CONFIG);
+
+  assertEquals(result.ok, false);
+  assertEquals(result.violations.length, 1);
+  assertEquals(result.checked_file_list, [{
+    file: "src/domain/a.ts",
+    layer: "inner",
+    import_lines_checked: 1,
+    violation_count: 1,
+  }]);
+  assertEquals(result.missing_files, ["src/domain/gone.ts"]);
+});
+
+Deno.test("checkLayers_with_no_missing_files_reports_an_empty_missing_list", () => {
+  const result = checkLayers([{
+    path: "src/domain/a.ts",
+    content: 'import { b } from "./b.ts";\n',
+  }], CONFIG);
+
+  assertEquals(result.missing_files, []);
 });
