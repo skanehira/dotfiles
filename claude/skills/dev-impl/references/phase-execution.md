@@ -20,6 +20,7 @@
 - [4.2a: implementer が期待どおりに終わらなかった場合の分岐](#42a-implementer-が期待どおりに終わらなかった場合の分岐)
 - [4.2c: adversarial_mode 別の起動順序](#42c-adversarial_mode-別の起動順序)
 - [4.2c: 観点 gating 表](#42c-観点-gating-表)
+- [4.2c: リスク面の表](#42c-リスク面の表)
 - [4.2c: review-adversarial の mode 決定表](#42c-review-adversarial-の-mode-決定表)
 - [4.2c: review-adversarial のスキップ述語表](#42c-review-adversarial-のスキップ述語表)
 
@@ -44,6 +45,8 @@
 | `REPORT_PATH` | implementer 起動の直前 | 起動の種類ごとに分ける: `impl-report.json` (初回) / `impl-report-fix-<round>.json` (修正ラウンド) / `impl-report-testgate-<test_gate_retry>.json` (4.2e の再試行) / `impl-report-retry-<phase_fix_round>.json` (`impl_report_invalid` の再起動)。**衝突させない** — 4.2e 手順 4 の突合が成果物とラウンドを 1:1 で対応させるため |
 | `EXEMPTIONS_COUNT` | 4.2c の事前ブロック | `jq 'length' "$SCRATCH_DIR/self-exemptions.json"`。**消えても再算出できる** (ファイルが残るため) ので env.sh には入れず、4.2d 手順 1 で使う直前に取り直してよい |
 | `RESULT_JSON` | 検査結果を読む時 | 検査 agent が `output_path` に書いた結果 JSON のパス |
+| `SPEC_TEXT` | Step 4.2 (事前判定) | `$PHASE_TASKS` と PHASE_CONTEXT の `design_detail` 抜粋を連結した文字列。リスク面の一次算出の入力 |
+| `RISK_FACES` | Step 4.2 (事前判定) で一次、4.2c で二次を足して確定 | このフェーズが踏む攻撃面のカンマ区切り集合 (`## 4.2c: リスク面の表` の 5 つ)。PHASE_CONTEXT の `risk_faces` / adversarial の `mode` 決定 / 修正ラウンド上限の伸縮の 3 箇所で使う。空文字列は「どの面にも当たらない」を表す |
 
 **`PHASE` と `PHASE_NAME` を取り違えない。** JSONL の集計は `PHASE` (短縮識別子) で行い、同じフェーズが 2 表記で混ざるとレポートのフェーズ集計が割れる。
 
@@ -92,6 +95,37 @@ else
   uiPhase=false
 fi
 ```
+
+### リスク面の一次算出 (仕様の記述から)
+
+**このフェーズが踏みやすい攻撃面の集合 `RISK_FACES` を、実装の前に仕様の記述から出す。** 面は
+`## 4.2c: リスク面の表` の 5 つで、ここで出した集合は 3 箇所で使う: (1) PHASE_CONTEXT の
+`risk_faces` として implementer に渡す (最初から族を閉じさせる) / (2) review-adversarial の
+`mode` 決定 / (3) 修正ラウンド上限の伸縮 (SKILL.md「カウンタと予算」)。
+
+**判定は仕様の日本語で行う** (`$PHASE_TASKS` = issue の ゴール / DoD / 実装タスク と、PHASE_CONTEXT の
+`design_detail` 抜粋)。仕様は自然言語なので、TypeScript でも Go でも Rust でも同じ判定が働く。
+コード差分から取る二次シグナルは実装後にしか使えないので、4.2c で補強する (`## 4.2c: リスク面の表`)。
+
+```bash
+# $SPEC_TEXT = $PHASE_TASKS + PHASE_CONTEXT の design_detail 抜粋 (Read した値を連結して代入)
+RISK_FACES=""
+add_face() { RISK_FACES="${RISK_FACES}${RISK_FACES:+,}$1"; }
+echo "$SPEC_TEXT" | rg -qi '並行|同時|競合|中断|再開|締め出し|巻き戻し|順序|冪等|再試行|リトライ|応答待ち' \
+  && add_face async_roundtrip
+echo "$SPEC_TEXT" | rg -qi '上限|件数|バイト|文字数|深さ|一括|バッチ|ページング' \
+  && add_face persistence_limit
+echo "$SPEC_TEXT" | rg -qi '認証|認可|セッション|失効|ログイン|ログアウト|権限' \
+  && add_face auth_error_path
+echo "$SPEC_TEXT" | rg -qi '一覧|遷移|戻る|再取得|再描画|反映' \
+  && add_face ui_consistency
+echo "$SPEC_TEXT" | rg -qi '連番|採番|一度きり|使い捨て|消費|ワンタイム' \
+  && add_face consumable
+```
+
+**語彙は 18 件の実測 finding から逆算したもので、次の run で当たるかは未検証である。** そのため
+4.2c で `gating_decided` の `basis.risk_faces` に記録し、そのフェーズで実際に出た `rule` と
+後から突き合わせられるようにする (外れていたら語彙を直す)。
 
 ## 4.2a: implementer の起動
 
@@ -497,17 +531,38 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 | **`$CONSUMABLE_CHANGED` が非空のフェーズ** | 上記 + review-quality (最後の issue でなくても起動する。多重消費・恒久エラー分岐の漏れはレイヤ境界の検査では検知できないため) |
 | `PRODUCT_MODE=cli` | review-product-readiness を**一切起動しない** (`uiPhase` が常に `false`。「最後の issue」の全観点フルからも除外する。cli の G_E2E は Step 5.2 で review-spec-compliance が担当する) |
 
+## 4.2c: リスク面の表
+
+**面の集合 `RISK_FACES` は 2 段で決まる。** 一次は実装前に仕様の日本語から出し (`## 4.2: 事前判定` の
+`### リスク面の一次算出`)、二次はこの表のコード差分パターンで補強する。**二次は言語依存なので、
+表に無い言語では一次だけで判定し、`gating_decided` の `basis.secondary_signal` に `false` を記録する**
+(判定材料が片方だけだったことを後から分かるようにする)。
+
+| 面 ID | 何を踏むか | 二次シグナル (コード差分。TypeScript / JavaScript の例) | 実測 |
+| --- | --- | --- | --- |
+| `async_roundtrip` | 非同期の往復と中断可能な状態。応答待ちの間に別の操作が通る / 中断の解除漏れ / 重複要求 | `AbortController` / `signal` / `debounce` / `setTimeout` / `setInterval` / `suspend`・`cancel`・`pending`・`inFlight` の識別子 / compare-and-set・`version`・`seq` | high 18 件中 **10 件 (56%)** |
+| `persistence_limit` | 永続化層の上限・境界。可変長の入力をそのまま DB へ渡す経路 | SQL の `inArray` / `IN (` / `LIMIT` / バッチ書き込み / 文字列長を文字数で数えている箇所 | 3 件 (17%) |
+| `auth_error_path` | 認証・認可・セッションとそのエラー経路 | `$AUTH_CHANGED` が非空 (`## 4.2c: 観点 gating 述語の算出コマンド`) | 2 件 (11%) |
+| `ui_consistency` | 画面間の不整合。遷移して戻ったときにキャッシュが古いまま | ルータ遷移とキャッシュ無効化 (`invalidate` / `refetch` / `revalidate`) が同じ差分にある | 2 件 (11%) |
+| `consumable` | 消費型資源の採番。一度使うと無効になる値の二重消費 | `$CONSUMABLE_CHANGED` が非空 (同上) | 1 件 (6%) |
+
+**既存の 2 述語 (`$AUTH_CHANGED` / `$CONSUMABLE_CHANGED`) が捕捉できていたのは 18 件中 3 件 (17%) だけ**で、
+最大クラスタの `async_roundtrip` に対応する信号が無かった。これが面を導入した理由である。
+
 ## 4.2c: review-adversarial の mode 決定表
 
 `claude/agents/review-adversarial.md` の「モード」節が受け側の規定。
 
 | 条件 (いずれかが真なら `full`) | 述語 |
 | --- | --- |
-| 消費型資源を扱う差分 | `$CONSUMABLE_CHANGED` が非空 |
-| 認証・認可・セッションの処理を含む差分 | `$AUTH_CHANGED` が非空 |
+| **`RISK_FACES` が非空** | 上の表のいずれかの面を踏む (一次または二次のどちらかで当たれば非空) |
 | **テスト差分が無く、実装が 20 行を超えて積まれたフェーズ** | `$TEST_FILE_CHANGED` と `$TEST_CONTENT_CHANGED` がともに空、かつ `$LINES` > 20 |
 | 最後の issue | 自分以外に open issue が残らない |
 | 上記のいずれでもない | → `weakening_only` (レンズ B のみ。docs を読まず攻撃も実行しない) |
+
+**`full` で起動するときは `risk_faces` を prompt に渡し、その面を名指しで優先攻撃させる。** 面の名指しが
+無いと「一般的に攻撃せよ」としか伝わらず、最大クラスタに当たるかが運任せになる (渡し方は
+[phase-context.md](./phase-context.md) の `## 渡し方`)。
 
 ## 4.2c: review-adversarial のスキップ述語表
 
