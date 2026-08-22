@@ -445,9 +445,12 @@ EOF
 
 ```bash
 # 予算は再入で引き上がる値なので必ず context に載せる。載せないと Step 0 の復元が
-# 既定 (33 / 3) にフォールバックし、再入のたびに引き上げが失われて同じ上限で止まり続ける
+# 既定にフォールバックし、再入のたびに引き上げが失われて同じ上限で止まり続ける
 PHASE_SPAWNS_BUDGET=${PHASE_SPAWNS_BUDGET:-33}
-PHASE_FIX_BUDGET=${PHASE_FIX_BUDGET:-3}
+# phase_fix_budget の基底は RISK_FACES の有無で決まる (SKILL.md「カウンタと予算」が正)。
+# 基底を載せずに既定 3 で書くと、再入時に面ありフェーズの上限が黙って 1 下がる
+FIX_BUDGET_BASE=$([ -n "$RISK_FACES" ] && echo 4 || echo 3)
+PHASE_FIX_BUDGET=${PHASE_FIX_BUDGET:-$FIX_BUDGET_BASE}
 jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
    --arg sha "$PHASE_START_SHA" --argjson issue "$ISSUE" \
    --argjson psb "$PHASE_SPAWNS_BUDGET" --argjson pfb "$PHASE_FIX_BUDGET" '{
@@ -526,7 +529,7 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 | ----------------- | --------------------------------------------------------------------------------------------------- |
 | 毎フェーズ        | review-adversarial (`mode` は下表で決める。下記スキップ述語で skip 可) |
 | テスト差分があるフェーズ (`$TEST_FILE_CHANGED` または `$TEST_CONTENT_CHANGED` が非空) | 上記 + review-tdd                              |
-| UI を触るフェーズ (`uiPhase == true`) | 上記 + review-product-readiness (dev_server が無ければ skip)                     |
+| UI を触るフェーズ (`uiPhase == true` **または `RISK_FACES` に `ui_consistency` を含む**) | 上記 + review-product-readiness (dev_server が無ければ skip)。**条件を面まで広げたのは実測に基づく** — 9 本で high 6 件 = 0.67 件/本と全観点で最も産出率が高く、単独稼働は 24 分しかない (検査は並列なので実時間はほぼ無料)。検出内容も実機でしか出ないもの (404 デッドループ / ErrorBoundary 不在 / 二度押しで重複登録) で、他観点では代替できない |
 | **最後の issue** | 全観点フル (tdd / quality / product-readiness / adversarial) **+ architecture-guard** — 境界違反は累積的で、途中で入ったものも最終差分に残るため、ここで 1 回検査すれば足りる。毎フェーズ起動していた頃の実測は 28 回で違反 1 件だった |
 | **`$CONSUMABLE_CHANGED` が非空のフェーズ** | 上記 + review-quality (最後の issue でなくても起動する。多重消費・恒久エラー分岐の漏れはレイヤ境界の検査では検知できないため) |
 | `PRODUCT_MODE=cli` | review-product-readiness を**一切起動しない** (`uiPhase` が常に `false`。「最後の issue」の全観点フルからも除外する。cli の G_E2E は Step 5.2 で review-spec-compliance が担当する) |
