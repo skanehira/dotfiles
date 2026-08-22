@@ -46,8 +46,9 @@
 | `EXEMPTIONS_COUNT` | 4.2c の事前ブロック | `jq 'length' "$SCRATCH_DIR/self-exemptions.json"`。**消えても再算出できる** (ファイルが残るため) ので env.sh には入れず、4.2d 手順 1 で使う直前に取り直してよい |
 | `RESULT_JSON` | 検査結果を読む時 | 検査 agent が `output_path` に書いた結果 JSON のパス |
 | `START_SHA` | Step 0 か Step 1 (run) | run 開始時の HEAD。**architecture-guard を最終フェーズで起動するときの差分の基準** (`BASE_SHA` として渡す)。代入は run-bootstrap.md の `## run スコープ変数と env.sh の生成`。**`PHASE_START_SHA` で代替しない** — フェーズ差分だけを見ると、過去フェーズで入って以降触られていない違反が検査対象から外れる |
-| `SPEC_TEXT` | Step 4.2 (事前判定) | `$PHASE_TASKS` と PHASE_CONTEXT の `design_detail` 抜粋を連結した文字列。リスク面の一次算出の入力 |
-| `RISK_FACES` | Step 4.2 (事前判定) で一次、4.2c で二次を足して確定 | このフェーズが踏む攻撃面のカンマ区切り集合 (`## 4.2c: リスク面の表` の 5 つ)。PHASE_CONTEXT の `risk_faces` / adversarial の `mode` 決定 / 修正ラウンド上限の伸縮の 3 箇所で使う。空文字列は「どの面にも当たらない」を表す |
+| `SPEC_TEXT` | Step 4.1 (フェーズ) | issue 本文 (`gh issue view`) と `DESIGN_DETAIL_APP.md` の該当節を連結した文字列。リスク面の一次算出の入力。**PHASE_CONTEXT を入力にしない** — PHASE_CONTEXT は 4.1.5 で組み立てるため循環する |
+| `DOCS_DIR` | Step 1 (run) | `$REPO_DIR/docs` の絶対パス。`traces_to` の照合 (`## 4.2d 手順 3`) とリスク面の一次算出が読む。代入は run-bootstrap.md の `## run スコープ変数と env.sh の生成` |
+| `RISK_FACES` | Step 4.1 (フェーズ) で一次、4.2c で二次を足して確定。**env.sh に `export` して Bash 呼び出しをまたいで保つ** | このフェーズが踏む攻撃面のカンマ区切り集合 (`## 4.2c: リスク面の表` の 5 つ)。PHASE_CONTEXT の `risk_faces` / adversarial の `mode` 決定 / 修正ラウンド上限の伸縮の 3 箇所で使う。空文字列は「どの面にも当たらない」を表す |
 
 **`PHASE` と `PHASE_NAME` を取り違えない。** JSONL の集計は `PHASE` (短縮識別子) で行い、同じフェーズが 2 表記で混ざるとレポートのフェーズ集計が割れる。
 
@@ -81,6 +82,8 @@ else
 fi
 ```
 
+**リスク面は 4.1 で一次算出済み** (`$RISK_FACES`。env.sh から `source` で読む)。ここでは実装後の差分を見て**二次シグナルで補強する** — 一次は仕様の日本語だけを見るので、仕様に書かれていない形で面を踏んだ差分を取りこぼす。二次の算出は `## 4.2c: 観点 gating 述語の算出コマンド` の後半にある。
+
 UI フェーズ判定 (`uiPhase`): `phase_tasks` / フェーズ名に UI キーワード (画面 / コンポーネント / page / component / style / CSS / レイアウト) が含まれる、または `related_source_files` にフロントエンド dir (`apps/web/`, `frontend/`, `src/components/`, `src/pages/` 等) が含まれる場合に true。**`product_mode: cli` の場合はキーワード判定を行わず常に false** (CLI 実装の「コマンド」「フラグ」等の語がキーワード誤爆するのを防ぐ)。
 
 実行前に `docs/.dev-impl/<run_id>/phase-<識別子>-context.md` (Step 4.1.5 で組み立て済み) を Read し、YAML フィールド `product_mode` / `phase_tasks` / `phase_name` / `related_source_files` の値を確認する。以下のコードの `$PRODUCT_MODE` / `$PHASE_TASKS` / `$PHASE_NAME` / `$RELATED_SOURCE_FILES` は、その Read した値をそのままシェル変数に代入したものを指す (例: `PHASE_NAME="フェーズ3: ユーザー認証"`)。YAML パーサーは使わず、Read した内容から手動で代入する。
@@ -96,37 +99,6 @@ else
   uiPhase=false
 fi
 ```
-
-### リスク面の一次算出 (仕様の記述から)
-
-**このフェーズが踏みやすい攻撃面の集合 `RISK_FACES` を、実装の前に仕様の記述から出す。** 面は
-`## 4.2c: リスク面の表` の 5 つで、ここで出した集合は 3 箇所で使う: (1) PHASE_CONTEXT の
-`risk_faces` として implementer に渡す (最初から族を閉じさせる) / (2) review-adversarial の
-`mode` 決定 / (3) 修正ラウンド上限の伸縮 (SKILL.md「カウンタと予算」)。
-
-**判定は仕様の日本語で行う** (`$PHASE_TASKS` = issue の ゴール / DoD / 実装タスク と、PHASE_CONTEXT の
-`design_detail` 抜粋)。仕様は自然言語なので、TypeScript でも Go でも Rust でも同じ判定が働く。
-コード差分から取る二次シグナルは実装後にしか使えないので、4.2c で補強する (`## 4.2c: リスク面の表`)。
-
-```bash
-# $SPEC_TEXT = $PHASE_TASKS + PHASE_CONTEXT の design_detail 抜粋 (Read した値を連結して代入)
-RISK_FACES=""
-add_face() { RISK_FACES="${RISK_FACES}${RISK_FACES:+,}$1"; }
-echo "$SPEC_TEXT" | rg -qi '並行|同時|競合|中断|再開|締め出し|巻き戻し|順序|冪等|再試行|リトライ|応答待ち' \
-  && add_face async_roundtrip
-echo "$SPEC_TEXT" | rg -qi '上限|件数|バイト|文字数|深さ|一括|バッチ|ページング' \
-  && add_face persistence_limit
-echo "$SPEC_TEXT" | rg -qi '認証|認可|セッション|失効|ログイン|ログアウト|権限' \
-  && add_face auth_error_path
-echo "$SPEC_TEXT" | rg -qi '一覧|遷移|戻る|再取得|再描画|反映' \
-  && add_face ui_consistency
-echo "$SPEC_TEXT" | rg -qi '連番|採番|一度きり|使い捨て|消費|ワンタイム' \
-  && add_face consumable
-```
-
-**語彙は 18 件の実測 finding から逆算したもので、次の run で当たるかは未検証である。** そのため
-4.2c で `gating_decided` の `basis.risk_faces` に記録し、そのフェーズで実際に出た `rule` と
-後から突き合わせられるようにする (外れていたら語彙を直す)。
 
 ## 4.2a: implementer の起動
 
@@ -264,7 +236,7 @@ gating で決まった観点 + architecture-guard を**同一メッセージ内�
 **`output_path` はラウンド番号で分ける (`-r${round}`)。** 固定名にするとラウンドごとに上書きされ、(a) `impl_done` の `review_outputs` に残る監査証跡が最終ラウンド分だけになり、(b) 4.2e 手順 4 の spawn 突合が「起動回数」ではなく「観点の種類数」を数えることになって、修正ラウンドを回したフェーズで必ず記録漏れと誤診する。
 
 ```javascript
-// 毎フェーズ必須
+// 最後の issue のフェーズのみ
 { subagent_type: "architecture-guard", model: "haiku", run_in_background: false,
   prompt: `target_diff: run:${runId}
 design_path: ${absDocsDir}/DESIGN.md
@@ -276,7 +248,7 @@ git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_
 
 // スキップ述語を満たさなければ実行。mode は 本ファイルの `## 4.2c: review-adversarial の mode 決定表` で決め、
 // gating_decided に記録した値をそのまま渡す (再 fan-out でも同じ値を使う)
-{ subagent_type: "review-adversarial", model: "opus",
+{ subagent_type: "review-adversarial", model: "opus",   // mode: full のときは risk_faces も渡す
   prompt: `mode: ${adversarialMode}
 phase_name: ${phaseName}
 phase_start_sha: ${phaseStartSha}
@@ -356,6 +328,33 @@ UNTRACKED_AUTH=$(git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs
 AUTH_CHANGED="${TRACKED_AUTH}${UNTRACKED_AUTH}"
 ```
 
+続けて**リスク面の二次シグナル**を評価し、4.1 の一次算出に足し込む (面の定義と各面のパターンは `## 4.2c: リスク面の表`)。**二次は言語依存**なので、対応表に無い言語のプロジェクトでは評価せず `SECONDARY_SIGNAL=false` を記録する (判定材料が片方だけだったことを後から分かるようにする)。
+
+```bash
+. "$SCRATCH_DIR/env.sh"          # 4.1 で算出した RISK_FACES を読み直す
+has_face() { echo ",$RISK_FACES," | rg -q ",$1,"; }
+add_face() { has_face "$1" || RISK_FACES="${RISK_FACES}${RISK_FACES:+,}$1"; }
+DIFF=$(git diff -U0 "${PHASE_START_SHA}" -- ':!*.md' ':!docs/'; \
+       git ls-files --others --exclude-standard -z -- ':!*.md' ':!docs/' | xargs -0 cat 2>/dev/null)
+
+# 対応言語か (表に無い言語では二次を評価しない)
+if echo "$CHANGED" | rg -q '\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$'; then
+  SECONDARY_SIGNAL=true
+  echo "$DIFF" | rg -q 'AbortController|\bsignal\b|debounce|setTimeout|setInterval|suspend|cancel|pending|inFlight|compare-and-set|\bversion\b|\bseq\b' \
+    && add_face async_roundtrip
+  echo "$DIFF" | rg -qi 'inArray|\bIN \(|\bLIMIT\b|batch|\.length\b' && add_face persistence_limit
+  echo "$DIFF" | rg -q 'invalidate|refetch|revalidate' && add_face ui_consistency
+else
+  SECONDARY_SIGNAL=false
+fi
+# 既存の 2 述語は面にそのまま対応する
+[ -n "$AUTH_CHANGED" ] && add_face auth_error_path
+[ -n "$CONSUMABLE_CHANGED" ] && add_face consumable
+# 確定値を書き戻す (以降の Bash 呼び出しと gating_decided が読む)
+sed -i '' "s|^export RISK_FACES=.*|export RISK_FACES=\"$RISK_FACES\"|" "$SCRATCH_DIR/env.sh"
+printf '%s\n' "$RISK_FACES" > "$SCRATCH_DIR/risk-faces.txt"
+```
+
 判定条件テーブル (review-adversarial の skip/実行の遷移規則と mode 決定、`$CONSUMABLE_CHANGED` による review-quality の起動) は 本ファイルの `## 4.2c: review-adversarial のスキップ述語表` を参照。
 
 ## 4.2e: テスト弱体化検知コマンド
@@ -432,6 +431,25 @@ PHASE_NAME="フェーズ$PHASE_ID: ノードの編集と階層操作"   # agent 
 SCRATCH_DIR="$RUN_DIR/reviews/$PHASE"
 mkdir -p "$SCRATCH_DIR"
 
+# --- リスク面の一次算出 (仕様の記述から。面の定義は `## 4.2c: リスク面の表`) ---
+# **PHASE_CONTEXT を入力にしない** — PHASE_CONTEXT は 4.1.5 で組み立てるので、
+# そこから面を取ると「面が要る 4.1 と、面を書く 4.1.5」が循環する。issue 本文と
+# docs を直接読めば循環しない。
+SPEC_TEXT="$(gh issue view "$ISSUE" --json body -q .body)
+$(rg -A 40 "^### フェーズ${PHASE_ID}:" "$DOCS_DIR/DESIGN_DETAIL_APP.md" 2>/dev/null || true)"
+RISK_FACES=""
+add_face() { RISK_FACES="${RISK_FACES}${RISK_FACES:+,}$1"; }
+echo "$SPEC_TEXT" | rg -qi '並行|同時|競合|中断|再開|締め出し|巻き戻し|順序|冪等|再試行|リトライ|応答待ち' \
+  && add_face async_roundtrip
+echo "$SPEC_TEXT" | rg -qi '上限|件数|バイト|文字数|深さ|一括|バッチ|ページング' \
+  && add_face persistence_limit
+echo "$SPEC_TEXT" | rg -qi '認証|認可|セッション|失効|ログイン|ログアウト|権限' \
+  && add_face auth_error_path
+echo "$SPEC_TEXT" | rg -qi '一覧|遷移|戻る|再取得|再描画|反映' \
+  && add_face ui_consistency
+echo "$SPEC_TEXT" | rg -qi '連番|採番|一度きり|使い捨て|消費|ワンタイム' \
+  && add_face consumable
+
 cat > "$SCRATCH_DIR/env.sh" <<EOF
 export PHASE="$PHASE"
 export PHASE_NAME="$PHASE_NAME"
@@ -439,8 +457,11 @@ export PHASE_ID="$PHASE_ID"
 export ISSUE=$ISSUE
 export SCRATCH_DIR="$SCRATCH_DIR"
 export PHASE_START_SHA="$PHASE_START_SHA"
+export RISK_FACES="$RISK_FACES"
 EOF
 ```
+
+**語彙は 18 件の実測 finding (2026-08-22、mind の run) から逆算したもので、次の run で当たるかは未検証である。** そのため 4.2c で `gating_decided` の `basis.risk_faces` に記録し、そのフェーズで実際に出た `rule` と後から突き合わせられるようにする (外れていたら語彙を直す)。**再入時は `gating_decided` の `basis.risk_faces` から復元する** (env.sh は再入で作り直さないので通常は残るが、記録の方を正とする)。
 
 変数が揃ったところで、JSONL のフェーズ `start` イベントを書く (**この順序を守る** — 先に書こうとすると `$PHASE` も `$ISSUE` も未定義で、`--argjson issue "$ISSUE"` が JSON パースエラーで落ちる):
 

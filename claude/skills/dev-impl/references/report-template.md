@@ -201,7 +201,7 @@ JSONL から `event_type` が `p1_fix | p2_fix | p3_escalate | phase_added` の�
 | `p1_fix` | `section` / `what` / `commit_sha` / `p1_fixes_in_phase` |
 | `p2_fix` | `section` / `what` / `why` / `commit_sha` / `p2_fixes_total` |
 | `phase_added` | `phase` / `issue_number` / `parent_number` / `origin` / `run_spawns_budget` |
-| `p3_escalate` | `reason` / `phase` / `issue` / `label` / `last_success_sha` + 停止理由ごとの詳細 (`remaining_fatal` / `round_history` 等があれば `<details>` で畳む) |
+| `p3_escalate` | `reason` / `phase` / `issue` / `label` / `last_success_sha` + 停止理由ごとの詳細 (`remaining_fatal` / `round_history` 等があれば `<details>` で畳む)。**`reason` が `phase_fix_exceeded` のときは `verdict` (`spec_defect` / `implementation_gap`) をカード見出しに併記し、`spec_defect` なら欠けている条文と提案 (`summary`) をカード本文に出す** — 人間が最初に知りたいのは「実装を直すのか仕様を直すのか」の別だから |
 
 ```html
 <article class="rounded border p-4" style="border-color: var(--border); background: var(--p1-bg); color: var(--p1-fg);">

@@ -9,7 +9,7 @@
 
 実装フェーズ: N / N (全完了)
 新規コミット: <git rev-list --count $START_SHA..HEAD>
-動的修正: P1 <X> 回 / P2 <Y> 回 / P3 0 回 (停止無し)
+動的修正: P1 <X> 回 / P2 <Y> 回 / P3 0 回 (停止無し。停止した場合は `<reason>` と、`phase_fix_exceeded` なら `verdict` = spec_defect / implementation_gap を併記する)
   P2 の内訳 (設計を実装に合わせて書き換えた箇所。要確認):
   - <section> — <what> (<commit_sha>)
   ... P2 が 0 回なら「P2 なし」の 1 行
