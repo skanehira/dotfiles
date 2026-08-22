@@ -229,7 +229,7 @@ docs (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md と、
 - docs/FEASIBILITY.md         (PoC 結果: verified x 件 / fallback 採用 y 件)
 ```
 
-FEASIBILITY.md を作成していない場合 (クイックモードで不確実性なし) は、その行を省略する。
+FEASIBILITY.md を作成していない場合 (クイックモードで不確実性なし) は、その行を省略する。docs/features/ を生成していない場合 (フェーズ 7.5 をスキップした構成) も同様にその行を省略する。
 
 DESIGN.md の「未解決の論点 (Open Issues)」に項目があれば続けて列挙する (「なし」なら省略)。
 
