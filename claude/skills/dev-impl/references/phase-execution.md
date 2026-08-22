@@ -133,9 +133,20 @@ repo_dir: ${absRepoDir}
 report_path: ${absScratchDir}/impl-report-fix-${round}.json
 findings_paths:
 ${fatalResultPaths.map(p => `  - ${p}`).join("\n")}
+${FAMILY_BRIEF}
 ${round === 1 ? "" : ROUND2_PLUS_BRIEF}
 最終メッセージは report_path の絶対パス 1 行だけにせよ。要約や解説を書くな。` }
 ```
+
+`FAMILY_BRIEF` (**ラウンド 1 から必ず足す**):
+
+```text
+指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを
+確認せよ。findings の evidence には検査側が走査した族の範囲が書かれているので、それを閉じるべき範囲の
+下限とみなせ。族として閉じられない残りがあれば、その旨を報告の open_questions に明記せよ。
+```
+
+族単位をラウンド 1 から求めるのは、**局所修正が族を閉じないことが周回の直接原因**だと実測で分かっているためである (`## 修正ラウンドのモデル昇格の根拠` の実測と、検査側の規範 `rules/core/references/finding-coverage.md`)。報告粒度と修正粒度は対になっていて、片方だけでは効かない。
 
 `ROUND2_PLUS_BRIEF` (ラウンド 2 以降だけ足す。**過去ラウンドの実績を必ず埋めて渡す** — 「同じ族の隣が出続けている」ことは実装者からは見えないため):
 
@@ -145,9 +156,6 @@ ${round === 1 ? "" : ROUND2_PLUS_BRIEF}
 
 過去ラウンドの経過: ${roundHistory}
 (例: 「round 1 は A:100 を指摘 → 解消したが round 2 で B:79 が新規に出た」)
-
-指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを
-確認せよ。族として閉じられない残りがあれば、その旨を報告の open_questions に明記せよ。
 ```
 
 `roundHistory` は JSONL の `fix_dispatch` の `fatal_summary` と、その次ラウンドの検査結果から main が組み立てる (main は findings 本文を読まないので、`{rule, file, line}` の射影と解消 / 未解消の別だけで足りる)。

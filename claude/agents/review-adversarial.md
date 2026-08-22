@@ -139,21 +139,7 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
 
 #### 列挙可能な族は必ず一括で走査する
 
-**finding が「列挙可能な集合の 1 インスタンス」なら、報告する前に集合全体を走査し、1 件の finding にまとめる。** 1 インスタンスだけを報告すると、修正器は最小実装の原則に従ってその 1 件だけを直すため、兄弟が必ず生き残る。すると次のラウンドで同じ型の指摘が出て、**修正ラウンド数が族の要素数と等しくなる** (実測: 述語関数の比較項 7 個の被覆を 1 件ずつ報告したことで、1 フェーズが 4 ラウンドを消化した)。
-
-族かどうかは「同じ判定を機械的に繰り返し適用できる対象が他にもあるか」で決める。典型:
-
-| 族の例 | 走査する範囲 |
-| --- | --- |
-| 述語関数・比較関数の項が未 pin | その関数のすべての比較項 |
-| 列挙型・union の一分岐が未処理 | その型のすべての分岐 |
-| ある層のファイルが下位層を import | その層のすべてのファイル |
-| ある API のエラー経路が未検証 | その API のすべてのエラーコード |
-| 同じ形のフィクスチャが 1 属性しか動かしていない | その構造体のすべての属性 |
-
-走査した結果は `evidence` に**全要素の判定を並べて書く** (例: 「比較項 7 個を変異させ、parentId / body / sortOrder は killed、origin / kind / x / y が survived」)。1 件だけ確かめて残りを推測で書かない — 走査していない要素は `evidence` にそう明記する。
-
-`fix_proposal` も族全体を一度に塞ぐ形で書く (個別のフィクスチャいじりではなく、`rules/core/testing.md`「パラメータ化テスト」に沿った 1 本のパラメータ化テスト等)。
+報告の粒度は共通規範に従う。**検査を始める前に `~/.claude/rules/core/references/finding-coverage.md` を Read すること。** 要点は「finding が列挙可能な集合の 1 インスタンスなら、報告する前に集合全体を走査して 1 件にまとめる」で、これを守らないと修正器が 1 件ずつしか閉じられず、修正ラウンド数が族の要素数と等しくなる。走査結果は `evidence` に全要素の判定を並べ、走査していない要素はそう明記する。
 
 ### Step 4: JSON 出力
 
@@ -179,6 +165,7 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
       "confidence": "high|medium|low",
       "rule": "edge_case_failure|error_path_unhandled|consumable_resource_reuse|attack_not_executable|working_tree_polluted|test_weakened|skip_added|tautological_test|vacuous_assertion|goal_refuted|phase_task_unimplemented|partial_commit_detected",
       "message": "具体的な指摘 (攻撃入力 / 観測出力を含む)",
+      "evidence": "族を走査した全要素の判定 (finding-coverage.md)。走査していない要素はその旨を明記する",
       "repro_command": "npx tsx /tmp/review-adversarial-phase-3/attack-1.ts   # レンズ A の finding のみ",
       "fix_proposal": "推奨修正"
     }

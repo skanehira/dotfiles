@@ -44,7 +44,7 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 
 ### 修正ラウンドのモデル昇格 (ラウンド 2 以降は `fable`)
 
-**ラウンド 1 で解消しなかった fatal は、指摘箇所の局所修正では閉じない性質のものが多い** (実測の内訳 → [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## 修正ラウンドのモデル昇格の根拠`)。そこで**ラウンド 2 以降は `model: "fable"` に上げ、指示文で「指摘箇所を局所的に塞ぐ前に、当該箇所が属する不変条件を洗い出して族ごと閉じる」ことを求める** (指示文の全文は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 修正ラウンドの implementer 起動`)。ラウンド 3 でも解消しなければ従来どおり `phase_fix_exceeded` でエスカレ停止する — **モデルを上げても閉じない fatal は、実装の腕ではなく設計の問題である**可能性が高く、人間の判断を仰ぐべき局面だと見なす。`agent-spawn-guard` hook は model の未指定だけを弾き、規定と違う値でも明示されていれば意図的な override として通すので、この昇格に hook の改修は要らない。
+**ラウンド 1 で解消しなかった fatal は、指摘箇所の局所修正では閉じない性質のものが多い** (実測の内訳 → [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## 修正ラウンドのモデル昇格の根拠`)。そこで**「指摘箇所を局所的に塞ぐ前に、当該箇所が属する不変条件を洗い出して族ごと閉じる」ことはラウンド 1 から求め、ラウンド 2 以降はさらに `model: "fable"` に上げて過去ラウンドの経過を渡す** (指示文の全文は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 修正ラウンドの implementer 起動`)。検査側が族を 1 件にまとめて報告する規範は `rules/core/references/finding-coverage.md` にあり、**報告粒度と修正粒度は対で効く**。ラウンド 3 でも解消しなければ従来どおり `phase_fix_exceeded` でエスカレ停止する — **モデルを上げても閉じない fatal は、実装の腕ではなく設計の問題である**可能性が高く、人間の判断を仰ぐべき局面だと見なす。`agent-spawn-guard` hook は model の未指定だけを弾き、規定と違う値でも明示されていれば意図的な override として通すので、この昇格に hook の改修は要らない。
 
 ### フェーズ実装を subagent に委譲する理由 (`rules/core/orchestration.md` の原則に対する dev-impl 限定の例外)
 

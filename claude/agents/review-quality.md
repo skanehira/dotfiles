@@ -105,6 +105,10 @@ git -C "$REPO_DIR" ls-files --others --exclude-standard
 
 見つけた問題は、確信が持てないものや severity: low のものも含めて**すべて findings に載せる**。重要度・確信度による自己フィルタはこの段階では行わない。フィルタリングは下流 (severity gating) の責務であり、この段階のゴールは網羅性。確信度は各 finding の `confidence` に記載する。
 
+#### 列挙可能な族は必ず一括で走査する
+
+報告の粒度は共通規範に従う。**検査を始める前に `~/.claude/rules/core/references/finding-coverage.md` を Read すること。** 要点は「finding が列挙可能な集合の 1 インスタンスなら、報告する前に集合全体を走査して 1 件にまとめる」で、これを守らないと修正器が 1 件ずつしか閉じられず、修正ラウンド数が族の要素数と等しくなる。走査結果は `evidence` に全要素の判定を並べ、走査していない要素はそう明記する。
+
 ### Step 4: JSON 出力
 
 各 finding は判定根拠を `evidence` に含める (該当コードの引用、または確認に使ったコマンドと出力)。主観的判定のみで終わらせない。
