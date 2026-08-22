@@ -24,7 +24,7 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 - 範囲外 (やらないこと)
 - 関連スキル / agent
 
-「実行手順」の内訳: Step 0 / Step 1 / Step 1.5 / Step 2 / Step 3 / Step 4 / Step 5 / Step 6 / Step 7
+「実行手順」の内訳: Step 0 / Step 1 / Step 1.5 / Step 2 / Step 3 (カウンタと予算を含む) / Step 4 / main のコンテキスト規律 / Step 5 / Step 6 / Step 7
 
 ## モデル方針
 

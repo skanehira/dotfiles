@@ -438,7 +438,12 @@ mkdir -p "$SCRATCH_DIR"
 # **PHASE_CONTEXT を入力にしない** — PHASE_CONTEXT は 4.1.5 で組み立てるので、
 # そこから面を取ると「面が要る 4.1 と、面を書く 4.1.5」が循環する。issue 本文と
 # docs を直接読めば循環しない。
-SPEC_TEXT="$(gh issue view "$ISSUE" --json body -q .body)
+ISSUE_BODY=$(gh issue view "$ISSUE" --json body -q .body) || {
+  # 取得に失敗したまま進むと SPEC_TEXT が痩せ、**全フェーズが黙って「面なし」に倒れる**。
+  # 面の有無は adversarial の mode と修正ラウンド上限の両方を決めるので影響が大きい
+  echo "issue 本文を取得できない。リスク面の算出が成立しないので停止する"; exit 1
+}
+SPEC_TEXT="$ISSUE_BODY
 $(rg -A 40 "^### フェーズ${PHASE_ID}:" "$DOCS_DIR/DESIGN_DETAIL_APP.md" 2>/dev/null || true)"
 RISK_FACES=""
 add_face() { RISK_FACES="${RISK_FACES}${RISK_FACES:+,}$1"; }

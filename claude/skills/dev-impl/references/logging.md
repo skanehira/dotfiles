@@ -141,7 +141,7 @@ run_id の発行・引き継ぎは run-bootstrap.md の `## run スコープ変�
 | `phase_added` | warn | run の途中でフェーズと issue が増えた時 (SKILL.md 4.6「新フェーズの issue 化」手順 4) | `phase` / `issue_number` / `parent_number` (紐付けた親。フラット構成なら省略) / `origin` (`p1` / `p2` / `goal_unmet`) / `run_spawns_budget` (同手順 3 で再計算した値) |
 | `p3_escalate` | error | エスカレ停止時 (SKILL.md「エスカレ停止時の挙動」) | `reason` (停止条件リストの値) / `phase` / `issue` (対象が無ければ `null`) / `label` (`in-progress` / `needs-human` / `none`) / `last_success_sha` / 停止理由ごとの詳細。**Step 0 手順 4 の再開分岐が読む唯一の駐車マーカー**なので、`reason` と `issue` は必ず入れる。**`reason: phase_fix_exceeded` のときは `verdict` (`spec_defect` / `implementation_gap`) と、その根拠となった `traces_to` の内訳 (`{traced: <件数>, null: <件数>}` を直近 2 ラウンド分) も入れる** — `spec_defect` は「実装では閉じられないので設計へ差し戻す」停止で、人間が最初に知りたいのがこの区別だから (判定は SKILL.md 4.2d 手順 3)。**`spec_defect` のときは欠けている条文と提案する条文案を `summary` に書く** |
 
-`p3_escalate` の `context` のうち、HTML レポート (report-template.md のセクション 4) が描画する 2 つは形を固定する。書き手ごとに形が変わると描画されない:
+`p3_escalate` の `context` のうち、次の 2 つは形を固定する。**HTML レポート (report-template.md のセクション 4) がレンダラを持つのは `remaining_fatal.essence` だけ**で、`remaining_fatal.findings[]` と `round_history` は `<details>` に畳んで出す扱い。書き手ごとに形が変わると畳む処理も当たらない:
 
 ```json
 "remaining_fatal": { "essence": "<残った fatal を 1 行で>", "findings": [{ "rule": "...", "severity": "high", "file": "...", "line": 0 }] },
@@ -150,6 +150,8 @@ run_id の発行・引き継ぎは run-bootstrap.md の `## run スコープ変�
 
 `phase_fix_exceeded` で停止した場合、どちらも 4.2d 手順 3 の `fix_dispatch` の内訳から作る。
 
+| event_type | severity | 記録タイミング | context |
+| --- | --- | --- | --- |
 | `run_done` | info | **run の完了時 (Step 6 の完了サマリ出力時) に 1 件だけ**。Step 0 の再入判定はこのイベントの有無だけを見る | `status` (`done` / `partial`) / `phases_completed` / `goal_summary`。**`done` (ステップ単位の完了) と混同しない** — 再入判定のセンチネルは `run_done` であって `done` ではない |
 
 
