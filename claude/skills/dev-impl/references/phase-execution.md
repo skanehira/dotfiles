@@ -530,8 +530,8 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 | ----------------- | --------------------------------------------------------------------------------------------------- |
 | 毎フェーズ        | review-adversarial (`mode` は下表で決める。下記スキップ述語で skip 可) |
 | テスト差分があるフェーズ (`$TEST_FILE_CHANGED` または `$TEST_CONTENT_CHANGED` が非空) | 上記 + review-tdd                              |
-| UI を触るフェーズ (`uiPhase == true` **または `RISK_FACES` に `ui_consistency` を含む**) | 上記 + review-product-readiness (dev_server が無ければ skip)。**条件を面まで広げたのは実測に基づく** — 9 本で high 6 件 = 0.67 件/本と全観点で最も産出率が高く、単独稼働は 24 分しかない (検査は並列なので実時間はほぼ無料)。検出内容も実機でしか出ないもの (404 デッドループ / ErrorBoundary 不在 / 二度押しで重複登録) で、他観点では代替できない |
-| **最後の issue** | 全観点フル (tdd / quality / product-readiness / adversarial) **+ architecture-guard** — 境界違反は累積的で、途中で入ったものも最終差分に残るため、ここで 1 回検査すれば足りる。毎フェーズ起動していた頃の実測は 28 回で違反 1 件だった |
+| UI を触るフェーズ (`uiPhase == true` **または `RISK_FACES` に `ui_consistency` を含む**) | 上記 + review-product-readiness (dev_server が無ければ skip)。**条件を面まで広げたのは実測に基づく** (2026-08-22、mind の run) — 9 本で high 6 件 = 0.67 件/本と全観点で最も産出率が高く、単独稼働は 24 分しかない (検査は並列なので実時間はほぼ無料)。検出内容も実機でしか出ないもの (404 デッドループ / ErrorBoundary 不在 / 二度押しで重複登録) で、他観点では代替できない |
+| **最後の issue** | 全観点フル (tdd / quality / product-readiness / adversarial) **+ architecture-guard** — 境界違反は累積的で、途中で入ったものも最終差分に残るため、ここで 1 回検査すれば足りる。毎フェーズ起動していた頃の実測 (2026-08-22、mind の run) は 28 回で違反 1 件だった |
 | **`$CONSUMABLE_CHANGED` が非空のフェーズ** | 上記 + review-quality (最後の issue でなくても起動する。多重消費・恒久エラー分岐の漏れはレイヤ境界の検査では検知できないため) |
 | `PRODUCT_MODE=cli` | review-product-readiness を**一切起動しない** (`uiPhase` が常に `false`。「最後の issue」の全観点フルからも除外する。cli の G_E2E は Step 5.2 で review-spec-compliance が担当する) |
 
@@ -544,7 +544,7 @@ jq -nc --arg ts "$(date +%Y-%m-%dT%H:%M:%S%z)" --arg p "$PHASE" \
 
 | 面 ID | 何を踏むか | 二次シグナル (コード差分。TypeScript / JavaScript の例) | 実測 |
 | --- | --- | --- | --- |
-| `async_roundtrip` | 非同期の往復と中断可能な状態。応答待ちの間に別の操作が通る / 中断の解除漏れ / 重複要求 | `AbortController` / `signal` / `debounce` / `setTimeout` / `setInterval` / `suspend`・`cancel`・`pending`・`inFlight` の識別子 / compare-and-set・`version`・`seq` | high 18 件中 **10 件 (56%)** |
+| `async_roundtrip` | 非同期の往復と中断可能な状態。応答待ちの間に別の操作が通る / 中断の解除漏れ / 重複要求 | `AbortController` / `signal` / `debounce` / `setTimeout` / `setInterval` / `suspend`・`cancel`・`pending`・`inFlight` の識別子 / compare-and-set・`version`・`seq` | 2026-08-22 / mind の run: high 18 件中 **10 件 (56%)** |
 | `persistence_limit` | 永続化層の上限・境界。可変長の入力をそのまま DB へ渡す経路 | SQL の `inArray` / `IN (` / `LIMIT` / バッチ書き込み / 文字列長を文字数で数えている箇所 | 3 件 (17%) |
 | `auth_error_path` | 認証・認可・セッションとそのエラー経路 | `$AUTH_CHANGED` が非空 (`## 4.2c: 観点 gating 述語の算出コマンド`) | 2 件 (11%) |
 | `ui_consistency` | 画面間の不整合。遷移して戻ったときにキャッシュが古いまま | ルータ遷移とキャッシュ無効化 (`invalidate` / `refetch` / `revalidate`) が同じ差分にある | 2 件 (11%) |
