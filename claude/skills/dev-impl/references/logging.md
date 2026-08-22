@@ -122,7 +122,7 @@ run_id の発行・引き継ぎは run-bootstrap.md の `## run スコープ変�
 
 ## subagent 起動と issue 完了の event_type (Step 4)
 
-1 フェーズは最小構成でも implementer 1 + architecture-guard 1 + review 1〜4 の subagent を起動する。全 spawn を記録して事後にフェーズ単価と突合できるようにする (上限は SKILL.md Step 3 の `phase_spawns` / `run_spawns`)。
+1 フェーズは最小構成でも implementer 1 + review 1〜4 の subagent を起動する (最後の issue のフェーズはこれに architecture-guard 1 が加わる)。全 spawn を記録して事後にフェーズ単価と突合できるようにする (上限は SKILL.md Step 3 の `phase_spawns` / `run_spawns`)。
 
 | event_type | severity | 記録タイミング | context |
 | --- | --- | --- | --- |
@@ -130,7 +130,7 @@ run_id の発行・引き継ぎは run-bootstrap.md の `## run スコープ変�
 | `impl_done` | info | **1 issue の完了時** (SKILL.md 4.2e のコミット後。**issue 完了はこのイベントだけ**で表す。`done` はステップ単位の完了に使い、issue 完了には使わない) | `phase` / `summary` / `commit_sha` / `review_outputs` (main が確認した検査結果 JSON のパス配列、監査証跡) / `phase_fix_round` (このフェーズで回した修正ラウンド数、0〜3) / `phase_spawns` |
 | `p2_fix` | warn | P2 動的修正で詳細設計を書き換えた時 (SKILL.md 4.6) | `section` (更新したセクション名) / `what` (何をどう変えたか 1 行) / `why` (実装から判明した事実) / `commit_sha` (設計変更のコミット) / `p2_fixes_total` (この時点の通算)。**P2 は回数で停止しない**ので、このエントリが「承認済みの設計が実装に合わせてどう書き換わったか」をユーザーが後から追える唯一の記録になる。Step 6 の完了サマリと HTML レポートのセクション 4 がこれを読む |
 | `p1_fix` | info | P1 動的修正で TODO.md を書き換えた時 (SKILL.md 4.6) | `section` / `what` / `commit_sha` / `p1_fixes_in_phase` |
-| `gating_decided` | info | フェーズの初回検査 fan-out の直前 (SKILL.md 4.2c。**フェーズごとに 1 件だけ**) | `phase` / `gating_set` (このフェーズで起動しうる **review-\* の観点名**の配列。`architecture-guard` は gating 対象外で常に実行するので含めない。再 fan-out はこの部分集合しか起動できない) / `adversarial_mode` (`full` / `weakening_only` / `skipped`) / `basis` (判定根拠の真偽値: `{test_changed: $TEST_FILE_CHANGED か $TEST_CONTENT_CHANGED が非空, consumable: $CONSUMABLE_CHANGED が非空, auth: $AUTH_CHANGED が非空, ui_phase: uiPhase, final_phase: 自分以外に open issue が無い}`)。**`verification_skipped` の `criteria_result` と共通するキー (`test_changed` / `final_phase`) は同名で揃える**が、両者はキー集合そのものは異なる (`basis` は gating の判定根拠、`criteria_result` は skip 述語の判定結果) |
+| `gating_decided` | info | フェーズの初回検査 fan-out の直前 (SKILL.md 4.2c。**フェーズごとに 1 件だけ**) | `phase` / `gating_set` (このフェーズで起動しうる **review-\* の観点名**の配列。`architecture-guard` は gating 対象外なので含めない — 最後の issue のフェーズでだけ起動する固定の観点であり、gating の判定に載らない。再 fan-out はこの部分集合しか起動できない) / `adversarial_mode` (`full` / `weakening_only` / `skipped`) / `basis` (判定根拠の真偽値: `{test_changed: $TEST_FILE_CHANGED か $TEST_CONTENT_CHANGED が非空, consumable: $CONSUMABLE_CHANGED が非空, auth: $AUTH_CHANGED が非空, ui_phase: uiPhase, final_phase: 自分以外に open issue が無い}`)。**`verification_skipped` の `criteria_result` と共通するキー (`test_changed` / `final_phase`) は同名で揃える**が、両者はキー集合そのものは異なる (`basis` は gating の判定根拠、`criteria_result` は skip 述語の判定結果) |
 | `spawn` | info | **Agent ツールで起動する直前** (**例外なく全て**。起動後に書く規定だと、待ちに入る直前の・前進を生まないログ 1 行だけが構造的に落ちる。実測で再 fan-out の記録が phase-5 は 7 回中 0 件だった。SKILL.md 4.2c の事前ブロックで他の必須処理とまとめて書く) | `phase` (フェーズ外の起動 — Step 1.5 の tech-investigation と Step 5.2 の監査 agent — は `"run"` を入れる。null にしない: 4.2e 手順 4 の突合が phase で絞るため) / `agent` (`dev-impl-implementer` / `architecture-guard` / `review-*` / `fix-lsp-warnings` / `tech-investigation`。後ろ 2 つは結果 JSON を出さないので 4.2e 手順 4 の突合対象外) / `model` (`opus` / `fable` / `haiku`。`fable` は修正ラウンド 2 以降の implementer = SKILL.md「修正ラウンドのモデル昇格」。dev-impl が起動する agent に `sonnet` は無い) / `mode` (implementer は `implement` / `fix`、review-adversarial は `full` / `weakening_only`) / `round` (fan-out / 修正ラウンドの番号。初回 fan-out は 0) / `phase_spawns` (このフェーズの累計、**起動前に書くので「これから起動する 1 件を含めた値」**) / `run_spawns` (run 全体の累計、同上)  **`round` は文字列**で、初回 fan-out は `"0"`、修正ラウンドは `"<phase_fix_round>"`、テストゲート再試行は `"tg<n>"`、報告不整合の再起動は `"retry<n>"` の 4 形式 (綴りの正は phase-execution.md の `## 変数の定義`)。Step 0 の `phase_fix_round` / `test_gate_retry` の復元はこの綴りに依存するので、数値で書くと復元が 0 に落ちる |
 | `fix_dispatch` | warn | 修正ラウンド (SKILL.md 4.2d) で `mode: fix` の implementer を起動した時 | `phase` / `phase_fix_round` (このラウンドの番号、1〜3) / `findings_paths` (渡した結果 JSON のパス配列) / `fatal_summary` (`{severity, rule, file, line}` の射影配列。**findings の本文は入れない**) |
 | `self_review` | info | implementer 報告の一括転記時 (Step 4.2e 手順 6) | `checklist_applied` / `tests_revised` / `notes`。実装者が `rules/core/testing.md` のセルフレビューチェックリストを自分のテストへ適用した結果。HTML レポートには出さず、事後の振り返りで人が読むために残す |
@@ -167,6 +167,7 @@ run_id の発行・引き継ぎは run-bootstrap.md の `## run スコープ変�
 | `dod_no_automated` | 4.2e: issue の `## DoD` から取り出せた自動コマンドが 0 件だった (手動系だけか、抽出の空振りかを区別できない) | `{target, source, issue, dod_cmds}` |
 | `dev_server_unavailable` | 4.2c / Step 5.2: review-product-readiness が dev サーバを起動できず実機検査が成立しなかった | `{target, source, phase}` |
 | `no_layer_convention` | 4.2c: architecture-guard がレイヤ構造を見つけられず Clean Arch 検査を skip した (意図的な素通りだが、境界を検査していない run であることを残す) | `{target, source, phase}` |
+| `layer_check_failed` | 4.2c: architecture-guard の判定スクリプト (`claude/scripts/layer-check.ts`) がファイルを読めず exit 2 で終了した。**未検証として扱う** (`no_layer_convention` と違い、正常な素通りではない) | `{target, source, phase}` |
 | `exemptions_unadjudicated` | 4.2c: 自己免除が 1 件以上あるのに review-tdd / review-adversarial のどちらも起動せず、誰も裁定しなかった | `{target, source, phase, claims}` |
 
 同一 `phase` に `gating_decided` が複数ある場合 (中断・再入や 4.2d 手順 5 の例外による追記) は**最新の 1 件を採る**。

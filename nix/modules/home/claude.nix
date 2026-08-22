@@ -35,6 +35,9 @@
     ".claude/hooks".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/hooks";
     ".claude/rules".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/rules";
     ".claude/skills".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/skills";
+    # agent / skill から `~/.claude/scripts/<name>` の形で呼ぶ決定的スクリプト置き場。
+    # 検査対象は dotfiles とは別のリポジトリなので、repo 相対では解決できない
+    ".claude/scripts".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/scripts";
     ".claude/knowledge-profile.md".source =
       config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/knowledge-profile.md";
   };
