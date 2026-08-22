@@ -193,7 +193,7 @@ chrome-devtools MCP で:
 - TDD / テスト品質 → `review-tdd`
 - コード品質 (SOLID / 命名等) → `review-quality`
 - セキュリティ脆弱性 → security-guidance プラグイン
-- アーキテクチャ境界 / 関数規模 → `review-quality` (heuristic) / `architecture-guard` (機械判定)
+- アーキテクチャ境界 / 関数規模 → `review-quality` (heuristic) / プロジェクトの lint と `architecture-guard` (機械判定。guard は最終フェーズ 1 回)
 - プロジェクト rules 準拠 → `review-quality`
 - テンプレ placeholder 残骸検出 (`__[A-Z_]+__` 等) → プロジェクト固有 cleanup なので扱わない
 - visual diff (前回スナップショットとの差分自動判定) → dev-impl HTML レポート or 人間目視

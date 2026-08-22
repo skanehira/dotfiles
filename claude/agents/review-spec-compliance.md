@@ -237,7 +237,7 @@ DoD が `npm run <script>` / `deno task <name>` / `make <target>` のような�
 
 - 被監査リポジトリのファイルの修正 (findings を返すだけ。対処は呼び出し側)。検証コマンドを試すための `/tmp` 配下の一時ファイルは対象外
 - G_E2E の実機検証 → `product_mode: webapp` (または省略) では review-product-readiness の責務。`product_mode: cli` の場合のみ本 agent が自動系ゴールとして実行する (上記 Step 2 参照)
-- コード品質・TDD 順守・レイヤ境界の検査 → review-quality / review-tdd / architecture-guard の責務
+- コード品質・TDD 順守・レイヤ境界の検査 → review-quality / review-tdd / プロジェクトの lint と architecture-guard (最終フェーズ 1 回) の責務
 - フェーズ差分スコープのレビュー → 本 agent は常に成果物全体を見る
 - フェーズ単位のタスク完了主張への反証・実装への能動的攻撃・テスト弱体化の差分検知 → `review-adversarial` (毎フェーズ前倒しで実施。本 agent は run 末尾に最終ゴール `G<n>` を全体監査する)
 

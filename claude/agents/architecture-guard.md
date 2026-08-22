@@ -1,6 +1,6 @@
 ---
 name: architecture-guard
-description: Clean Architecture のレイヤ境界違反 (domain → infra import 等) と DDD の集約境界違反を検出する専用 reviewer。違反を構造化 JSON で返すだけで、修正は呼び出し側がメインループで TDD 実施する。dev-impl から各フェーズ末尾の gate として内部呼び出しされる想定。違反の判定基準は機械的・宣言的なので「ユーザーに判断を仰ぐ」ではなく「呼び出し側で機械修正」を前提とする。
+description: Clean Architecture のレイヤ境界違反 (domain → infra import 等) と DDD の集約境界違反を検出する専用 reviewer。違反を構造化 JSON で返すだけで、修正は呼び出し側がメインループで TDD 実施する。dev-impl から最終フェーズの検査 fan-out で 1 回だけ内部呼び出しされる想定 (レイヤ境界は毎ラウンドの lint が一次で担保し、本 agent は run 全体の差分をまとめて検査する)。違反の判定基準は機械的・宣言的なので「ユーザーに判断を仰ぐ」ではなく「呼び出し側で機械修正」を前提とする。
 tools: Read, Grep, Glob, Bash
 model: haiku
 ---
@@ -18,12 +18,13 @@ Clean Architecture と DDD の**境界違反だけ**を検出する専用 review
 - `target_diff`: 検査対象の差分指定。次のいずれか:
   - `"HEAD"` (直前のコミット差分)
   - `"working_tree"` (未コミットの全差分)
-  - `"phase:<phase-name>"` (TODO.md のフェーズ名、dev-impl からの呼び出し時)
+  - `"phase:<phase-name>"` (TODO.md のフェーズ名。そのフェーズの差分だけを見る)
+  - `"run:<label>"` (**run 全体の差分**。基準は `BASE_SHA`。dev-impl が最終フェーズで 1 回だけ起動するときに使う — フェーズ差分だけを見ると、過去フェーズで入って以降触られていない違反が検査対象から外れる)
 - `design_path`: 概要設計書のパス (デフォルト `docs/DESIGN.md`)。レイヤ定義と aggregate 一覧を抽出する
 - `design_detail_path`: アプリ詳細設計書のパス (デフォルト `docs/DESIGN_DETAIL_APP.md`)。実装ガイドに記載されたディレクトリ構造を読む (レイヤ境界検査に必要なのはアプリ側のみ。INFRA 側は読まない)
-- `PHASE_START_SHA`: `target_diff: phase:<...>` のときの**必須値**。そのフェーズ開始時の SHA で、差分の基準点になる (未設定だとステップ 2 の `git diff` が失敗し `skip_reason: "diff_command_failed"` になる)
+- `BASE_SHA`: `target_diff` が `phase:<...>` / `run:<...>` のときの**必須値**。差分の基準点となる SHA で、`phase:` ならそのフェーズ開始時の SHA、`run:` なら run 開始時の SHA を受け取る (未設定だとステップ 2 の `git diff` が失敗し `skip_reason: "diff_command_failed"` になる)
 - `output_path`: 検出結果 JSON の書き出し先 (デフォルト `/tmp/architecture-guard-result.json`)
-- `repo_dir`: 検査対象リポジトリの**絶対パス** (省略時はカレントディレクトリ)。dev-impl や workflow-review から、cwd とは別のリポジトリを検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、設計書のパスも `repo_dir` 基準の絶対パスに解決する**
+- `repo_dir`: 検査対象リポジトリの**絶対パス** (省略時はカレントディレクトリ)。dev-impl から、cwd とは別のリポジトリを検査する場合に渡される。**Bash の cwd は呼び出しごとに親セッションのものへ戻るため、`cd` で移動したつもりのまま git を実行すると別のリポジトリを検査してしまう。以降の git コマンドは必ず `git -C "$REPO_DIR"` の形で実行し、設計書のパスも `repo_dir` 基準の絶対パスに解決する**
 
 ## 出力
 
@@ -105,16 +106,16 @@ case "$TARGET" in
   working_tree)
     { git -C "$REPO_DIR" diff --name-only; git -C "$REPO_DIR" diff --staged --name-only; git -C "$REPO_DIR" ls-files --others --exclude-standard; } | sort -u
     ;;
-  phase:*)
-    # dev-impl は実装ラウンドごとにコミットするので、PHASE_START_SHA との比較でフェーズの
-    # 全差分が取れる。未コミットの残り (コミット漏れ・検査中の書き換え) も取りこぼさないよう、
-    # working tree と untracked も併せて見る。
-    { git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA"; git -C "$REPO_DIR" ls-files --others --exclude-standard; } | sort -u
+  phase:*|run:*)
+    # dev-impl は実装ラウンドごとにコミットするので、BASE_SHA との比較で対象範囲の
+    # 全差分が取れる (phase: はフェーズ開始 SHA、run: は run 開始 SHA)。未コミットの残り
+    # (コミット漏れ・検査中の書き換え) も取りこぼさないよう、working tree と untracked も併せて見る。
+    { git -C "$REPO_DIR" diff --name-only "$BASE_SHA"; git -C "$REPO_DIR" ls-files --others --exclude-standard; } | sort -u
     ;;
 esac
 ```
 
-`phase:*` ケースで `git diff --name-only "$PHASE_START_SHA"` が非0 exit code を返した場合 (`$PHASE_START_SHA` が未設定 / 存在しない SHA 等)、これは「差分が空」と区別する: `checked_files: 0` ではなく `ok: false, skip_reason: "diff_command_failed", violations: []`、`message` にコマンドの stderr を含めて返す。これにより「本当に変更なし」を装った偽陽性の `ok: true` を防ぐ。**呼び出し側 (dev-impl) はこれを未検証として扱い、修正ラウンドに乗せずに停止する** (実装を直しても解消しない性質のため。dev-impl SKILL.md 4.2d 手順 1)。
+`phase:*` / `run:*` ケースで `git diff --name-only "$BASE_SHA"` が非0 exit code を返した場合 (`$BASE_SHA` が未設定 / 存在しない SHA 等)、これは「差分が空」と区別する: `checked_files: 0` ではなく `ok: false, skip_reason: "diff_command_failed", violations: []`、`message` にコマンドの stderr を含めて返す。これにより「本当に変更なし」を装った偽陽性の `ok: true` を防ぐ。**呼び出し側 (dev-impl) はこれを未検証として扱い、修正ラウンドに乗せずに停止する** (実装を直しても解消しない性質のため。dev-impl SKILL.md 4.2d 手順 1)。
 
 各ファイルが「inner layer」「outer layer」「unknown」のどれに属するか、ステップ 1 の pattern で分類する。
 
@@ -171,8 +172,8 @@ const guardResult = await Agent({
   description: "Clean Arch / DDD 境界の検査",
   subagent_type: "architecture-guard",
   model: "haiku",
-  prompt: `target_diff: phase:${phaseName}
-PHASE_START_SHA: ${phaseStartSha}
+  prompt: `target_diff: run:${runId}
+BASE_SHA: ${runStartSha}
 design_path: ${absDocsDir}/DESIGN.md
 design_detail_path: ${absDocsDir}/DESIGN_DETAIL_APP.md
 repo_dir: ${absRepoDir}

@@ -186,7 +186,7 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
 
 - `G<n>` / `G_E2E` 検証コマンドの実行・`goals_sha` の照合 → `review-spec-compliance` (post-impl、run 末尾に成果物全体の最終ゴールを監査)。本 agent のレンズ C はフェーズ単位のタスク完了主張のみを対象とする
 - テストの構造・命名規約・振る舞い表現の良し悪し → `review-tdd`。本 agent のレンズ B は「基準時点から弱くなっていないか」の差分検知に限る (トートロジー検知の観点は review-tdd と重複しうるが、dimension が異なるため defense in depth として意図的に残す)。**新規に書かれたテストそのものの空虚性 (最初から否定形・不在アサーションだけ) は review-tdd の `vacuous_negative_assertion` の担当**で、本 agent の `vacuous_assertion` は基準時点からの空虚化のみを見る
-- アーキテクチャ違反 → `review-quality` (heuristic) / `architecture-guard` (機械判定)。消費型資源の多重使用は両者で扱うが、**排他・truth source・エラー分岐の構造をコード上で判定するのが `review-quality`、実際に 2 回消費させて観測するのが本 agent** という分担 (dimension が異なるため defense in depth として重複を許容する)
+- アーキテクチャ違反 → `review-quality` (heuristic) / プロジェクトの lint と `architecture-guard` (機械判定。guard は最終フェーズ 1 回)。消費型資源の多重使用は両者で扱うが、**排他・truth source・エラー分岐の構造をコード上で判定するのが `review-quality`、実際に 2 回消費させて観測するのが本 agent** という分担 (dimension が異なるため defense in depth として重複を許容する)
 - セキュリティ → security-guidance プラグイン
 - 修正の実施 → 一切行わない。findings を返すのみ (対処は呼び出し側)
 
