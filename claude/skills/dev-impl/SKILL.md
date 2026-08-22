@@ -39,15 +39,12 @@ allowed-tools: Read, Edit, Write, Glob, Bash, Skill, Agent, AskUserQuestion
 | architecture-guard (4.2c) | `haiku` | レイヤ境界違反の検出は機械的・宣言的な判定でモデル性能に依存しない |
 | fix-lsp-warnings (4.2b) | `haiku` | LSP が出した警告を規則どおりに潰す機械作業 |
 | tech-investigation (Step 1.5 の個別呼び出し) | `opus` | 検証範囲の設計を自分で行う探索的な調査 |
-| review-adversarial (4.2c) | `sonnet` | 下記のとおり実測で opus の優位が確認できず、同額でより多くのターンを回せる sonnet が有利 |
-| review-tdd / review-quality / review-product-readiness (4.2c) | `opus` | 設計意図とテストの対応づけなど、規約の機械照合に還元されない判断を含む |
+| review-adversarial / review-tdd / review-quality / review-product-readiness (4.2c) | `opus` | 設計意図とテストの対応づけなど、規約の機械照合に還元されない判断を含む。adversarial の検出力を opus と sonnet で比較した経緯 → [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## review-adversarial のモデル選択の経緯` |
 | review-spec-compliance (5.2) | `opus` | 承認ハッシュ照合と成果物 ↔ 詳細設計の突合を伴う受入監査 |
 
 ### 修正ラウンドのモデル昇格 (ラウンド 2 以降は `fable`)
 
 **ラウンド 1 で解消しなかった fatal は、指摘箇所の局所修正では閉じない性質のものが多い** (実測の内訳 → [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## 修正ラウンドのモデル昇格の根拠`)。そこで**ラウンド 2 以降は `model: "fable"` に上げ、指示文で「指摘箇所を局所的に塞ぐ前に、当該箇所が属する不変条件を洗い出して族ごと閉じる」ことを求める** (指示文の全文は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 修正ラウンドの implementer 起動`)。ラウンド 3 でも解消しなければ従来どおり `phase_fix_exceeded` でエスカレ停止する — **モデルを上げても閉じない fatal は、実装の腕ではなく設計の問題である**可能性が高く、人間の判断を仰ぐべき局面だと見なす。`agent-spawn-guard` hook は model の未指定だけを弾き、規定と違う値でも明示されていれば意図的な override として通すので、この昇格に hook の改修は要らない。
-
-**review-adversarial が `sonnet` である理由**も実測に基づく (同 `## review-adversarial が sonnet である根拠`)。`rules/core/orchestration.md` の原則「実行器のモデル ≤ 検証器のモデル」をこの 2 点で満たさなくなるが、当該原則は「検証が実行より弱いと骨抜きになる」ことを避けるための代理指標であり、**検出力の実測が代理指標に優先する**。切り替え後は high 検出件数の推移を監視し、**opus 時の 0.15 件/spawn を下回り続けるようなら opus に戻す**。
 
 ### フェーズ実装を subagent に委譲する理由 (`rules/core/orchestration.md` の原則に対する dev-impl 限定の例外)
 

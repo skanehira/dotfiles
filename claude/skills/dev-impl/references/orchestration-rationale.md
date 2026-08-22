@@ -5,7 +5,7 @@
 ## 目次
 
 - [修正ラウンドのモデル昇格の根拠](#修正ラウンドのモデル昇格の根拠)
-- [review-adversarial が sonnet である根拠](#review-adversarial-が-sonnet-である根拠)
+- [review-adversarial のモデル選択の経緯](#review-adversarial-のモデル選択の経緯)
 - [フェーズ実装を subagent に委譲する根拠](#フェーズ実装を-subagent-に委譲する根拠)
 - [spawn 予算の根拠](#spawn-予算の根拠)
 - [内部呼び出し subagent の役割詳細](#内部呼び出し-subagent-の役割詳細)
@@ -19,9 +19,15 @@
 - `agent-spawn-guard` hook は **model の未指定だけを弾き、規定と違う値でも明示されていれば意図的な override として通す** (`claude/hooks/agent-spawn-guard.ts` の `validateAgentSpawn`)。この昇格に hook の改修は要らない
 - この昇格により、当該ラウンドだけ「実行器のモデル > 検証器のモデル」となり `rules/core/orchestration.md` の原則を満たさなくなる。**検証器 (review-*) を上げるのではなく実行器だけを上げるのは、ラウンド 2 に至った時点で不足しているのが検出力ではなく修正の設計力だと実測で分かっているため** (検出は毎ラウンド機能しており、新しい high を実行証拠つきで出し続けている)
 
-## review-adversarial が sonnet である根拠
+## review-adversarial のモデル選択の経緯
 
-- **review-adversarial が `sonnet` である理由**: 同一セッション・同一フェーズ群での直接比較 (2026-08 のセッションログ実測) で、opus は 20 spawn・2.55 ドル/spawn で high 3 件 (0.15 件/spawn)、sonnet は 21 spawn・2.51 ドル/spawn で high 19 件 (0.90 件/spawn) だった。**1 spawn あたりの金額はほぼ同一で、単価が 1/5 の sonnet は同じ予算で 3.8 倍のターンを回せるため、実際に壊して確かめる本 agent の作業様式と噛み合う**。sonnet の findings は空虚ではなく、TOCTOU 並行削除を実際に再現し修正前ロジックで 20/20 再現するところまで確認する等、実行証拠を伴っていた。この 1 点で `rules/core/orchestration.md` の原則「実行器のモデル ≤ 検証器のモデル」を満たさなくなるが、当該原則は「検証が実行より弱いと骨抜きになる」ことを避けるための代理指標であり、**検出力の実測が代理指標に優先する**。切り替え後は high 検出件数の推移を監視し、opus 時の 0.15 件/spawn を下回り続けるようなら opus に戻す。
+**現在は `opus`**。一時 `sonnet` を規定していたが、その規定は実行時に成立していなかったうえ、根拠とした差も後の実測で再現しなかった。
+
+- **sonnet を選んだときの実測 (2026-08)**: 同一セッション・同一フェーズ群での直接比較で、opus は 20 spawn・2.55 ドル/spawn で high 3 件 (0.15 件/spawn)、sonnet は 21 spawn・2.51 ドル/spawn で high 19 件 (0.90 件/spawn) だった。sonnet の findings は空虚ではなく、TOCTOU 並行削除を実際に再現し修正前ロジックで 20/20 再現するところまで確認する等、実行証拠を伴っていた
+- **規定が実行時に無効だった**: `claude/settings.json` の `ANTHROPIC_DEFAULT_SONNET_MODEL: "claude-opus-5[1m]"` により、**サブエージェントの `model: sonnet` 指定は opus-5 で実行される**。mind の run では 32 件すべてが opus-5 だった (陰性対照: `model: haiku` の architecture-guard は 28 件すべて haiku)。規定と設定のどちらかが死文である状態が続いていた
+- **差が再現しなかった (2026-08-22 実測)**: mind の run で opus-5 実行の adversarial は **0.56 件/spawn** (29 本で high 16 件) で、同 run の review-tdd の 0.55 件/spawn と同水準。旧実測の opus 群 (0.15 件/spawn) は再現していない。なお旧実測の opus 群が opus-5 だったか fable-5 だったかは、実行モデルまで遡らないと確定できない (`model: opus` 指定が fable-5 で実行された記録が別途 36 件ある)
+- **結論**: 検出力の差が確認できない以上、`rules/core/orchestration.md` の原則「実行器のモデル ≤ 検証器のモデル」に素直に従って `opus` に統一する。「0.15 件/spawn を下回ったら opus に戻す」という監視条項は、opus に統一した時点で意味を失うので置かない
+- **モデル指定を変えるときの検証**: 指定を書くだけでは適用の証拠にならない。起動メタ (`<session>/subagents/agent-*.meta.json` の `model`) と実行モデル (同じ agent の jsonl の `message.model`) を突き合わせて、実際に適用されたことを確認する
 
 ## フェーズ実装を subagent に委譲する根拠
 
@@ -55,7 +61,7 @@ SKILL.md 「関連スキル / agent」から参照する。model の割当と根
 - **architecture-guard**: Clean Arch / DDD 境界違反検出、機械判定 (Step 4.2c の fan-out に毎フェーズ含める、haiku)
 - **fix-lsp-warnings**: Lua/Neovim の LSP 警告修正 (Step 4.2b、haiku)。修正する agent なので検査 fan-out には混ぜず単独・逐次で走らせる
 - **review-tdd / review-quality / review-product-readiness**: Step 4.2c から `model: opus` 明示で並列起動 (観点 gating・起動条件は Step 4.2c 参照)。review-quality は rules 準拠 + アーキテクチャ heuristic を統合。review-product-readiness は実機 chrome-devtools MCP 操作で UX 横断項目 (ナビ到達 / ErrorBoundary / 空状態 / loading / SEO meta / 404 / logout) を検査 (Step 5.2 の G_E2E 判定も担当)
-- **review-adversarial**: Step 4.2c から `model: sonnet` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・アサーションの空虚化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず `docs_dir` の TODO.md から当該フェーズの節を自分で読み直し、その完了主張に反証を試みる) で検査。**毎フェーズは `mode: weakening_only` (レンズ B のみ) で走り、消費型資源・認証・テスト差分なしの大量実装・最後の issue のフェーズだけ `mode: full` (A+B+C) に上げる** (Step 4.2c の mode 決定表)。機械スキップ述語 (Step 4.2c 参照) を満たせば skip 可。`test_weakened` / `vacuous_assertion` / `skip_added` / `tautological_test` は severity と confidence に関わらず修正ラウンドに乗せず、トレース確認の経路に直結する (詳細は Step 4.2d)
+- **review-adversarial**: Step 4.2c から `model: opus` 明示で並列起動する敵対的レビュワー。3 レンズ (A: エッジケース/エラーパスを能動的に攻撃し実際に実行して落とす、B: テスト弱体化・トートロジー化・アサーションの空虚化・skip 隠蔽の意味論検知、C: PHASE_CONTEXT を信用せず `docs_dir` の TODO.md から当該フェーズの節を自分で読み直し、その完了主張に反証を試みる) で検査。**毎フェーズは `mode: weakening_only` (レンズ B のみ) で走り、消費型資源・認証・テスト差分なしの大量実装・最後の issue のフェーズだけ `mode: full` (A+B+C) に上げる** (Step 4.2c の mode 決定表)。機械スキップ述語 (Step 4.2c 参照) を満たせば skip 可。`test_weakened` / `vacuous_assertion` / `skip_added` / `tautological_test` は severity と confidence に関わらず修正ラウンドに乗せず、トレース確認の経路に直結する (詳細は Step 4.2d)
 
 - **review-spec-compliance**: Step 5.2 から `model: opus` 明示で起動する第三者受入監査 (mode: post-impl)。承認ハッシュの独立照合・自動系ゴール検証コマンドの独立再実行・成果物全体 ↔ 詳細設計の突合・検証コマンドの空虚性検査。PHASE_CONTEXT 抜粋は渡さず docs を自分で全文 Read させる (被監査者が編纂した入力を信用しない)。`PRODUCT_MODE=cli` では G_E2E 検証コマンドの実行もこの agent が担当する (review-product-readiness は起動しないため)
 - **security-guidance プラグイン**: セキュリティレビューはこのプラグイン (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review) に委譲。自作 subagent は持たない

@@ -36,7 +36,7 @@ export const MANDATED_MODEL: Record<string, string> = {
   "dev-impl-implementer": "opus",
   "architecture-guard": "haiku",
   "fix-lsp-warnings": "haiku",
-  "review-adversarial": "sonnet",
+  "review-adversarial": "opus",
   "review-tdd": "opus",
   "review-quality": "opus",
   "review-product-readiness": "opus",
