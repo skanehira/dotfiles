@@ -433,6 +433,8 @@ cmp -s /tmp/issue-current.md /tmp/issue-body.md || \
 
 比較にコマンド置換 (`$(...)`) を使わない — 末尾改行を捨てるため差分を取りこぼす (`rules/core/verification.md`)。
 
+比較用の `/tmp/issue-body.md` は `## 設計` 節 (12.4.2) 込みで生成する。これにより**機能仕様 (docs/features/) の改訂も本文不一致として検出され、フェーズ 12 の再実行で issue の設計節が自動的に貼り直される** (issue 側の設計はスナップショット、正本は docs 側)。
+
 **`in-progress` の issue の本文を書き換えたときは、issue コメントで改訂を告知する。** `/dev-impl` が古い DoD で作業している可能性があるため、再開時に気付けるようにする。
 
 #### 親 issue の分類と対応表の seed (`HIERARCHY=yes` のときだけ)
@@ -521,6 +523,13 @@ ISSUE_NUM=$(printf '%s' "$ISSUE_URL" | grep -o '[0-9]*$')
 ## 参照すべき docs
 <TODO.md のメタ情報「参照 docs」をそのまま>
 
+## 設計
+<details><summary>機能仕様 UC-<n> (docs/features/UC-<n>.md の転記。正本は docs 側)</summary>
+
+<docs/features/UC-<n>.md の全文を、見出しをすべて 2 段降格 (`sed 's/^#/###/'`) して転記>
+</details>
+<!-- ucs: none のフェーズ、または docs/features/ が無い構成では本節を省略する -->
+
 ## 変更が想定されるファイル
 <TODO.md のメタ情報「変更想定ファイル」をそのまま>
 
@@ -537,13 +546,14 @@ Depends on #<issue番号>        <!-- deps: none なら「依存なし」と書�
 G1, G2                          <!-- goals: none なら本節を省略 -->
 ```
 
-本文は TODO.md のフェーズから次を写す。**変換が要るのは依存の 1 項目だけで、残りはそのまま転記する**:
+本文は TODO.md のフェーズ (設計のみ docs/features/) から次を写す。**変換が要るのは依存と設計の 2 項目だけで、残りはそのまま転記する**:
 
-| issue 本文 | TODO.md での所在 | 変換 |
+| issue 本文 | 転記元 | 変換 |
 | --- | --- | --- |
 | ゴール | メタ情報の**ゴール** | そのまま |
 | DoD | メタ情報の **DoD** / **DoD (手動)** | そのまま (両方あれば両方) |
 | 参照すべき docs | メタ情報の**参照 docs** | そのまま |
+| 設計 | `docs/features/UC-<n>.md` (フェーズの `ucs` が指す UC) | **見出しを 2 段降格** (`sed 's/^#/###/'`) して `<details>` に包む。1 段ではタイトル行 `# UC-<n>` が `##` になり issue の節構造 (`##` レベルの節境界) を壊す。人間向けスナップショットで、実装器の設計入力は PHASE_CONTEXT の `feature_spec` が正 |
 | 変更が想定されるファイル | メタ情報の**変更想定ファイル** | そのまま |
 | 非スコープ | メタ情報の**非スコープ** | そのまま |
 | 実装タスク | チェックボックス群 | そのまま |
