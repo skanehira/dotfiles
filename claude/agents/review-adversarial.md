@@ -165,6 +165,7 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
       "confidence": "high|medium|low",
       "rule": "edge_case_failure|error_path_unhandled|consumable_resource_reuse|attack_not_executable|working_tree_polluted|test_weakened|skip_added|tautological_test|vacuous_assertion|goal_refuted|phase_task_unimplemented|partial_commit_detected",
       "message": "具体的な指摘 (攻撃入力 / 観測出力を含む)",
+      "traces_to": { "id": "<DoD 項目 / BR 番号 / DESIGN_DETAIL の節>", "quote": "<その条文の原文をそのまま引用した 1 文>" },
       "evidence": "族を走査した全要素の判定 (finding-coverage.md)。走査していない要素はその旨を明記する",
       "repro_command": "npx tsx /tmp/review-adversarial-phase-3/attack-1.ts   # レンズ A の finding のみ",
       "fix_proposal": "推奨修正"
@@ -172,6 +173,8 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
   ]
 }
 ```
+
+- `traces_to`: その指摘がどの仕様条文に紐づくか (`{id, quote}`)。紐づかなければ `null`。**`quote` は原文をそのまま引用する** (呼び出し側が `rg -F` で実在を照合するため)。規定は `~/.claude/rules/core/references/finding-coverage.md` の `## finding を仕様条文に紐づける (traces_to)`
 
 `ok: true` は high/medium findings ゼロ。`mode` には受け取った値をそのまま入れる (呼び出し側が「どのレンズまで検査済みか」を事後に判別できるようにするため)。`mode: weakening_only` では `attacks_attempted: 0` / `skipped_lenses: ["A", "C"]` になる。
 

@@ -153,12 +153,15 @@ related_source_files が指定されていればそれを優先。それ以外�
       "confidence": "high|medium|low",
       "rule": "behavior_assertion|vacuous_negative_assertion|naming|aaa|exact_match|mock_overuse|test_isolation",
       "message": "具体的な指摘内容",
+      "traces_to": { "id": "<DoD 項目 / BR 番号 / DESIGN_DETAIL の節>", "quote": "<その条文の原文をそのまま引用した 1 文>" },
       "evidence": "該当箇所のコード引用、または判定に使ったコマンドと出力",
       "fix_proposal": "推奨修正"
     }
   ]
 }
 ```
+
+- `traces_to`: その指摘がどの仕様条文に紐づくか (`{id, quote}`)。紐づかなければ `null`。**`quote` は原文をそのまま引用する** (呼び出し側が `rg -F` で実在を照合するため)。規定は `~/.claude/rules/core/references/finding-coverage.md` の `## finding を仕様条文に紐づける (traces_to)`
 
 `ok: true` は high/medium findings ゼロ。
 
