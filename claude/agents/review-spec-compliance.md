@@ -1,6 +1,6 @@
 ---
 name: review-spec-compliance
-description: 設計成果物と実装の第三者監査 agent (2 モード)。mode: post-impl は dev-impl Step 5 から起動され、承認ハッシュ (goals_sha) の独立照合・ゴール検証コマンドの独立再実行・成果物全体 ↔ DESIGN_DETAIL_APP/INFRA の突合 (未実装 API / スキーマ乖離 / インフラ欠落)・検証コマンドの空虚性検査を行う。mode: pre-approval は dev-spec フェーズ 10.5 (承認ゲート直前) から起動され、docs 4 ファイルの整合 (TODO カバレッジ / ゴール↔検証手順の意味的整合 / 検証手順とフェーズ DoD の空虚性 — コマンドを実際に実行して「著作時点の誤り」と「実装の不在」を切り分ける / APP・INFRA 境界誤配置 / 概要↔詳細の矛盾 / トランザクション境界の記載カバレッジ / TODO.md のフェーズ単位メタ情報と DoD の空虚性) を fresh context で監査する。実装者・設計者本人が編纂した抜粋 (PHASE_CONTEXT) は受け取らず、docs を自分で全文 Read するのが存在意義。構造化 JSON で findings を返し、修正は行わない。
+description: 設計成果物と実装の第三者監査 agent (2 モード)。mode: post-impl は dev-impl Step 5 から起動され、承認ハッシュ (goals_sha) の独立照合・ゴール検証コマンドの独立再実行・成果物全体 ↔ DESIGN_DETAIL_APP/INFRA の突合 (未実装 API / スキーマ乖離 / インフラ欠落)・検証コマンドの空虚性検査を行う。mode: pre-approval は dev-spec フェーズ 10.5 (承認ゲート直前) から起動され、docs の整合 (TODO カバレッジ / ゴール↔検証手順の意味的整合 / 検証手順とフェーズ DoD の空虚性 — コマンドを実際に実行して「著作時点の誤り」と「実装の不在」を切り分ける / APP・INFRA 境界誤配置 / 概要↔詳細の矛盾 / トランザクション境界の記載カバレッジ / TODO.md のフェーズ単位メタ情報と DoD の空虚性 / 機能仕様 docs/features/ のカバレッジ・BR 引用・未決定行・DETAIL との矛盾) を fresh context で監査する。実装者・設計者本人が編纂した抜粋 (PHASE_CONTEXT) は受け取らず、docs を自分で全文 Read するのが存在意義。構造化 JSON で findings を返し、修正は行わない。
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
@@ -53,7 +53,7 @@ holdout_enabled: true | false      # post-impl のみ。省略時 false (PoC 機
 
 - `ok: true` は severity: high の findings が 0 件かつ (post-impl では) unmet ゴールが 0 件
 - `goal_results` は post-impl のみ。`status`: `achieved` / `unmet` / `manual_pending`
-- `rule` の値: `verification_tampered` / `goal_result_mismatch` / `unimplemented_api` / `schema_drift` / `infra_missing` / `vacuous_verification` / `holdout_test_failed` (post-impl、`holdout_test_failed` は `holdout_enabled: true` の場合のみ)、`todo_coverage_gap` / `goal_verification_mismatch` / `vacuous_verification` / `boundary_violation` / `overview_detail_conflict` / `transaction_boundary_gap` / `phase_meta_missing` / `phase_dod_vacuous` (pre-approval)
+- `rule` の値: `verification_tampered` / `goal_result_mismatch` / `unimplemented_api` / `schema_drift` / `infra_missing` / `vacuous_verification` / `holdout_test_failed` (post-impl、`holdout_test_failed` は `holdout_enabled: true` の場合のみ)、`todo_coverage_gap` / `goal_verification_mismatch` / `vacuous_verification` / `boundary_violation` / `overview_detail_conflict` / `transaction_boundary_gap` / `phase_meta_missing` / `phase_dod_vacuous` / `feature_spec_missing` / `br_not_traced` / `feature_spec_unresolved` / `feature_detail_conflict` (pre-approval)
 
 ## 進捗ログ
 
@@ -136,7 +136,7 @@ TODO.md には**書かれていない**エッジケースシナリオを、DESIG
 
 ### Step 0: 設計成果物の読み込み
 
-DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md を**全文 Read**。コードは読まない (この時点で実装は存在しない)。
+DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md を**全文 Read**。`docs/features/` が存在すれば配下の `UC-*.md` (機能仕様) と `docs/USECASES.md` も全文 Read する。コードは読まない (この時点で実装は存在しない)。
 
 ### Step 1: todo_coverage_gap (TODO カバレッジ)
 
@@ -188,6 +188,15 @@ Step 1〜6 は**ゴール (`G<n>`) 単位**の検査であり、TODO.md の**フ
    - **手動系への安易な逃避**: `DoD (手動):` が付いているが、Playwright 等のテストコードで自動化できる内容 (DOM 構造・a11y 属性・画面遷移)。原理的に機械判定できないもの (外部サービスの受信確認・視覚的印象・実機体感) 以外は自動化を求める → severity: medium
 
 
+
+### Step 8: 機能仕様の監査 (`docs/USECASES.md` が存在する場合のみ)
+
+USECASES.md が無い構成 (クイックモード等) では機能仕様 (フェーズ 7.5) 自体が生成されないので、本 Step は丸ごとスキップする。要件の正本は `../skills/dev-spec/references/feature-spec.md`。
+
+1. **`feature_spec_missing`** (severity: high): TODO.md の `<!-- ucs: ... -->` 宣言に現れる全 UC について `docs/features/UC-<n>.md` が存在するか。`rg -o '<!-- ucs: (UC-[0-9]+)' docs/TODO.md` の異なり値と `ls docs/features/UC-*.md` を突合する
+2. **`br_not_traced`** (severity: high): 各機能仕様について、その UC の全 BR (USECASES.md の該当 UC 節の BR 表) が**原文で引用**されているか。BR 表の各行のルール本文を `rg -F '<ルール本文>' docs/features/UC-<n>.md` で照合する (原文一致。要約・言い換えは不一致として扱う — 照合できない引用は存在しない条文のでっち上げと区別が付かないため)
+3. **`feature_spec_unresolved`** (severity: high): `rg -n '要判断:' docs/features/` が 1 件以上ヒットしないか。ヒット = フェーズ 8 で解消されるべきプロダクト判断が未決定のまま承認ゲートに向かっている
+4. **`feature_detail_conflict`** (severity: medium): 機能仕様の入出力契約・責務配置と DESIGN_DETAIL_APP.md の記述 (エンドポイント一覧・データフロー・エラー戦略) が矛盾していないか (例: 機能仕様は「サーバーで変換」、DETAIL のエンドポイント表に該当 API が無い)。意味判定であり機械照合はできないので、機能仕様が名指しする API・層・ファイルが DETAIL 側の対応する節と食い違う箇所を挙げる
 
 ## 検証コマンドは実行して健全性を確かめる (pre-approval の Step 3 / Step 7 共通)
 
