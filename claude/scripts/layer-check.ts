@@ -30,7 +30,8 @@ export type LayerConfig = {
   outer: string[];
 };
 
-export type SourceFile = { path: string; content: string };
+/** `content` が null なら「差分には出るが実体が無い」= 削除されたファイル。 */
+export type SourceFile = { path: string; content: string | null };
 
 export type Layer = "inner" | "outer" | "unknown";
 
@@ -56,6 +57,8 @@ export type LayerCheckResult = {
   skip_reason: string | null;
   violations: Violation[];
   checked_file_list: CheckedFile[];
+  /** 実体が無く読めなかったファイル (削除など)。**沈黙で落とさず必ず出す** */
+  missing_files: string[];
 };
 
 const FIX_PROPOSAL =
@@ -145,13 +148,21 @@ export function checkLayers(
       skip_reason: "no_layer_convention",
       violations: [],
       checked_file_list: [],
+      missing_files: [],
     };
   }
 
   const violations: Violation[] = [];
   const checked: CheckedFile[] = [];
+  const missing: string[] = [];
 
   for (const file of files) {
+    // 削除されたファイルは差分の列挙には出るが実体が無い。import も持たないので
+    // 検査対象にならないが、**黙って落とすと「検査した件数」が実態とずれる**ので必ず記録する
+    if (file.content === null) {
+      missing.push(file.path);
+      continue;
+    }
     const layer = classify(file.path, config);
     let importLines = 0;
     let count = 0;
@@ -193,6 +204,7 @@ export function checkLayers(
     skip_reason: null,
     violations,
     checked_file_list: checked,
+    missing_files: missing,
   };
 }
 
@@ -218,7 +230,12 @@ async function main() {
     try {
       files.push({ path: p, content: await Deno.readTextFile(`${repo}/${p}`) });
     } catch (e) {
-      // 読めなかったファイルを黙って落とすと「検査した」件数が実態とずれる
+      if (e instanceof Deno.errors.NotFound) {
+        // 差分に出る削除ファイル。入力不正ではないので停止しない (missing_files に載る)
+        files.push({ path: p, content: null });
+        continue;
+      }
+      // 権限エラー等は入力不正。黙って落とすと「検査した」件数が実態とずれる
       console.error(
         JSON.stringify({ error: "unreadable", file: p, detail: String(e) }),
       );

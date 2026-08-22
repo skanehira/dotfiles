@@ -206,8 +206,8 @@ git -C "$REPO_DIR" diff -U0 "$PHASE_START_SHA" HEAD -- '*.rs' | rg '^\+.*#\[cfg\
 
 **この監査は 4.2d 手順 5 の「初回 high 0 で打ち切り」の対象外**である。打ち切りが止めるのは
 実装への攻撃 (レンズ A / C) であって、累積テスト差分の意味論検査 (レンズ B) は仕事が違う。
-打ち切ったフェーズでも必ず 1 回走らせる。起動したら `spawn` を記録する (`round` は `"tg0"` ではなく
-`"final"` を使い、テストゲート再試行と区別する)。
+打ち切ったフェーズでも必ず 1 回走らせる。起動したら `spawn` を記録する (`round` は `"tg0"` ではなく `"final"` を使い、テストゲート再試行と区別する)。
+**`output_path` は `$SCRATCH_DIR/review-adversarial-rfinal.json` にする** — 4.2e 手順 4 の突合は成果物を `review-*-r*.json` の glob で拾って `spawn` 側の `review-adversarial-rfinal` と集合比較するので、別名にすると「記録はあるが成果物が無い」= 未検証扱いで偽のエスカレ停止になる。
 
 ## 4.2d 手順 8: 作業ツリーの汚染の検出と復元
 
@@ -229,7 +229,6 @@ git -C "$REPO_DIR" diff -U0 "$PHASE_START_SHA" HEAD -- '*.rs' | rg '^\+.*#\[cfg\
   - `report_path` は `<SCRATCH_DIR>/impl-report-testgate-<test_gate_retry>.json` (修正ラウンドの `impl-report-fix-<round>.json` と衝突させない。カウンタが別なので番号が重なる)。**`spawn` 記録の `context.round` には文字列 `"tg<test_gate_retry>"` を入れる** (4.2e 手順 4 の突合が成果物のファイル名と 1:1 で対応するようにするため)
   - `model` は `test_gate_retry` が 1 なら `opus`、2 以降は `fable` (「修正ラウンドのモデル昇格」と同じ考え方)
   - 起動の直前に `spawn` を記録し、**報告を受けたら「ラウンドごとのコミット」に従ってコミットする** (コミットしないと作業ツリーが非クリーンなまま次の手順へ進み、4.2c の clean 前提と 4.2d 手順 8 の汚染検知がどちらも壊れる)
-  - fix がテストに触れた場合は、修正ラウンドと同じく review-adversarial (`mode: weakening_only` 以上) を 1 回起動してから最終コミットへ進む
 
 ## 4.2e: DoD ブロックの抽出と実行
 
@@ -309,7 +308,7 @@ bash -e "$SCRATCH_DIR/dod.sh"   # 期待: exit 0
 | 修正ラウンド 3 回でも fatal 残存 (guard 違反 / review high のいずれも)                                           | `phase_fix_exceeded`                         |
 | 検査 agent が結果を返せない (未検証をパス扱いにしない)                                                           | `guard_agent_failed` / `review_agent_failed` |
 | implementer の報告が読めない / 実装が実在しない (`files_changed` が空) が 3 回続いた                             | `phase_fix_exceeded` (原因は `impl_report_invalid`)  |
-| `phase_spawns > phase_spawns_budget` (既定 33) または `run_spawns > run_spawns_budget` (Step 3 のカウンタ規定)                              | `spawn_budget_exceeded`                      |
+| `phase_spawns > phase_spawns_budget` (Step 3 のカウンタ規定) または `run_spawns > run_spawns_budget` (Step 3 のカウンタ規定)                              | `spawn_budget_exceeded`                      |
 | テストゲート 3 回不通過                                                                                          | `tests_failing_before_commit`                |
 | 自己免除の抽出が成立しない (report はあるが配列が得られない)                                                     | `exemptions_extract_failed`                  |
 | `design_overview_break` 検知 (実装・修正中いずれでも、commit 前に停止)                                           | `design_overview_break` (P3)                 |

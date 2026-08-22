@@ -62,7 +62,7 @@ TDD: `rules/core/tdd.md` / 設計原則: `rules/core/design.md` / テスト戦�
 
 ## 進捗ログ (2 系統)
 
-**リアルタイム監視用の 1 行テキストログ**と**事後振り返り用の構造化 JSONL** を並走させる。各ステップの「開始 / 完了 / 動的修正 / エスカレ」発生時に両方へ同期して書き込む (1 行ログ = summary のみ、JSONL = summary + context を構造化)。終了時に JSONL から HTML レポート (Step 7) を生成する。`START_SHA` は Step 5.2 の監査 agent 呼び出し ([references/goal-audit.md](./references/goal-audit.md)) と Step 6 の完了サマリ ([references/notification-template.md](./references/notification-template.md) の `## 完了サマリ (Step 6)`) から参照される (エスカレ停止通知が使うのは `<SHA>` と `<PHASE_START_SHA>` で、`START_SHA` は使わない)。
+**リアルタイム監視用の 1 行テキストログ**と**事後振り返り用の構造化 JSONL** を並走させる。各ステップの「開始 / 完了 / 動的修正 / エスカレ」発生時に両方へ同期して書き込む (1 行ログ = summary のみ、JSONL = summary + context を構造化)。終了時に JSONL から HTML レポート (Step 7) を生成する。`START_SHA` は Step 4.2c の architecture-guard の差分基準と結果突合、Step 5.2 の監査 agent 呼び出し ([references/goal-audit.md](./references/goal-audit.md))、Step 6 の完了サマリ ([references/notification-template.md](./references/notification-template.md) の `## 完了サマリ (Step 6)`) から参照される (エスカレ停止通知が使うのは `<SHA>` と `<PHASE_START_SHA>` で、`START_SHA` は使わない)。
 
 - **run スコープの変数は Step 0 の再入判定を済ませてから確定する** (再入なら `run_id` を引き継ぐので、先に発行すると捨てる羽目になる)
 - **シェル変数は Bash ツールの呼び出しをまたいで消える。** run スコープの値は `$RUN_DIR/env.sh`、フェーズスコープの値 (`PHASE` / `PHASE_NAME` / `PHASE_ID` / `PHASE_START_SHA` / `SCRATCH_DIR` / `ISSUE`) は Step 4.1 で `$SCRATCH_DIR/env.sh` に書き、各ブロックの冒頭で両方を `source` して再確立する
@@ -173,6 +173,8 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 
 ### Step 3: ループ全体の状態管理
 
+#### カウンタと予算
+
 以下の counter を保持して各フェーズで参照する (dev-impl 開始時に 0 で初期化):
 
 | カウンタ                                        | 上限                                                      | 超過時の挙動                                    |
@@ -180,9 +182,9 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 | `p1_fixes_in_phase` (現フェーズ内 P1 修正回数)  | 2 (回)                                                    | P2 として扱う (次のループでは P2 として処理)    |
 | `p2_fixes_total` (dev-impl 全体の P2 修正回数)  | なし (上限を設けない)                                     | 停止しない。件数と内訳を記録し Step 6 で提示する |
 | `goal_loop` (ゴール達成判定 → 未達対応の周回数) | 2 (周)                                                    | P3 として停止                                   |
-| `phase_fix_round` (現フェーズの検査 → 修正の周回数) | `phase_fix_budget` (**基底は `RISK_FACES` が空なら 3、非空なら 4**。**再入時は `max(基底, 復元値 + 1)` に引き上げ、フェーズの `start` イベントの `context.phase_fix_budget` に基底込みの値で記録する。復元は記録値の最大**) | `phase_fix_exceeded` でエスカレ停止 (context に guard 由来 / review 由来の内訳を残す) |
+| `phase_fix_round` (現フェーズの検査 → 修正の周回数) | `phase_fix_budget` (**基底は `RISK_FACES` が空なら 3 (ラウンド)、非空なら 4 (ラウンド)**。**再入時は `max(基底, 復元値 + 1)` に引き上げ、フェーズの `start` イベントの `context.phase_fix_budget` に基底込みの値で記録する。復元は記録値の最大**) | `phase_fix_exceeded` でエスカレ停止 (context に guard 由来 / review 由来の内訳を残す) |
 | `test_gate_retry` (現フェーズの 4.2e テストゲート再試行回数) | 3 (回)                                       | `tests_failing_before_commit` でエスカレ停止    |
-| `phase_spawns` (現フェーズの累計 subagent 起動数) | `phase_spawns_budget` (既定 33 (spawn)。**再入時は `max(33, 復元値 + 16)` に引き上げ、フェーズの `start` イベントの `context.phase_spawns_budget` に記録する。復元は記録値の最大**) — `spawn_budget_exceeded` は「再実行で解決しうる」停止で、復元されたカウンタが上限を超えたままだと再実行が構造的に何も解決しない (`run_spawns_budget` と同じ理由。16 は fix 1 + 再検査 5 の 2 ラウンド分 + 予備) | `spawn_budget_exceeded` でエスカレ停止          |
+| `phase_spawns` (現フェーズの累計 subagent 起動数) | `phase_spawns_budget` (既定 34 (spawn)。**再入時は `max(34, 復元値 + 16)` に引き上げ、フェーズの `start` イベントの `context.phase_spawns_budget` に記録する。復元は記録値の最大**) — `spawn_budget_exceeded` は「再実行で解決しうる」停止で、復元されたカウンタが上限を超えたままだと再実行が構造的に何も解決しない (`run_spawns_budget` と同じ理由。16 は fix 1 + 再検査 5 の 2 ラウンド分 + 予備) | `spawn_budget_exceeded` でエスカレ停止          |
 | `run_spawns` (run 全体の累計 subagent 起動数)   | `run_spawns_budget` (下記「spawn 予算の意図」で定義)      | 同上                                            |
 
 **再入で予算が増える 3 つ (`phase_fix_budget` / `phase_spawns_budget` / `run_spawns_budget`) は同じ理屈で動く。** いずれの停止理由も「再実行で解決しうる」か「人間が対応した後に再開する」ものなので、**再入しても予算が一切増えないなら再実行が構造的に何も解決できず、即座に同じ理由で再停止する**。予算の追加付与を人間の再起動に紐づけることで、1 セッション内の暴走は有限の予算で止めたまま、人間の判断を挟んだ継続だけが前進する。`phase_fix_budget` の増分が **+1** なのは `phase_fix_exceeded` が `needs-human` に分類される停止だからで、人間が 1 回対応したら 1 ラウンド分だけ直す余地を与える対応付けにしてある。**基底を `RISK_FACES` の有無で 3 / 4 に振るのは実測に基づく** — 面を持つフェーズにだけ 1 ラウンド余分に与えると、adversarial の起動本数が 1 本増える代わりに high の検出が 1 件増えた (2026-08-22、mind の run。効率 1.29 → 1.32)。**基底は `start` イベントに書き込む値に必ず含める** — 含めないと再入時に `max(3, ...)` へ落ちて、面を持つフェーズの上限が黙って 1 下がる。
@@ -199,7 +201,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 
 **spawn 予算の意図**:
 
-- 1 フェーズは最小構成でも implementer 1 + review 1〜4 を起動し (最後の issue のフェーズは architecture-guard 1 が加わる)、フェーズ数だけ積み上がるため上限を機械ゲートとして置く。**`phase_spawns` の上限 33・`run_spawns` の上限係数 20 (spawn / issue) はいずれも実測から取った値**で、測定と算出の内訳は [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## spawn 予算の根拠` にある (値を変えるときはそこの実測と突き合わせる)
+- 1 フェーズは最小構成でも implementer 1 + review 1〜4 を起動し (最後の issue のフェーズは architecture-guard 1 が加わる)、フェーズ数だけ積み上がるため上限を機械ゲートとして置く。**`phase_spawns` の上限 34・`run_spawns` の上限係数 20 (spawn / issue) はいずれも実測から取った値**で、測定と算出の内訳は [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## spawn 予算の根拠` にある (値を変えるときはそこの実測と突き合わせる)
 - **`run_spawns` の上限は `run_spawns_budget` という別の値で保持し、残作業ベースで上方向にのみ更新する。** 更新するのは次の 3 時点だけで、**issue が close されても下げない**:
 
   | 更新時点 | 計算 |
@@ -283,7 +285,7 @@ PHASE_CONTEXT の YAML テンプレートと抜粋ロジック (design 節の抜
 
 ##### 事前判定 (main)
 
-`IS_NEOVIM_PLUGIN` は init.lua / lua ディレクトリ / plugin/*.lua の有無で決まる (4.2b の要否)。`uiPhase` は `phase_tasks` / フェーズ名の UI キーワード、または `related_source_files` のフロントエンド dir 有無で決まる (4.2c の観点 gating に使う)。**`PRODUCT_MODE=cli` では `uiPhase` を判定せず常に `false` 固定**とする (CLI 実装の「コマンド」「フラグ」等の語がキーワード判定に誤爆するのを防ぐ)。**あわせて、このフェーズが踏む攻撃面の集合 `RISK_FACES` を仕様の記述から算出する** (面の定義は同ファイルの `## 4.2c: リスク面の表`)。実装の前に出すのは、implementer に指摘を待たせず最初から族を閉じさせるためで、PHASE_CONTEXT の `risk_faces` として渡る。実行コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2: 事前判定`。
+`IS_NEOVIM_PLUGIN` は init.lua / lua ディレクトリ / plugin/*.lua の有無で決まる (4.2b の要否)。`uiPhase` は `phase_tasks` / フェーズ名の UI キーワード、または `related_source_files` のフロントエンド dir 有無で決まる (4.2c の観点 gating に使う)。**`PRODUCT_MODE=cli` では `uiPhase` を判定せず常に `false` 固定**とする (CLI 実装の「コマンド」「フラグ」等の語がキーワード判定に誤爆するのを防ぐ)。**あわせて、このフェーズが踏む攻撃面の集合 `RISK_FACES` を仕様の記述から算出する** (面の定義は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: リスク面の表`)。実装の前に出すのは、implementer に指摘を待たせず最初から族を閉じさせるためで、PHASE_CONTEXT の `risk_faces` として渡る。実行コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2: 事前判定`。
 
 **RUN_FACTS.md を新規作成したフェーズでのみ**、gate コマンド (`full_test_command` / `lint_command` / `format_command`) を main が 1 回実行して exit code を確認する。**未検証のコマンドを渡すと、implementer が自分の実装のせいで失敗していると誤認して発散する。** 結果を RUN_FACTS.md の「確認済み」列に書き、**その後で** PHASE_CONTEXT に `gate_commands_verified` を `true` (全コマンドが exit 0) / `false` で書く。2 フェーズ目以降は同列から引き継ぐ。
 
@@ -338,7 +340,7 @@ fan-out 前の事前ブロックでは、続けて次の 3 つを行う (いず�
 
 **`mode: full` の review-adversarial は fan-out に入れず、単独で先に走らせてから残りを fan-out する。** レンズ A は**共有の作業ツリー上でソースを直接書き換えて実行し、終える前に戻す**ので、その間に並列で走る観点は変異後のコードを読みうる。読んだかどうかは事後に判別できず (戻ってしまえば `status` は clean)、その観点の結果が「fatal なし」でも「fatal あり」でも信用できない。**影響は dev サーバを立てる review-product-readiness に限らない** — guard も tdd も quality も同じツリーを読む。`weakening_only` は変異を行わないので通常どおり fan-out に入れてよい。起動順序の表は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: adversarial_mode 別の起動順序`。
 
-gating で決まった観点を**同一メッセージ内の複数 Agent tool_use として並列起動**し、main が全部の完了を待つ。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 検査 fan-out の起動`。**`architecture-guard` は最後の issue のフェーズでだけこの fan-out に加える** — 境界違反は累積的なので最終差分に残り、毎フェーズ起動していた頃の実測 (2026-08-22、mind の run) は 28 回で違反 1 件だった。それ以外のフェーズでレイヤ境界を担保するのはプロジェクト側の lint (`lint_command`) で、検査の方法は当該プロジェクトの `CLAUDE.md` に書かれている前提とする。**`lint_command` が null か、`CLAUDE.md` に境界検査の記載が無いフェーズでは、そのフェーズの境界検査は誰も行っていない** — `verification_skipped` (source: `layer_check_absent`) に記録して Step 5.6 の集約に載せる (`lint_command` の存在確認は「exit 0 で走るか」までで、境界を見るかは検証していないため、沈黙させると最後の issue まで検査ゼロの run が「問題なし」に見える)。guard を review と同じ fan-out に入れるのは待ちを 2 回から 1 回に減らすためで、guard の違反も review の fatal も同じ修正ラウンド (4.2d) で処理する。検査 agent も implementer と同じく **30 分応答が無ければ打ち切り** (計測コマンドと `SPAWN_EPOCH` の書き出しは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: subagent の応答待ち時間`)、打ち切った観点は 4.2d 手順 1 で扱う。
+gating で決まった観点を**同一メッセージ内の複数 Agent tool_use として並列起動**し、main が全部の完了を待つ。呼び出し方法は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2c: 検査 fan-out の起動`。**`architecture-guard` は最後の issue のフェーズでだけこの fan-out に加える** (根拠 → [references/orchestration-rationale.md](./references/orchestration-rationale.md) の `## 内部呼び出し subagent の役割詳細`)。それ以外のフェーズでレイヤ境界を担保するのはプロジェクト側の lint (`lint_command`) で、検査の方法は当該プロジェクトの `CLAUDE.md` に書かれている前提とする。**`lint_command` が null か、`CLAUDE.md` に境界検査の記載が無いフェーズでは、そのフェーズの境界検査は誰も行っていない** — `verification_skipped` (source: `layer_check_absent`) に記録して Step 5.6 の集約に載せる (`lint_command` の存在確認は「exit 0 で走るか」までで、境界を見るかは検証していないため、沈黙させると最後の issue まで検査ゼロの run が「問題なし」に見える)。guard を review と同じ fan-out に入れるのは待ちを 2 回から 1 回に減らすためで、guard の違反も review の fatal も同じ修正ラウンド (4.2d) で処理する。検査 agent も implementer と同じく **30 分応答が無ければ打ち切り** (計測コマンドと `SPAWN_EPOCH` の書き出しは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2a: subagent の応答待ち時間`)、打ち切った観点は 4.2d 手順 1 で扱う。
 
 **観点 gating (トークン削減の要):**
 
@@ -352,14 +354,14 @@ gating で決まった観点を**同一メッセージ内の複数 Agent tool_us
 
 **結果を受け取ったら、`skipped_lenses` が非空なら `verification_skipped` (source: `mode_degraded`) を書く。** これが Step 5.6 の集約に合流する経路で、書かなければモード縮退が沈黙する。スキップ述語で adversarial を起動しなかった場合は `gating_decided` の `adversarial_mode` に `"skipped"` を記録する。**mode の判定根拠は `basis` に残す。**
 
-各 Agent 呼び出しには **「モデル方針」の表どおり `model` を明示**する。呼び出し時の指定は agent 定義側のデフォルトより優先され、**未指定にすると親のセッションモデルを継承してしまう** (`agent-spawn-guard` hook が未指定を deny する)。**review-adversarial には PHASE_CONTEXT の path を渡さない** — fresh context 監査のため、`mode` / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / **exemptions_path** / output_path のみを渡す (**集合の正は phase-context.md「渡し方」の行**)。**`mode` を渡し忘れると agent 側の既定で `full` に戻り、縮退が無音で効かなくなる**。
+各 Agent 呼び出しには **「モデル方針」の表どおり `model` を明示**する。呼び出し時の指定は agent 定義側のデフォルトより優先され、**未指定にすると親のセッションモデルを継承してしまう** (`agent-spawn-guard` hook が未指定を deny する)。**review-adversarial には PHASE_CONTEXT の path を渡さない** — fresh context 監査のため、`mode` / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / **risk_faces** / scratch_dir / **exemptions_path** / output_path のみを渡す (**集合の正は phase-context.md「渡し方」の行**)。**`mode` を渡し忘れると agent 側の既定で `full` に戻り、縮退が無音で効かなくなる**。
 
 ##### 4.2d: fatal 判定と修正ラウンド (最大 3)
 
 main は各 agent の結果 JSON を「main のコンテキスト規律」の `jq` 射影で読む。
 
 1. **いずれかの agent が結果を返せない → その観点は「未検証」。パス扱いにせず** `guard_agent_failed` (architecture-guard) / `review_agent_failed` (review-*) でエスカレ停止する。high 0 件と同一視しない。該当は「エラー終了か 30 分無応答」「`output_path` の JSON が不在かパース不能」「スキーマ不適合 (guard は `ok`、review-* は `findings` が読めない)」「guard の `skip_reason: "diff_command_failed"`」「guard の `unchecked_files` が非空」「**`exemptions_path` を渡した agent (review-tdd と review-adversarial の 2 つだけ) の `adjudicated` が、取り直した免除件数を下回る**」。
-   - **guard の `skip_reason: "no_layer_convention"` は未検証にしない** — レイヤ構造の無いプロジェクトで誤検知を出さないための意図的な素通りで、`checked_files: 0, ok: true` が正しい結果。ただし `verification_skipped` (source: `no_layer_convention`) には記録する。**`skip_reason: "layer_check_failed"` は未検証にする** (判定スクリプトがファイルを読めず検査が成立していないため。`diff_command_failed` と同じ扱い)
+   - **guard の `skip_reason: "no_layer_convention"` は未検証にしない** — レイヤ構造の無いプロジェクトで誤検知を出さないための意図的な素通りで、`checked_files: 0, ok: true` が正しい結果。ただし `verification_skipped` (source: `no_layer_convention`) には記録する。**`skip_reason: "layer_check_failed"` は未検証にする** (判定スクリプトがファイルを読めず検査が成立していないため。`diff_command_failed` と同じ扱い)。`verification_skipped` (source: `layer_check_failed`) にも記録する
    - **`exemptions_path` を渡していない agent (architecture-guard / review-quality / review-product-readiness) に `adjudicated` の条件を適用しない** — 渡していないものを裁定できるはずがなく、免除が 1 件でもあるフェーズが全て偽の停止になる
    - **review-product-readiness の `dev_server_unavailable` は未検証扱いにするが、修正ラウンドには乗せない** (環境起因で実装者が直せないため。guard の `diff_command_failed` と同じ性質)
    - **agent の失敗は「一過性」と「決定的」を分けて扱う。** タイムアウト・JSON 破損・一時的なエラー終了は `in-progress` のまま再実行で解決しうるが、**`TOO_MANY_FILES` / `NO_DESIGN_DOCS` / スキーマ不適合 / `diff_command_failed` / `unchecked_files` 非空 / `adjudicated` 不足は決定的**で、同じ入力なら何度でも同じ結果になる。決定的な失敗と、同一フェーズで同じ agent が 2 回続けて失敗した場合は **`needs-human` に振り分ける** (決定的な失敗を「再実行で解決しうる」に入れると、人間に渡る経路が無いまま同じ停止を繰り返す)
@@ -370,7 +372,7 @@ main は各 agent の結果 JSON を「main のコンテキスト規律」の `j
 
    **`verdict: spec_defect` のときは、同一フェーズでの再 fan-out を禁止する。** 仕様がその状況を定めていない以上、実装をどう直しても閉じないためで、**欠けている条文と提案する条文案を出力に残して停止する**。実測ではこれが最大の浪費だった — あるフェーズは検査 7 巡・修正 6 巡を消化し、最終判定は「条文そのものに起因するため実装では閉じられない」で、**そのフェーズの検査+修正の 87% は「もう閉じない」と分かった後に使われていた**。ラベルは既存の `needs-human` を貼り (新しい状態は作らない)、区別は JSONL の `verdict` で行う。`implementation_gap` のときは従来どおり人間の判断を仰ぐ停止として扱う。続けて **JSONL に `event_type: fix_dispatch` を記録する**。`spawn` と同じく**起動する前に書く** — Step 0 の再入で `phase_fix_round` を復元する唯一のソースであり、ラウンド 2 以降の implementer へ渡す「過去ラウンドの経過」の材料でもある。fixer に渡す findings ファイルの切り出しは [references/phase-gates.md](./references/phase-gates.md) の `## 4.2d 手順 3: fixer へ渡す findings の切り出し` を Read してから実行する (**guard の分をキー `findings` に付け替えると、implementer が high しか拾わない規約により guard の medium が誰にも直されず毎ラウンド再検出される**)。
 4. **`mode: fix` の `dev-impl-implementer` を起動**する。**モデルはラウンド 1 が `opus`、ラウンド 2 以降が `fable`** (上記「修正ラウンドのモデル昇格」)。ラウンド 2 以降は指示文に「指摘箇所を局所的に塞ぐ前に、その箇所が属する不変条件を洗い出し、同じ族のエッジケースがまとめて閉じるかを確認せよ。族として閉じられない残りは報告の `open_questions` に明記せよ」を加える。渡すのは `findings_paths` / `phase_context_path` / `repo_dir` / `report_path`。**指示文の全文テンプレート (過去ラウンドの経過を渡す `ROUND2_PLUS_BRIEF` を含む) は [references/phase-execution.md](./references/phase-execution.md) の `## 4.2d: 修正ラウンドの implementer 起動` を Read して使う。** main は findings の本文を読まないし、修正内容を指示しない。**報告を受けたら 4.2a と同じく main がコミットする**
-5. 修正完了後、**再 fan-out は「fatal を出した観点」に絞って 4.2c に戻る** (最後の issue のフェーズでは architecture-guard も含める)。**初回 fan-out の review-adversarial が high 0 件 (手順 2 の fatal の定義を通した後の high。除外される 4 rule は数えない) だったフェーズでは、以降のラウンドで adversarial を再起動しない。判定と `gating_decided` への追記は初回 fan-out の結果を射影で読んだ直後に行う** — 実測 (2026-08-22、mind の run) で「前ラウンドが high 0 なら次も 0」が 78% (7/9) で、この打ち切りは本数を 27% 減らして検出を 6% しか落とさない (検出維持率 0.94 ÷ 本数比 0.73 = 効率 1.28)。打ち切りを決めたら `gating_decided` に追記し (同一フェーズは最新 1 件を採る既存規定に乗る)、再入時はそこから復元する。**フェーズ末の弱体化監査 (4.2e) はこの打ち切りの対象外**とする — 累積テスト差分の監査であって実装への攻撃ではなく、仕事が違う。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は**原則として `gating_decided` の `gating_set` の部分集合**とする (guard は gating 対象外なので判定に含めない)。集合外の review-adversarial を追加してよいのは次の 2 つだけで、追加したら `gating_decided` を追記する (**テスト弱体化の監査はラウンドごとには行わず、フェーズ末に 1 回だけ累積差分に対して行う** → 4.2e):
+5. 修正完了後、**再 fan-out は「fatal を出した観点」に絞って 4.2c に戻る** (最後の issue のフェーズでは architecture-guard も含める)。**初回 fan-out の review-adversarial が high 0 件 (手順 2 の fatal の定義を通した後の high。除外される 4 rule は数えない) だったフェーズでは、以降のラウンドで adversarial を再起動しない。判定と `gating_decided` への追記は初回 fan-out の結果を射影で読んだ直後に行う** — 実測 (2026-08-22、mind の run) で「前ラウンドが high 0 なら次も 0」が 78% (7/9) で、この打ち切りは本数を 27% 減らして検出を 6% しか落とさない (検出維持率 0.94 ÷ 本数比 0.73 = 効率 1.28)。打ち切りを決めたら `gating_decided` に `adversarial_stopped: true` を立てて追記し (同一フェーズは最新 1 件を採る既存規定に乗る)、再入時はそこから復元する。**フェーズ末の弱体化監査 (4.2e) はこの打ち切りの対象外**とする — 累積テスト差分の監査であって実装への攻撃ではなく、仕事が違う。目的は「前回の fatal が fix 差分で解消したか」の検証であって、フェーズ全体の再レビューではない (毎ラウンド全観点を回すと観点ごとに新しい指摘が出続け、ラウンドが上限まで消化される。実測でフェーズあたり平均 2.25 ラウンド)。起動する観点は**原則として `gating_decided` の `gating_set` の部分集合**とする (guard は gating 対象外なので判定に含めない)。集合外の review-adversarial を追加してよいのは次の 2 つだけで、追加したら `gating_decided` を追記する (**テスト弱体化の監査はラウンドごとには行わず、フェーズ末に 1 回だけ累積差分に対して行う** → 4.2e):
    - **self-exemptions の claim 差分に新規の免除があった場合** (`mode: weakening_only` で足りる) — 修正ラウンドで新たに宣言された免除を裁く者を確保するため
    - **スキップ述語が「skip → 実行」に転じた場合** (降格は禁止)。この転換で起動するときの `mode` はその時点で mode 決定表を評価して決める (初回 skip したフェーズは `adversarial_mode: "skipped"` しか記録が無いため)
 

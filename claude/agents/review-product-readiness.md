@@ -175,7 +175,7 @@ chrome-devtools MCP で:
       "rule": "nav_unreachable|error_boundary_missing|empty_state_missing|loading_missing|seo_meta|page_404_deadloop|logout_missing|console_error|dev_server_unavailable",
       "message": "具体的な指摘 (画面名 / URL / 観測値)",
       "traces_to": { "id": "<DoD 項目 / BR 番号 / DESIGN_DETAIL の節>", "quote": "<その条文の原文をそのまま引用した 1 文>" },
-      "evidence": "族を走査した全要素の判定 (finding-coverage.md)。走査していない要素はその旨を明記する",
+      "evidence": "族を走査した全要素の判定 (finding-coverage.md)。該当箇所のコード引用や判定に使ったコマンドと出力も含める。走査していない要素はその旨を明記する",
       "fix_proposal": "推奨修正"
     }
   ]

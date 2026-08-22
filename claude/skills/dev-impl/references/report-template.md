@@ -150,7 +150,7 @@ dev-impl の Step 7 で生成する `docs/dev-impl-reports/${run_id}.html` の�
 
 ## セクション 3: フェーズタイムライン
 
-fix rounds 列と spawns 列の分母 (`p.phase_fix_budget` / `p.phase_spawns_budget`) は、当該フェーズの `start` イベントの同名フィールドの**最大**を採る (再入で引き上げられた値が正。記録が無い旧 run は既定の 3 / 33 を使う)。
+fix rounds 列と spawns 列の分母 (`p.phase_fix_budget` / `p.phase_spawns_budget`) は、当該フェーズの `start` イベントの同名フィールドの**最大**を採る (再入で引き上げられた値が正。記録が無い旧 run は SKILL.md の `#### カウンタと予算` の既定を使う)。
 
 ```html
 <section class="space-y-2">

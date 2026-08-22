@@ -19,6 +19,7 @@ phase_name: <フェーズN: 名前>        # TODO.md の該当節を自分で rg
 phase_start_sha: <SHA>
 repo_dir: <検査対象リポジトリの絶対パス。省略時はカレントディレクトリ>
 docs_dir: docs/                      # mode: full のみ。TODO.md / DESIGN*.md を自力 Read (無ければレンズ C は対象なしとして skip)
+risk_faces: <async_roundtrip,persistence_limit,...>  # mode: full のみ。このフェーズが踏む攻撃面 (呼び出し側が仕様と差分から算出)。**レンズ A はこの面を優先して攻撃する**。空文字列もありうる
 dev_server:                          # optional。mode: full のレンズ A で Web UI を攻撃するときのみ使う
   url: <検出できた URL>
   start_command: <dev/start script>
@@ -42,7 +43,7 @@ output_path: <呼び出し側が渡す絶対パス。dev-impl では $SCRATCH_DI
 
 **Step 0 (自己免除の裁定) は mode に関わらず必ず実施する。** `weakening_only` でも `exemptions_path` は渡されるので、`adjudicated_exemptions` を返さないと呼び出し側の未検証判定 (dev-impl SKILL.md 4.2d 手順 1) に必ず引っかかって停止する。攻撃の実行が要る免除は `weakening_only` では確かめられないので `verdict: "unverifiable"` に倒し、その理由を `evidence` に書く (裁定しなかったのではなく、このモードでは確かめられないことを明示する)。
 
-`weakening_only` は「毎フェーズ実行する reward hacking の監視」が役割で、攻撃と完了主張の反証は要所の `full` が担当する。呼び出し側が `full` を選ぶ条件は 4 つ (消費型資源を扱う差分 / 認証・認可・セッションを扱う差分 / テスト差分が無いまま実装が 20 行を超えたフェーズ / 最後の issue) で、いずれも別々の機械判定である (認証は消費型資源の一種ではない)。**`weakening_only` は skip ではなくモードの縮退**なので、未実行のレンズを必ず `skipped_lenses: ["A", "C"]` に記録する (呼び出し側が未検証項目として集約するため。沈黙で「検査済み」に見せない)。
+`weakening_only` は「毎フェーズ実行する reward hacking の監視」が役割で、攻撃と完了主張の反証は要所の `full` が担当する。呼び出し側が `full` を選ぶ条件は `skills/dev-impl/references/phase-execution.md` の `## 4.2c: review-adversarial の mode 決定表` が正 (条件をここに再掲しない — 二重定義になり、片方だけ更新されると乖離する)。**`weakening_only` は skip ではなくモードの縮退**なので、未実行のレンズを必ず `skipped_lenses: ["A", "C"]` に記録する (呼び出し側が未検証項目として集約するため。沈黙で「検査済み」に見せない)。
 
 ### Step 0: 自己免除の裁定 (exemptions_path が渡された場合)
 
@@ -166,7 +167,7 @@ Step 2 で切り出した TODO.md の該当フェーズタスクごとに、完�
       "rule": "edge_case_failure|error_path_unhandled|consumable_resource_reuse|attack_not_executable|working_tree_polluted|test_weakened|skip_added|tautological_test|vacuous_assertion|goal_refuted|phase_task_unimplemented|partial_commit_detected",
       "message": "具体的な指摘 (攻撃入力 / 観測出力を含む)",
       "traces_to": { "id": "<DoD 項目 / BR 番号 / DESIGN_DETAIL の節>", "quote": "<その条文の原文をそのまま引用した 1 文>" },
-      "evidence": "族を走査した全要素の判定 (finding-coverage.md)。走査していない要素はその旨を明記する",
+      "evidence": "族を走査した全要素の判定 (finding-coverage.md)。該当箇所のコード引用や判定に使ったコマンドと出力も含める。走査していない要素はその旨を明記する",
       "repro_command": "npx tsx /tmp/review-adversarial-phase-3/attack-1.ts   # レンズ A の finding のみ",
       "fix_proposal": "推奨修正"
     }
