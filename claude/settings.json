@@ -103,6 +103,10 @@
       }
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/claude/scripts/statusline-command.sh"
+  },
   "enabledPlugins": {
     "archify@misty-lantern": true,
     "bank-ledger-transcribe@misty-lantern": true,
@@ -125,7 +129,8 @@
     "typescript-lsp@claude-plugins-official": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "claude-security@claude-plugins-official": true,
-    "stripe@claude-plugins-official": true
+    "stripe@claude-plugins-official": true,
+    "eli5@claude-community": true
   },
   "extraKnownMarketplaces": {
     "agent-plugins-for-aws": {
@@ -181,6 +186,12 @@
         "source": "github",
         "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
       }
+    },
+    "claude-community": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-community"
+      }
     }
   },
   "language": "Japanese",
@@ -196,9 +207,5 @@
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
-  "statusLine": {
-    "type": "command",
-    "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/claude/scripts/statusline-command.sh"
-  }
+  "voiceEnabled": true
 }
