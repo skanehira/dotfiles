@@ -486,7 +486,7 @@ EOF
 ```bash
 # 予算は再入で引き上がる値なので必ず context に載せる。載せないと Step 0 の復元が
 # 既定にフォールバックし、再入のたびに引き上げが失われて同じ上限で止まり続ける
-PHASE_SPAWNS_BUDGET=${PHASE_SPAWNS_BUDGET:-33}
+PHASE_SPAWNS_BUDGET=${PHASE_SPAWNS_BUDGET:-34}
 # phase_fix_budget の基底は RISK_FACES の有無で決まる (SKILL.md「カウンタと予算」が正)。
 # 基底を載せずに既定 3 で書くと、再入時に面ありフェーズの上限が黙って 1 下がる
 FIX_BUDGET_BASE=$([ -n "$RISK_FACES" ] && echo 4 || echo 3)
