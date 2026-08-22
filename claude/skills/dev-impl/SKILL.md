@@ -235,7 +235,7 @@ gh issue list --repo "$REPO_SLUG" --state closed --limit $LIMIT --json number --
 
 Step 2 で選んだ issue を 1 件実装し、close してから Step 2 に戻る。**同時に複数の issue を走らせない。** implementer は main の working tree で直接編集し、統合の手順は無い (main がそのままコミットする)。骨格は「issue に `in-progress` を貼る → PHASE_CONTEXT を組み立てる → implementer 起動 → 待つ → 検査 fan-out 起動 → 待つ → 修正ラウンド → テストゲート → コミット → issue を close」。
 
-**PHASE_CONTEXT の実装指示は issue 本文から組み立てる。** `## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` をそのまま使う (節名は dev-spec のフェーズ 12 が固定している)。設計の抜粋が必要な場合だけ `## 参照すべき docs` が指す節を docs から読む。`ucs` を持つフェーズでは機能仕様 (`docs/features/UC-<n>.md`) と UC 節の全文が PHASE_CONTEXT の `feature_spec` / `usecase_detail` として implementer に届く ([references/phase-context.md](./references/phase-context.md))。着手時と完了時の GitHub 操作:
+**PHASE_CONTEXT の実装指示は issue 本文から組み立てる。** `## ゴール` / `## DoD` / `## 参照すべき docs` / `## 変更が想定されるファイル` / `## 非スコープ` / `## 実装タスク` をそのまま使う (節名は dev-spec のフェーズ 12 が固定している)。設計の抜粋が必要な場合だけ `## 参照すべき docs` が指す節を docs から読む。`ucs` を持つフェーズでは機能仕様 (`docs/features/UC-<n>.md`) と UC 節の全文が PHASE_CONTEXT の `feature_spec` / `usecase_detail` として implementer に届く ([references/phase-context.md](./references/phase-context.md))。issue 本文の設計節 (12.4.2 が転記する機能仕様のスナップショット) は人間向けなので抽出しない (docs 直読の `feature_spec` と二重に渡さない)。着手時と完了時の GitHub 操作:
 
 ```bash
 gh issue edit <N> --repo "$REPO_SLUG" --add-label in-progress --remove-label ready
@@ -461,7 +461,8 @@ implementer 報告 (`mode: implement` / `mode: fix` 双方) の `deviation_signa
 6. **編集した設計書 (`DESIGN_DETAIL_APP.md` / `_INFRA.md` / `docs/features/` 配下) と `docs/TODO.md` をコミットする** (上記「動的修正のコミット」)
 7. ログに「P2 fix: <更新セクション>」を残す (JSONL は `event_type: p2_fix`)。**`context` には `section` / `what` (何をどう変えたか 1 行) / `why` (実装から判明した事実) / `commit_sha` (手順 6 のコミット) / `p2_fixes_total` (この時点の通算) を入れる** — 停止しない代わりに、ユーザーが後から「設計のどこが実装に合わせて書き換わったか」を追える唯一の記録になる
 8. 当該フェーズの再実行か次フェーズへ進むかを判定: 再生成後の TODO.md で **当該フェーズ内に新規の未完了タスク (`- [ ]`) が追加されていれば、P1 手順 4 と同じく issue を reopen して本文の `## 実装タスク` を更新し、`ready` に戻してから Step 2 の抽出をやり直す**。既存タスクが全て完了済みのまま (詳細設計の記述を補っただけで実装側の追加作業が無い) なら次フェーズへ進む
-9. ユーザに対する通知は「<編集した設計書のファイル名> / TODO.md を更新しました (詳細はログ参照)」程度 (dev-impl は止まらない)
+9. **`docs/features/UC-<n>.md` を編集した場合は、その UC を `ucs` に持つ open な issue の `## 設計` 節を再生成して貼り直す** (転記規則は dev-spec 12.4.2 — 全文を 2 段降格で `<details>` に包む。`gh issue edit <番号> --body-file`)。closed は触らない (後の `/dev-spec` 再実行時に 12.3 が不一致として報告する)。`in-progress` の issue はコメントで改訂を告知する (12.3 と同じ規則)
+10. ユーザに対する通知は「<編集した設計書のファイル名> / TODO.md を更新しました (詳細はログ参照)」程度 (dev-impl は止まらない)
 
 ##### 新フェーズの issue 化 (P1 / P2 / Step 5.5 の共通手順)
 
