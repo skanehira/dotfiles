@@ -41,6 +41,12 @@ design_detail: |                         # DESIGN_DETAIL_APP.md / DESIGN_DETAIL_
 design_detail_app_path: docs/DESIGN_DETAIL_APP.md
 design_detail_infra_path: docs/DESIGN_DETAIL_INFRA.md
 
+# --- このフェーズが踏む攻撃面 ---
+risk_faces: [<async_roundtrip|persistence_limit|auth_error_path|ui_consistency|consumable>, ...]
+  # Step 4.2 事前判定でフェーズ仕様の記述から算出した集合 (空配列もありうる)。
+  # implementer は指摘を待たず、ここに挙がった面の族を最初から閉じる。
+  # 面の定義は phase-execution.md の `## 4.2c: リスク面の表`
+
 # --- 既存コードの状態 ---
 repo_state: <greenfield|existing>        # 下記「repo_state」参照。related_source_files の空配列の意味を確定させる
 related_source_files:                    # subagent が Read すべき既存ファイル一覧
@@ -188,4 +194,4 @@ run 全体で 1 ファイル (`docs/.dev-impl/<run_id>/RUN_FACTS.md`)。**親だ
 | review-quality | 絶対パスを渡す |
 | review-product-readiness | 絶対パスを渡す。**加えて `repo_dir` (絶対パス) / `dev_server` (url と start_command) / `snapshot_dir` (`$SCRATCH_DIR/product-readiness-snapshots/`) を渡す** — `snapshot_dir` は dev サーバの PID ファイル置き場でもあり、落とすと agent が起動したサーバを停止できず、以降のフェーズが古いコードのサーバを検査し続ける |
 | architecture-guard | **渡さない** (`claude/agents/architecture-guard.md` の入力節が PHASE_CONTEXT を受け取らないため。代わりに `design_path` / `design_detail_path` / `target_diff` / `PHASE_START_SHA` / `repo_dir` / `output_path` を直接渡す) |
-| review-adversarial | **渡さない** (fresh context 監査のため、`mode` / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / **`exemptions_path`** / output_path のみを直接渡す。`exemptions_path` は免除 0 件でも必ず渡す — 渡すのは実装の説明ではなく「検証しないと宣言した項目の名指しリスト」なので fresh context の趣旨は壊れない。`mode` は SKILL.md 4.2c で確定した `full` / `weakening_only`。省略すると agent 側の既定で `full` になる。`weakening_only` のときは docs_dir / dev_server を渡さない) |
+| review-adversarial | **渡さない** (fresh context 監査のため、`mode` / phase_name / phase_start_sha / repo_dir / docs_dir / dev_server / scratch_dir / **`exemptions_path`** / output_path のみを直接渡す。`exemptions_path` は免除 0 件でも必ず渡す — 渡すのは実装の説明ではなく「検証しないと宣言した項目の名指しリスト」なので fresh context の趣旨は壊れない。`mode` は SKILL.md 4.2c で確定した `full` / `weakening_only`。省略すると agent 側の既定で `full` になる。`weakening_only` のときは docs_dir / dev_server を渡さない。**`mode: full` のときは `risk_faces` も渡し、その面を名指しで優先攻撃させる** — 渡さないと「一般的に攻撃せよ」としか伝わらず、最大クラスタに当たるかが運任せになる) |

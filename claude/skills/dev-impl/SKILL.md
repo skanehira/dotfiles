@@ -283,7 +283,7 @@ PHASE_CONTEXT の YAML テンプレートと抜粋ロジック (design 節の抜
 
 ##### 事前判定 (main)
 
-`IS_NEOVIM_PLUGIN` は init.lua / lua ディレクトリ / plugin/*.lua の有無で決まる (4.2b の要否)。`uiPhase` は `phase_tasks` / フェーズ名の UI キーワード、または `related_source_files` のフロントエンド dir 有無で決まる (4.2c の観点 gating に使う)。**`PRODUCT_MODE=cli` では `uiPhase` を判定せず常に `false` 固定**とする (CLI 実装の「コマンド」「フラグ」等の語がキーワード判定に誤爆するのを防ぐ)。実行コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2: 事前判定`。
+`IS_NEOVIM_PLUGIN` は init.lua / lua ディレクトリ / plugin/*.lua の有無で決まる (4.2b の要否)。`uiPhase` は `phase_tasks` / フェーズ名の UI キーワード、または `related_source_files` のフロントエンド dir 有無で決まる (4.2c の観点 gating に使う)。**`PRODUCT_MODE=cli` では `uiPhase` を判定せず常に `false` 固定**とする (CLI 実装の「コマンド」「フラグ」等の語がキーワード判定に誤爆するのを防ぐ)。**あわせて、このフェーズが踏む攻撃面の集合 `RISK_FACES` を仕様の記述から算出する** (面の定義は同ファイルの `## 4.2c: リスク面の表`)。実装の前に出すのは、implementer に指摘を待たせず最初から族を閉じさせるためで、PHASE_CONTEXT の `risk_faces` として渡る。実行コマンドは [references/phase-execution.md](./references/phase-execution.md) の `## 4.2: 事前判定`。
 
 **RUN_FACTS.md を新規作成したフェーズでのみ**、gate コマンド (`full_test_command` / `lint_command` / `format_command`) を main が 1 回実行して exit code を確認する。**未検証のコマンドを渡すと、implementer が自分の実装のせいで失敗していると誤認して発散する。** 結果を RUN_FACTS.md の「確認済み」列に書き、**その後で** PHASE_CONTEXT に `gate_commands_verified` を `true` (全コマンドが exit 0) / `false` で書く。2 フェーズ目以降は同列から引き継ぐ。
 
@@ -325,7 +325,7 @@ implementer 報告の `design_decisions` (設計が沈黙・あいまいな箇�
 
 ##### 4.2c: 検査 fan-out (main が起動して待つ)
 
-**このステップで Read する参照節** (起動前にまとめて開く): [phase-gates.md](./references/phase-gates.md) の `## 4.2c: fan-out 前後の clean 確認` / `## 4.2c: 自己免除の抽出` / `## 4.2c: spawn の事前記録` / `## 4.2c: 「最後の issue」の判定`、[phase-execution.md](./references/phase-execution.md) の `## 4.2c: 観点 gating 表` / `## 4.2c: review-adversarial の mode 決定表` / `## 4.2c: review-adversarial のスキップ述語表` / `## 4.2c: 観点 gating 述語の算出コマンド` / `## 4.2c: adversarial_mode 別の起動順序` / `## 4.2c: 検査 fan-out の起動`、[phase-context.md](./references/phase-context.md) の `## 渡し方` (agent ごとの入力集合の正)、[logging.md](./references/logging.md) の `gating_decided` の行 (context スキーマの正)。
+**このステップで Read する参照節** (起動前にまとめて開く): [phase-gates.md](./references/phase-gates.md) の `## 4.2c: fan-out 前後の clean 確認` / `## 4.2c: 自己免除の抽出` / `## 4.2c: spawn の事前記録` / `## 4.2c: 「最後の issue」の判定`、[phase-execution.md](./references/phase-execution.md) の `## 4.2c: 観点 gating 表` / `## 4.2c: リスク面の表` / `## 4.2c: review-adversarial の mode 決定表` / `## 4.2c: review-adversarial のスキップ述語表` / `## 4.2c: 観点 gating 述語の算出コマンド` / `## 4.2c: adversarial_mode 別の起動順序` / `## 4.2c: 検査 fan-out の起動`、[phase-context.md](./references/phase-context.md) の `## 渡し方` (agent ごとの入力集合の正)、[logging.md](./references/logging.md) の `gating_decided` の行 (context スキーマの正)。
 
 **fan-out の前後で作業ツリーが clean であることを確認する。初回だけでなく 4.2d の再 fan-out でも毎回行う。** 同じ「`status --porcelain` が非空」でも観測する時点で意味が違い、**処方が正反対 (前はコミットする / 後は `git restore` で捨てる) なので、取り違えると実装を捨てるか変異をコミットすることになる**。コマンドと 3 つの前提は [references/phase-gates.md](./references/phase-gates.md) の `## 4.2c: fan-out 前後の clean 確認`。
 
