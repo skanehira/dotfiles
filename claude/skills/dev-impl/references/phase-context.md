@@ -7,10 +7,6 @@ PHASE_CONTEXT は、フェーズを実装する implementer と検査する suba
 - [テンプレート](#テンプレート)
 - [抜粋ロジック](#抜粋ロジック)
 - [RUN_FACTS.md](#run_factsmd)
-- [プロジェクトコマンド](#プロジェクトコマンド)
-- [完了フェーズの成果物](#完了フェーズの成果物)
-- [累積 design_decisions](#累積-design_decisions)
-- [既知の落とし穴](#既知の落とし穴)
 - [渡し方](#渡し方)
 
 ## テンプレート
@@ -43,7 +39,9 @@ design_detail_infra_path: docs/DESIGN_DETAIL_INFRA.md
 
 # --- このフェーズが踏む攻撃面 ---
 risk_faces: [<async_roundtrip|persistence_limit|auth_error_path|ui_consistency|consumable>, ...]
-  # Step 4.2 事前判定でフェーズ仕様の記述から算出した集合 (空配列もありうる)。
+  # Step 4.1 で issue 本文と DESIGN_DETAIL から算出した集合 (空配列もありうる)。
+  # **4.2 ではない** — PHASE_CONTEXT を 4.1.5 で書く時点で値が確定している必要がある。
+  # $SCRATCH_DIR/env.sh の RISK_FACES をカンマ区切りから YAML 配列に直して書く。
   # implementer は指摘を待たず、ここに挙がった面の族を最初から閉じる。
   # 面の定義は phase-execution.md の `## 4.2c: リスク面の表`
 
