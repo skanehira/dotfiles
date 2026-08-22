@@ -37,8 +37,8 @@ JSON スキーマ:
   "ok": false,
   "checked_files": 12,
   "checked_file_list": [
-    { "file": "src/domain/user/User.ts", "layer": "domain", "import_lines_checked": 5, "violation_count": 1 },
-    { "file": "src/api/app.ts", "layer": "api", "import_lines_checked": 8, "violation_count": 0 }
+    { "file": "src/domain/user/User.ts", "layer": "inner", "import_lines_checked": 5, "violation_count": 1 },
+    { "file": "src/api/app.ts", "layer": "outer", "import_lines_checked": 8, "violation_count": 0 }
   ],
   "unchecked_files": [],
   "skipped_by_design": ["src/domain/user/User.test.ts", "vite.config.ts"],
@@ -49,8 +49,8 @@ JSON スキーマ:
       "line": 5,
       "rule": "clean_arch_layer",
       "severity": "high",
-      "message": "domain layer file imports from infrastructure layer (line 5: import { db } from '../../infrastructure/db')",
-      "fix_proposal": "domain に Port インターフェース (例: UserRepository) を定義し、infrastructure に Adapter 実装を置く。User からは Port のみ参照する"
+      "message": "src/domain/user/User.ts:5 (inner) が outer の src/infrastructure/db を import している: import { db } from '../../infrastructure/db'",
+      "fix_proposal": "inner に Port (interface) を定義し、outer に Adapter 実装を置いて DI で繋ぐ"
     },
     {
       "file": "src/application/order/place-order.ts",
@@ -65,6 +65,7 @@ JSON スキーマ:
 ```
 
 - `ok: true` は違反ゼロ。`ok: false` は 1 件以上の違反あり
+- `checked_file_list[].layer` は `inner` / `outer` / `unknown` の 3 値 (`claude/scripts/layer-check.ts` の `Layer` 型)。`clean_arch_layer` の `message` / `fix_proposal` もスクリプトの出力をそのまま使う (自分で書き換えない)
 - `severity`: `high` (即修正必須) / `medium` (修正推奨) / `low` (情報レベル)。dev-impl は high と medium を修正対象として渡す
 - `checked_file_list`: **実際に import 行を読んだファイルを 1 件も省略せず列挙する (必須)。** これが無いと、呼び出し側は「違反が無い」と「そのファイルを見ていない」を区別できない。検出できていないことと異常が無いことが区別できない検査は、実行しても情報が増えていない (`rules/core/verification.md`)。実測では、型のみの cross-layer import 1 行を 5 回中 4 回見落としながら毎回 `ok: true` を返し、呼び出し側はそれを「境界は健全」と読んでいた。`violation_count: 0` のファイルも必ず載せる (違反があったファイルだけを列挙すると `violations` と同じ情報にしかならない)。件数は `checked_files` と一致させる
 - `unchecked_files`: **差分に含まれるソースファイルのうち、自分が import 行を読まなかったものの配列 (必須)。** `checked_file_list` から呼び出し側に差集合を取らせると、呼び出し側は結果 JSON 全体を読む必要が生じ、main のコンテキスト規律 (射影だけを読む) と両立しない。**自分で差集合を計算してトップレベルに出す。** 未検証が 0 件なら `[]`。テスト・設定・ドキュメント等、レイヤ分類の対象外として意図的に見なかったファイルはここに入れず、`skipped_by_design` に分ける
@@ -121,7 +122,7 @@ esac
 
 ### ステップ 3: Clean Architecture レイヤ違反検出
 
-**import 行を自分で読んで判定してはならない。** `claude/scripts/layer-check.ts` を実行し、その出力をそのまま使う。
+**import 行を自分で読んで判定してはならない。** `claude/scripts/layer-check.ts` を実行し、その出力をそのまま使う (**deno が要る**。shebang 経由で `deno run --allow-read` として起動する)。
 
 ```bash
 ~/.claude/scripts/layer-check.ts \

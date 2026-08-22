@@ -85,7 +85,7 @@ skills/
 | dev-impl (実装ループ) / dev-impl-quick (軽量実装ループ) | `model: opus` (frontmatter) | 実装の質がそのまま成果物の質になるため実行器を下げない |
 | dev-impl-implementer subagent (`mode: implement` / `mode: fix`) | `model: opus` (frontmatter + 呼び出し時明示) | 実行器。実装の質がそのまま成果物の質になるため下げない。`agent-spawn-guard` hook が呼び出し時の model 未指定を deny する |
 | review-tdd / review-quality / review-product-readiness / review-spec-compliance subagent | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。frontmatter も opus にして、呼び出し時の明示忘れで無音でセッション継承より下に落ちない防御とする |
-| review-adversarial subagent | `model: sonnet` (frontmatter + 呼び出し時明示) | 唯一の例外。同一セッション内の直接比較で opus と sonnet の 1 spawn あたり単価がほぼ同一 ($2.55 / $2.51) だったのに対し、high 検出は sonnet が 6 倍 (0.90 件/spawn vs 0.15 件/spawn) だった。「実際に壊して確かめる」作業様式では、同じ予算でターンを多く回せることが検出力に直結する。**検出力の実測が「実行器 ≤ 検証器」の代理指標に優先する**という判断。high 検出件数が opus 時 (0.15 件/spawn) を下回り続けたら opus に戻す |
+| review-adversarial subagent | `model: opus` (frontmatter + 呼び出し時明示) | 一時 sonnet を規定していたが、settings.json の alias 再マップにより実行時は opus になっており規定が成立していなかった。2026-08-22 に mind の run を実測すると opus 実行で 0.56 件/spawn (review-tdd の 0.55 と同水準) で、sonnet 優位 (0.90 対 0.15) は再現しなかった。経緯は `skills/dev-impl/references/orchestration-rationale.md` の `## review-adversarial のモデル選択の経緯` |
 | tech-investigation subagent (dev-spec フェーズ 5 の PoC 検証) | `model: opus` (frontmatter + 呼び出し時明示) | 「何をどこまで検証すれば行けると言えるか」を自分で設計する探索的な調査。検証範囲の見落としが設計の前提を誤らせる |
 | architecture-guard subagent | `model: haiku` (frontmatter) | レイヤ境界違反の検出は機械的な判定でモデル性能に依存しない |
 
@@ -126,10 +126,10 @@ git index を共有する操作 (コミット) は並列化できないので親
 |---|---|
 | `tech-investigation` | `dev-spec` フェーズ 5 (PoC 検証、並列 fan-out) |
 | `dev-impl-implementer` | `dev-impl` Step 4.2a (`mode: implement`) / Step 4.2d (`mode: fix`)、いずれも model: opus 明示。`tools` に `Agent` を持たない葉 |
-| `architecture-guard` | `dev-impl` Step 4.2c (検査 fan-out に毎フェーズ含める) |
+| `architecture-guard` | `dev-impl` Step 4.2c (検査 fan-out に**最後の issue のフェーズでだけ**含める。それ以外のフェーズでレイヤ境界を担保するのはプロジェクトの lint) |
 | `fix-lsp-warnings` | `dev-impl` Step 4.2b (単独・逐次。修正 agent なので検査 fan-out に混ぜない) / Agent ツールで直接起動 |
 | `review-*` (tdd / quality / product-readiness) | `dev-impl` Step 4.2c (model: opus 明示) / `workflow-review` |
-| `review-adversarial` | `dev-impl` Step 4.2c (model: sonnet 明示。毎フェーズは `mode: weakening_only`、消費型資源・認証・テスト差分なしの大量実装・最後の issue のフェーズのみ `mode: full`) / `workflow-review` (常に `full`) |
+| `review-adversarial` | `dev-impl` Step 4.2c (model: opus 明示。リスク面が空なら `mode: weakening_only`、面を踏む差分・テスト差分なしの大量実装・最後の issue のフェーズは `mode: full`) / `workflow-review` (常に `full`) |
 | `review-tdd` (単一観点のみ) | `dev-impl-quick` ステップ 4 (model: opus 明示) |
 
 ## スキル一覧

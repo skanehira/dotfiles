@@ -251,7 +251,7 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 
 詳細は `claude/skills/README.md` を参照 (タスク規模別の入口・モデル方針を含む)。主要スキル：
 - `/dev-spec` — 設計ループ (ユーザーストーリー → ... → PoC 検証 → DESIGN/DETAIL → TODO 生成 → 承認ゲート。手順は references/ に集約、クイックモード・部分実行可)
-- `/dev-impl` — 実装ループ (TODO 全フェーズを自律実装、`model: sonnet`。中小タスクはスキルを使わず plan mode / 直接依頼 + 直営 TDD)
+- `/dev-impl` — 実装ループ (TODO 全フェーズを自律実装、`model: opus`。中小タスクはスキルを使わず plan mode / 直接依頼 + 直営 TDD)
 
 ### Workflow Skills
 - `/workflow-review` — コードレビュー (3 観点並列、修正はメインループ直営 TDD)
