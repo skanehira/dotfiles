@@ -122,10 +122,21 @@ fatal の `traces_to` が実在する条文を指しているかを照合し、`
 `quote` を `rg -F` (固定文字列) で docs に当てて、当たらなければ `null` として扱う。
 
 ```bash
-# 当該ラウンドの各検査結果 JSON について、fatal の traces_to を traced / null に分類する
+. "$RUN_DIR/env.sh"; . "$SCRATCH_DIR/env.sh"
+# ROUND は env.sh に書かない規定 (run-bootstrap.md) なので、ここで JSONL から数え直す。
+# 増分前の値を使う — 照合の対象は「いま受け取った検査結果」であり、まだ起動していない fix ではない
+ROUND=$(jq -c --arg p "$PHASE" 'select(.phase==$p and .event_type=="fix_dispatch")' "$JSONL" | wc -l | tr -d ' ')
+[ -d "$DOCS_DIR" ] || { echo "DOCS_DIR が無い。照合は成立しない (implementation_gap に倒す)"; exit 1; }
+
+# 当該ラウンドの各検査結果 JSON について、fatal の traces_to を traced / null に分類する。
+# **規約系の rule は対象外** — テスト規約違反 (rules/core/testing.md 由来) は docs の条文に
+# 対応物を持たないので構造的に null になり、混ぜると仕様の欠陥と区別できない
+CONVENTION_RULES='behavior_assertion|vacuous_negative_assertion|naming|aaa|exact_match|mock_overuse|test_isolation'
 for RESULT_JSON in "$SCRATCH_DIR"/review-*-r${ROUND}.json; do
   [ -f "$RESULT_JSON" ] || continue
-  jq -r '[.findings[]? | select(.severity=="high")] | .[] | (.traces_to.quote // "")' "$RESULT_JSON"
+  jq -r --arg cr "$CONVENTION_RULES" \
+     '[.findings[]? | select(.severity=="high") | select((.rule // "") | test($cr) | not)]
+      | .[] | (.traces_to.quote // "")' "$RESULT_JSON"
 done | while IFS= read -r q; do
   if [ -z "$q" ]; then
     echo null
@@ -139,17 +150,39 @@ done | sort | uniq -c > "$SCRATCH_DIR/traces-r${ROUND}.txt"
 cat "$SCRATCH_DIR/traces-r${ROUND}.txt"
 ```
 
+**前ラウンドの分類と突き合わせて verdict を決める。**
+
+```bash
+all_null() {   # $1 のファイルが「1 行以上あり、かつ traced が 0 件」なら真
+  [ -s "$1" ] || return 1                     # 空 = fatal が 1 件も無い → 判定材料にしない
+  ! rg -q 'traced' "$1"
+}
+PREV="$SCRATCH_DIR/traces-r$((ROUND-1)).txt"
+if [ "$ROUND" -lt 1 ] || [ ! -f "$PREV" ]; then
+  VERDICT=implementation_gap                  # 前ラウンドが無い = まだ 2 連続を判定できない
+elif all_null "$SCRATCH_DIR/traces-r${ROUND}.txt" && all_null "$PREV"; then
+  VERDICT=spec_defect
+else
+  VERDICT=implementation_gap
+fi
+echo "$VERDICT"
+```
+
 **このラウンドの fatal がすべて `null` だったかを記録する。** 判定に使うのは
 「2 ラウンド連続で fatal が全件 `null`」であり、1 ラウンド分だけでは決まらない
 (1 巡目は仕様を読み切れていないだけの可能性がある)。
 
 | 直近 2 ラウンドの fatal | verdict | 意味 |
 | --- | --- | --- |
-| どちらも全件 `null` | `spec_defect` | 仕様がその状況を定めていない。**実装では閉じられない** |
+| どちらも 1 件以上あり、どちらも全件 `null` | `spec_defect` | 仕様がその状況を定めていない。**実装では閉じられない** |
 | 片方でも `traced` を含む | `implementation_gap` | 条文はあるのに実装が外れている。実装で閉じられる |
+| 前ラウンドの分類が無い (初回 / ファイル不在) | `implementation_gap` | まだ 2 連続を判定できない |
+| どちらかが**空** (対象 fatal が 0 件) | `implementation_gap` | 空集合への全称は無条件に成立するので `spec_defect` に倒さない |
 
-**ファイルが 1 つも見つからなかった場合は判定不能**として `implementation_gap` に倒す
-(検査が走っていない状態を「仕様の欠陥」と読むと、実装の問題を設計へ押し付けることになる)。
+**空を `spec_defect` に倒さない**のが要点である。architecture-guard の `violations` は
+`traces_to` を持たず本ループの入力にも入らないので、guard 由来の fatal だけのラウンドは
+0 行になる。規約系 rule を除外した結果 0 行になることもある。空集合を「全件 null」と読むと、
+**この判定が防ぐと宣言している当のケース (実装で閉じられる指摘の差し戻し) で空虚になる**。
 
 ## 4.2e: 累積テスト差分の弱体化監査
 

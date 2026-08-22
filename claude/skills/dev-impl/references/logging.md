@@ -127,7 +127,7 @@ run_id の発行・引き継ぎは run-bootstrap.md の `## run スコープ変�
 | event_type | severity | 記録タイミング | context |
 | --- | --- | --- | --- |
 | `impl_report` | info | implementer から報告を受領した時 | 報告要約 JSON + `report_path`。**全文を転記する場合は `jq` で `report_path` から直接 JSONL へ流し込み、main のコンテキストには載せない** |
-| `impl_done` | info | **1 issue の完了時** (SKILL.md 4.2e のコミット後。**issue 完了はこのイベントだけ**で表す。`done` はステップ単位の完了に使い、issue 完了には使わない) | `phase` / `summary` / `commit_sha` / `review_outputs` (main が確認した検査結果 JSON のパス配列、監査証跡) / `phase_fix_round` (このフェーズで回した修正ラウンド数、0〜3) / `phase_spawns` |
+| `impl_done` | info | **1 issue の完了時** (SKILL.md 4.2e のコミット後。**issue 完了はこのイベントだけ**で表す。`done` はステップ単位の完了に使い、issue 完了には使わない) | `phase` / `summary` / `commit_sha` / `review_outputs` (main が確認した検査結果 JSON のパス配列、監査証跡) / `phase_fix_round` (このフェーズで回した修正ラウンド数。上限は `phase_fix_budget` = 基底 3 または 4) / `phase_spawns` |
 | `p2_fix` | warn | P2 動的修正で詳細設計を書き換えた時 (SKILL.md 4.6) | `section` (更新したセクション名) / `what` (何をどう変えたか 1 行) / `why` (実装から判明した事実) / `commit_sha` (設計変更のコミット) / `p2_fixes_total` (この時点の通算)。**P2 は回数で停止しない**ので、このエントリが「承認済みの設計が実装に合わせてどう書き換わったか」をユーザーが後から追える唯一の記録になる。Step 6 の完了サマリと HTML レポートのセクション 4 がこれを読む |
 | `p1_fix` | info | P1 動的修正で TODO.md を書き換えた時 (SKILL.md 4.6) | `section` / `what` / `commit_sha` / `p1_fixes_in_phase` |
 | `gating_decided` | info | フェーズの初回検査 fan-out の直前 (SKILL.md 4.2c。**フェーズごとに 1 件だけ**) | `phase` / `gating_set` (このフェーズで起動しうる **review-\* の観点名**の配列。`architecture-guard` は gating 対象外なので含めない — 最後の issue のフェーズでだけ起動する固定の観点であり、gating の判定に載らない。再 fan-out はこの部分集合しか起動できない) / `adversarial_mode` (`full` / `weakening_only` / `skipped`) / `adversarial_stopped` (真なら以降のラウンドで review-adversarial を再起動しない = 初回 fan-out で high 0 件だった。SKILL.md 4.2d 手順 5。**フェーズ末の弱体化監査は対象外**) / `basis` (判定根拠: `{test_changed: $TEST_FILE_CHANGED か $TEST_CONTENT_CHANGED が非空, consumable: $CONSUMABLE_CHANGED が非空, auth: $AUTH_CHANGED が非空, ui_phase: uiPhase, final_phase: 自分以外に open issue が無い, risk_faces: $RISK_FACES の配列, secondary_signal: 二次シグナル (コード差分パターン) を評価できた言語か}`)。**`risk_faces` を記録するのは、面の語彙が 18 件の finding から逆算した未検証の proxy だからである** — そのフェーズで実際に出た `rule` と後から突き合わせて、当たり外れを測って直せる状態にしておく。**`verification_skipped` の `criteria_result` と共通するキー (`test_changed` / `final_phase`) は同名で揃える**が、両者はキー集合そのものは異なる (`basis` は gating の判定根拠、`criteria_result` は skip 述語の判定結果) |
@@ -168,6 +168,7 @@ run_id の発行・引き継ぎは run-bootstrap.md の `## run スコープ変�
 | `dev_server_unavailable` | 4.2c / Step 5.2: review-product-readiness が dev サーバを起動できず実機検査が成立しなかった | `{target, source, phase}` |
 | `no_layer_convention` | 4.2c: architecture-guard がレイヤ構造を見つけられず Clean Arch 検査を skip した (意図的な素通りだが、境界を検査していない run であることを残す) | `{target, source, phase}` |
 | `layer_check_failed` | 4.2c: architecture-guard の判定スクリプト (`claude/scripts/layer-check.ts`) がファイルを読めず exit 2 で終了した。**未検証として扱う** (`no_layer_convention` と違い、正常な素通りではない) | `{target, source, phase}` |
+| `layer_check_absent` | 4.2c: そのフェーズでレイヤ境界を検査するものが何も無かった。`lint_command` が null か、プロジェクトの `CLAUDE.md` に境界検査の記載が無く、かつ architecture-guard も起動しないフェーズ (最後の issue 以外) で記録する。**guard を毎フェーズから外したことで生まれた穴を沈黙させないための source** | `{target, source, phase, lint_command}` |
 | `exemptions_unadjudicated` | 4.2c: 自己免除が 1 件以上あるのに review-tdd / review-adversarial のどちらも起動せず、誰も裁定しなかった | `{target, source, phase, claims}` |
 
 同一 `phase` に `gating_decided` が複数ある場合 (中断・再入や 4.2d 手順 5 の例外による追記) は**最新の 1 件を採る**。
