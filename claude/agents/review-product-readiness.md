@@ -151,6 +151,10 @@ chrome-devtools MCP で:
 
 見つけた問題は、確信が持てないものや severity: low のものも含めて**すべて findings に載せる**。重要度・確信度による自己フィルタはこの段階では行わない。フィルタリングは下流 (severity gating) の責務であり、この段階のゴールは網羅性 — 実際の問題を黙って落とすより、後で除外される finding を出す方が良い。確信度は各 finding の `confidence` に記載し、下流がランク付けできるようにする。
 
+#### 列挙可能な族は必ず一括で走査する
+
+報告の粒度は共通規範に従う。**検査を始める前に `~/.claude/rules/core/references/finding-coverage.md` を Read すること。** 要点は「finding が列挙可能な集合の 1 インスタンスなら、報告する前に集合全体を走査して 1 件にまとめる」で、これを守らないと修正器が 1 件ずつしか閉じられず、修正ラウンド数が族の要素数と等しくなる。走査結果は `evidence` に全要素の判定を並べ、走査していない要素はそう明記する。
+
 ### Step 4: JSON 出力
 
 `output_path` に Write、stdout に絶対パス 1 行:
@@ -170,6 +174,7 @@ chrome-devtools MCP で:
       "confidence": "high|medium|low",
       "rule": "nav_unreachable|error_boundary_missing|empty_state_missing|loading_missing|seo_meta|page_404_deadloop|logout_missing|console_error|dev_server_unavailable",
       "message": "具体的な指摘 (画面名 / URL / 観測値)",
+      "evidence": "族を走査した全要素の判定 (finding-coverage.md)。走査していない要素はその旨を明記する",
       "fix_proposal": "推奨修正"
     }
   ]
