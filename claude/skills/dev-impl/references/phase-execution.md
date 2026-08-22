@@ -45,6 +45,7 @@
 | `REPORT_PATH` | implementer 起動の直前 | 起動の種類ごとに分ける: `impl-report.json` (初回) / `impl-report-fix-<round>.json` (修正ラウンド) / `impl-report-testgate-<test_gate_retry>.json` (4.2e の再試行) / `impl-report-retry-<phase_fix_round>.json` (`impl_report_invalid` の再起動)。**衝突させない** — 4.2e 手順 4 の突合が成果物とラウンドを 1:1 で対応させるため |
 | `EXEMPTIONS_COUNT` | 4.2c の事前ブロック | `jq 'length' "$SCRATCH_DIR/self-exemptions.json"`。**消えても再算出できる** (ファイルが残るため) ので env.sh には入れず、4.2d 手順 1 で使う直前に取り直してよい |
 | `RESULT_JSON` | 検査結果を読む時 | 検査 agent が `output_path` に書いた結果 JSON のパス |
+| `START_SHA` | Step 0 か Step 1 (run) | run 開始時の HEAD。**architecture-guard を最終フェーズで起動するときの差分の基準** (`BASE_SHA` として渡す)。代入は run-bootstrap.md の `## run スコープ変数と env.sh の生成`。**`PHASE_START_SHA` で代替しない** — フェーズ差分だけを見ると、過去フェーズで入って以降触られていない違反が検査対象から外れる |
 | `SPEC_TEXT` | Step 4.2 (事前判定) | `$PHASE_TASKS` と PHASE_CONTEXT の `design_detail` 抜粋を連結した文字列。リスク面の一次算出の入力 |
 | `RISK_FACES` | Step 4.2 (事前判定) で一次、4.2c で二次を足して確定 | このフェーズが踏む攻撃面のカンマ区切り集合 (`## 4.2c: リスク面の表` の 5 つ)。PHASE_CONTEXT の `risk_faces` / adversarial の `mode` 決定 / 修正ラウンド上限の伸縮の 3 箇所で使う。空文字列は「どの面にも当たらない」を表す |
 
@@ -265,10 +266,10 @@ gating で決まった観点 + architecture-guard を**同一メッセージ内�
 ```javascript
 // 毎フェーズ必須
 { subagent_type: "architecture-guard", model: "haiku", run_in_background: false,
-  prompt: `target_diff: phase:${phaseName}
+  prompt: `target_diff: run:${runId}
 design_path: ${absDocsDir}/DESIGN.md
 design_detail_path: ${absDocsDir}/DESIGN_DETAIL_APP.md
-PHASE_START_SHA: ${phaseStartSha}
+BASE_SHA: ${runStartSha}
 repo_dir: ${absRepoDir}
 output_path: ${absScratchDir}/guard-r${round}.json
 git diff コマンド自体が失敗した場合は ok:false, skip_reason:"diff_command_failed" とせよ。` }
@@ -313,7 +314,7 @@ jq -c '{
 }' "$RESULT_JSON"
 ```
 
-architecture-guard については、main 側で `checked + sbd + (unchecked の件数)` が**フェーズ差分のソースファイル数と一致すること**を突き合わせる (`git -C "$REPO_DIR" diff --name-only "$PHASE_START_SHA" | wc -l` と比較)。一致しなければ guard の自己申告に漏れがある = 未検証として扱う。**ただし `skip_reason` が非 null のときはこの突合を行わない** — `no_layer_convention` は検査自体を意図的に省いた状態 (checked 0 が正)、`diff_command_failed` は差分が取れていない状態で、どちらも件数の一致を期待できない (各々の扱いは SKILL.md 4.2d 手順 1)。
+architecture-guard については、main 側で `checked + sbd + (unchecked の件数)` が**run 全体の差分のソースファイル数と一致すること**を突き合わせる (`git -C "$REPO_DIR" diff --name-only "$START_SHA" | wc -l` と比較。**基準は `PHASE_START_SHA` ではなく run 開始 SHA** — guard は最終フェーズで run 全体を検査するため)。一致しなければ guard の自己申告に漏れがある = 未検証として扱う。**ただし `skip_reason` が非 null のときはこの突合を行わない** — `no_layer_convention` は検査自体を意図的に省いた状態 (checked 0 が正)、`diff_command_failed` は差分が取れていない状態で、どちらも件数の一致を期待できない (各々の扱いは SKILL.md 4.2d 手順 1)。
 
 `message` / `fix_proposal` は main では読まない (修正する implementer が JSON を自分で Read する)。
 

@@ -172,7 +172,7 @@ related_source_files が指定されていればそれを優先。それ以外�
 ## 範囲外
 
 - RED→GREEN→REFACTOR の順序遵守 → 実装ループが `rules/core/tdd.md` に従い自律遵守する。事後の順序推定 (mtime 比較・commit 順序) は行わない
-- アーキテクチャ違反 → `review-quality` (heuristic) / `architecture-guard` (機械判定)
+- アーキテクチャ違反 → `review-quality` (heuristic) / プロジェクトの lint と `architecture-guard` (機械判定。guard は最終フェーズ 1 回)
 - セキュリティ → security-guidance プラグイン (Edit/Write pattern 検知 + Stop hook LLM diff review)
 - 一般コード品質 → `review-quality`
 - プロジェクト rules 準拠 → `review-quality`
