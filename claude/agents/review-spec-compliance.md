@@ -136,7 +136,7 @@ TODO.md には**書かれていない**エッジケースシナリオを、DESIG
 
 ### Step 0: 設計成果物の読み込み
 
-DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md を**全文 Read**。`docs/features/` が存在すれば配下の `UC-*.md` (機能仕様) と `docs/USECASES.md` も全文 Read する。コードは読まない (この時点で実装は存在しない)。
+DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md を**全文 Read**。`docs/USECASES.md` が存在すればそれも全文 Read し、`docs/features/` が存在すれば配下の `UC-*.md` (機能仕様) も全文 Read する (USECASES.md あり・features/ なしは `feature_spec_missing` がまさに検出すべき状態なので、features/ の不在で USECASES.md の Read を飛ばさない)。コードは読まない (この時点で実装は存在しない)。
 
 ### Step 1: todo_coverage_gap (TODO カバレッジ)
 
@@ -171,7 +171,7 @@ Step 1〜6 は**ゴール (`G<n>`) 単位**の検査であり、TODO.md の**フ
 
 これが重要なのは、**TODO.md の各フェーズがそのまま GitHub issue になり、`/dev-impl` は実装中その issue しか読まない**ためである。フェーズ単位の DoD を検査する fresh context は本 Step だけで、issue 生成 (フェーズ 12) は本監査と人間承認の後に走る転記処理なので、そこには検査が無い。
 
-`references/todo-generation.md` の「各フェーズが持つメタ情報」が要件の正本。TODO.md の各フェーズ見出し (`### フェーズ<識別子>: ...`) について検査する:
+`~/.claude/skills/dev-spec/references/todo-generation.md` の「各フェーズが持つメタ情報」が要件の正本。TODO.md の各フェーズ見出し (`### フェーズ<識別子>: ...`) について検査する:
 
 1. **メタ情報 5 項目の充足**: ゴール / DoD / 参照 docs / 変更想定ファイル / 非スコープ。欠落 → `phase_meta_missing` (severity: high)
 2. **宣言の充足**: `<!-- deps: ... -->` と `<!-- goals: ... -->` が全フェーズにあり、`goals` の識別子が DESIGN.md のゴール一覧に実在し、**全ゴールがいずれかのフェーズでカバーされている**こと。欠落・未カバー → `phase_meta_missing` (severity: high)
@@ -187,14 +187,12 @@ Step 1〜6 は**ゴール (`G<n>`) 単位**の検査であり、TODO.md の**フ
    - **終了しないコマンド**: dev サーバ・watch モードなど常駐するコマンドを DoD にしている。受け入れ判定の再実行がハングする。ヘルスチェック (`curl`) や終了するコマンドに置き換えることを求める
    - **手動系への安易な逃避**: `DoD (手動):` が付いているが、Playwright 等のテストコードで自動化できる内容 (DOM 構造・a11y 属性・画面遷移)。原理的に機械判定できないもの (外部サービスの受信確認・視覚的印象・実機体感) 以外は自動化を求める → severity: medium
 
+### Step 8: feature_spec_missing / br_not_traced / feature_spec_unresolved / feature_detail_conflict (機能仕様)
 
+**`docs/USECASES.md` が存在する場合のみ実行する。** 無い構成 (クイックモード等) では機能仕様 (フェーズ 7.5) 自体が生成されないので、本 Step は丸ごとスキップする。要件の正本は `~/.claude/skills/dev-spec/references/feature-spec.md`。
 
-### Step 8: 機能仕様の監査 (`docs/USECASES.md` が存在する場合のみ)
-
-USECASES.md が無い構成 (クイックモード等) では機能仕様 (フェーズ 7.5) 自体が生成されないので、本 Step は丸ごとスキップする。要件の正本は `../skills/dev-spec/references/feature-spec.md`。
-
-1. **`feature_spec_missing`** (severity: high): TODO.md の `<!-- ucs: ... -->` 宣言に現れる全 UC について `docs/features/UC-<n>.md` が存在するか。`rg -o '<!-- ucs: (UC-[0-9]+)' docs/TODO.md` の異なり値と `ls docs/features/UC-*.md` を突合する
-2. **`br_not_traced`** (severity: high): 各機能仕様について、その UC の全 BR (USECASES.md の該当 UC 節の BR 表) が**原文で引用**されているか。BR 表の各行のルール本文を `rg -F '<ルール本文>' docs/features/UC-<n>.md` で照合する (原文一致。要約・言い換えは不一致として扱う — 照合できない引用は存在しない条文のでっち上げと区別が付かないため)
+1. **`feature_spec_missing`** (severity: high): TODO.md の `<!-- ucs: ... -->` 宣言に現れる全 UC について `docs/features/UC-<n>.md` が存在するか。`rg -o '^### フェーズ.*<!-- ucs: (UC-[0-9]+)' -r '$1' docs/TODO.md | sort -u` の値と `ls docs/features/UC-*.md` を突合する (フェーズ見出しにアンカーするのは、本文中の書式例を異なり値に混入させないため)
+2. **`br_not_traced`** (severity: high): 各機能仕様について、その UC の全 BR (USECASES.md の該当 UC 節の BR 表) が**原文で引用**されているか。BR 表の各行のルール本文セルの生テキストを 1 行 1 件で `/tmp` の一時ファイルに落とし、`rg -F -f <一時ファイル> docs/features/UC-<n>.md` で照合する (原文一致。要約・言い換えは不一致として扱う — 照合できない引用は存在しない条文のでっち上げと区別が付かないため。セル内のエスケープはアンエスケープせず、`rg -F '<本文>'` の直書きはクォート事故を招くので使わない)。BR 表が無い・0 行の UC は本 rule の対象外とする
 3. **`feature_spec_unresolved`** (severity: high): `rg -n '要判断:' docs/features/` が 1 件以上ヒットしないか。ヒット = フェーズ 8 で解消されるべきプロダクト判断が未決定のまま承認ゲートに向かっている
 4. **`feature_detail_conflict`** (severity: medium): 機能仕様の入出力契約・責務配置と DESIGN_DETAIL_APP.md の記述 (エンドポイント一覧・データフロー・エラー戦略) が矛盾していないか (例: 機能仕様は「サーバーで変換」、DETAIL のエンドポイント表に該当 API が無い)。意味判定であり機械照合はできないので、機能仕様が名指しする API・層・ファイルが DETAIL 側の対応する節と食い違う箇所を挙げる
 
@@ -209,7 +207,7 @@ DoD と検証手順のコマンドを実際に実行し、失敗の種類で判�
 | 失敗の種類 | 見分け方 | 判定 |
 | --- | --- | --- |
 | **著作時点の誤り** | 不正なフラグ / サブコマンド (`unexpected argument`)、コマンドが存在しない (`command not found`)、シェルの構文エラー | `phase_dod_vacuous` (severity: high)。実装が揃っても永久に通らない |
-| **実装の不在** | 対象ファイルが無い (`No such file`)、テストが 0 件、型検査が未作成モジュールを指す | 想定どおり。findings にしない |
+| **実装の不在** | 対象ファイルが無い (`No such file`)、テストが 0 件、型検査が未作成モジュールを指す | 想定どおり。findings にしない。**ただし `docs/features/fixtures/` 配下のパスの不在は除く** — fixture は設計時 (フェーズ 7.5) にコミット済みのはずの成果物であり、その不在は著作時点の誤り (`phase_dod_vacuous`, severity: high)。implementer は期待値の再生成を禁じられているため自力復旧できない |
 
 判別できないときは、**コマンドの骨格だけを一時ディレクトリで再現して実行する** (設計書に書かれた設定ファイルを最小構成で置いて叩く)。作業ディレクトリを汚さないこと。
 

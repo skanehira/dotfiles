@@ -51,7 +51,7 @@ sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DESIGN.md | head -
 
 スタンプが無い (旧形式 docs) 場合、dev-spec は新規生成時に必ずスタンプを書くため発生しない (更新モードで旧形式 docs を扱う場合のみ想定される)。dev-impl はこのスタンプを Step 1 で読み取り、UI 系の観点別レビューやゴール判定を切り替える。**スタンプ不在時、dev-impl は `webapp` と同一には扱わない**: 独立した `unknown` 状態として扱い、Web プロダクト判定 (`dev_server` 推定) が真の場合のみ webapp 相当のフォールバック動作をとる (推定できなければ Web 系の必須判定は効かない。詳細は dev-impl/SKILL.md Step 1 参照)。
 
-**クイックモードとの合成規則**: 各フェーズの有効・無効は「クイックモード列を適用 → cli モード列を適用」の順で決める。どちらか一方でも「スキップ」なら、そのフェーズはスキップする。クイックモード列が「条件付き実行」(フェーズ 4・5) の場合、cli モード列の値 (いずれも「実行」) はこの条件付き判定を上書きしない。フェーズ 0.3 の不確実性確認の結果 (あり/なし) にそのまま従う。
+**クイックモードとの合成規則**: 各フェーズの有効・無効は「クイックモード列を適用 → cli モード列を適用」の順で決める。どちらか一方でも「スキップ」なら、そのフェーズはスキップする。クイックモード列が「条件付き実行」の場合、cli モード列の値 (いずれも「実行」) はこの条件付き判定を上書きしない。条件はフェーズ 4・5 が「フェーズ 0.3 の不確実性確認の結果 (あり/なし)」、フェーズ 7.5 が「docs/USECASES.md の存在」(正本は `references/feature-spec.md` の実行条件。クイックモードはフェーズ 3 を通らないため通常は不在でスキップになるが、既存の USECASES.md がある再開・更新では実行する)。
 
 ## フェーズ一覧
 
@@ -66,7 +66,7 @@ sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DESIGN.md | head -
 | 5    | PoC 検証             | `references/poc-verification.md`       | FEASIBILITY.md 更新 (PoC 結果)                                         | 条件付き実行   | 実行       |
 | 6    | DDD モデリング       | `references/ddd-modeling.md`           | docs/GLOSSARY.md, docs/DOMAIN_MODEL.md                                 | スキップ       | 実行       |
 | 7    | 概要/詳細設計        | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL_APP.md, docs/DESIGN_DETAIL_INFRA.md | 実行           | 実行       |
-| 7.5  | 機能仕様             | `references/feature-spec.md`           | docs/features/UC-\*.md (+ fixtures/)                                   | スキップ       | 実行       |
+| 7.5  | 機能仕様             | `references/feature-spec.md`           | docs/features/UC-\*.md (+ fixtures/)                                   | 条件付き実行   | 実行       |
 | 8    | 深掘りインタビュー   | `references/interview.md`              | DESIGN / DETAIL 更新                                                   | 実行           | 実行       |
 | 9    | 検証手順の確認と補完 | `references/verification-review.md`    | DESIGN / DETAIL 更新                                                   | 実行           | 実行       |
 | 10   | TODO.md 生成         | `references/todo-generation.md`        | docs/TODO.md                                                           | 実行           | 実行       |
@@ -189,7 +189,7 @@ AskUserQuestion({
 
 ## フェーズ 10.5: 設計整合監査 (第三者検証)
 
-人間承認 (フェーズ 11) の前捌きとして、`review-spec-compliance` subagent (mode: pre-approval) に docs 4 ファイルの整合を fresh context で監査させる。設計者本人 (このセッション) のセルフレビューでは検出できない見落とし (TODO カバレッジ漏れ / ゴールと検証手順の意味的不整合 / 検証コマンドとフェーズ DoD の空虚性 / APP・INFRA 境界誤配置 / 概要↔詳細の矛盾) を承認前に潰す。**監査 agent は DoD と検証手順のコマンドを実際に実行し、「著作時点の誤り (不正なフラグ・構文エラー) 」と「実装の不在」を切り分ける** — 静的に読むだけでは、そのフェーズが原理的に受け入れ判定を通せない状態に気付けない (実測)。**人間承認の代替ではない** (フェーズ 11 は残る)。
+人間承認 (フェーズ 11) の前捌きとして、`review-spec-compliance` subagent (mode: pre-approval) に docs 4 ファイル + (存在すれば) docs/features/ と USECASES.md の整合を fresh context で監査させる。設計者本人 (このセッション) のセルフレビューでは検出できない見落とし (TODO カバレッジ漏れ / ゴールと検証手順の意味的不整合 / 検証コマンドとフェーズ DoD の空虚性 / APP・INFRA 境界誤配置 / 概要↔詳細の矛盾 / 機能仕様のカバレッジ・BR 引用・未決定行) を承認前に潰す。**監査 agent は DoD と検証手順のコマンドを実際に実行し、「著作時点の誤り (不正なフラグ・構文エラー) 」と「実装の不在」を切り分ける** — 静的に読むだけでは、そのフェーズが原理的に受け入れ判定を通せない状態に気付けない (実測)。**人間承認の代替ではない** (フェーズ 11 は残る)。
 
 ```javascript
 const audit = await Agent({
@@ -199,14 +199,14 @@ const audit = await Agent({
   prompt: `mode: pre-approval
 docs_dir: docs/
 output_path: /tmp/review-spec-compliance-pre-approval.json
-docs (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) は自分で全文 Read すること。
+docs (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md と、存在すれば docs/USECASES.md / docs/features/UC-*.md) は自分で全文 Read すること。
 作業結果 (output_path のパス) は必ず最終メッセージで親に返すこと。`
 })
 ```
 
 結果の分岐 (**最大 2 周**):
 
-- **severity: high の findings あり** → 指摘の対象で戻り先を決めて修正する: TODO カバレッジ → フェーズ 10、検証手順・空虚性 → フェーズ 9、設計内容・境界・矛盾 → フェーズ 7〜8。修正後に本フェーズを再実行する
+- **severity: high の findings あり** → 指摘の対象で戻り先を決めて修正する: TODO カバレッジ → フェーズ 10、検証手順・空虚性 → フェーズ 9、設計内容・境界・矛盾 → フェーズ 7〜8、機能仕様のカバレッジ・BR 引用・DETAIL との矛盾 (`feature_spec_missing` / `br_not_traced` / `feature_detail_conflict`) → フェーズ 7.5、`要判断:` の残存 (`feature_spec_unresolved`) → フェーズ 8。修正後に本フェーズを再実行する
 - **2 周しても high が残る** → 差し戻しを打ち切り、残存 findings をフェーズ 11 のサマリーに「監査で未解消の指摘」として添付し、人間の判断に委ねる
 - **high が 0 件 (medium/low のみ)** → findings をフェーズ 11 のサマリーに参考情報として添付し、フェーズ 11 へ進む
 - **agent がエラー / JSON 解釈不能** → 監査未実施のまま進まない。ユーザーに「監査 agent が失敗しました。再試行 / 監査なしで承認ゲートへ / 中止」を AskUserQuestion で確認する (未検証を silent にパス扱いしない)
@@ -224,6 +224,7 @@ docs (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) は�
 - docs/DESIGN.md              (概要設計)
 - docs/DESIGN_DETAIL_APP.md   (アプリ詳細設計)
 - docs/DESIGN_DETAIL_INFRA.md (インフラ詳細設計)
+- docs/features/UC-*.md       (機能仕様 n 件 + fixtures/)
 - docs/TODO.md                (タスクリスト、全 n フェーズ)
 - docs/FEASIBILITY.md         (PoC 結果: verified x 件 / fallback 採用 y 件)
 ```
@@ -384,6 +385,8 @@ REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 ```
 
 いずれかが失敗する (git リポジトリでない / GitHub リモートが無い / `gh` 未認証) 場合は**停止**し、状況を伝えて「リポジトリを用意してから `/dev-spec` を再実行してください」と案内する。issue を作れないまま成功したように振る舞わない。
+
+**`docs/features/` が存在する場合は `rg -n '要判断:' docs/features/` が 0 件であることも確認する。** 1 件以上あれば停止してフェーズ 8 へ差し戻す (0.2 の高速経路 (承認済み → 12 のみ実行) では 10.5 の `feature_spec_unresolved` が走らないため、ここが承認後改変に対する唯一の検査になる)。
 
 **`docs/` の push は求めない。** `/dev-impl` はローカルの working tree にある docs を読むので、issue の「参照すべき docs」を解決するのにリモートの状態は要らない。dotfiles の運用でも `git push` は人間が手で行う。
 
@@ -614,6 +617,7 @@ rg -q 'DoD \(未定義\):' <該当フェーズの本文> && LABEL=needs-human ||
 - [ ] blocker=true の PoC 計画がすべて解決済み (verified または fallback 採用)
 - [ ] 全フェーズ実行時: DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md が生成され、承認ゲートを通過した
 - [ ] フェーズ 10.5 の設計整合監査が実行された (high findings は解消、または未解消のまま人間判断に添付)
+- [ ] (docs/USECASES.md がある構成) UC 全件分の docs/features/UC-<n>.md が存在し、`要判断:` の残存が 0 件
 - [ ] 承認時: TODO.md 先頭に承認スタンプ (goals_sha 付き) が書き込まれた
 - [ ] TODO.md の全フェーズが issue 化され、ラベル (`ready` または `needs-human`) が付いた
 - [ ] (`HIERARCHY=yes` の場合) 親 issue が作られ、全フェーズ issue がいずれかの親に sub-issue として紐付いた。次の 2 つの集合が一致することで確認する
