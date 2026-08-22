@@ -66,6 +66,7 @@ sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DESIGN.md | head -
 | 5    | PoC 検証             | `references/poc-verification.md`       | FEASIBILITY.md 更新 (PoC 結果)                                         | 条件付き実行   | 実行       |
 | 6    | DDD モデリング       | `references/ddd-modeling.md`           | docs/GLOSSARY.md, docs/DOMAIN_MODEL.md                                 | スキップ       | 実行       |
 | 7    | 概要/詳細設計        | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL_APP.md, docs/DESIGN_DETAIL_INFRA.md | 実行           | 実行       |
+| 7.5  | 機能仕様             | `references/feature-spec.md`           | docs/features/UC-\*.md (+ fixtures/)                                   | スキップ       | 実行       |
 | 8    | 深掘りインタビュー   | `references/interview.md`              | DESIGN / DETAIL 更新                                                   | 実行           | 実行       |
 | 9    | 検証手順の確認と補完 | `references/verification-review.md`    | DESIGN / DETAIL 更新                                                   | 実行           | 実行       |
 | 10   | TODO.md 生成         | `references/todo-generation.md`        | docs/TODO.md                                                           | 実行           | 実行       |
@@ -73,7 +74,7 @@ sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DESIGN.md | head -
 | 11   | 承認ゲート           | (本ファイル下記)                       | 承認スタンプ                                                           | 実行           | 実行       |
 | 12   | GitHub issue 生成    | (本ファイル下記)                       | 子 issue 群 (`ready` / `needs-human`) + 親 issue 群 (`uc-tracking`)    | 実行           | 実行       |
 
-**フェーズ 12 はモードに関係なく常に実行する。** 実装ループ (`/dev-impl`) は issue を入力にとるので、issue が無いと次に進めない。進捗表示 (`📍 設計ループ [n/N]`) の分母は 12 とする (フェーズ 10.5 は 10 の一部として数えない)。
+**フェーズ 12 はモードに関係なく常に実行する。** 実装ループ (`/dev-impl`) は issue を入力にとるので、issue が無いと次に進めない。進捗表示 (`📍 設計ループ [n/N]`) の分母は 12 とする (フェーズ 7.5 は 7 の一部、10.5 は 10 の一部として数えない)。
 
 ### ゲート条件 (フェーズ 7 の開始条件)
 
@@ -123,7 +124,7 @@ AskUserQuestion({
 
 ### 0.2 既存ドキュメントの確認と開始点の決定
 
-docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / GLOSSARY.md / DOMAIN_MODEL.md / DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md) を確認する。
+docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / GLOSSARY.md / DOMAIN_MODEL.md / DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / features/ / TODO.md) を確認する。
 
 旧形式の単一 `docs/DESIGN_DETAIL.md` を見つけたら、`references/todo-generation.md` のフォールバック A (APP / INFRA への分割移行) を案内してから続行する。
 
@@ -141,7 +142,7 @@ DESIGN.md が存在する場合、プロダクトモードは 0.1 の推論・�
 | FEASIBILITY.md (blocker=true が unresolved)                | 5 (PoC 検証)                                                    |
 | FEASIBILITY.md (全件解決済み)                               | 6 (DDD)。クイックモードなら 7                                   |
 | GLOSSARY.md / DOMAIN_MODEL.md                               | 7 (設計書生成)                                                  |
-| DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md   | 8 (深掘り)。深掘り済みが明らかなら 9                            |
+| DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md   | 7.5 (機能仕様。USECASES.md が無い、または docs/features/ が UC 全件分あるなら 8)。深掘り済みが明らかなら 9 |
 | TODO.md (承認スタンプ無し)                                  | 10.5 (設計整合監査)                                             |
 
 - **何もない** → モード選択へ
