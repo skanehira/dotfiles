@@ -36,7 +36,7 @@ let
       tree-sitter # CLI; nvim-treesitter main が parser compile に要求
       cargo-zigbuild
     ]
-    ++ lib.optionals pkgs.stdenv.isDarwin [
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
       # ryoppippi/nix-vite-plus overlay (vp コマンド)。aarch64-linux では installCheckPhase
       # で SIGABRT になり build 失敗 (上流側の問題)。Linux 対応が必要になったら overlay 側
       # の修正か doCheck=false の wrap を検討
@@ -143,7 +143,7 @@ let
       rclone
       tirith # shell security guard (homograph URL / pipe-to-shell 等を実行前にブロック)
     ]
-    ++ lib.optionals pkgs.stdenv.isDarwin [
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
       terminal-notifier # macOS notification API (codex notify で使用)
     ];
 
@@ -156,7 +156,7 @@ let
     ++ [
       inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.default # AI agent multiplexer TUI (flake input)
     ]
-    ++ lib.optionals pkgs.stdenv.isDarwin [
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
       screen-capture-mcp-server # Claude Code 用画面キャプチャ MCP サーバー
     ];
 
