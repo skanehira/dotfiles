@@ -1,6 +1,6 @@
 ---
 name: workflow-design-notes
-description: dev-spec を使わず議論しながら設計を固めるときの進行様式。議論中は決定台帳 (DESIGN_NOTES.md) だけを追記し、節目に dev-impl 互換の DESIGN.md / DESIGN_DETAIL.md へゼロから落とし込む。「議論しながら設計したい」「設計の壁打ちを文書に残したい」「台帳に記録して」「設計書に落とし込んで」「一旦まとめて」などで起動。
+description: dev-spec を使わず議論しながら設計を固めるときの進行様式。議論中は決定台帳 (DESIGN_NOTES.md) だけを追記し、節目に dev-spec 互換の DESIGN.md (1 枚) + docs/features/ へゼロから落とし込む。「議論しながら設計したい」「設計の壁打ちを文書に残したい」「台帳に記録して」「設計書に落とし込んで」「一旦まとめて」などで起動。
 ---
 
 # /workflow-design-notes
@@ -8,7 +8,7 @@ description: dev-spec を使わず議論しながら設計を固めるときの�
 議論駆動の設計セッションで、完成文書への継ぎ足し編集を構造的に排除する。アーティファクトを 2 つに分離する:
 
 - **決定台帳** `docs/DESIGN_NOTES.md`: 追記専用の作業記憶。議論中はこれ**だけ**を更新する
-- **設計書** `docs/DESIGN.md` + `docs/DESIGN_DETAIL.md`: 台帳からの**再生成物**。議論中に直接 Edit しない
+- **設計書** `docs/DESIGN.md` + `docs/features/<機能名>.md`: 台帳からの**再生成物**。議論中に直接 Edit しない
 
 継ぎ足しで文書が劣化する根本原因は「議論の作業記憶」と「レビュー用の完成文書」を同じファイルに兼ねさせることにある。台帳は形式が緩く追記の害がなく、設計書は毎回ゼロから生成されるため常に全体整合した状態で読める。
 
@@ -32,15 +32,15 @@ description: dev-spec を使わず議論しながら設計を固めるときの�
 トリガー: ユーザーの「まとめて」「落とし込んで」指示。議論が節目（アーキテクチャ確定・レビュー依頼前）に達したと判断したら自分から提案してよい。
 
 1. `rules/core/documentation.md` の手順どおり依拠事実を rg で再検証する
-2. `rules/core/references/doc-formats/design-doc.md`（構造規範）と `../dev-spec/references/design-template.md`（節構成の正本）を Read する
-3. 台帳**全体**から `docs/DESIGN.md` + `docs/DESIGN_DETAIL.md` を**毎回ゼロから生成**する（前回生成物への差分編集をしない）。生成物の冒頭に `<!-- generated-from: docs/DESIGN_NOTES.md -->` を入れる（直接編集への注意標識）
-4. design-doc.md の「dev-impl ゲート」判定コマンド（G ゴール存在・G↔検証 1:1・POC_NEEDED 残存）を自分で実行し、通らなければ生成をやり直す
+2. `rules/core/references/doc-formats/design-doc.md`（構造規範）と `../dev-spec/references/design-doc.md`（DESIGN.md テンプレートの正本）・`../dev-spec/references/feature-doc.md`（機能設計書テンプレート）を Read する
+3. 台帳**全体**から `docs/DESIGN.md` + `docs/features/` を**毎回ゼロから生成**する（前回生成物への差分編集をしない）。生成物の冒頭に `<!-- generated-from: docs/DESIGN_NOTES.md -->` を入れる（直接編集への注意標識）
+4. design-doc.md の「機械ゲート」判定コマンド（POC_NEEDED blocker=true 残存）を自分で実行し、通らなければ生成をやり直す
 5. `/utility-doc-audit` を設計書 2 ファイル + 決定台帳付きで**フル監査**として起動する（ゼロから全文再生成した直後のため、スコープ監査ではなく観点 1〜6 全体を検査させる。決定カバレッジ観点が台帳→文書の取りこぼし・棄却案の生き残りを検査する）
 6. 監査指摘のうち決定に関わるものは**台帳に反映してから再生成**する（文書だけを直すと台帳と文書が乖離する）。字句レベルの指摘は文書の直接修正でよい
 
 ## 下流への接続
 
-落とし込み後に実装へ進む場合: `../dev-spec/references/todo-generation.md` の手順で `docs/TODO.md` を生成 → 承認 → `/dev-impl` 起動。本スキルの成果物は dev-impl の入力契約（パス・G ゴール・検証 1:1）を満たすように設計されている。
+落とし込み後に実装へ進む場合: `/dev-spec` のフェーズ 9〜10（issue ドラフト + ドラフトチェック → issue 作成）を実行してから `/dev-impl` を起動する。本スキルの成果物は dev-spec の成果物（DESIGN.md + features/）と同形なので、そのまま接続できる。
 
 ## 境界（対象外）
 
@@ -51,5 +51,5 @@ description: dev-spec を使わず議論しながら設計を固めるときの�
 ## 関連
 
 - `rules/core/documentation.md` — ドキュメント作業ルールの正本
-- `rules/core/references/doc-formats/design-doc.md` — 設計書の構造規範（dev-impl ゲート含む）
+- `rules/core/references/doc-formats/design-doc.md` — 設計書の構造規範（機械ゲート含む）
 - `../utility-doc-audit/SKILL.md` — 落とし込み後の監査

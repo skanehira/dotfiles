@@ -83,8 +83,8 @@ argument-hint: "[project-name] [プロダクト概要]"
 
 | スキル / エージェント | 役割 | 使う場面 |
 | --- | --- | --- |
-| `/dev-spec` | 設計ループ (ユーザーストーリー → 設計書 → TODO.md → 承認ゲート) | Step 8 の後 (ユーザーが起動) |
-| `/dev-impl` | 実装ループ | dev-spec の承認ゲート通過後 |
+| `/dev-spec` | 設計ループ (ユーザーストーリー → 設計書 → issue 生成) | Step 8 の後 (ユーザーが起動) |
+| `/dev-impl` | 実装ループ | dev-spec の issue 作成後 |
 | `workflow-commit` | Conventional Commit 形式でのコミット | Step 7 |
 | `demo-site-builder` | 静的 SPA デモの構築 / deploy token 発行スクリプトの提供 | Step 1 の振り分け / Step 6 |
 | `chrome-devtools` MCP | ログインフローの実機確認 | Step 5 (認証あり) |
