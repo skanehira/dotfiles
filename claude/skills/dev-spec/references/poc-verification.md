@@ -108,6 +108,6 @@ rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
 
 ## 後段との連動
 
-- フェーズ 7 (analyzing-requirements) は、FEASIBILITY.md の PoC 結果を技術選定の根拠として DESIGN.md に反映し、未検証で残った `blocker=false` の PoC 計画のみ `POC_NEEDED` マーカーとして DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側に転記する
-- フェーズ 7 は `status=fallback_adopted` / `scope_reduced` の PoC 結果を DESIGN.md の「検討した代替案」に転記する (当初案 = 却下案、fallback / スコープ縮小後の案 = 採用案として)
-- 実装ループ (`/dev-impl`) は起動時に DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の `blocker=true` マーカー残存をチェックし、見つけたら実装に入らず本フェーズへの差し戻しを案内する (安全網)
+- フェーズ 6 (design-doc) は、FEASIBILITY.md の PoC 結果を技術選定の根拠として DESIGN.md に反映し、未検証で残った `blocker=false` の PoC 計画のみ `POC_NEEDED` マーカーとして DESIGN.md の該当節 (機能単体の契約なら docs/features/ の該当ファイル) に転記する
+- フェーズ 6 は `status=fallback_adopted` / `scope_reduced` の PoC 結果を DESIGN.md「アーキテクチャと技術選定」に転記する (当初案 = 却下案、fallback / スコープ縮小後の案 = 採用案として)
+- 実装ループ (`/dev-impl`) は起動時に docs/DESIGN.md / docs/features/ の `blocker=true` マーカー残存をチェックし、見つけたら実装に入らず本フェーズへの差し戻しを案内する (安全網)
