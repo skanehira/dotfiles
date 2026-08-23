@@ -1,6 +1,6 @@
 ---
 name: tech-investigation
-description: FEASIBILITY.md の PoC 計画や DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の POC_NEEDED マーカー (技術選定の未確定要素) に対して、最新ライブラリドキュメント取得 + 最小 PoC コード実行 + fallback 案提示までを自動で行う調査 subagent。dev-spec のフェーズ 5 (PoC 検証) から並列 fan-out で内部呼び出しされる。人間判断を仰がず、結果を構造化 JSON で返す。
+description: FEASIBILITY.md の PoC 計画や docs/DESIGN.md・docs/features/ の POC_NEEDED マーカー (技術選定の未確定要素) に対して、最新ライブラリドキュメント取得 + 最小 PoC コード実行 + fallback 案提示までを自動で行う調査 subagent。dev-spec のフェーズ 5 (PoC 検証) から並列 fan-out で内部呼び出しされる。人間判断を仰がず、結果を構造化 JSON で返す。
 tools: Read, Grep, Glob, Bash, WebFetch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: opus
 ---
@@ -18,7 +18,7 @@ model は opus。「何をどこまで検証すれば技術的に行けると言
 呼び出し元から以下を受け取る:
 
 - `marker`: PoC 計画 / POC_NEEDED マーカー本文 (例: `id=react-19-suspense, scope=async-data-loading, risk=high, blocker=true`)
-- `context_paths`: 検証対象の文脈を読むドキュメントのリスト (dev-spec フェーズ 5 からは `docs/FEASIBILITY.md`、設計後の個別呼び出しでは `docs/DESIGN.md` + `docs/DESIGN_DETAIL_APP.md` / `docs/DESIGN_DETAIL_INFRA.md` のマーカーがある側)
+- `context_paths`: 検証対象の文脈を読むドキュメントのリスト (dev-spec フェーズ 5 からは `docs/FEASIBILITY.md`、設計後の個別呼び出しでは `docs/DESIGN.md` + マーカーがある `docs/features/` のファイル)
 - `output_path`: 結果 JSON の書き出し先 (例 `/tmp/tech-investigation-<id>.json`)
 - `workspace_dir`: PoC コード用の作業ディレクトリ (例 `/tmp/poc-<id>/`、無ければ作る)
 
@@ -39,7 +39,7 @@ model は opus。「何をどこまで検証すれば技術的に行けると言
     "console エラーなし、期待動作確認"
   ],
   "recommended_approach": "Server Component から async データ取得し、子の Client Component で use(promise) で読み出す。Suspense 境界は親 layout に置く",
-  "fallback": "Suspense が使えない場合は SWR fetcher にフォールバック (DESIGN_DETAIL_APP.md 既存記述と整合)",
+  "fallback": "Suspense が使えない場合は SWR fetcher にフォールバック (DESIGN.md 既存記述と整合)",
   "references": [
     "https://react.dev/reference/react/use",
     "context7: /facebook/react v19.0.0"
@@ -110,7 +110,7 @@ PoC コードは「**マーカー scope だけを検証する最小コード**�
 ## 範囲外 (やらないこと)
 
 - 本実装の作成 → 実装ループ (/dev-impl) の責務
-- 設計全体のレビュー → workflow-review / architecture-guard の責務
+- 設計全体のレビュー → dev-spec フェーズ 8 (設計チェック) の責務
 - 「ライブラリの選定」(複数候補の比較) → feasibility-check / 人間判断
 - 大規模 PoC (複数ファイル・ビルドが要る規模) → 環境不足扱いで partial 返却
 
