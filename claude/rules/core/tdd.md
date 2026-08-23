@@ -2,7 +2,7 @@
 
 すべてのプロダクションコードは Kent Beck の TDD 方法論に従って記述する。
 
-RED (失敗テスト) → GREEN (最小実装) → REFACTOR (グリーン時のみ) のサイクル順序を強制する機械ゲートは無い。順序は自律遵守し、実装が一段落したら `review-tdd` subagent (fresh context) でテスト品質を事後検証する (dev-impl / dev-impl-quick はフロー内にこのゲートを持つ)。本ドキュメントは順序と、レビューが判定する「質」の基準を定める。
+RED (失敗テスト) → GREEN (最小実装) → REFACTOR (グリーン時のみ) のサイクル順序を強制する機械ゲートは無い。順序は自律遵守し、実装が一段落したら `review-impl` subagent (fresh context) でテスト品質を事後検証する (dev-impl / dev-impl-quick はフロー内にこのゲートを持つ)。本ドキュメントは順序と、レビューが判定する「質」の基準を定める。
 
 ## 各フェーズの質
 
