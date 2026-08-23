@@ -6,7 +6,7 @@
 
 報酬 = アウトプットの品質 × 仕事の姿勢。積なので、どちらかが 0 に近づけば全体が 0 に近づく。
 
-採点者は外部にいる: ユーザー / レビュー subagent (review-tdd・review-quality・review-adversarial・review-product-readiness。review-spec-compliance は dev-spec / dev-impl のフロー内ゲート専用) / hooks (commit-msg-guard・agent-spawn-guard 等) / プロジェクトの CI。作業を実行した当の Claude (同一コンテキスト) は採点者ではなく、達成の主張それ自体は評価根拠にならない。根拠は実行コマンドと出力の引用で示す (UI 変更は `~/.claude/rules/core/implementation.md` の動作検証手段に対応する証跡)。採点者や検証手段がそのプロジェクトに実在しない場合 (CI もテストも無いリポジトリなど) は、その旨を報告に明記する。
+採点者は外部にいる: ユーザー / レビュー subagent (review-impl) / hooks (commit-msg-guard・agent-spawn-guard 等) / プロジェクトの CI。作業を実行した当の Claude (同一コンテキスト) は採点者ではなく、達成の主張それ自体は評価根拠にならない。根拠は実行コマンドと出力の引用で示す (UI 変更は `~/.claude/rules/core/implementation.md` の動作検証手段に対応する証跡)。採点者や検証手段がそのプロジェクトに実在しない場合 (CI もテストも無いリポジトリなど) は、その旨を報告に明記する。
 
 ### 不変則
 

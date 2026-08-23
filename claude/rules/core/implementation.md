@@ -6,8 +6,8 @@ CLAUDE.md「実装時」から遅延参照する詳細。設計原則は `~/.cla
 
 - TDD で実装する (→ `~/.claude/rules/core/tdd.md`)。RED→GREEN→REFACTOR の順序と「実装編集後の再テスト」は機械ゲートではなく自律遵守する。TDD を適用しない判断 (typo 修正・宣言的 config 変更など、観測可能な振る舞いを変えない編集) をした場合はその理由を出力に明示する
 - 実装が一段落したら**レビュー subagent で事後検証する**。スキル (dev-impl / dev-impl-quick) を使う場合はフロー内のレビューゲートに任せ、スキルを使わない実装 (plan mode・直接依頼) では自分で起動する:
-  - テスト差分がまとまっている (新規テストファイル or 20 行超) → `review-tdd` subagent (`model: "opus"` 明示、`output_path` 指定) でテスト品質を検証し、high/medium findings を修正してからテストを再実行する
-  - 複数観点で見たい差分 (機能追加・リファクタ) → `/workflow-review` で 4 観点並列レビュー
+  - テスト差分がまとまっている (新規テストファイル or 20 行超) → `review-impl` subagent (`model: "opus"` 明示、`focus: tests`・`report_path` 指定) でテスト品質を検証し、high/medium findings を修正してからテストを再実行する
+  - 複数観点で見たい差分 (機能追加・リファクタ) → `/workflow-review` で全項目レビュー (focus: all)
 
 ## 設計と変更範囲
 
