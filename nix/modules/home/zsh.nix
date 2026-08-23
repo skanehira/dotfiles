@@ -46,7 +46,7 @@
         # tirith: シェル実行前に homograph URL / pipe-to-shell 等の脅威を検査
         eval "$(tirith init --shell zsh)"
       ''
-      + lib.optionalString pkgs.stdenv.isDarwin ''
+      + lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
 
         # OpenShift Local (crc): oc を遅延初期化
         # `crc oc-env` 実行は ~560ms と重く、login shell 起動時に毎回払うのは割に合わない。
@@ -63,11 +63,11 @@
     # ~/.zprofile に追記する内容 (login shell 起動時に評価される)
     # platform 分岐は Nix 評価時に解決され、対象 OS の文字列だけが残る
     profileExtra =
-      lib.optionalString pkgs.stdenv.isDarwin ''
+      lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
         export SHELL=/bin/zsh
         eval "$(/opt/homebrew/bin/brew shellenv)"
       ''
-      + lib.optionalString pkgs.stdenv.isLinux ''
+      + lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
         export SHELL=/usr/bin/zsh
         brew=/home/linuxbrew/.linuxbrew/bin/brew
         if [ -f "$brew" ]; then
@@ -98,7 +98,7 @@
     # rust
     c = "cargo";
   }
-  // lib.optionalAttrs pkgs.stdenv.isDarwin {
+  // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
     # nix-darwin 切替 (mac)。nh が内部で darwin-rebuild を sudo 実行し、
     # 自動で nom 経由のビルド進捗 + 適用前後の diff を表示する。
     # 設定名は nh の -c (home) / -H (darwin) で明示する。nh 4.x は INSTALLABLE の
@@ -108,7 +108,7 @@
     # noglob: zsh の EXTENDED_GLOB がパス中のメタ文字を展開するのを防ぐ保険。
     drs = "noglob nh darwin switch ${dotfilesRoot}/nix -H ${username}";
   }
-  // lib.optionalAttrs pkgs.stdenv.isLinux {
+  // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
     # Home Manager standalone 切替 (Linux)
     hms = "noglob nh home switch ${dotfilesRoot}/nix -c ${username}";
   };
@@ -121,7 +121,7 @@
     ".config/zsh/functions/gss.zsh".source = ../../../zsh/functions/gss.zsh;
     ".config/zsh/functions/claude-deepseek.zsh".source = ../../../zsh/functions/claude-deepseek.zsh;
   }
-  // lib.optionalAttrs pkgs.stdenv.isDarwin {
+  // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
     # sleepctl は pmset/ioreg 依存の mac 専用機能
     ".config/zsh/functions/sleepctl.zsh".source = ../../../zsh/functions/sleepctl.zsh;
   };
