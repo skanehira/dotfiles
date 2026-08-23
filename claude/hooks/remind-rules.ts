@@ -107,11 +107,11 @@ export const IMPL_REMINDER_FULL =
 2. rules: このセッションで未読なら ~/.claude/rules/core/ の tdd.md / design.md / testing.md / implementation.md / verification.md を Read してから着手する (読了済みなら再読不要)。
 3. 外科的変更: 依頼スコープを超えない (隣接改善・dead code 削除は別ターンで合意)。TDD を適用しない判断 (typo 修正・宣言的 config 等) はその理由を出力で明示する。
 4. 委譲: 実装はメインループ直営 (逐次実装のサブエージェント委譲は禁止。委譲は並列 fan-out と巨大出力の隔離のみ、fan-out 時は model: opus を明示し、実装系なら指示文に rules の Read 指示を含める)。テスト実行 (E2E 等の巨大出力のみ)・コミット実行は Haiku に委譲する (コミットメッセージは親が起草し、Haiku には実行だけさせる)。
-5. 事後レビュー: TDD 順序を強制する機械ゲートは無いので自律遵守する。スキル (dev-impl / dev-impl-quick) を使わない実装では、まとまったテスト差分 (新規テストファイル or 20 行超) を書いたら完了報告の前に review-tdd subagent (model: opus 明示・output_path 指定) でテスト品質を検証し、high/medium findings を修正してテストを再実行する。複数観点で見たい差分は /workflow-review を使う。`;
+5. 事後レビュー: TDD 順序を強制する機械ゲートは無いので自律遵守する。スキル (dev-impl / dev-impl-quick) を使わない実装では、まとまったテスト差分 (新規テストファイル or 20 行超) を書いたら完了報告の前に review-impl subagent (model: opus 明示・focus: tests・report_path 指定) でテスト品質を検証し、high/medium findings を修正してテストを再実行する。複数観点で見たい差分は /workflow-review を使う。`;
 
 // 2 回目以降: フル版の要点への短いポインタだけ再注入する (反復コスト削減)。
 export const IMPL_REMINDER_SHORT =
-  `[hook: remind-rules] 実装/修正系の指示を検知 (詳細は本セッション初回のフル版リマインダと ~/.claude/rules/core/orchestration.md)。トリアージ (モデル割当 1 行明示・rules 未読なら Read) / 外科的変更 (TDD 例外は理由明示) / 委譲は並列 fan-out と巨大出力の隔離のみ (テスト・コミット実行は Haiku) / まとまったテスト差分を書いたら完了前に review-tdd で事後レビュー。`;
+  `[hook: remind-rules] 実装/修正系の指示を検知 (詳細は本セッション初回のフル版リマインダと ~/.claude/rules/core/orchestration.md)。トリアージ (モデル割当 1 行明示・rules 未読なら Read) / 外科的変更 (TDD 例外は理由明示) / 委譲は並列 fan-out と巨大出力の隔離のみ (テスト・コミット実行は Haiku) / まとまったテスト差分を書いたら完了前に review-impl で事後レビュー。`;
 
 export const DOC_REMINDER =
   `[hook: remind-rules] ドキュメント修正系の指示を検知しました。
