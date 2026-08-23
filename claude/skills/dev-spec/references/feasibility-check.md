@@ -33,7 +33,7 @@
 #### 1.1 前提ドキュメントの読み込み
 
 ```javascript
-Read({ file_path: "docs/USECASES.md" })
+Read({ file_path: "docs/design/USECASES.md" })
 Read({ file_path: "docs/PRODUCT_SPEC.md" })
 ```
 
@@ -311,7 +311,7 @@ AskUserQuestion({
 
 ```javascript
 Write({
-  file_path: "docs/FEASIBILITY.md",
+  file_path: "docs/design/FEASIBILITY.md",
   content: feasibilityContent
 })
 ```
@@ -328,7 +328,7 @@ Agent({
 以下の技術検証ドキュメントをレビューし、問題があれば修正してください。
 
 ## レビュー対象ファイル
-- docs/FEASIBILITY.md
+- docs/design/FEASIBILITY.md
 
 ## レビュー観点
 

@@ -1,6 +1,6 @@
 ---
 name: tech-investigation
-description: FEASIBILITY.md の PoC 計画や docs/DESIGN.md・docs/features/ の POC_NEEDED マーカー (技術選定の未確定要素) に対して、最新ライブラリドキュメント取得 + 最小 PoC コード実行 + fallback 案提示までを自動で行う調査 subagent。dev-spec のフェーズ 5 (PoC 検証) から並列 fan-out で内部呼び出しされる。人間判断を仰がず、結果を構造化 JSON で返す。
+description: FEASIBILITY.md の PoC 計画や docs/design/DESIGN.md・docs/design/features/ の POC_NEEDED マーカー (技術選定の未確定要素) に対して、最新ライブラリドキュメント取得 + 最小 PoC コード実行 + fallback 案提示までを自動で行う調査 subagent。dev-spec のフェーズ 5 (PoC 検証) から並列 fan-out で内部呼び出しされる。人間判断を仰がず、結果を構造化 JSON で返す。
 tools: Read, Grep, Glob, Bash, WebFetch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: opus
 ---
@@ -18,7 +18,7 @@ model は opus。「何をどこまで検証すれば技術的に行けると言
 呼び出し元から以下を受け取る:
 
 - `marker`: PoC 計画 / POC_NEEDED マーカー本文 (例: `id=react-19-suspense, scope=async-data-loading, risk=high, blocker=true`)
-- `context_paths`: 検証対象の文脈を読むドキュメントのリスト (dev-spec フェーズ 5 からは `docs/FEASIBILITY.md`、設計後の個別呼び出しでは `docs/DESIGN.md` + マーカーがある `docs/features/` のファイル)
+- `context_paths`: 検証対象の文脈を読むドキュメントのリスト (dev-spec フェーズ 5 からは `docs/design/FEASIBILITY.md`、設計後の個別呼び出しでは `docs/design/DESIGN.md` + マーカーがある `docs/design/features/` のファイル)
 - `output_path`: 結果 JSON の書き出し先 (例 `/tmp/tech-investigation-<id>.json`)
 - `workspace_dir`: PoC コード用の作業ディレクトリ (例 `/tmp/poc-<id>/`、無ければ作る)
 
@@ -130,7 +130,7 @@ const investigationResult = await Agent({
   subagent_type: "tech-investigation",
   model: "opus",
   prompt: `marker: id=react-19-suspense, scope=async-data-loading, risk=high, blocker=true
-context_paths: docs/FEASIBILITY.md
+context_paths: docs/design/FEASIBILITY.md
 output_path: /tmp/tech-investigation-react-19-suspense.json
 workspace_dir: /tmp/poc-react-19-suspense/`
 })

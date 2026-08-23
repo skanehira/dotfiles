@@ -2,11 +2,11 @@
 name: dev-spec
 description: >-
   設計ループ。ユーザーストーリー → UI スケッチ → ユースケース → 実現可能性検証 → PoC 検証 →
-  横断設計 (docs/DESIGN.md) → 機能設計 (docs/features/) → 設計チェック → issue ドラフトチェック →
+  横断設計 (docs/design/DESIGN.md) → 機能設計 (docs/design/features/) → 設計チェック → issue ドラフトチェック →
   GitHub issue 生成 (親子構造) までを対話的に実行し、人間が issue を確認して実装ループへ引き渡す。
   「設計フェーズを開始」「要件を整理したい」「計画を立てたい」「ユーザーストーリーを書きたい」
   「技術的に実現できるか確認したい」「機能設計を書きたい」「issue に落としたい」などで起動。
-  docs/ の状態から途中再開・特定フェーズの部分実行も可能。
+  docs/design/ の状態から途中再開・特定フェーズの部分実行も可能。
   `cli` / `webapp` のプロダクトモード指定で CLI ツール開発時は UI スケッチ等を軽量化できる。
   issue 作成後、/dev-impl がそれを 1 件ずつ実装する。
 argument-hint: "[cli|webapp] [タスク説明]"
@@ -16,10 +16,10 @@ argument-hint: "[cli|webapp] [タスク説明]"
 
 ## 概要
 
-設計ループを回して docs/ 配下に設計成果物を生成し、GitHub issue に落として実装ループ (`/dev-impl`) に引き渡す。成果物は 3 種:
+設計ループを回して docs/design/ 配下に設計成果物を生成し、GitHub issue に落として実装ループ (`/dev-impl`) に引き渡す。成果物は 3 種:
 
-- **docs/DESIGN.md** (横断設計 1 枚): 目的・アーキテクチャ・開発検証コマンド・スキーマ・API 一覧・横断規約
-- **docs/features/<機能名>.md** (機能設計): 機能単位の入出力・API・実装配置・エッジケース・テスト方針。**正本は常に docs 側で、issue は参照するだけ** (ローカルで「この機能の設計はどうなっているか」を AI にも人間にも引ける)
+- **docs/design/DESIGN.md** (横断設計 1 枚): 目的・アーキテクチャ・開発検証コマンド・スキーマ・API 一覧・横断規約
+- **docs/design/features/<機能名>.md** (機能設計): 機能単位の入出力・API・実装配置・エッジケース・テスト方針。**正本は常に docs 側で、issue は参照するだけ** (ローカルで「この機能の設計はどうなっているか」を AI にも人間にも引ける)
 - **GitHub issue**: 親 1 件 (トラッキング) + 子 N 件 (作業単位)。**人間が issue 本文 + 参照 docs だけで着手できる**ことが情報設計の基準
 
 フェーズごとに Feedback (検証手段) が異なる:
@@ -40,10 +40,10 @@ argument-hint: "[cli|webapp] [タスク説明]"
 | `webapp` | ブラウザで操作するプロダクト (モバイル Web 含む) | 「画面」「サイト」「Web」「SPA」「ダッシュボード」等の語 |
 | `cli`    | ターミナルから実行するプロダクト (TUI 含む)      | 「CLI」「コマンド」「ツール」「TUI」「パイプ」等の語     |
 
-**判定と保持**: モードは docs/DESIGN.md の 1 行目に `<!-- product-mode: cli -->` (または `webapp`) の形式でスタンプする (フェーズ 6 が新規生成時に必ず書き込む)。判定コマンド:
+**判定と保持**: モードは docs/design/DESIGN.md の 1 行目に `<!-- product-mode: cli -->` (または `webapp`) の形式でスタンプする (フェーズ 6 が新規生成時に必ず書き込む)。判定コマンド:
 
 ```bash
-sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DESIGN.md | head -1
+sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/design/DESIGN.md | head -1
 ```
 
 dev-impl はこのスタンプで UI の実機検証 (Playwright E2E) の要否を切り替える。
@@ -56,13 +56,13 @@ dev-impl はこのスタンプで UI の実機検証 (Playwright E2E) の要否�
 
 | #  | フェーズ                          | 手順書                              | 出力                               | クイックモード | cli モード |
 | -- | --------------------------------- | ----------------------------------- | ---------------------------------- | -------------- | ---------- |
-| 1  | ユーザーストーリー                | `references/user-story.md`          | docs/USER_STORIES.md               | スキップ       | 実行       |
-| 2  | UI スケッチ                       | `references/ui-sketch.md`           | docs/UI_SKETCH.html                | スキップ       | スキップ   |
-| 3  | ユースケース記述                  | `references/usecase-description.md` | docs/USECASES.md                   | スキップ       | 実行       |
-| 4  | 実現可能性検証                    | `references/feasibility-check.md`   | docs/FEASIBILITY.md (PoC 計画)     | 条件付き実行   | 実行       |
+| 1  | ユーザーストーリー                | `references/user-story.md`          | docs/design/USER_STORIES.md               | スキップ       | 実行       |
+| 2  | UI スケッチ                       | `references/ui-sketch.md`           | docs/design/UI_SKETCH.html                | スキップ       | スキップ   |
+| 3  | ユースケース記述                  | `references/usecase-description.md` | docs/design/USECASES.md                   | スキップ       | 実行       |
+| 4  | 実現可能性検証                    | `references/feasibility-check.md`   | docs/design/FEASIBILITY.md (PoC 計画)     | 条件付き実行   | 実行       |
 | 5  | PoC 検証                          | `references/poc-verification.md`    | FEASIBILITY.md 更新 (PoC 結果)     | 条件付き実行   | 実行       |
-| 6  | 横断設計                          | `references/design-doc.md`          | docs/DESIGN.md                     | 実行           | 実行       |
-| 7  | 機能設計                          | `references/feature-doc.md`         | docs/features/<機能名>.md          | 実行           | 実行       |
+| 6  | 横断設計                          | `references/design-doc.md`          | docs/design/DESIGN.md                     | 実行           | 実行       |
+| 7  | 機能設計                          | `references/feature-doc.md`         | docs/design/features/<機能名>.md          | 実行           | 実行       |
 | 8  | 設計チェック                      | (本ファイル下記)                    | 指摘の反映 (docs 修正)             | 実行           | 実行       |
 | 9  | issue ドラフト + ドラフトチェック | `references/issue-template.md`      | ドラフト (scratchpad) + 指摘の反映 | 実行           | 実行       |
 | 10 | GitHub issue 生成                 | `references/issue-template.md`      | 親 issue 1 件 + 子 issue N 件      | 実行           | 実行       |
@@ -74,7 +74,7 @@ dev-impl はこのスタンプで UI の実機検証 (Playwright E2E) の要否�
 FEASIBILITY.md に **`blocker=true` の未解決 PoC 計画が残っている間は、フェーズ 6 (設計書生成) に進んではならない**。判定はプロンプト遵守ではなく次のコマンドで機械的に行う:
 
 ```bash
-rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
+rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/design/FEASIBILITY.md
 ```
 
 - 1 件以上ヒット → フェーズ 5 (PoC 検証) へ戻る
@@ -89,11 +89,11 @@ rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
 
 `$ARGUMENTS` の先頭トークン群のうち、`cli` / `webapp` に完全一致するものは**プロダクトモード**として消費し、残りをタスク説明とする。タスク説明が無ければ事前の会話から推論し、それも不明なら「どのようなタスクの設計を行いますか?」と質問する。
 
-**既存の docs から復元できる項目は質問しない。** `docs/DESIGN.md` があればプロダクトモードはスタンプから復元する。トークン指定も復元もできない場合だけ、タスク説明と会話履歴から推論し、推論結果を推奨ラベル (`(推論)` + 根拠 1 行) にして AskUserQuestion で確認する (確定済みなら呼ばない)。
+**既存の docs から復元できる項目は質問しない。** `docs/design/DESIGN.md` があればプロダクトモードはスタンプから復元する。トークン指定も復元もできない場合だけ、タスク説明と会話履歴から推論し、推論結果を推奨ラベル (`(推論)` + 根拠 1 行) にして AskUserQuestion で確認する (確定済みなら呼ばない)。
 
 ### 0.2 既存ドキュメントの確認と開始点の決定
 
-docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / DESIGN.md / features/) と、GitHub 上の親 issue (`tracking` ラベル) を確認する (先に `gh auth status` を確認し、未認証なら issue 関連の判定はスキップして「フェーズ 10 までに認証が必要」と伝える)。
+docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / DESIGN.md / features/) と、GitHub 上の親 issue (`tracking` ラベル) を確認する (先に `gh auth status` を確認し、未認証なら issue 関連の判定はスキップして「フェーズ 10 までに認証が必要」と伝える)。
 
 旧構成の成果物 (DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / DOMAIN_MODEL.md / TODO.md) を見つけたら、本スキルの対象外であることを伝え、「新構成 (DESIGN.md 1 枚 + features/) で設計し直す / 中止」を確認する。旧成果物は読み取りの参考にはするが更新しない。
 
@@ -156,7 +156,7 @@ docs が完成した時点で、書き手と別コンテキストの subagent �
 
 `general-purpose` subagent を **`model: "opus"` 明示**で 1 本起動する (機能設計書が 8 本を超える場合は機能ごとに分担させて並列 fan-out し、横断の整合は親がまとめる)。指示文に含める内容:
 
-> docs/USECASES.md (あれば)・docs/DESIGN.md・docs/features/*.md を**全文 Read** し、次を検査して指摘だけを返せ (修正はしない):
+> docs/design/USECASES.md (あれば)・docs/design/DESIGN.md・docs/design/features/*.md を**全文 Read** し、次を検査して指摘だけを返せ (修正はしない):
 >
 > 1. **落とし漏れ**: USECASES.md の各 UC・各規則 (BR) が、いずれかの機能設計書でカバーされているか
 > 2. **矛盾**: 機能設計書どうし、および DESIGN.md との食い違い (スキーマと入出力、API 一覧と各機能の API 節)
@@ -180,7 +180,7 @@ docs が完成した時点で、書き手と別コンテキストの subagent �
 
 `references/issue-template.md` の「issue 作成手順」に従う。要点:
 
-1. **docs をコミットする**: docs/ 配下の成果物 (DESIGN.md / features/ ほか。ただし `docs/PENDING_REVIEW.html` は対象外 — dev-impl が管理する) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/rules/core/orchestration.md` に従う)。**/dev-impl は origin から切ったブランチで docs を読むため、実装開始前にこのコミットの push が必要** — 手順 4 の案内に含める
+1. **docs をコミットする**: docs/design/ 配下の成果物 (DESIGN.md / features/ ほか。ただし `docs/PENDING_REVIEW.html` は対象外 — dev-impl が管理する) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/rules/core/orchestration.md` に従う)。**/dev-impl は origin から切ったブランチで docs を読むため、実装開始前にこのコミットの push が必要** — 手順 4 の案内に含める
 
 2. **作成前に人間の同意を取る** (GitHub への書き込みなので):
 
@@ -220,7 +220,7 @@ B: このセッションで続行 — このまま /dev-impl とタイプ
 
 - [ ] 対象フェーズがすべて実行された (またはユーザー判断でスキップ)
 - [ ] blocker=true の PoC 計画がすべて解決済み (`verified` / `fallback_adopted` / `scope_reduced` のいずれか)
-- [ ] docs/DESIGN.md と docs/features/ が生成され、フェーズ 8 の設計チェックを通過した (high 0 件、または未解消のまま人間判断に提示済み)
+- [ ] docs/design/DESIGN.md と docs/design/features/ が生成され、フェーズ 8 の設計チェックを通過した (high 0 件、または未解消のまま人間判断に提示済み)
 - [ ] 全ドラフトがフェーズ 9 のドラフトチェックを通過した
 - [ ] 親 issue 1 件 + 子 issue 全件が作成され、全子が親に sub-issue として紐付いた (issue-template.md の最終報告の形式で報告した)
 

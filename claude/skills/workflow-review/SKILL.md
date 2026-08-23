@@ -40,7 +40,7 @@ Agent({
   model: "opus",   // 実行器 ≤ 検証器
   prompt: `repo_dir: <git rev-parse --show-toplevel の結果>
 base_sha: <BASE_SHA>
-docs_hint: <docs/DESIGN.md や docs/features/ が存在すればそのパス。無ければ「なし (設計 docs の無いリポジトリ)」>
+docs_hint: <docs/design/DESIGN.md や docs/design/features/ が存在すればそのパス。無ければ「なし (設計 docs の無いリポジトリ)」>
 focus: all
 report_path: <scratchpad>/workflow-review-<timestamp>.json`
 })

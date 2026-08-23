@@ -8,7 +8,7 @@
 
 | 規模 | 入口 | 中身 |
 |---|---|---|
-| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → 人間が issue を確認 → `/dev-impl` | 設計ループ (要件〜PoC 検証〜DESIGN.md + docs/features/〜issue 生成) → 実装ループ (issue を依存順に 1 件ずつ自律実装)。issue は親 1 件 (トラッキング) + 子 N 件で、親を見れば UC 単位の進捗を俯瞰できる。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
+| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → 人間が issue を確認 → `/dev-impl` | 設計ループ (要件〜PoC 検証〜DESIGN.md + docs/design/features/〜issue 生成) → 実装ループ (issue を依存順に 1 件ずつ自律実装)。issue は親 1 件 (トラッキング) + 子 N 件で、親を見れば UC 単位の進捗を俯瞰できる。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
 | **M: 1 機能・リファクタの一括委任 (docs 不要)** | `/dev-impl-quick` | 軽量実装ループ。タスク分解 → 直営 TDD → テストゲート → review-impl (focus: tests) → タスク単位コミット |
 | **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-impl` を自分で起動する |
 | **S: バグ修正・typo** | 直接依頼 | スキル不要。remind-rules hook が既定の品質を守る |
@@ -21,7 +21,7 @@
 │                                                                │
 │  1 user-story → 2 ui-sketch (webapp のみ) → 3 usecase          │
 │      → 4 feasibility → 5 ★PoC 検証 (tech-investigation 並列)   │
-│      → 6 DESIGN.md (横断 1 枚) → 7 docs/features/ (機能設計)   │
+│      → 6 DESIGN.md (横断 1 枚) → 7 docs/design/features/ (機能設計)   │
 │      → 8 ★設計チェック (fresh context の突合)                  │
 │      → 9 issue ドラフト + ★ドラフト一括チェック                │
 │      → 10 GitHub issue 生成 (親 1 + 子 N、sub-issue 紐付け)    │
@@ -134,8 +134,8 @@ git index を共有する操作 (コミット) は並列化できないので親
 
 | スキル | 説明 | 入力 | 出力 |
 |---|---|---|---|
-| [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜横断設計 (DESIGN.md 1 枚)〜機能設計 (docs/features/)〜設計チェック〜issue ドラフトチェック〜GitHub issue 生成。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + docs/features/*.md + GitHub issue 群 (親 1 件 `tracking` + 子 N 件 `ready`、sub-issue 紐付け) |
-| [dev-impl](./dev-impl/) | 実装ループ。GitHub issue を `Depends on #N` の順に 1 件ずつ自律実装 (implementer subagent が issue と docs を直読して TDD → review-impl → 修正 ≤2 ラウンド → PR → DoD ローカル実行 green で merge → close)。詰まった issue は needs-human で駐車して次へ。進捗は issue コメントのみで、2 ラウンド後の未解消 medium はチェックリスト (docs/PENDING_REVIEW.html、リポジトリで持ち回り) に集約して run 終了時に確認を促す | GitHub issue (必須)。docs/DESIGN.md + docs/features/ は issue から参照される | issue ごとの PR + merge コミット |
+| [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜横断設計 (DESIGN.md 1 枚)〜機能設計 (docs/design/features/)〜設計チェック〜issue ドラフトチェック〜GitHub issue 生成。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + docs/design/features/*.md + GitHub issue 群 (親 1 件 `tracking` + 子 N 件 `ready`、sub-issue 紐付け) |
+| [dev-impl](./dev-impl/) | 実装ループ。GitHub issue を `Depends on #N` の順に 1 件ずつ自律実装 (implementer subagent が issue と docs を直読して TDD → review-impl → 修正 ≤2 ラウンド → PR → DoD ローカル実行 green で merge → close)。詰まった issue は needs-human で駐車して次へ。進捗は issue コメントのみで、2 ラウンド後の未解消 medium はチェックリスト (docs/PENDING_REVIEW.html、リポジトリで持ち回り) に集約して run 終了時に確認を促す | GitHub issue (必須)。docs/design/DESIGN.md + docs/design/features/ は issue から参照される | issue ごとの PR + merge コミット |
 | [dev-impl-quick](./dev-impl-quick/) | 軽量実装ループ。依頼文をタスク分解 → 1 件ずつ直営 TDD → テストゲート → review-impl (focus: tests、model: opus 明示) → タスク単位 commit | 依頼文または簡易タスクリスト (docs 不要) | タスク単位のコミット |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / design-doc / feature-doc / issue-template)。
@@ -148,7 +148,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [workflow-commit](./workflow-commit/) | Conventional Commit 形式でコミット (push はユーザが手動) |
 | [workflow-create-draft-pr](./workflow-create-draft-pr/) | ローカルのコミット履歴と差分から Draft PR を作成 (`.github/` のテンプレート自動検出) |
 | [workflow-debate](./workflow-debate/) | 複数サブエージェントで議論を反復し、相違が収束するまで議題を検証 |
-| [workflow-design-notes](./workflow-design-notes/) | 議論しながら設計を固める進行様式。決定台帳 → 節目に DESIGN.md + docs/features/ へゼロから落とし込み |
+| [workflow-design-notes](./workflow-design-notes/) | 議論しながら設計を固める進行様式。決定台帳 → 節目に DESIGN.md + docs/design/features/ へゼロから落とし込み |
 
 ### プロダクト生成
 
@@ -178,4 +178,4 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 
 - **必ずしも全フェーズを使う必要はない** — dev-spec はクイックモード・部分実行・途中再開に対応
 - **PoC 検証は不確実性がある場合のみ発火** — 技術的不確実性が無ければ自動スキップ
-- **設計の正本は docs 側** — issue は docs を参照するだけで、転記・同期の機構は無い。機能の設計を知りたければ `docs/features/<機能名>.md` を読む (ローカルで AI に聞くときもここを指す)
+- **設計の正本は docs 側** — issue は docs を参照するだけで、転記・同期の機構は無い。機能の設計を知りたければ `docs/design/features/<機能名>.md` を読む (ローカルで AI に聞くときもここを指す)

@@ -26,8 +26,8 @@
 <この issue で何ができるようになるか (1〜3 行)。対応 UC があれば「UC-<n>: <名前>」を明記>
 
 ## 設計
-docs/features/<機能名>.md 参照
-<横断事項 (スキーマ・API 規約・認証など) に触れる場合は「docs/DESIGN.md「<節名>」」も併記。設計本文は転記しない — 正本は docs 側で、issue は参照のみ>
+docs/design/features/<機能名>.md 参照
+<横断事項 (スキーマ・API 規約・認証など) に触れる場合は「docs/design/DESIGN.md「<節名>」」も併記。設計本文は転記しない — 正本は docs 側で、issue は参照のみ>
 
 ## DoD
 <実行可能なコマンドと期待結果。実行方法の前提 (セットアップ・起動) は DESIGN.md「開発・検証コマンド」に置き、ここでは繰り返さない。例:
@@ -48,7 +48,7 @@ Depends on #<番号>
 
 ```markdown
 ## 設計
-docs/DESIGN.md 参照
+docs/design/DESIGN.md 参照
 
 ## ユースケースと issue の対応
 ### UC-<n>: <ユースケース名>

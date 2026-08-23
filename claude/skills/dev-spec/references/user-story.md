@@ -294,7 +294,7 @@ ICEスコア = Impact × Confidence × Ease
 
 ```javascript
 Write({
-  file_path: "docs/USER_STORIES.md",
+  file_path: "docs/design/USER_STORIES.md",
   content: userStoriesContent
 })
 ```
@@ -314,7 +314,7 @@ Agent({
 以下のユーザーストーリードキュメントをレビューしてください。
 
 ## レビュー対象ファイル
-- docs/USER_STORIES.md
+- docs/design/USER_STORIES.md
 
 ## レビュー観点 A（問題があれば Edit ツールで直接修正する）
 

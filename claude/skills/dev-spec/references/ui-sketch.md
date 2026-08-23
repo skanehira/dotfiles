@@ -20,7 +20,7 @@
 
 **cli モードでは本フェーズは実行しない** (dev-spec/SKILL.md フェーズ一覧の cli モード列を参照)。CLI インターフェース仕様はフェーズ 6 (`design-doc.md`) の DESIGN.md 内で設計する。
 
-対話を通じてUIの方向性を整理し、成果物を **単一の `docs/UI_SKETCH.html` に集約**する。
+対話を通じてUIの方向性を整理し、成果物を **単一の `docs/design/UI_SKETCH.html` に集約**する。
 この HTML 1ファイルに以下をすべて含める：
 1. 画面一覧
 2. ユーザーフロー図（HTML/SVG/CSS で描画。**Mermaid は使わない**）
@@ -40,7 +40,7 @@
 #### 1.1 前提ドキュメントの読み込み
 
 ```javascript
-Read({ file_path: "docs/USER_STORIES.md" })
+Read({ file_path: "docs/design/USER_STORIES.md" })
 Read({ file_path: "docs/PRODUCT_SPEC.md" })
 ```
 
@@ -272,7 +272,7 @@ AskUserQuestion({
 ```javascript
 Skill({
   skill: "frontend-design",
-  args: `docs/UI_SKETCH.html をベースに、ブランド方向性に沿ったビジュアルへ作り込んでください。
+  args: `docs/design/UI_SKETCH.html をベースに、ブランド方向性に沿ったビジュアルへ作り込んでください。
 
 方向性 (5.1 でユーザーと合意):
 - トーン: <例: 外資系ラグジュアリー / 国内カジュアル / 開発者向け>
@@ -285,11 +285,11 @@ Skill({
 - UI_SKETCH.html の AppShell (ヘッダー / ナビ / フッター / 404 / トースト / ErrorBoundary フォールバック画面、フェーズ 4.5 で設計済) すべてに方向性を反映
 - 各個別画面のプロトタイプにも方向性を反映
 - 既存の画面構造・フロー・要素は壊さない (構造維持 + ビジュアル適用)
-- 単一 HTML ファイル (docs/UI_SKETCH.html) を直接上書き
+- 単一 HTML ファイル (docs/design/UI_SKETCH.html) を直接上書き
 - 動作確認は行わない (ユーザーが手動で確認するため、ブラウザ・chrome-devtools 等での確認は不要)
 
-ベース入力: docs/UI_SKETCH.html
-出力先: docs/UI_SKETCH.html (上書き)`
+ベース入力: docs/design/UI_SKETCH.html
+出力先: docs/design/UI_SKETCH.html (上書き)`
 })
 ```
 
@@ -299,7 +299,7 @@ frontend-design スキルの戻り (作り込まれた UI_SKETCH.html) を受け
 
 #### 5.3 プロトタイプの構成
 
-- **単一 HTML ファイル `docs/UI_SKETCH.html`** に設計書のすべてを集約・自己完結させる
+- **単一 HTML ファイル `docs/design/UI_SKETCH.html`** に設計書のすべてを集約・自己完結させる
 - **React 19 + Tailwind CSS を CDN で読み込む**
   - React 19 は UMD ビルドを廃止しているため、`importmap` + `esm.sh`（ESM）で読み込む
   - JSX は Babel standalone（`<script type="text/babel" data-type="module">`）で変換、Tailwind は Play CDN
@@ -313,7 +313,7 @@ frontend-design スキルの戻り (作り込まれた UI_SKETCH.html) を受け
 
 #### 5.4 動作確認（ユーザー手動）
 
-chrome-devtools 等での自動確認は行わない。ユーザーに `docs/UI_SKETCH.html` をブラウザで開いてもらい（macOS なら `open docs/UI_SKETCH.html`）、以下を手動で確認してもらう:
+chrome-devtools 等での自動確認は行わない。ユーザーに `docs/design/UI_SKETCH.html` をブラウザで開いてもらい（macOS なら `open docs/design/UI_SKETCH.html`）、以下を手動で確認してもらう:
 
 - 各フローがボタン操作で遷移するか
 - 表示崩れがないか
@@ -322,7 +322,7 @@ chrome-devtools 等での自動確認は行わない。ユーザーに `docs/UI_
 ```javascript
 AskUserQuestion({
   questions: [{
-    question: "docs/UI_SKETCH.html をブラウザで開いて確認してください（フローの遷移 / 表示崩れ / コンソールエラー）。問題はありましたか?",
+    question: "docs/design/UI_SKETCH.html をブラウザで開いて確認してください（フローの遷移 / 表示崩れ / コンソールエラー）。問題はありましたか?",
     header: "動作確認",
     options: [
       { label: "問題なし", description: "次フェーズへ進む" },
@@ -369,7 +369,7 @@ AskUserQuestion({
 ### フェーズ7: UI_SKETCH.html への集約（最終化）
 
 別 Markdown（`UI_SKETCH.md`）は作らない。フェーズ2〜6で整理した内容を
-`docs/UI_SKETCH.html` の各セクションに反映し、**1ファイルで完結**させる。
+`docs/design/UI_SKETCH.html` の各セクションに反映し、**1ファイルで完結**させる。
 
 最終的に HTML 内に含めるセクション:
 - 画面一覧（テーブル）
@@ -390,7 +390,7 @@ Agent({
 以下のUI/UXスケッチドキュメントをレビューし、問題があれば修正してください。
 
 ## レビュー対象ファイル
-- docs/UI_SKETCH.html
+- docs/design/UI_SKETCH.html
 
 ## レビュー観点
 
@@ -421,7 +421,7 @@ Agent({
 - [ ] 各フローのクリッカブルプロトタイプが作成されている
 - [ ] 各画面の要素・インタラクションが UI_SKETCH.html に整理されている
 - [ ] ユーザーがブラウザで手動確認し「問題なし」となっている（フローが遷移する・表示崩れなし・コンソールエラーなし）
-- [ ] 成果物が docs/UI_SKETCH.html 1ファイルに集約されている（別 Markdown を作らない）
+- [ ] 成果物が docs/design/UI_SKETCH.html 1ファイルに集約されている（別 Markdown を作らない）
 - [ ] セルフレビューが完了し、問題が解消されている
 
 ## 関連スキル
