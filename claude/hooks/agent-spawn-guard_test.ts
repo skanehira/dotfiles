@@ -71,3 +71,65 @@ Deno.test("validateAgentSpawn_with_no_subagent_type_allows", () => {
 
   assertEquals(result, { ok: true });
 });
+
+// --- hook I/O 層 (main: stdin パース → PreToolUse deny JSON 出力・AGENT_SPAWN_GUARD=off 脱出口) ---
+
+const HOOK = new URL("./agent-spawn-guard.ts", import.meta.url).pathname;
+
+async function runHook(
+  toolInput: Record<string, unknown>,
+  env: Record<string, string> = {},
+): Promise<string> {
+  const cmd = new Deno.Command("deno", {
+    args: ["run", "--allow-env", HOOK],
+    stdin: "piped",
+    stdout: "piped",
+    stderr: "null",
+    env,
+  });
+  const child = cmd.spawn();
+  const writer = child.stdin.getWriter();
+  await writer.write(
+    new TextEncoder().encode(JSON.stringify({ tool_input: toolInput })),
+  );
+  await writer.close();
+  const { stdout } = await child.output();
+  return new TextDecoder().decode(stdout).trim();
+}
+
+Deno.test("hook emits a PreToolUse deny decision when the spawn violates the policy", async () => {
+  const stdout = await runHook({
+    subagent_type: "review-impl",
+    prompt: "repo_dir: /tmp/repo",
+  });
+
+  assertEquals(JSON.parse(stdout), {
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason:
+        "[agent-spawn-guard] review-impl の起動に model が指定されていません。" +
+        "未指定だと agent 定義ではなく親のセッションモデルを継承します。" +
+        'model: "opus" を明示してください。',
+    },
+  });
+});
+
+Deno.test("hook stays silent when the spawn complies", async () => {
+  const stdout = await runHook({
+    subagent_type: "review-impl",
+    model: "opus",
+    prompt: "repo_dir: /tmp/repo",
+  });
+
+  assertEquals(stdout, "");
+});
+
+Deno.test("hook stays silent when AGENT_SPAWN_GUARD is off", async () => {
+  const stdout = await runHook(
+    { subagent_type: "review-impl", prompt: "repo_dir: /tmp/repo" },
+    { AGENT_SPAWN_GUARD: "off", PATH: Deno.env.get("PATH") ?? "" },
+  );
+
+  assertEquals(stdout, "");
+});

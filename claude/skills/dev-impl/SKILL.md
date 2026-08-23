@@ -52,7 +52,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 - `$ARGUMENTS` で issue 番号が指定されていれば、その issue (と未完了の依存先) だけを対象にする
 - `tracking` ラベルの親 issue は実装対象にしない
 
-**`in-progress` が残っていれば前回の中断。** その issue の状態を確認して再開位置を決める:
+**`in-progress` が残っている、または対象 issue に残置ブランチ `issue-<N>` がある場合は前回の中断・駐車からの復帰。** その issue の状態を確認して再開位置を決める (needs-human から `ready` に戻された issue はラベルでは区別できないため、ブランチの有無で検出する):
 
 | 状態 (`gh pr list --repo "$REPO_SLUG" --head issue-<N>` と `git branch --list issue-<N>`) | 再開位置 |
 | --- | --- |
