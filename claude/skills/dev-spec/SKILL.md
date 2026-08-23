@@ -93,7 +93,7 @@ rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
 
 ### 0.2 既存ドキュメントの確認と開始点の決定
 
-docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / DESIGN.md / features/) と、GitHub 上の親 issue (`tracking` ラベル) を確認する。
+docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / DESIGN.md / features/) と、GitHub 上の親 issue (`tracking` ラベル) を確認する (先に `gh auth status` を確認し、未認証なら issue 関連の判定はスキップして「フェーズ 10 までに認証が必要」と伝える)。
 
 旧構成の成果物 (DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / DOMAIN_MODEL.md / TODO.md) を見つけたら、本スキルの対象外であることを伝え、「新構成 (DESIGN.md 1 枚 + features/) で設計し直す / 中止」を確認する。旧成果物は読み取りの参考にはするが更新しない。
 
@@ -106,8 +106,8 @@ docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md /
 | USECASES.md                                 | 4 (実現可能性)                                                 |
 | FEASIBILITY.md (blocker=true が unresolved) | 5 (PoC 検証)                                                   |
 | FEASIBILITY.md (全件解決済み)               | 6 (横断設計)                                                   |
-| DESIGN.md                                   | 7 (機能設計)。features/ が計画した機能全件分あるなら 8         |
-| GitHub に親 issue (`tracking`) がある       | 10 (issue の突き合わせのみ実行 — 冪等なので安全に再実行できる) |
+| DESIGN.md                                   | 7 (機能設計)。features/ 各ファイルの「対象 UC」と USECASES.md の UC 一覧を突合し、全 UC がカバー済みなら 8 (USECASES.md が無い構成では人間に確認する) |
+| GitHub に親 issue (`tracking`) がある       | 9 (ドラフトを docs から再生成) → 10。ドラフトはセッション固有の scratchpad にしか無く、10 単独では突き合わせの比較元が無い |
 
 更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する (DESIGN.md ではスタンプ行を押し出さず 1 行目に保つ)。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。**
 
@@ -131,7 +131,7 @@ AskUserQuestion({
 
 ### 部分実行
 
-依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「機能設計だけ書き直したい」「issue を作り直したい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。**ただし対象にフェーズ 6 が含まれる場合は、実行前に必ず「ゲート条件」の判定コマンドを実行する。** docs を修正する部分実行の後は、フェーズ 8 (設計チェック) を挟んでから issue に反映する (フェーズ 10 の突き合わせが本文差分を検出して貼り直す)。対象がフェーズ 2 (UI スケッチ) で cli モードなら「cli モードでは UI スケッチは対象外です」と案内して終了する。
+依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「機能設計だけ書き直したい」「issue を作り直したい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。**ただし対象にフェーズ 6 が含まれる場合は、実行前に必ず「ゲート条件」の判定コマンドを実行する。** docs を修正する部分実行の後は、フェーズ 8 (設計チェック) → 9 (ドラフト再生成 + ドラフトチェック) → 10 の順で issue に反映する (フェーズ 10 の突き合わせが本文差分を検出して貼り直す)。対象がフェーズ 2 (UI スケッチ) で cli モードなら「cli モードでは UI スケッチは対象外です」と案内して終了する。
 
 ## 各フェーズの進め方
 
@@ -170,7 +170,7 @@ docs が完成した時点で、書き手と別コンテキストの subagent �
 
 ## フェーズ 9: issue ドラフト + ドラフトチェック
 
-`references/issue-template.md` を Read し、テンプレートに従って**親 1 件 + 子 N 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。依存は最小限にし、並行して着手できる形を優先する。
+`references/issue-template.md` を Read し、テンプレートに従って**親 1 件 + 子 N 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。再実行時 (issue への反映・別セッションからの再開) もドラフトは docs から再生成する — 前セッションの scratchpad は残っていない。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。依存は最小限にし、並行して着手できる形を優先する。
 
 全ドラフトが揃ったら、`general-purpose` subagent (**`model: "opus"` 明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合と相互の重複・漏れはセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 5 項目を指示文に転記し、機能設計書と DESIGN.md のパスを渡して照合させる。出力形式はフェーズ 8 と同じ。
 
@@ -180,7 +180,9 @@ docs が完成した時点で、書き手と別コンテキストの subagent �
 
 `references/issue-template.md` の「issue 作成手順」に従う。要点:
 
-1. **作成前に人間の同意を取る** (GitHub への書き込みなので):
+1. **docs をコミットする**: docs/ 配下の成果物 (DESIGN.md / features/ ほか) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/rules/core/orchestration.md` に従う)。**/dev-impl は origin から切ったブランチで docs を読むため、実装開始前にこのコミットの push が必要** — 手順 4 の案内に含める
+
+2. **作成前に人間の同意を取る** (GitHub への書き込みなので):
 
 ```javascript
 AskUserQuestion({
@@ -197,19 +199,19 @@ AskUserQuestion({
 })
 ```
 
-2. 手順書どおり作成する: ラベル用意 → 既存 issue との突き合わせ (冪等) → 親の特定/作成 → 子を依存順に作成 → sub-issue 紐付け
-3. 結果を報告し、次を案内する:
+3. 手順書どおり作成する: ラベル用意 → 既存 issue との突き合わせ (冪等) → 親の特定/作成 → 子を依存順に作成 → sub-issue 紐付け → 親本文の確定
+4. 結果を報告し、次を案内する:
 
 ```
 ✓ issue を作成しました: 親 #<番号> + 子 <n> 件 (新規 <a> / 更新 <b> / スキップ <c>)
 
-GitHub で issue をざっと確認してください。問題がなければ実装ループを起動します:
+GitHub で issue をざっと確認し、docs のコミットを push してください (/dev-impl は origin の docs を読みます)。問題がなければ実装ループを起動します:
 
 A (推奨): 新しいセッションで起動 — 対象リポジトリで claude を開き /dev-impl を実行
    (設計の対話履歴を持ち込まず、クリーンなコンテキストで実装ループが回る)
 B: このセッションで続行 — このまま /dev-impl とタイプ
 
-修正したい issue があれば、指摘してください (docs を直してフェーズ 8 → 10 で issue に反映します)。
+修正したい issue があれば、指摘してください (docs を直してフェーズ 8 → 9 → 10 で issue に反映します)。
 ```
 
 **実装ループを Skill ツールで自動起動しない** — issue を人間が確認して GO を出すことが承認であり、`/dev-impl` はユーザーが起動する。
@@ -217,7 +219,7 @@ B: このセッションで続行 — このまま /dev-impl とタイプ
 ## 完了条件
 
 - [ ] 対象フェーズがすべて実行された (またはユーザー判断でスキップ)
-- [ ] blocker=true の PoC 計画がすべて解決済み (verified または fallback 採用)
+- [ ] blocker=true の PoC 計画がすべて解決済み (`verified` / `fallback_adopted` / `scope_reduced` のいずれか)
 - [ ] docs/DESIGN.md と docs/features/ が生成され、フェーズ 8 の設計チェックを通過した (high 0 件、または未解消のまま人間判断に提示済み)
 - [ ] 全ドラフトがフェーズ 9 のドラフトチェックを通過した
 - [ ] 親 issue 1 件 + 子 issue 全件が作成され、全子が親に sub-issue として紐付いた (issue-template.md の最終報告の形式で報告した)
@@ -226,9 +228,9 @@ B: このセッションで続行 — このまま /dev-impl とタイプ
 
 設計・タスク分解で以下を参照する:
 
-- TDD ルール: `rules/core/tdd.md`
-- 設計原則: `rules/core/design.md`
-- テスト方針: `rules/core/testing.md`
+- TDD ルール: `~/.claude/rules/core/tdd.md`
+- 設計原則: `~/.claude/rules/core/design.md`
+- テスト方針: `~/.claude/rules/core/testing.md`
 
 ## 関連スキル・エージェント
 

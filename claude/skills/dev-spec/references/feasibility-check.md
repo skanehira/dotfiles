@@ -258,7 +258,7 @@ AskUserQuestion({
 ```
 ```
 
-**POC_STATUS 行 (機械判定用、必須)**: 各 PoC 計画の直下に次の 1 行を書く。フェーズ 5 が検証後に status を更新し、フェーズ 7 のゲートはこの行を rg で判定する (書式詳細は `poc-verification.md`):
+**POC_STATUS 行 (機械判定用、必須)**: 各 PoC 計画の直下に次の 1 行を書く。フェーズ 5 が検証後に status を更新し、フェーズ 6 のゲートはこの行を rg で判定する (書式詳細は `poc-verification.md`):
 
 ```
 <!-- POC_STATUS: id=<id>, blocker=<true|false>, status=unresolved -->
@@ -321,7 +321,7 @@ Write({
 生成したドキュメントのレビューをサブエージェントに委譲する。
 
 ```javascript
-Task({
+Agent({
   description: "技術検証レビュー",
   subagent_type: "general-purpose",
   prompt: `
@@ -363,7 +363,7 @@ Task({
 
 このフェーズが残した PoC 計画は、後段で次のように扱われる:
 
-1. **フェーズ 5 (PoC 検証)**: `blocker=true` の計画を `tech-investigation` subagent の並列 fan-out で実際に検証し、結果 (verified / fallback 採用) を FEASIBILITY.md の「PoC 結果」に記録する。未解決の blocker=true が残る限り設計書生成 (フェーズ 7) に進めない
+1. **フェーズ 5 (PoC 検証)**: `blocker=true` の計画を `tech-investigation` subagent の並列 fan-out で実際に検証し、結果 (verified / fallback 採用) を FEASIBILITY.md の「PoC 結果」に記録する。未解決の blocker=true が残る限り設計書生成 (フェーズ 6) に進めない
 2. **フェーズ 6 (design-doc)**: 検証済みの PoC 結果を技術選定の根拠として DESIGN.md に反映する。未検証で残った `blocker=false` の計画のみ `POC_NEEDED` マーカーとして DESIGN.md の該当節に転記する
 3. **実装ループ (`/dev-impl`)**: 起動時に `blocker=true` マーカーの残存をチェックし、見つけたら実装に入らず dev-spec フェーズ 5 への差し戻しを案内する (安全網)
 

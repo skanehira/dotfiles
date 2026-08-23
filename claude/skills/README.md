@@ -13,7 +13,7 @@
 | **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-impl` を自分で起動する |
 | **S: バグ修正・typo** | 直接依頼 | スキル不要。remind-rules hook が既定の品質を守る |
 
-横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-draft-pr` (PR 作成)。
+横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-draft-pr` (PR 作成) / `/workflow-design-notes` (設計の壁打ち台帳 → dev-spec 互換 docs へ落とし込み)。
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -58,6 +58,7 @@ skills/
 ├── workflow-commit/
 ├── workflow-create-draft-pr/
 ├── workflow-debate/
+├── workflow-design-notes/
 ├── workflow-review/
 ├── demo-site-builder/
 ├── fullstack-app-builder/     # フルスタック scaffold (手順は references/)
@@ -82,7 +83,7 @@ skills/
 | dev-spec フェーズ 8・9 のチェック subagent (general-purpose) | `model: opus` (呼び出し時明示) | 検証器は実行器より下げない |
 | dev-impl / dev-impl-quick | `model: opus` (frontmatter) | 実装の質がそのまま成果物の質になるため実行器を下げない |
 | dev-impl-implementer subagent | `model: opus` (frontmatter + 呼び出し時明示) | 実行器。`agent-spawn-guard` hook が呼び出し時の model 未指定を deny する |
-| review-impl subagent (統合レビュワー) | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。frontmatter も opus にして、明示忘れで無音にセッション継承より下へ落ちない防御とする |
+| review-impl subagent (統合レビュワー) | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。呼び出し時の明示忘れは `agent-spawn-guard` hook が deny する (model 未指定は frontmatter ではなく親のセッションモデルを継承するため、frontmatter は防御にならない) |
 | tech-investigation subagent (dev-spec フェーズ 5) | `model: opus` (frontmatter + 呼び出し時明示) | 「何をどこまで検証すれば行けると言えるか」を自分で設計する探索的な調査 |
 | コミット実行・巨大出力のテスト実行 | `model: haiku` (subagent) | 機械実行。`rules/core/orchestration.md`「委譲の判断」 |
 
@@ -126,6 +127,8 @@ git index を共有する操作 (コミット) は並列化できないので親
 
 ## スキル一覧
 
+開発フローに関わるスキルのみ列挙する (単発スキルの網羅一覧ではない)。
+
 ### 開発フロー
 
 | スキル | 説明 | 入力 | 出力 |
@@ -144,6 +147,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [workflow-commit](./workflow-commit/) | Conventional Commit 形式でコミット (push はユーザが手動) |
 | [workflow-create-draft-pr](./workflow-create-draft-pr/) | ローカルのコミット履歴と差分から Draft PR を作成 (`.github/` のテンプレート自動検出) |
 | [workflow-debate](./workflow-debate/) | 複数サブエージェントで議論を反復し、相違が収束するまで議題を検証 |
+| [workflow-design-notes](./workflow-design-notes/) | 議論しながら設計を固める進行様式。決定台帳 → 節目に DESIGN.md + docs/features/ へゼロから落とし込み |
 
 ### プロダクト生成
 

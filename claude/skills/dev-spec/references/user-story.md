@@ -307,7 +307,7 @@ Write({
 - **観点 B（多角的な考慮漏れチェック）**: 指摘ごとに「明らかな不足 → 直接修正」「仕様が不明瞭・スコープ判断が必要 → 親に報告してユーザの判断を仰ぐ」を使い分ける
 
 ```javascript
-Task({
+Agent({
   description: "ユーザーストーリーレビュー",
   subagent_type: "general-purpose",
   prompt: `
