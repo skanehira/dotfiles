@@ -93,6 +93,7 @@ let
     dua
     duckdb
     htop
+    nvtopPackages.full # nvtop: GPU モニタ TUI (darwin=Apple GPU / linux=全 GPU backend)
     jq
     lsd
     tree
