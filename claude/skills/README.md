@@ -135,7 +135,7 @@ git index を共有する操作 (コミット) は並列化できないので親
 | スキル | 説明 | 入力 | 出力 |
 |---|---|---|---|
 | [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜横断設計 (DESIGN.md 1 枚)〜機能設計 (docs/features/)〜設計チェック〜issue ドラフトチェック〜GitHub issue 生成。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + docs/features/*.md + GitHub issue 群 (親 1 件 `tracking` + 子 N 件 `ready`、sub-issue 紐付け) |
-| [dev-impl](./dev-impl/) | 実装ループ。GitHub issue を `Depends on #N` の順に 1 件ずつ自律実装 (implementer subagent が issue と docs を直読して TDD → review-impl → 修正 ≤2 ラウンド → PR → DoD ローカル実行 green で merge → close)。詰まった issue は needs-human で駐車して次へ。進捗は issue コメントのみで、2 ラウンド後の未解消 medium はチェックリスト HTML に集約して run 終了時に確認を促す | GitHub issue (必須)。docs/DESIGN.md + docs/features/ は issue から参照される | issue ごとの PR + merge コミット |
+| [dev-impl](./dev-impl/) | 実装ループ。GitHub issue を `Depends on #N` の順に 1 件ずつ自律実装 (implementer subagent が issue と docs を直読して TDD → review-impl → 修正 ≤2 ラウンド → PR → DoD ローカル実行 green で merge → close)。詰まった issue は needs-human で駐車して次へ。進捗は issue コメントのみで、2 ラウンド後の未解消 medium はチェックリスト (docs/PENDING_REVIEW.html、リポジトリで持ち回り) に集約して run 終了時に確認を促す | GitHub issue (必須)。docs/DESIGN.md + docs/features/ は issue から参照される | issue ごとの PR + merge コミット |
 | [dev-impl-quick](./dev-impl-quick/) | 軽量実装ループ。依頼文をタスク分解 → 1 件ずつ直営 TDD → テストゲート → review-impl (focus: tests、model: opus 明示) → タスク単位 commit | 依頼文または簡易タスクリスト (docs 不要) | タスク単位のコミット |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / design-doc / feature-doc / issue-template)。
