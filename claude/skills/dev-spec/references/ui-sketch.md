@@ -18,7 +18,7 @@
 
 ## 概要
 
-**cli モードでは本フェーズは実行しない** (dev-spec/SKILL.md フェーズ一覧の cli モード列を参照)。CLI インターフェース仕様はフェーズ 7 (`analyzing-requirements.md`) の DESIGN_DETAIL_APP.md 内で設計する。
+**cli モードでは本フェーズは実行しない** (dev-spec/SKILL.md フェーズ一覧の cli モード列を参照)。CLI インターフェース仕様はフェーズ 6 (`design-doc.md`) の DESIGN.md 内で設計する。
 
 対話を通じてUIの方向性を整理し、成果物を **単一の `docs/UI_SKETCH.html` に集約**する。
 この HTML 1ファイルに以下をすべて含める：
@@ -428,4 +428,4 @@ Task({
 
 - **user-story**: UIスケッチの前にストーリーを作成する場合
 - **usecase-description**: より詳細なフローを整理する場合
-- **analyzing-requirements**: 技術設計に進む場合
+- **design-doc**: 横断設計に進む場合

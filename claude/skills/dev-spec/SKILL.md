@@ -2,13 +2,13 @@
 name: dev-spec
 description: >-
   設計ループ。ユーザーストーリー → UI スケッチ → ユースケース → 実現可能性検証 → PoC 検証 →
-  DDD モデリング → 概要/詳細設計 (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md) → 深掘りインタビュー →
-  検証手順補完 → TODO.md 生成までを対話的に実行し、承認ゲートで実装ループへ引き渡す。
+  横断設計 (docs/DESIGN.md) → 機能設計 (docs/features/) → 設計チェック → issue ドラフトチェック →
+  GitHub issue 生成 (親子構造) までを対話的に実行し、人間が issue を確認して実装ループへ引き渡す。
   「設計フェーズを開始」「要件を整理したい」「計画を立てたい」「ユーザーストーリーを書きたい」
-  「技術的に実現できるか確認したい」「TODO.md を作りたい」「DESIGN.md を深掘りしたい」などで起動。
+  「技術的に実現できるか確認したい」「機能設計を書きたい」「issue に落としたい」などで起動。
   docs/ の状態から途中再開・特定フェーズの部分実行も可能。
   `cli` / `webapp` のプロダクトモード指定で CLI ツール開発時は UI スケッチ等を軽量化できる。
-  承認ゲートを通ると TODO.md の各フェーズを GitHub issue 化し、/dev-impl がそれを 1 件ずつ実装する。
+  issue 作成後、/dev-impl がそれを 1 件ずつ実装する。
 argument-hint: "[cli|webapp] [タスク説明]"
 ---
 
@@ -16,16 +16,15 @@ argument-hint: "[cli|webapp] [タスク説明]"
 
 ## 概要
 
-設計ループを回して docs/ 配下に設計成果物を生成し、承認ゲートを経て実装ループ (`/dev-impl`) に引き渡す。最終成果物は次の 4 ファイル:
+設計ループを回して docs/ 配下に設計成果物を生成し、GitHub issue に落として実装ループ (`/dev-impl`) に引き渡す。成果物は 3 種:
 
-- **docs/DESIGN.md** (概要設計): 共通 (目的・スコープ・ゴール・全体構成図・技術選定) + アプリ概要 + インフラ概要の 3 章構成
-- **docs/DESIGN_DETAIL_APP.md** (アプリ詳細設計): セットアップ・API・スキーマ・シーケンス・エラー実装・UX・検証手順 (ローカル / CI 系)
-- **docs/DESIGN_DETAIL_INFRA.md** (インフラ詳細設計): リソース・IaC・CI/CD (GitHub Actions 固定)・監視・シークレット・検証手順 (環境依存系)
-- **docs/TODO.md**: TDD 準拠の実装タスクリスト
+- **docs/DESIGN.md** (横断設計 1 枚): 目的・アーキテクチャ・開発検証コマンド・スキーマ・API 一覧・横断規約
+- **docs/features/<機能名>.md** (機能設計): 機能単位の入出力・API・実装配置・エッジケース・テスト方針。**正本は常に docs 側で、issue は参照するだけ** (ローカルで「この機能の設計はどうなっているか」を AI にも人間にも引ける)
+- **GitHub issue**: 親 1 件 (トラッキング) + 子 N 件 (作業単位)。**人間が issue 本文 + 参照 docs だけで着手できる**ことが情報設計の基準
 
 フェーズごとに Feedback (検証手段) が異なる:
 
-- 要件・設計の妥当性 → **人間の承認** (AskUserQuestion)
+- 要件・設計の妥当性 → **人間の確認** (AskUserQuestion) + **fresh context の検査 subagent** (フェーズ 8・9)
 - 技術的実現可能性 → **PoC の実行結果** (tech-investigation subagent)。「できるはず」という自己申告のまま設計に進むことを禁止する
 
 ### モデルガード
@@ -34,51 +33,45 @@ argument-hint: "[cli|webapp] [タスク説明]"
 
 ## プロダクトモード
 
-設計対象がブラウザ操作型か CLI/ターミナル型かを表す横断設定。フェーズ 2 (UI スケッチ) の要否とゴール定義 (G_E2E) の中身を左右する。
+設計対象がブラウザ操作型か CLI/ターミナル型かを表す横断設定。フェーズ 2 (UI スケッチ) の要否と E2E 検証の中身を左右する。
 
-| モード   | 対象                                    | 判定ヒント                                                       |
-| -------- | --------------------------------------- | ------------------------------------------------------------------ |
+| モード   | 対象                                             | 判定ヒント                                               |
+| -------- | ------------------------------------------------ | -------------------------------------------------------- |
 | `webapp` | ブラウザで操作するプロダクト (モバイル Web 含む) | 「画面」「サイト」「Web」「SPA」「ダッシュボード」等の語 |
-| `cli`    | ターミナルから実行するプロダクト (TUI 含む) | 「CLI」「コマンド」「ツール」「TUI」「パイプ」等の語 |
+| `cli`    | ターミナルから実行するプロダクト (TUI 含む)      | 「CLI」「コマンド」「ツール」「TUI」「パイプ」等の語     |
 
-将来モードを追加する場合はこの表に 1 行足し、下記フェーズ一覧の「cli モード」列に相当する列を追加する。
-
-**判定と保持**: モードは docs/DESIGN.md の 1 行目に `<!-- product-mode: cli -->` (または `webapp`) の形式でスタンプする。フェーズ 7 (概要/詳細設計) が新規生成時に必ず書き込む。判定コマンド:
+**判定と保持**: モードは docs/DESIGN.md の 1 行目に `<!-- product-mode: cli -->` (または `webapp`) の形式でスタンプする (フェーズ 6 が新規生成時に必ず書き込む)。判定コマンド:
 
 ```bash
 sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DESIGN.md | head -1
 ```
 
-スタンプが無い (旧形式 docs) 場合、dev-spec は新規生成時に必ずスタンプを書くため発生しない (更新モードで旧形式 docs を扱う場合のみ想定される)。dev-impl はこのスタンプを Step 1 で読み取り、UI 系の観点別レビューやゴール判定を切り替える。**スタンプ不在時、dev-impl は `webapp` と同一には扱わない**: 独立した `unknown` 状態として扱い、Web プロダクト判定 (`dev_server` 推定) が真の場合のみ webapp 相当のフォールバック動作をとる (推定できなければ Web 系の必須判定は効かない。詳細は dev-impl/SKILL.md Step 1 参照)。
+dev-impl はこのスタンプで UI の実機検証 (Playwright E2E) の要否を切り替える。
 
-**クイックモードとの合成規則**: 各フェーズの有効・無効は「クイックモード列を適用 → cli モード列を適用」の順で決める。どちらか一方でも「スキップ」なら、そのフェーズはスキップする。クイックモード列が「条件付き実行」の場合、cli モード列の値 (いずれも「実行」) はこの条件付き判定を上書きしない。条件はフェーズ 4・5 が「フェーズ 0.3 の不確実性確認の結果 (あり/なし)」、フェーズ 7.5 が「docs/USECASES.md の存在」(正本は `references/feature-spec.md` の実行条件。クイックモードはフェーズ 3 を通らないため通常は不在でスキップになるが、既存の USECASES.md がある再開・更新では実行する)。
+**クイックモードとの合成規則**: 各フェーズの有効・無効は「クイックモード列を適用 → cli モード列を適用」の順で決める。どちらか一方でも「スキップ」ならスキップする。フェーズ 4・5 の条件は「フェーズ 0.3 の不確実性確認の結果 (あり/なし)」。
 
 ## フェーズ一覧
 
 **フェーズを開始するときに該当手順書を Read し、その手順に従う。**
 
-| #    | フェーズ             | 手順書                                 | 出力                                                                   | クイックモード | cli モード |
-| ---- | -------------------- | -------------------------------------- | ---------------------------------------------------------------------- | -------------- | ---------- |
-| 1    | ユーザーストーリー   | `references/user-story.md`             | docs/USER_STORIES.md                                                   | スキップ       | 実行       |
-| 2    | UI スケッチ          | `references/ui-sketch.md`              | docs/UI_SKETCH.html                                                      | スキップ       | スキップ   |
-| 3    | ユースケース記述     | `references/usecase-description.md`    | docs/USECASES.md                                                       | スキップ       | 実行       |
-| 4    | 実現可能性検証       | `references/feasibility-check.md`      | docs/FEASIBILITY.md (PoC 計画)                                         | 条件付き実行   | 実行       |
-| 5    | PoC 検証             | `references/poc-verification.md`       | FEASIBILITY.md 更新 (PoC 結果)                                         | 条件付き実行   | 実行       |
-| 6    | DDD モデリング       | `references/ddd-modeling.md`           | docs/GLOSSARY.md, docs/DOMAIN_MODEL.md                                 | スキップ       | 実行       |
-| 7    | 概要/詳細設計        | `references/analyzing-requirements.md` | docs/DESIGN.md, docs/DESIGN_DETAIL_APP.md, docs/DESIGN_DETAIL_INFRA.md | 実行           | 実行       |
-| 7.5  | 機能仕様             | `references/feature-spec.md`           | docs/features/UC-\*.md (+ fixtures/)                                   | 条件付き実行   | 実行       |
-| 8    | 深掘りインタビュー   | `references/interview.md`              | DESIGN / DETAIL 更新                                                   | 実行           | 実行       |
-| 9    | 検証手順の確認と補完 | `references/verification-review.md`    | DESIGN / DETAIL 更新                                                   | 実行           | 実行       |
-| 10   | TODO.md 生成         | `references/todo-generation.md`        | docs/TODO.md                                                           | 実行           | 実行       |
-| 10.5 | 設計整合監査         | (本ファイル下記)                       | 監査 findings (修正は 7〜10 へ差し戻し)                                | 実行           | 実行       |
-| 11   | 承認ゲート           | (本ファイル下記)                       | 承認スタンプ                                                           | 実行           | 実行       |
-| 12   | GitHub issue 生成    | (本ファイル下記)                       | 子 issue 群 (`ready` / `needs-human`) + 親 issue 群 (`uc-tracking`)    | 実行           | 実行       |
+| #  | フェーズ                          | 手順書                              | 出力                               | クイックモード | cli モード |
+| -- | --------------------------------- | ----------------------------------- | ---------------------------------- | -------------- | ---------- |
+| 1  | ユーザーストーリー                | `references/user-story.md`          | docs/USER_STORIES.md               | スキップ       | 実行       |
+| 2  | UI スケッチ                       | `references/ui-sketch.md`           | docs/UI_SKETCH.html                | スキップ       | スキップ   |
+| 3  | ユースケース記述                  | `references/usecase-description.md` | docs/USECASES.md                   | スキップ       | 実行       |
+| 4  | 実現可能性検証                    | `references/feasibility-check.md`   | docs/FEASIBILITY.md (PoC 計画)     | 条件付き実行   | 実行       |
+| 5  | PoC 検証                          | `references/poc-verification.md`    | FEASIBILITY.md 更新 (PoC 結果)     | 条件付き実行   | 実行       |
+| 6  | 横断設計                          | `references/design-doc.md`          | docs/DESIGN.md                     | 実行           | 実行       |
+| 7  | 機能設計                          | `references/feature-doc.md`         | docs/features/<機能名>.md          | 実行           | 実行       |
+| 8  | 設計チェック                      | (本ファイル下記)                    | 指摘の反映 (docs 修正)             | 実行           | 実行       |
+| 9  | issue ドラフト + ドラフトチェック | `references/issue-template.md`      | ドラフト (scratchpad) + 指摘の反映 | 実行           | 実行       |
+| 10 | GitHub issue 生成                 | `references/issue-template.md`      | 親 issue 1 件 + 子 issue N 件      | 実行           | 実行       |
 
-**フェーズ 12 はモードに関係なく常に実行する。** 実装ループ (`/dev-impl`) は issue を入力にとるので、issue が無いと次に進めない。進捗表示 (`📍 設計ループ [n/N]`) の分母は 12 とする (フェーズ 7.5 は 7 の一部、10.5 は 10 の一部として数えない)。
+**フェーズ 10 はモードに関係なく常に実行する** (実装ループは issue を入力にとる)。進捗表示の分母は 10。
 
-### ゲート条件 (フェーズ 7 の開始条件)
+### ゲート条件 (フェーズ 6 の開始条件)
 
-FEASIBILITY.md に **`blocker=true` の未解決 PoC 計画が残っている間は、フェーズ 7 (設計書生成) に進んではならない**。判定はプロンプト遵守ではなく次のコマンドで機械的に行う:
+FEASIBILITY.md に **`blocker=true` の未解決 PoC 計画が残っている間は、フェーズ 6 (設計書生成) に進んではならない**。判定はプロンプト遵守ではなく次のコマンドで機械的に行う:
 
 ```bash
 rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
@@ -94,60 +87,29 @@ rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
 
 ### 0.1 タスク説明とプロダクトモードの取得
 
-`$ARGUMENTS` の先頭トークン群のうち、`cli` / `webapp` に完全一致するものは**プロダクトモード**として消費し、残りをタスク説明とする。それ以外の位置・語は自由文のタスク説明として扱う (フラグパーサは持たない)。
+`$ARGUMENTS` の先頭トークン群のうち、`cli` / `webapp` に完全一致するものは**プロダクトモード**として消費し、残りをタスク説明とする。タスク説明が無ければ事前の会話から推論し、それも不明なら「どのようなタスクの設計を行いますか?」と質問する。
 
-タスク説明: `$ARGUMENTS` の残り部分があればそれを使用。なければ事前の会話から推論し、それも不明なら「どのようなタスクの設計を行いますか?」と質問する。
-
-**引き渡し先は常に `/dev-impl` で、経路の選択肢は無い。** 承認ゲート (フェーズ 11) を通ると、フェーズ 12 が TODO.md の各フェーズを GitHub issue に転記し (ユースケース単位の親 issue に sub-issue として紐付ける)、`/dev-impl` がそのフェーズ issue を依存順に 1 件ずつ実装する。**実装中の状態の原本は GitHub issue** (ラベルと open/closed) で、TODO.md は監査と承認の対象かつ issue の生成元として残る。
-
-**既存の docs から復元できる項目は質問しない。** `docs/DESIGN.md` があればプロダクトモードはスタンプから復元する (0.2 の手順)。再開時に確定済みの項目を訊き直さないための優先順である。
-
-トークン指定も docs からの復元もできない場合だけ、タスク説明と会話履歴から推論し、推論結果を推奨ラベルにして確認する:
-
-```javascript
-AskUserQuestion({
-  questions: [{
-    question: "このタスクのプロダクトモードを確認してください",
-    header: "プロダクトモード",
-    options: [
-      { label: "cli (推論)", description: "<推論根拠を 1 行で>。UI スケッチをスキップし、CLI インターフェース仕様をフェーズ 7 の詳細設計内で書く" },
-      { label: "webapp", description: "現行のフルフロー (UI スケッチ実行、G_E2E はブラウザでの実機検証)" }
-    ],
-    multiSelect: false
-  }]
-})
-```
-
-プロダクトモードが既に確定していれば AskUserQuestion 自体を呼ばない。
-
-推論が `webapp` 寄りなら、`(推論)` ラベルと推論根拠の description を `webapp` の選択肢に付け替え、`cli` の選択肢は「UI スケッチを実行し、G_E2E は実機ブラウザで検証」の説明文にする (label/description の入れ替えのみ。選択肢の並び順は変えない)。
+**既存の docs から復元できる項目は質問しない。** `docs/DESIGN.md` があればプロダクトモードはスタンプから復元する。トークン指定も復元もできない場合だけ、タスク説明と会話履歴から推論し、推論結果を推奨ラベル (`(推論)` + 根拠 1 行) にして AskUserQuestion で確認する (確定済みなら呼ばない)。
 
 ### 0.2 既存ドキュメントの確認と開始点の決定
 
-docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / GLOSSARY.md / DOMAIN_MODEL.md / DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / features/ / TODO.md) を確認する。
+docs/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / DESIGN.md / features/) と、GitHub 上の親 issue (`tracking` ラベル) を確認する。
 
-旧形式の単一 `docs/DESIGN_DETAIL.md` を見つけたら、`references/todo-generation.md` のフォールバック A (APP / INFRA への分割移行) を案内してから続行する。
+旧構成の成果物 (DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / DOMAIN_MODEL.md / TODO.md) を見つけたら、本スキルの対象外であることを伝え、「新構成 (DESIGN.md 1 枚 + features/) で設計し直す / 中止」を確認する。旧成果物は読み取りの参考にはするが更新しない。
 
-DESIGN.md が存在する場合、プロダクトモードは 0.1 の推論・質問を行わず「プロダクトモード」節の判定コマンドでスタンプから復元する (再開時は再質問しない)。DESIGN.md が無く UI_SKETCH.html がある場合は webapp 確定。どちらも無い場合は 0.1 のとおり推論・確認する。
+途中まで存在する場合は「続きから (推奨) / 最初から / 既存を更新」を AskUserQuestion で確認する。「続きから」の再開フェーズは次の表で決める (存在する成果物のうち最も下流のものを見る):
 
-- **DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md が揃い、TODO.md 先頭に承認スタンプ (`<!-- dev-spec:approved ... -->`) がある** → 設計は完成している。**フェーズ 12 だけを実行する。** 承認は取得済みなので取り直さない。issue 化済みかの判定は 12.3 の突き合わせが冪等に行うので、ここで自前の確認をしない (全件スキップなら「作成済み」と報告され、`/dev-impl` の案内に進む)
-- **4 点は揃っているが承認スタンプが無い** → 未承認。フェーズ 10.5 (設計整合監査) から再開する
-- **途中まで存在する** → 「続きから (推奨) / 最初から / 既存を更新」を AskUserQuestion で確認。「続きから」の再開フェーズは次の表で決める (存在する成果物のうち最も下流のものを見る):
+| 最も下流の既存成果物                        | 再開フェーズ                                                   |
+| ------------------------------------------- | -------------------------------------------------------------- |
+| USER_STORIES.md                             | 2 (UI スケッチ)。cli モードでは 3                              |
+| UI_SKETCH.html                              | 3 (ユースケース)                                               |
+| USECASES.md                                 | 4 (実現可能性)                                                 |
+| FEASIBILITY.md (blocker=true が unresolved) | 5 (PoC 検証)                                                   |
+| FEASIBILITY.md (全件解決済み)               | 6 (横断設計)                                                   |
+| DESIGN.md                                   | 7 (機能設計)。features/ が計画した機能全件分あるなら 8         |
+| GitHub に親 issue (`tracking`) がある       | 10 (issue の突き合わせのみ実行 — 冪等なので安全に再実行できる) |
 
-| 最も下流の既存成果物                                      | 再開フェーズ                                                  |
-| --------------------------------------------------------- | --------------------------------------------------------------- |
-| USER_STORIES.md                                           | 2 (UI スケッチ)。cli モードでは 2 をスキップし 3 (ユースケース) |
-| UI_SKETCH.html                                             | 3 (ユースケース)                                              |
-| USECASES.md                                                | 4 (実現可能性)                                                 |
-| FEASIBILITY.md (blocker=true が unresolved)                | 5 (PoC 検証)                                                    |
-| FEASIBILITY.md (全件解決済み)                               | 6 (DDD)。クイックモードなら 7                                   |
-| GLOSSARY.md / DOMAIN_MODEL.md                               | 7 (設計書生成)                                                  |
-| DESIGN.md + DESIGN_DETAIL_APP.md + DESIGN_DETAIL_INFRA.md   | 7.5 (機能仕様。USECASES.md が無い、または docs/features/ が UC 全件分あるなら 8)。深掘り済みが明らかなら 9 |
-| TODO.md (承認スタンプ無し)                                  | 10.5 (設計整合監査)                                             |
-
-- **何もない** → モード選択へ
-
-更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する。プロダクトモードのスタンプ行は変更履歴コメントの挿入で押し出さず、DESIGN.md の 1 行目に保つ。
+更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する (DESIGN.md ではスタンプ行を押し出さず 1 行目に保つ)。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。**
 
 ### 0.3 モード選択
 
@@ -157,26 +119,26 @@ AskUserQuestion({
     question: "設計ループの回し方を選んでください",
     header: "モード",
     options: [
-      { label: "フルコース", description: "ユーザーストーリー〜DDD まで全フェーズ (1〜12)。新規プロダクト・大きい機能向け" },
-      { label: "クイック", description: "タスク説明から設計書 + TODO + issue を直接生成 (7〜12)。技術的な不確実性がある場合のみ実現可能性検証 + PoC (4〜5) を先に通す" }
+      { label: "フルコース", description: "ユーザーストーリー〜issue 生成まで全フェーズ (1〜10)。新規プロダクト・大きい機能向け" },
+      { label: "クイック", description: "タスク説明から設計書 + issue を直接生成 (6〜10)。技術的な不確実性がある場合のみ実現可能性検証 + PoC (4〜5) を先に通す" }
     ],
     multiSelect: false
   }]
 })
 ```
 
-クイック選択時は、まず Claude 自身がタスク説明と会話履歴から不確実性候補 (未経験ライブラリ / 外部 API 連携 / 性能・スケール懸念 / 新しいプラットフォーム機能) を走査して列挙し、その候補を提示した上で「これらを含め、成立するか未検証の技術要素はありますか?」と AskUserQuestion で確認する (人間の記憶だけに頼らない)。あればフェーズ 4 → 5 を実行してから 7 へ、なければ 7 から開始する (この「不確実性なし」の確認が、ゲート条件の「FEASIBILITY.md 無し」通過の根拠になる)。
+クイック選択時は、まず Claude 自身がタスク説明と会話履歴から不確実性候補 (未経験ライブラリ / 外部 API 連携 / 性能・スケール懸念 / 新しいプラットフォーム機能) を走査して列挙し、その候補を提示した上で「これらを含め、成立するか未検証の技術要素はありますか?」と AskUserQuestion で確認する (人間の記憶だけに頼らない)。あればフェーズ 4 → 5 を実行してから 6 へ、なければ 6 から開始する (この「不確実性なし」の確認が、ゲート条件の「FEASIBILITY.md 無し」通過の根拠になる)。
 
 ### 部分実行
 
-依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「DESIGN.md を深掘りしたい」「TODO だけ作り直したい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。**ただし対象にフェーズ 7 が含まれる場合は、実行前に必ず「ゲート条件」の判定コマンドを実行する** (ゲートはどの経路から入っても効かせる)。対象がフェーズ 2 (UI スケッチ) の場合、DESIGN.md が存在すればそのプロダクトモードで判定し `cli` なら「cli モードでは UI スケッチは対象外です」と案内して終了する。DESIGN.md がまだ無い場合は先に 0.1 のモード確認を行ってから判定する。
+依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「機能設計だけ書き直したい」「issue を作り直したい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。**ただし対象にフェーズ 6 が含まれる場合は、実行前に必ず「ゲート条件」の判定コマンドを実行する。** docs を修正する部分実行の後は、フェーズ 8 (設計チェック) を挟んでから issue に反映する (フェーズ 10 の突き合わせが本文差分を検出して貼り直す)。対象がフェーズ 2 (UI スケッチ) で cli モードなら「cli モードでは UI スケッチは対象外です」と案内して終了する。
 
 ## 各フェーズの進め方
 
-1. 進捗を表示する。cli モードでスキップしたフェーズは `⊘` で表示し番号は振り直さない:
+1. 進捗を表示する。スキップしたフェーズは `⊘` で表示し番号は振り直さない:
 
 ```
-📍 設計ループ [n/12]
+📍 設計ループ [n/10]
    ├─ ✓ user-story（完了）
    ├─ ⊘ ui-sketch（cli モードのためスキップ）
    ├─ ▶ usecase-description（実行中）
@@ -186,462 +148,79 @@ AskUserQuestion({
 2. 手順書を Read し、手順に従って実行する
 3. フェーズ完了後、AskUserQuestion で「次へ進む / ここで終了」を確認する
 4. ユーザーが修正内容を入力した場合は反映して再承認を取る (承認されるまで繰り返す)
+5. フェーズ 6・7 では、プロダクト判断が要る点をその場で AskUserQuestion で確認しながら書く (独立したインタビューフェーズは無い。聞き方の基準は各手順書の「記入基準」)
 
-## フェーズ 10.5: 設計整合監査 (第三者検証)
+## フェーズ 8: 設計チェック (fresh context)
 
-人間承認 (フェーズ 11) の前捌きとして、`review-spec-compliance` subagent (mode: pre-approval) に docs 4 ファイル + (存在すれば) docs/features/ と USECASES.md の整合を fresh context で監査させる。設計者本人 (このセッション) のセルフレビューでは検出できない見落とし (TODO カバレッジ漏れ / ゴールと検証手順の意味的不整合 / 検証コマンドとフェーズ DoD の空虚性 / APP・INFRA 境界誤配置 / 概要↔詳細の矛盾 / 機能仕様のカバレッジ・BR 引用・未決定行) を承認前に潰す。**監査 agent は DoD と検証手順のコマンドを実際に実行し、「著作時点の誤り (不正なフラグ・構文エラー) 」と「実装の不在」を切り分ける** — 静的に読むだけでは、そのフェーズが原理的に受け入れ判定を通せない状態に気付けない (実測)。**人間承認の代替ではない** (フェーズ 11 は残る)。
+docs が完成した時点で、書き手と別コンテキストの subagent に全文を突合させる。書き手自身は「定義したつもり」バイアスで漏れ・矛盾を検出できないため。**issue 生成の前に行う** — 設計の穴は issue 化してから見つかるほど手戻りが大きい。
 
-```javascript
-const audit = await Agent({
-  description: "設計整合の第三者監査",
-  subagent_type: "review-spec-compliance",
-  model: "opus",   // 呼び出し時明示 (実行器 ≤ 検証器)
-  prompt: `mode: pre-approval
-docs_dir: docs/
-output_path: /tmp/review-spec-compliance-pre-approval.json
-docs (DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md と、存在すれば docs/USECASES.md / docs/features/UC-*.md) は自分で全文 Read すること。
-作業結果 (output_path のパス) は必ず最終メッセージで親に返すこと。`
-})
-```
+`general-purpose` subagent を **`model: "opus"` 明示**で 1 本起動する (機能設計書が 8 本を超える場合は機能ごとに分担させて並列 fan-out し、横断の整合は親がまとめる)。指示文に含める内容:
 
-結果の分岐 (**最大 2 周**):
+> docs/USECASES.md (あれば)・docs/DESIGN.md・docs/features/*.md を**全文 Read** し、次を検査して指摘だけを返せ (修正はしない):
+>
+> 1. **落とし漏れ**: USECASES.md の各 UC・各規則 (BR) が、いずれかの機能設計書でカバーされているか
+> 2. **矛盾**: 機能設計書どうし、および DESIGN.md との食い違い (スキーマと入出力、API 一覧と各機能の API 節)
+> 3. **未定義・参照切れ**: 使われている用語・テーブル・エンドポイント・節参照に定義があるか。「後述」「別途定義」のまま宙に浮いた参照が無いか
+> 4. **エッジケースの妥当性**: 明らかに起こるのに決定が書かれていないエッジケース
+> 5. **開発・検証コマンドの実在**: DESIGN.md「開発・検証コマンド」が現リポジトリで実行可能か (可能なら実行して確かめる)
+>
+> 出力: `[severity] 該当箇所 / 問題の一文 / 修正案の一文` (severity: high = 実装が詰まる / medium = 曖昧さが残る / low = 可読性)
 
-- **severity: high の findings あり** → 指摘の対象で戻り先を決めて修正する: TODO カバレッジ → フェーズ 10、検証手順・空虚性 → フェーズ 9、設計内容・境界・矛盾 → フェーズ 7〜8、機能仕様のカバレッジ・BR 引用・DETAIL との矛盾 (`feature_spec_missing` / `br_not_traced` / `feature_detail_conflict`) → フェーズ 7.5、`要判断:` の残存 (`feature_spec_unresolved`) → フェーズ 8。修正後に本フェーズを再実行する
-- **2 周しても high が残る** → 差し戻しを打ち切り、残存 findings をフェーズ 11 のサマリーに「監査で未解消の指摘」として添付し、人間の判断に委ねる
-- **high が 0 件 (medium/low のみ)** → findings をフェーズ 11 のサマリーに参考情報として添付し、フェーズ 11 へ進む
-- **agent がエラー / JSON 解釈不能** → 監査未実施のまま進まない。ユーザーに「監査 agent が失敗しました。再試行 / 監査なしで承認ゲートへ / 中止」を AskUserQuestion で確認する (未検証を silent にパス扱いしない)
+結果の分岐 (**最大 2 周**): high があれば該当 docs を修正して再実行。2 周しても残る high は人間に提示して判断を仰ぐ。high が無ければ (medium/low は反映するか判断してから) フェーズ 9 へ。subagent がエラーの場合は未検査のまま進まず、「再試行 / チェックなしで続行 / 中止」を AskUserQuestion で確認する。
 
-## フェーズ 11: 承認ゲート (設計 → 実装の遷移)
+## フェーズ 9: issue ドラフト + ドラフトチェック
 
-設計ループと実装ループの境界。**人間の明示承認がないと越えられない Stop** であり、Claude が自律的に実装ループを開始することは禁止。Skill ツール経由の起動では dev-impl のモデル指定 (`model: opus`) が適用されないため、実装ループの起動は必ずユーザーが行う。
+`references/issue-template.md` を Read し、テンプレートに従って**親 1 件 + 子 N 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。依存は最小限にし、並行して着手できる形を優先する。
 
-### 11.1 サマリー表示
+全ドラフトが揃ったら、`general-purpose` subagent (**`model: "opus"` 明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合と相互の重複・漏れはセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 5 項目を指示文に転記し、機能設計書と DESIGN.md のパスを渡して照合させる。出力形式はフェーズ 8 と同じ。
 
-```
-✓ 設計ループ完了
+分岐も同じ (**最大 2 周**): high は修正して再実行、2 周で残れば人間に提示、無ければフェーズ 10 へ。
 
-生成されたファイル:
-- docs/DESIGN.md              (概要設計)
-- docs/DESIGN_DETAIL_APP.md   (アプリ詳細設計)
-- docs/DESIGN_DETAIL_INFRA.md (インフラ詳細設計)
-- docs/features/UC-*.md       (機能仕様 n 件 + fixtures/)
-- docs/TODO.md                (タスクリスト、全 n フェーズ)
-- docs/FEASIBILITY.md         (PoC 結果: verified x 件 / fallback 採用 y 件)
-```
+## フェーズ 10: GitHub issue 生成
 
-FEASIBILITY.md を作成していない場合 (クイックモードで不確実性なし) は、その行を省略する。docs/features/ を生成していない場合 (フェーズ 7.5 をスキップした構成) も同様にその行を省略する。
+`references/issue-template.md` の「issue 作成手順」に従う。要点:
 
-DESIGN.md の「未解決の論点 (Open Issues)」に項目があれば続けて列挙する (「なし」なら省略)。
-
-フェーズ 10.5 の監査 findings があれば続けて列挙する (未解消の high は「監査で未解消の指摘」、medium/low は「参考」として区別する)。
-
-### 11.2 最終承認
-
-未解決の論点が残っている場合、この承認は「その論点を認識した上での承認」であることを前提とする。
-
-**承認は GitHub への書き込みの承認を兼ねる。** 承認直後にフェーズ 12 が issue を作成するため、選択肢の説明文でそれを明示し、ユーザーが副作用を認識したうえで承認できる状態にする。
-
-**説明文を埋める前に 12.0 の階層判定と 12.1 の前提条件チェックを実行する。** リポジトリ・`gh` 認証が解決できない環境で承認だけ取得すると、承認スタンプを書いた後にフェーズ 12 が停止し、「承認済みだが issue が無い」という中途半端な状態になる。解決できなければ承認を求めず、12.1 の案内を出して終了する。`<n>` は `docs/TODO.md` のフェーズ数 (`rg -c '^### フェーズ' docs/TODO.md`)、`<m>` は 12.0 が求めた `PARENT_TOTAL` とする (算出式を書き写さず 12.0 の値を使う)。`HIERARCHY=no` なら `<m>` の記述ごと省く。
+1. **作成前に人間の同意を取る** (GitHub への書き込みなので):
 
 ```javascript
 AskUserQuestion({
   questions: [{
-    question: "設計成果物を確認してください。実装ループへ進んでよいですか?",
-    header: "設計承認",
+    question: "issue を作成してよいですか? (ドラフトチェック済み)",
+    header: "issue 作成",
     options: [
-      { label: "承認", description: "承認すると <owner/name> に issue を <n> 件 (+ UC 親 issue <m> 件) 作成します (フェーズ 12)。その後 /dev-impl の起動方法を案内して終了" },
-      { label: "修正", description: "修正内容を指示して該当フェーズへ戻る" },
-      { label: "中止", description: "ここで終了 (成果物は残る。issue は作成しない)" }
+      { label: "作成", description: "<owner/name> に子 issue <n> 件 + 親 issue 1 件を作成し、sub-issue として紐付ける" },
+      { label: "ドラフトを見せて", description: "ドラフト全文を表示してから再確認" },
+      { label: "中止", description: "ここで終了 (docs とドラフトは残る。issue は作成しない)" }
     ],
     multiSelect: false
   }]
 })
 ```
 
-「修正」の戻り先は指摘内容で決める: ゴール・検証手順 → フェーズ 9、設計内容 → フェーズ 7〜8、タスク分割 → フェーズ 10。戻った後は当該フェーズ以降を再実行し、再度この承認ゲートに来る。
-
-### 11.3 実装ループへの引き継ぎ案内
-
-承認されたら次の 2 つを行い、2 の案内の前に**フェーズ 12 を実行する**。**実装ループを Skill ツールで起動しない** (`/dev-impl` はユーザーが起動する):
-
-1. **承認スタンプの書き込み**: まず受入基準のハッシュを計算する:
-
-```bash
-GOALS_SHA=$(
-  {
-    rg --no-filename '^- G[0-9]+:|^G[0-9]+:|^- G_E2E:|^G_E2E:' docs/DESIGN.md
-    rg --no-filename '^- G[0-9]+ 検証|^G[0-9]+ 検証|^- G_E2E 検証|^G_E2E 検証' docs/DESIGN_DETAIL_APP.md docs/DESIGN_DETAIL_INFRA.md
-  } | shasum -a 256 | cut -d' ' -f1
-)
-```
-
-`docs/TODO.md` の先頭 (1 行目) に `<!-- dev-spec:approved YYYY-MM-DD goals_sha=${GOALS_SHA} -->` を挿入する (既存スタンプがあれば行ごと置換)。ハッシュ対象は**ゴール定義行と検証手順行のみ**で、承認時点の受入基準をスタンプにバインドする。dev-impl は起動時 (Step 1 構造ゲート) にスタンプの存在とハッシュ一致を機械チェックし、承認後に受入基準が変更されていれば実装に入らない (`approval_stale`)。P2 動的修正 (実装ガイド等の追記) はハッシュ対象外なので正当に通る
-2. フェーズ 12 を実行してから次を表示する。
+2. 手順書どおり作成する: ラベル用意 → 既存 issue との突き合わせ (冪等) → 親の特定/作成 → 子を依存順に作成 → sub-issue 紐付け
+3. 結果を報告し、次を案内する:
 
 ```
-✓ 設計が承認され、フェーズ issue を <n> 件作成しました (ready: <a> 件 / needs-human: <b> 件)。
-  ユースケース単位の親 issue <m> 件 (うち新規作成 <k> 件) にひも付けています:
-    UC-001: <名前> → #<番号>
-    横断: UC に属さないフェーズ → #<番号>
-  親 issue の Sub-issues セクションに、そのユースケースの残タスクと進捗が出ます。
+✓ issue を作成しました: 親 #<番号> + 子 <n> 件 (新規 <a> / 更新 <b> / スキップ <c>)
 
-実装ループは以下のいずれかで開始してください:
+GitHub で issue をざっと確認してください。問題がなければ実装ループを起動します:
 
-A (推奨): 新しいセッションで起動
-   対象リポジトリのディレクトリで claude を新しく開き、/dev-impl を実行。
-   設計の対話履歴を持ち込まず、クリーンなコンテキストで実装ループが回る。
-   dev-impl は model: opus 指定なので、起動ターンから Opus で実行される。
+A (推奨): 新しいセッションで起動 — 対象リポジトリで claude を開き /dev-impl を実行
+   (設計の対話履歴を持ち込まず、クリーンなコンテキストで実装ループが回る)
+B: このセッションで続行 — このまま /dev-impl とタイプ
 
-B: このセッションで続行
-   このまま /dev-impl とタイプ。このターンだけ Opus に切り替わる。
-   (エスカレーション回答後の再開も /dev-impl の再実行で行う)
-
-dev-impl はフェーズ issue を依存順に 1 件ずつ実装して close する (親 issue は実装対象にせず、
-子が全て closed になった時点で自動で close する)。
-needs-human が付いた issue は着手せず、最初にユーザーへ質問を出す。
+修正したい issue があれば、指摘してください (docs を直してフェーズ 8 → 10 で issue に反映します)。
 ```
 
-**`HIERARCHY=no` (フラット構造) のときは、親 issue に触れている 4 行 (「ユースケース単位の親 issue …」以下の一覧 2 行と「親 issue の Sub-issues …」、および括弧内の親の説明) を省く。**
-
-## フェーズ 12: GitHub issue 生成
-
-`docs/TODO.md` の各フェーズを GitHub issue に写す。**新しい内容を書かない — TODO.md からの機械的な転記に徹する。**
-
-理由: DoD 設計を fresh context で検査するのはフェーズ 10.5 の `pre-approval` 監査だけである。ここで本文を創作すると、監査後・承認後になり第三者検査を素通りする。転記中に「情報が足りない」と気づいたら、issue に書き足すのではなく**フェーズ 10 へ戻って TODO.md を直し、10.5 から再実行する**。
-
-### 12.0 issue の階層と階層判定 (**11.2 の承認を求める前に実行する**)
-
-issue は 2 階層で作る。以降この 2 つを**親 issue** / **子 issue** と呼ぶ。
-
-| 階層 | 何を表すか | タイトル | ラベル | 誰が使うか |
-| --- | --- | --- | --- | --- |
-| **親 issue** | ユースケース 1 件 (`docs/USECASES.md` の `## UC-<n>:` 見出し) | `UC-<n>: <ユースケース名>` | `uc-tracking` のみ | **人間**が進捗を俯瞰する。残件は GitHub の issue 画面の Sub-issues セクション (完了数の進捗バーと子の一覧) で見る。close / reopen は `/dev-impl` と本フェーズが機械的に行うので、人間は操作しなくてよい |
-| **子 issue** | TODO.md のフェーズ 1 件 | `フェーズ<識別子>: <名前>` | `ready` / `needs-human` | `/dev-impl` が 1 件ずつ実装して close する |
-
-紐付けは GitHub ネイティブの **sub-issues** (REST API) で行う。`ucs: none` のフェーズ (基盤構築・インフラ構築・品質保証など) は、固定タイトル **`横断: UC に属さないフェーズ`** の親 issue 1 件にまとめる。
-
-**親 issue は俯瞰専用であり、着手順・スコープには一切関与しない。** 着手順は子の `Depends on #N`、実装範囲は子の非スコープが決める。親にライフサイクルラベル (`ready` / `in-progress` / `needs-human`) を付けない — 付けると `/dev-impl` が親を実装対象として拾ってしまう。
-
-#### 階層判定
-
-```bash
-UCS_VALUES=$(rg -o '<!-- ucs: (UC-[0-9]+|none) -->' -r '$1' docs/TODO.md | sort -u)
-if [ -f docs/USECASES.md ] && [ -n "$UCS_VALUES" ]; then HIERARCHY=yes; else HIERARCHY=no; fi
-PARENT_TOTAL=$(printf '%s' "$UCS_VALUES" | grep -c . | tr -d ' ')   # 必要な親 issue の総数
-```
-
-**判定結果は `HIERARCHY` に落として以降はこの値だけを見る** (11.2 / 12.4.1 / 12.4.3 / 12.6 が同じ判定を各自やり直すと、TODO.md の編集をまたいで結果が割れる)。`PARENT_TOTAL` は 11.2 の `<m>` と 12.6 の報告にそのまま使う。
-
-**値まで検査する形 (`UC-[0-9]+|none`) を崩さない。** `<!-- ucs: ` の有無だけで判定すると、TODO.md 本文に書式を説明する散文が混じっているだけで階層ありに倒れ、`...` のような非 UC 文字列を親の候補として拾う (実測済み)。
-
-`HIERARCHY=no` になるのは次の 2 経路で、**いずれも仕様でありエラーではない**: (a) `docs/USECASES.md` が無い (クイックモードはフェーズ 3 を通らない)、(b) `ucs` 宣言を持たない旧形式の承認済み TODO.md をそのまま issue 化する。このとき親を作らず、子 issue のみのフラット構造で生成する。
-
-**ただし「USECASES.md はあるのに `ucs` 宣言が 1 件も無い」を (b) に含めない。これは判定の分岐ではなく停止条件である**:
-
-```bash
-if [ -f docs/USECASES.md ] && [ -z "$UCS_VALUES" ]; then
-  echo "USECASES.md があるのに ucs 宣言が 1 件も無い。フェーズ 10 へ戻って TODO.md を直し 10.5 から再実行すること"; exit 1
-fi
-```
-
-これはフェーズ 10 の生成漏れであり、本来はフェーズ 10.5 の `pre-approval` 監査が `phase_meta_missing` (severity: high) で検出する。**ただし 0.2 の高速経路 (docs 4 点 + 承認スタンプが揃っていればフェーズ 12 だけを実行する) では 10.5 が走らないので、ここで止めないと誰も検出しない。** 判定を `HIERARCHY=no` に倒して黙ってフラット生成すると、既存の親 issue が孤立したまま残り、監査が上げるはずだった high を握り潰すことになる。
-
-#### ucs の構造検証 (`HIERARCHY=yes` のときだけ)
-
-**`ucs` は承認スタンプの `goals_sha` に含まれない。** ハッシュ対象は受入基準 (ゴール定義行と検証手順行) だけであり、`ucs` は受入基準ではないので対象に加えない。その結果、**承認後に `ucs` だけを書き換えても `approval_stale` にならず、0.2 の高速経路 (docs 4 点 + 承認スタンプが揃っていればフェーズ 12 だけを実行する) ではフェーズ 10.5 の監査も通らずにここへ届く。** その経路で唯一 `ucs` を検査できるのが本項なので、省くと壊れた宣言がそのまま親子構造になる。
-
-親を作る前に次を検査し、**1 つでも違反があれば issue を作らずに停止**して、フェーズ 10 へ戻って TODO.md を直し 10.5 から再実行するよう案内する:
-
-| 検査 | 違反の例 |
-| --- | --- |
-| 全フェーズに `<!-- ucs: ... -->` がある | 一部のフェーズだけ宣言が欠けている (親の無い子ができる) |
-| 各値が単一の `UC-<n>` または `none` である | `<!-- ucs: UC-001,UC-002 -->` (sub-issue は 1 子 = 1 親なので紐付けられない) |
-| 各 `UC-<n>` が `docs/USECASES.md` の `## UC-<n>:` 見出しに実在する | UC を削除したのに TODO.md の宣言が残っている (転記元の無い親を作ろうとする) |
-
-```bash
-# 検査 1・2: フェーズ総数と、妥当な ucs 宣言を持つフェーズ数が一致すること
-PHASES=$(rg -c '^### フェーズ' docs/TODO.md | tr -d ' ')
-DECLARED=$(rg -c '^### フェーズ.*<!-- ucs: (UC-[0-9]+|none) -->' docs/TODO.md | tr -d ' ')
-[ "$PHASES" -eq "$DECLARED" ] || { echo "ucs 宣言の欠落または複数指定: $DECLARED/$PHASES フェーズ"; exit 1; }
-
-# 検査 3: 宣言された UC がすべて USECASES.md に実在すること
-rg -o '^### フェーズ.*<!-- ucs: (UC-[0-9]+) -->' -r '$1' docs/TODO.md | sort -u > /tmp/ucs-declared.txt
-rg -o '^## (UC-[0-9]+):' -r '$1' docs/USECASES.md | sort -u > /tmp/ucs-real.txt
-GHOST=$(comm -23 /tmp/ucs-declared.txt /tmp/ucs-real.txt)
-[ -z "$GHOST" ] || { echo "USECASES.md に存在しない UC を参照: $GHOST"; exit 1; }
-```
-
-**パターンを `^### フェーズ` にアンカーすることを省かない。** ファイル全体から `<!-- ucs: ... -->` を数えると、宣言を落としたフェーズが 1 件あっても、本文の散文に書式例が 1 つ書かれているだけで件数が釣り合い、**検査が黙って通る** (実測で再現)。12.0 の階層判定が値まで見る形にしてあるのと同じ罠である。
-
-**判定をコメントや目視に委ねず exit code で分岐する。** 「一致すること」と書いただけの検査は、出力を読み飛ばした時点で無検査になる (`rules/core/verification.md`「セレクタは件数を検証する」)。
-
-**フェーズ 10 を通る通常経路では、10.5 の `phase_meta_missing` と本項の検査が両方走る。** それでも重複と見なさない理由は 2 つある。10.5 が届かない経路 (0.2 の高速経路) が存在し、そこでは本項が唯一の検査であること。そして両方走る経路でも、本項は機械判定なので 10.5 の結論と割れないこと。DoD の審査を 12.5 で繰り返さないのとは事情が異なる — DoD は issue 本文に載るので改訂すれば 12.3 の本文一致確認が検出するが、`ucs` は本文に書かないため他に検出経路が無い。
-
-### 12.1 前提条件 (**11.2 の承認を求める前に実行する**)
-
-```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
-REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-```
-
-いずれかが失敗する (git リポジトリでない / GitHub リモートが無い / `gh` 未認証) 場合は**停止**し、状況を伝えて「リポジトリを用意してから `/dev-spec` を再実行してください」と案内する。issue を作れないまま成功したように振る舞わない。
-
-**`docs/features/` が存在する場合は `rg -n '要判断:' docs/features/` が 0 件であることも確認する。** 1 件以上あれば停止してフェーズ 8 へ差し戻す (0.2 の高速経路 (承認済み → 12 のみ実行) では 10.5 の `feature_spec_unresolved` が走らないため、ここが承認後改変に対する唯一の検査になる)。解消後は 9〜11 をやり直さずフェーズ 12 へ直行してよい — 機能仕様は goals_sha の対象外なので承認は有効のままで、issue への反映は 12.3 の貼り直しが行う。
-
-**`docs/` の push は求めない。** `/dev-impl` はローカルの working tree にある docs を読むので、issue の「参照すべき docs」を解決するのにリモートの状態は要らない。dotfiles の運用でも `git push` は人間が手で行う。
-
-### 12.2 ラベルの用意 (冪等)
-
-`--force` は「無ければ作成、あれば更新」なので毎回流してよい。
-
-```bash
-gh label create ready        --force --color 0E8A16 --description "着手可能。依存が解決済みで DoD が判定可能"
-gh label create in-progress  --force --color 1D76DB --description "dev-impl が実装中"
-gh label create needs-human  --force --color D93F0B --description "人間の判断待ちで駐車中"
-gh label create uc-tracking  --force --color 5319E7 --description "ユースケース単位の親 issue。実装対象ではない"
-```
-
-`uc-tracking` は `HIERARCHY=no` でも作ってよい (使わないだけで害はない)。
-
-### 12.3 既存 issue との突き合わせ (冪等)
-
-```bash
-gh issue list --repo "$REPO_SLUG" --state all --limit 200 --json number,title,state,labels
-```
-
-**ライフサイクルラベル**とは `ready` / `in-progress` / `needs-human` の 3 つ (12.2 で作るもの) を指す。`uc-tracking` はこれに含めない。
-
-#### 子 issue の分類
-
-各フェーズについて、既存 issue を次のとおり分類する:
-
-| 既存 issue の状態 | 判定 | 動作 |
-| --- | --- | --- |
-| 無い | 未作成 | 12.4.2 で新規作成する |
-| タイトル一致・**ラベル無しの open** | **未完成** (作成直後に落ちた) | 本文を作り直して貼り直し、ラベルを付ける。ラベルが無いと `/dev-impl` の Step 2 が着手対象として拾わず、恒久的に不可視になる |
-| タイトル一致・ラベルあり・**本文が現在の転記内容 (TODO.md + 12.4.2 の設計節) と一致** | 最新 | 本文の更新はスキップする。**ただし 12.4.3 の紐付け検証からは除外しない** |
-| タイトル一致・ラベルあり・**本文が不一致** | **設計が改訂された** | `gh issue edit <番号> --body-file` で貼り直す (下記) |
-| closed | 完了済み | 本文の更新はスキップする (再オープンしない)。ただし**本文が現在の転記内容 (TODO.md + 12.4.2 の設計節) と不一致なら、その issue 番号を 12.6 の報告に列挙する** — フェーズ 10 へ戻って直した改訂が、既に完了した issue には届かないことを人間が把握できるようにするため |
-
-**本文の一致確認を省かない。** フェーズ 12 の冒頭で「情報が足りなければフェーズ 10 へ戻って TODO.md を直し 10.5 から再実行する」と定めているが、タイトル一致だけでスキップすると**その修正が issue に届かない**。修正した DoD が実装者に渡らなければ、戻った意味が消える。
-
-```bash
-gh issue view "$ISSUE_NUM" --repo "$REPO_SLUG" --json body -q .body | sed 's/\r$//' > /tmp/issue-current.md
-cmp -s /tmp/issue-current.md /tmp/issue-body.md || \
-  gh issue edit "$ISSUE_NUM" --repo "$REPO_SLUG" --body-file /tmp/issue-body.md
-```
-
-比較にコマンド置換 (`$(...)`) を使わない — 末尾改行を捨てるため差分を取りこぼす (`rules/core/verification.md`)。取得側の `sed 's/\r$//'` は CRLF の除去 — GitHub の web UI で本文を一度でも編集すると改行が CRLF で保存され、無変更でも不一致になるため。`gh` 往復のバイト一致 (末尾改行・`<details>` の無変換) は未検証 — 不一致が毎回発生する場合はここを疑う。
-
-比較用の `/tmp/issue-body.md` は `## 設計` 節 (12.4.2) 込みで生成する。これにより**機能仕様 (docs/features/) の改訂も本文不一致として検出され、フェーズ 12 の再実行で issue の設計節が自動的に貼り直される** (issue 側の設計はスナップショット、正本は docs 側)。
-
-**`in-progress` の issue の本文を書き換えたときは、issue コメントで改訂を告知する。** `/dev-impl` が古い DoD で作業している可能性があるため、再開時に気付けるようにする。
-
-#### 親 issue の分類と対応表の seed (`HIERARCHY=yes` のときだけ)
-
-親は**ライフサイクルラベルを持たない**ので、上の表のうち「ラベル無しの open = 未完成」の行は適用しない。判定材料は `uc-tracking` の有無とタイトル一致だけとする。本文の一致確認は行うが、比較相手は 12.4.1 が作る `/tmp/parent-body.md` である (上のスニペットの `/tmp/issue-body.md` は子用)。
-
-**既存の親を列挙して「タイトル → 親 issue 番号」の対応表を作る。** これをやらないと、再実行 (0.2 の「4 点が揃い承認スタンプがある → フェーズ 12 だけを実行する」経路) で親が全件スキップされ、12.4.3 が紐付け先の番号を引けなくなる:
-
-```bash
-gh issue list --repo "$REPO_SLUG" --state all --limit 200 --label uc-tracking --json number,title
-```
-
-**続けて、いま列挙した各親について、紐付け済みの子 issue 番号を集めて seed する。** これが 12.4.3 の差集合の基準になる:
-
-```bash
-for PARENT_NUM in $(gh issue list --repo "$REPO_SLUG" --state all --limit 200 \
-                      --label uc-tracking --json number --jq '.[].number'); do
-  gh api --paginate "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues?per_page=100" --jq '.[].number'
-done
-```
-
-`--paginate` と `per_page=100` を省かない。**このエンドポイントの既定は 1 ページ 30 件** (公式ドキュメントの List sub-issues) なので、子が 30 件を超える親では 31 件目以降が見えず、「未紐付け」と誤認して二重紐付けの 422 を踏む。
-
-**closed の親に open な子を紐付けることになったら、親を `gh issue reopen` してから紐付ける。** 完了済みの UC に設計改訂でフェーズが 1 本増えた場合がこれにあたる。閉じた親にぶら下げると、そのユースケースが未完に戻ったことが俯瞰から消える (`/dev-impl` の Step 4.6「新フェーズの issue 化」も同じ規則で動く):
-
-```bash
-[ "$(gh issue view "$PARENT_NUM" --repo "$REPO_SLUG" --json state -q .state)" = "CLOSED" ] && \
-  gh issue reopen "$PARENT_NUM" --repo "$REPO_SLUG" --comment "フェーズが追加されたため再オープンする"
-```
-
-### 12.4 issue の生成
-
-**親 → 子 → 紐付けの順に進める。** 子を紐付けるには親の issue 番号が確定している必要がある。
-
-#### 12.4.1 親 issue (`HIERARCHY=yes` のときだけ)
-
-**対応表は 12.3 の出力で seed してから作成に入り、不足している親だけを作る。** seed しないと再実行で同名の親が二重に作られる。
-
-必要な親は 12.0 が求めた `UCS_VALUES` から決まる。`UC-<n>` の各値について `docs/USECASES.md` の該当節から親を 1 件、`none` が含まれていれば「横断」の親を 1 件用意する。**`ucs` に現れない UC の親は作らない** (どのフェーズも実装しない UC の空の親を残さないため。UC の取りこぼし自体はフェーズ 10 のセルフレビューとフェーズ 10.5 の監査が検出する)。
-
-`$PARENT_TITLE` は 12.0 の表の形式で組む (`UC-<n>: <ユースケース名>` — USECASES.md の `## UC-<n>:` 見出しをそのまま / UC に属さない分は固定リテラル `横断: UC に属さないフェーズ`)。**この形式は 12.3 の突き合わせと `/dev-impl` の Step 4.6「新フェーズの issue 化」が親を引き当てる鍵なので、整形して変えない。** USECASES.md で UC 名を改訂すると別タイトルの親が新規に作られてしまうため、改名したときは既存の親のタイトルを手で直す。
-
-本文も USECASES.md からの転記に徹する。**節名は子と同じく固定で、変えない** (12.3 の本文一致確認がこの構造を前提にする):
-
-```markdown
-## ユースケース
-<USECASES.md の該当 UC の「概要」表をそのまま。「横断」の親では「特定のユースケースに属さないフェーズ (基盤構築・インフラ構築・品質保証・UI/UX 仕上げなど) をまとめる追跡用 issue」と書く>
-
-## 詳細
-docs/USECASES.md 「UC-<n>: <名前>」        <!-- 「横断」の親では「なし (転記元の UC は無い)」と書く -->
-
-## 進捗
-実装は sub-issue (フェーズ issue) で行う。残件はこの issue の Sub-issues セクション (完了数の進捗バーと子の一覧) を見る。
-```
-
-作成してタイトル → 親 issue 番号の対応表に入れる (`gh issue create` が返すのは URL なので番号を取り出す):
-
-```bash
-PARENT_URL=$(gh issue create --repo "$REPO_SLUG" --title "$PARENT_TITLE" --body-file /tmp/parent-body.md --label uc-tracking)
-PARENT_NUM=$(printf '%s' "$PARENT_URL" | grep -o '[0-9]*$')
-```
-
-#### 12.4.2 子 issue (フェーズ)
-
-**TODO.md のフェーズ出現順に 1 件ずつ作る。** deps は前方参照が禁止されている (`references/todo-generation.md`「フェーズ依存の宣言」) ため、出現順に作れば依存先の issue 番号は**常に確定済み**になる。識別子 → issue 番号の対応表を作りながら進める。
-
-**対応表は 12.3 の出力で seed してから作成に入る。** 中断後の再実行では先行フェーズが「作成済み」でスキップされるため、seed しないと `Depends on #<issue番号>` を解決できず依存が空になる (`/dev-impl` の Step 2 が着手順を決められず、依存先が未完成のまま実装に入る)。12.3 で取得した `number,title` から、既存 issue のフェーズ識別子 → 番号を先に全件入れておく。
-
-`gh issue create` が返すのは**番号ではなく URL** なので、番号を取り出してから対応表に入れる (そのまま埋めると `Depends on <URL>` になり、`/dev-impl` の Step 2 が依存を読めない):
-
-```bash
-# ラベルは 12.5 の判定で先に決めておく ("$LABEL" = ready または needs-human)
-ISSUE_URL=$(gh issue create --repo "$REPO_SLUG" --title "$TITLE" --body-file /tmp/issue-body.md --label "$LABEL")
-ISSUE_NUM=$(printf '%s' "$ISSUE_URL" | grep -o '[0-9]*$')
-```
-
-`$TITLE` と `/tmp/issue-body.md` はフェーズごとに用意する。本文は Write ツールで `/tmp/issue-body.md` に書き出してから渡す (改行を含むため `--body` にインラインで埋めない)。書き出したら `wc -c` で **65536 バイト未満**であることを確認する (GitHub issue 本文の上限。超えると `gh issue create` / `edit` が 422 で落ちる)。超える場合は `## 設計` 節の転記をやめ、`docs/features/UC-<n>.md 参照 (本文上限超過のため転記省略)` の 1 行に落とす。本文の構造は次に固定する — `/dev-impl` がこの見出しで読むため、**節名を変えない**:
-
-```markdown
-## ゴール
-<TODO.md のメタ情報「ゴール」をそのまま>
-
-## DoD
-<TODO.md のメタ情報「DoD」をそのまま。`DoD (手動):` があれば続けて書く>
-
-## 参照すべき docs
-<TODO.md のメタ情報「参照 docs」をそのまま>
-
-## 設計
-<details><summary>機能仕様 UC-<n> (docs/features/UC-<n>.md の転記。正本は docs 側)</summary>
-
-<docs/features/UC-<n>.md の全文を、コードフェンス外の見出しをすべて 2 段降格して転記: `awk '/^```/{c=!c} !c{sub(/^#/,"###")} 1'`>
-</details>
-<!-- 本節の省略条件: フェーズの ucs 宣言が none / docs/features/ が無い構成 / docs/features/UC-<n>.md が単体で不在。単体不在で省略した場合は 12.6 の報告に列挙する -->
-
-## 変更が想定されるファイル
-<TODO.md のメタ情報「変更想定ファイル」をそのまま>
-
-## 非スコープ
-<TODO.md のメタ情報「非スコープ」をそのまま>
-
-## 実装タスク
-<TODO.md のチェックボックス群をそのまま>
-
-## 依存
-Depends on #<issue番号>        <!-- deps: none なら「依存なし」と書く -->
-
-## 対応ゴール
-G1, G2                          <!-- goals: none なら本節を省略 -->
-```
-
-本文は TODO.md のフェーズ (設計のみ docs/features/) から次を写す。**変換が要るのは依存・設計・対応ゴールの 3 項目だけで、残りはそのまま転記する**:
-
-| issue 本文 | 転記元 | 変換 |
-| --- | --- | --- |
-| ゴール | メタ情報の**ゴール** | そのまま |
-| DoD | メタ情報の **DoD** / **DoD (手動)** | そのまま (両方あれば両方) |
-| 参照すべき docs | メタ情報の**参照 docs** | そのまま |
-| 設計 | `docs/features/UC-<n>.md` (フェーズの `ucs` が指す UC) | **コードフェンス外の見出しを 2 段降格** (`awk '/^```/{c=!c} !c{sub(/^#/,"###")} 1'`。sed の全行置換はフェンス内のシェルコメントまで降格するので使わない) して `<details>` に包む。1 段ではタイトル行 `# UC-<n>` が `##` になり issue の節構造 (`##` レベルの節境界) を壊す。**`<summary>` 直後の空行は必須** (無いと details 内の markdown が描画されない)。人間向けスナップショットで、実装器の設計入力は PHASE_CONTEXT の `feature_spec` が正 (定義は dev-impl の references/phase-context.md) |
-| 変更が想定されるファイル | メタ情報の**変更想定ファイル** | そのまま |
-| 非スコープ | メタ情報の**非スコープ** | そのまま |
-| 実装タスク | チェックボックス群 | そのまま |
-| 依存 | `<!-- deps: 2,3 -->` | **`Depends on #<issue番号>`** に変換 (対応表を引く。`none` なら「依存なし」と書く) |
-| 対応ゴール | `<!-- goals: G1,G2 -->` | `G1, G2` と本文に書く (`none` なら省略) |
-
-`<!-- ucs: ... -->` は**本文に書かない**。親子関係は sub-issue の紐付け (12.4.3) が表現するため、本文に重複して書くと二重管理になる。
-
-タイトルは `フェーズ<識別子>: <名前>` (TODO.md の見出しから HTML コメントを除いたもの) をそのまま使う。12.3 の突き合わせがタイトル一致で行われるため、**整形して変えない**。
-
-**TODO.md の全フェーズ共通節も各 issue に転記する。** `## 実装タスク` より前にフェーズ横断の規約 (「DoD ブロックの実行方法」等) がある場合、それを `## DoD` の直後に `### <節名>` として埋め込む。**実装者が読むのは issue だけ**で TODO.md 冒頭は届かないため、転記しないと規約が失われる (実測: DoD ブロックを `bash -e` で流す前提・`cmd && exit 1 || exit 0` の禁止といった、DoD の解釈に必須の規約が全フェーズ共通節にしか無かった)。共通節が無ければ本項はスキップする。
-
-#### 12.4.3 親への紐付け (sub-issues。`HIERARCHY=yes` のときだけ)
-
-**紐付けの対象は TODO.md の全フェーズであり、今回新規作成した子だけではない。** 12.3 で「作成済み・本文一致」に分類されてスキップされた既存の子も対象に含める — 前回の run が子を作った直後に落ちていると、その子は紐付かないまま「作成済み」として永久にスキップされ、親の俯瞰から漏れ続ける。
-
-判定はこう置く。各フェーズについて、`ucs` が指すべき親 (`none` なら「横断」の親) を `$PARENT_NUM` とし、12.3 で seed した紐付け状況と突き合わせる:
-
-| 現在の紐付け状態 | 動作 |
-| --- | --- |
-| どの親にも紐付いていない | 紐付ける (下記スニペット) |
-| `$PARENT_NUM` に紐付いている | 何もしない (これが冪等化であり、二重紐付けの 422 を事前に避ける唯一の手段) |
-| **別の親**に紐付いている | `ucs` が改訂されたということ。`replace_parent` を付けて貼り替える (下記) |
-
-`ucs` の改訂は issue 本文に差分を作らない (`ucs` は本文に書かないため) ので、12.3 の本文一致確認では検出できない。**この表の 3 行目が唯一の検出経路**であり、省くとフェーズ 10 で直した `ucs` が永久に反映されない。
-
-```bash
-CHILD_ID=$(gh api "repos/$REPO_SLUG/issues/$ISSUE_NUM" --jq .id)
-# 新規に紐付ける
-gh api "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues" -F sub_issue_id="$CHILD_ID"
-# 別の親から貼り替える (replace_parent を付けないと単一親制約で 422 になる)
-gh api "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues" -F sub_issue_id="$CHILD_ID" -F replace_parent=true
-```
-
-**紐付けに使うのは REST の numeric id であり、issue 番号でも node ID でもない。** 使い捨てリポジトリでの実測で確定した挙動:
-
-| 項目 | 挙動 |
-| --- | --- |
-| パラメータの型 | `-F` (integer として送る) が必須。`-f` (文字列) は `is not of type integer` で HTTP 422。id は `gh api repos/.../issues/<番号> --jq .id` で取る (`gh issue view --json id` が返すのは `I_kwDO...` 形式の node ID で、これは使えない) |
-| 二重紐付け | HTTP 422 (`Issue may not contain duplicate sub-issues and Sub issue may only have one parent`)。メッセージが単一親制約の違反と共通なので、事後に握りつぶすと本当の設計エラーを見逃す。上の表のとおり**事前の状態判定で避ける** |
-
-`replace_parent` (貼り替え) と `DELETE /repos/{owner}/{repo}/issues/{n}/sub_issue` (取り外し) は公式ドキュメント (REST API の Sub-issues) に定義されている。取り外しは本フェーズでは使わない (親を空にする場面が無いため)。
-
-**紐付けに失敗したら停止する。** 子だけが宙に浮くと、その issue は親の俯瞰から漏れたまま実装される。12.6 で成功を報告せず、代わりに次を人間に伝える: 作成済みの子 issue 番号、未紐付けのまま残った親と子の組、そして**復旧は `/dev-spec` の再実行で行える**こと (12.3 が紐付け状況を seed し直し、続きから紐付ける)。
-
-### 12.5 ラベルの付与
-
-**ラベルは issue の作成前に決める** (12.4.2 のスニペットの `$LABEL`)。判定は 1 行で機械的に行う:
-
-```bash
-rg -q 'DoD \(未定義\):' <該当フェーズの本文> && LABEL=needs-human || LABEL=ready
-```
-
-**原則すべて `ready`。** DoD の要件はフェーズ 10 の生成要件として満たされ、フェーズ 10.5 の監査 (`phase_meta_missing` / `phase_dod_vacuous`) と人間承認を通過済みなので、ここで改めて審査しない。二重の門を作ると、どちらが正かが曖昧になる。
-
-例外は 1 つだけ: **`DoD (未定義): <理由>` が書かれているフェーズ**は `needs-human` を貼り、理由を issue コメントに転記する。`ready` と併記しない (`/dev-impl` は `ready` の issue を着手対象にするため、両方付けると駐車したはずの issue が実装される)。
-
-**親 issue には `uc-tracking` だけを付ける** (12.4.1 で作成時に付与済み)。ライフサイクルラベルを足さない。
-
-### 12.6 結果の報告
-
-次を数えて 11.3 の案内文に埋める:
-
-- 子 issue: 作成件数 (`ready` / `needs-human` の内訳) とスキップした既存 issue の件数
-- 親 issue: `HIERARCHY=yes` なら **`PARENT_TOTAL` (紐付け先として使った親の総数) と、そのうち今回新規作成した件数**を両方書く (再実行では総数が 3 でも作成 0 件になる)。あわせて親の番号とタイトルを `UC-001: 名前 → #12` の形式で列挙する — 件数だけでは人間がどの issue を見ればよいか分からない。`HIERARCHY=no` なら「親 issue なし (USECASES.md または ucs 宣言が無いためフラット構造)」と 1 行書く
-- 12.3 で検出した「closed だが本文が不一致」の issue 番号
+**実装ループを Skill ツールで自動起動しない** — issue を人間が確認して GO を出すことが承認であり、`/dev-impl` はユーザーが起動する。
 
 ## 完了条件
 
 - [ ] 対象フェーズがすべて実行された (またはユーザー判断でスキップ)
 - [ ] blocker=true の PoC 計画がすべて解決済み (verified または fallback 採用)
-- [ ] 全フェーズ実行時: DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / TODO.md が生成され、承認ゲートを通過した
-- [ ] フェーズ 10.5 の設計整合監査が実行された (high findings は解消、または未解消のまま人間判断に添付)
-- [ ] (docs/USECASES.md がある構成) UC 全件分の docs/features/UC-<n>.md が存在し、`要判断:` の残存が 0 件
-- [ ] (docs/features/ がある構成) `ucs` が `UC-<n>` を指すフェーズの子 issue すべての本文に `## 設計` 節がある (`gh issue list --json body` と `rg -c '^## 設計$'` で件数を突合する)
-- [ ] 承認時: TODO.md 先頭に承認スタンプ (goals_sha 付き) が書き込まれた
-- [ ] TODO.md の全フェーズが issue 化され、ラベル (`ready` または `needs-human`) が付いた
-- [ ] (`HIERARCHY=yes` の場合) 親 issue が作られ、全フェーズ issue がいずれかの親に sub-issue として紐付いた。次の 2 つの集合が一致することで確認する
-
-```bash
-# A: 親に紐付いている子の番号
-gh issue list --repo "$REPO_SLUG" --state all --limit 200 --label uc-tracking --json number --jq '.[].number' |
-  while read -r P; do gh api --paginate "repos/$REPO_SLUG/issues/$P/sub_issues?per_page=100" --jq '.[].number'; done | sort -u > /tmp/linked.txt
-# B: 実装対象 (uc-tracking を除く) の全 issue 番号
-gh issue list --repo "$REPO_SLUG" --state all --limit 200 --json number,labels \
-  --jq '.[] | select((.labels | map(.name) | index("uc-tracking")) | not) | .number' | sort -u > /tmp/all-children.txt
-cmp /tmp/linked.txt /tmp/all-children.txt    # 一致すれば紐付け漏れなし
-```
+- [ ] docs/DESIGN.md と docs/features/ が生成され、フェーズ 8 の設計チェックを通過した (high 0 件、または未解消のまま人間判断に提示済み)
+- [ ] 全ドラフトがフェーズ 9 のドラフトチェックを通過した
+- [ ] 親 issue 1 件 + 子 issue 全件が作成され、全子が親に sub-issue として紐付いた (issue-template.md の最終報告の形式で報告した)
 
 ## 参照ルール
 
@@ -649,11 +228,10 @@ cmp /tmp/linked.txt /tmp/all-children.txt    # 一致すれば紐付け漏れな
 
 - TDD ルール: `rules/core/tdd.md`
 - 設計原則: `rules/core/design.md`
-- コミットルール: `rules/core/commit.md`
+- テスト方針: `rules/core/testing.md`
 
 ## 関連スキル・エージェント
 
-- **dev-impl**: issue 駆動の逐次実装ループ。フェーズ 12 が issue を作った後、ユーザーが起動する
+- **dev-impl**: issue 駆動の逐次実装ループ。フェーズ 10 が issue を作った後、ユーザーが起動する
 - **tech-investigation** (subagent): フェーズ 5 の PoC 検証で並列 fan-out される
-- **review-spec-compliance** (subagent): フェーズ 10.5 の設計整合監査 (mode: pre-approval、`model: opus` 明示)
 - **workflow-debate**: 設計判断の壁打ちが必要なとき

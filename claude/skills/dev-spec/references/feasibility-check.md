@@ -252,7 +252,7 @@ AskUserQuestion({
 - 成功 → 本実装へ
 - 失敗 → 代替案を検討
 
-**POC_NEEDED マーカー (analyzing-requirements で DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md の該当側に転記する形式)**:
+**POC_NEEDED マーカー (design-doc で DESIGN.md の該当節に転記する形式)**:
 ```
 <!-- POC_NEEDED: id=<id>, scope=<目的を1行で>, risk=<high|medium|low>, blocker=<true|false> -->
 ```
@@ -364,7 +364,7 @@ Task({
 このフェーズが残した PoC 計画は、後段で次のように扱われる:
 
 1. **フェーズ 5 (PoC 検証)**: `blocker=true` の計画を `tech-investigation` subagent の並列 fan-out で実際に検証し、結果 (verified / fallback 採用) を FEASIBILITY.md の「PoC 結果」に記録する。未解決の blocker=true が残る限り設計書生成 (フェーズ 7) に進めない
-2. **フェーズ 7 (analyzing-requirements)**: 検証済みの PoC 結果を技術選定の根拠として DESIGN.md / DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md に反映する。未検証で残った `blocker=false` の計画のみ `POC_NEEDED` マーカーとして詳細設計の該当側に転記する
+2. **フェーズ 6 (design-doc)**: 検証済みの PoC 結果を技術選定の根拠として DESIGN.md に反映する。未検証で残った `blocker=false` の計画のみ `POC_NEEDED` マーカーとして DESIGN.md の該当節に転記する
 3. **実装ループ (`/dev-impl`)**: 起動時に `blocker=true` マーカーの残存をチェックし、見つけたら実装に入らず dev-spec フェーズ 5 への差し戻しを案内する (安全網)
 
 このため、PoC 計画を書くときは:
@@ -376,5 +376,4 @@ Task({
 
 - **usecase-description.md**: 技術検証の前にユースケースを整理する場合
 - **poc-verification.md**: 直後のフェーズ 5。PoC 計画を実際に検証する
-- **ddd-modeling.md**: 技術検証後、ドメインモデリングに進む場合
-- **analyzing-requirements.md**: 技術設計に進む場合 (未検証の blocker=false のみ POC_NEEDED マーカーとして転記)
+- **design-doc.md**: 横断設計に進む場合 (未検証の blocker=false のみ POC_NEEDED マーカーとして転記)

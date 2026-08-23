@@ -377,5 +377,4 @@ Task({
 ## 関連スキル
 
 - **user-story**: ユースケース記述の前にストーリーを作成する場合
-- **ddd-modeling**: ユースケースからドメインモデルを構築する場合
-- **analyzing-requirements**: 技術設計に進む場合
+- **design-doc**: 横断設計に進む場合
