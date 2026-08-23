@@ -36,7 +36,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/DESIGN.md docs/features/ 2>/dev/null
 - **docs が push 済みか確認する**: ローカルに `docs/DESIGN.md` があるのに `git log origin/$DEFAULT -1 -- docs/` が空なら、ブランチ基点 (origin) に設計 docs が無い。docs を含むコミットの push を人間に依頼して停止する (2.1 のブランチは origin から切るため、push されていないと implementer が docs を読めない)
 - `docs/DESIGN.md` が無い構成でも、issue が自己完結していれば続行してよい (issue の DoD に実行コマンドが揃っていることが条件)
 
-作業ログ用のディレクトリを作る: `SCRATCH=<scratchpad>/dev-impl-$(date +%Y%m%d-%H%M%S)` (report JSON の置き場。git 管理外)。
+作業ログ用のディレクトリを作る: `SCRATCH=<scratchpad>/dev-impl-$(date +%Y%m%d-%H%M%S)` (report JSON の置き場。git 管理外)。保留レビュー項目のチェックリストは `$SCRATCH/pending-review.html` に置く (追記は 2.3、確認案内は Step 3)。
 
 ## Step 1: issue の収集と着手順
 
@@ -124,8 +124,12 @@ report_path: <SCRATCH>/review-<N>-r<ラウンド>.json`
 findings の分岐:
 
 - **high / medium が 0 件** → 2.4 へ (low は完了コメントに「報告のみ」として記載)
-- **high / medium がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して修正させ、レビューを再実行する。**このループは最大 2 ラウンド (固定)**。2 ラウンド後に **high が残る → 2.6**。**medium だけが残る → low と同様に報告のみとして 2.4 へ進む**
+- **high / medium がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して修正させ、レビューを再実行する。**このループは最大 2 ラウンド (固定)**。2 ラウンド後に **high が残る → 2.6**。**medium だけが残る → `$SCRATCH/pending-review.html` に追記して 2.4 へ進む** (下記「保留レビュー項目の記録」)
 - **`category: test-weakening` の finding** → implementer に直させず親が裁定する: 弱体化が事実なら該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要 — 2.4 の全体テストが検証する。ラウンド数にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む
+
+#### 保留レビュー項目の記録
+
+2 ラウンドで解消しなかった medium は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。`$SCRATCH/pending-review.html` (無ければ作成) に issue ごとの節として追記する — 各 finding はチェックボックス付きの 1 項目で、severity / category / `file:line` / summary / evidence / fix_hint をまとめる。外部依存の無い自己完結の静的 HTML とし、run 中は全 issue が同じファイルに追記し続ける。
 
 ### 2.4 コミット・PR・merge
 
@@ -142,7 +146,7 @@ Closes #<N>
 
 ## 検証
 - テスト: <全体テストの結果 (passed/failed 件数)>
-- レビュー: review-impl <ラウンド数> 周、high/medium 0 件 (low <k> 件は merge 後の issue コメントに記載)
+- レビュー: review-impl <ラウンド数> 周、high 0 件 (low <k> 件・未解消 medium <m> 件は merge 後の issue コメントに記載。medium 0 件ならその旨)
 - DoD: merge 前にローカルで全コマンドを実行し、green を確認してから merge する
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
@@ -167,6 +171,7 @@ merge により `Closes #N` で issue は自動 close される (されていな
 - 変更: <summary と主要ファイル>
 - テスト: <2.4 の全体テストの件数>、DoD: green
 - レビュー: <ラウンド数> 周 (low の報告: <あれば列挙、なければ「なし」>)
+- 未解消 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint はチェックリスト pending-review.html に記録 — issue コメント側が恒久の記録で、HTML は確認 UI)
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
 
@@ -183,7 +188,7 @@ gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が
 
 ブランチと open PR は merge せず残す (人間が差分を確認でき、再開時に再利用できる)。**その issue に依存しない次の issue へ進む。**
 
-**run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する。
+**run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する — このときも Step 3 の手順 2 (pending-review.html の open と確認促し) を実行する (merge 済み issue の保留 medium を停止で失わない)。
 
 ## Step 3: 終了処理
 
@@ -196,14 +201,16 @@ gh api --paginate "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues?per_page=100" 
 # 0 件なら: gh issue close "$PARENT_NUM" --repo "$REPO_SLUG" --comment "全 issue の実装が完了したため close する"
 ```
 
-2. 最終報告 (会話で 1 回だけ。レポート文書は作らない):
+2. `$SCRATCH/pending-review.html` が存在すれば `open` で開き (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、未解消 medium <n> 件のチェックが必要」とユーザーに確認を促す。ユーザーが対応要と判断した項目は、新しい issue にするか直接の修正依頼で対応する
+3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
    - 実装した issue と PR の一覧
+   - 保留レビュー項目 (未解消 medium) の件数とチェックリストのパス
    - `needs-human` で駐車した issue と、人間がすべき決定
    - 実装中の設計判断・docs 更新の要約
 
 ## エスカレーション回答後の再開
 
-人間が `needs-human` の issue に回答したら、**回答の内容を issue 本文 (該当節の書き換え) または参照 docs に反映してから**、ラベルを `ready` に戻して本スキルを再実行する — implementer は issue 本文と docs しか読まないため、コメントに書かれただけの回答は実装に届かない。docs 側を変えた場合は push も行う (Step 0 の確認に掛かる)。Step 1 の収集が駐車 issue を拾い直し、残置ブランチ・PR があれば続きから実装する。
+人間が `needs-human` の issue に回答したら、**回答の内容を issue 本文 (該当節の書き換え) または参照 docs に反映してから**、ラベルを `ready` に戻して本スキルを再実行する — implementer は issue 本文と docs しか読まないため、コメントに書かれただけの回答は実装に届かない。docs 側を変えた場合は push も行う (Step 0 の確認に掛かる)。Step 1 の収集が駐車 issue を拾い直し、残置ブランチ・PR があれば続きから実装する。チェックリスト (pending-review.html) は run 単位 (`$SCRATCH` が run ごとに新規) なので、再開 run の Step 3 が示す件数に前 run の保留 medium は含まれない — 前 run 分は各 issue の完了コメントに残っている summary から辿る。
 
 ## 参照ルール
 
