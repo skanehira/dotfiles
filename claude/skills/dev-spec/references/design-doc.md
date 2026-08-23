@@ -1,14 +1,14 @@
-# 横断設計書 (docs/DESIGN.md) の書き方 (dev-spec フェーズ 6)
+# 横断設計書 (docs/design/DESIGN.md) の書き方 (dev-spec フェーズ 6)
 
 - 種別: テンプレート + 記入基準
 - 生成者: dev-spec フェーズ 6。更新者: dev-impl (実装詳細レベルの乖離補正のみ)
-- 消費者: 機能設計書 (docs/features/) と issue から節名で参照される / dev-impl の implementer・review-impl が横断規約・スキーマ・検証コマンドを引く / 人間が全体像を掴む
+- 消費者: 機能設計書 (docs/design/features/) と issue から節名で参照される / dev-impl の implementer・review-impl が横断規約・スキーマ・検証コマンドを引く / 人間が全体像を掴む
 
-**1 ファイルに横断関心事だけを書く。** 機能単位の契約 (入出力・エッジケース) は docs/features/ が正本で、ここに書かない。逆に、複数機能が共有するもの (スキーマ・API 規約・エラー形式・認証) は必ずここに書き、features 側に重複させない。
+**1 ファイルに横断関心事だけを書く。** 機能単位の契約 (入出力・エッジケース) は docs/design/features/ が正本で、ここに書かない。逆に、複数機能が共有するもの (スキーマ・API 規約・エラー形式・認証) は必ずここに書き、features 側に重複させない。
 
 ## テンプレート
 
-1 行目のプロダクトモードスタンプは判定コマンド (`sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/DESIGN.md | head -1`) が読むので、位置を動かさない。「(該当時)」の節は、該当しない構成では節ごと省略してよい (空節を残さない)。
+1 行目のプロダクトモードスタンプは判定コマンド (`sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/design/DESIGN.md | head -1`) が読むので、位置を動かさない。「(該当時)」の節は、該当しない構成では節ごと省略してよい (空節を残さない)。
 
 ```markdown
 <!-- product-mode: webapp -->
@@ -38,7 +38,7 @@
 ## API 一覧 (該当時)
 
 <エンドポイントの一覧表 (メソッド・パス・概要・対応する機能設計書)。
- 個別のリクエスト/レスポンス詳細は各 docs/features/ の「API」節が正本>
+ 個別のリクエスト/レスポンス詳細は各 docs/design/features/ の「API」節が正本>
 
 ## 横断規約 (該当時)
 

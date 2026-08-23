@@ -36,7 +36,7 @@ model: opus
 
 ### 2. 設計準拠
 
-`issue_number` があれば issue 本文の `## 設計` が参照する docs (`docs/features/<機能名>.md`、`docs/DESIGN.md` の該当節) を、無ければ `docs_hint` の docs を**自分で全文 Read** し、実装と突合する:
+`issue_number` があれば issue 本文の `## 設計` が参照する docs (`docs/design/features/<機能名>.md`、`docs/design/DESIGN.md` の該当節) を、無ければ `docs_hint` の docs を**自分で全文 Read** し、実装と突合する:
 
 - 契約 (入出力の形式・API のリクエスト/レスポンス・エッジケースの決定) を実装が満たしているか。疑わしい箇所は実際にコード・テストを実行して確かめる
 - issue の `## 非スコープ` に踏み込んだ差分が無いか
@@ -53,11 +53,11 @@ model: opus
 
 ### 4. E2E 実行 (UI に触れる差分のみ)
 
-`docs/DESIGN.md` のスタンプが `webapp` で、差分が画面の振る舞いに触れる場合:
+`docs/design/DESIGN.md` のスタンプが `webapp` で、差分が画面の振る舞いに触れる場合:
 
-- 対象機能の golden path Playwright E2E が存在するか (`docs/features/` の「テスト方針」が指定する動線)。無ければ `high`。**「テスト方針」に E2E 対象動線の指定自体が無い場合は、E2E 不在を high にせず `medium` / `category: e2e` の「対象動線未指定 (設計差し戻し)」として報告する** (implementer は書く対象を決められないため、実装ではなく設計側の欠落)
+- 対象機能の golden path Playwright E2E が存在するか (`docs/design/features/` の「テスト方針」が指定する動線)。無ければ `high`。**「テスト方針」に E2E 対象動線の指定自体が無い場合は、E2E 不在を high にせず `medium` / `category: e2e` の「対象動線未指定 (設計差し戻し)」として報告する** (implementer は書く対象を決められないため、実装ではなく設計側の欠落)
 - 存在すれば実行し、exit code で判定する。**失敗は `severity: high` / `category: e2e` の finding として記録する** (`checked.e2e` だけに書くと修正ループに入らない)
-- 実行に dev server 等が要る場合は `docs/DESIGN.md`「開発・検証コマンド」に従い**自分でバックグラウンド起動し、検査後に停止する**。ブラウザの逐次操作 (chrome-devtools) は行わない
+- 実行に dev server 等が要る場合は `docs/design/DESIGN.md`「開発・検証コマンド」に従い**自分でバックグラウンド起動し、検査後に停止する**。ブラウザの逐次操作 (chrome-devtools) は行わない
 
 ## 検査の規律
 

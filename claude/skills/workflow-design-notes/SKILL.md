@@ -1,6 +1,6 @@
 ---
 name: workflow-design-notes
-description: dev-spec を使わず議論しながら設計を固めるときの進行様式。議論中は決定台帳 (DESIGN_NOTES.md) だけを追記し、節目に dev-spec 互換の DESIGN.md (1 枚) + docs/features/ へゼロから落とし込む。「議論しながら設計したい」「設計の壁打ちを文書に残したい」「台帳に記録して」「設計書に落とし込んで」「一旦まとめて」などで起動。
+description: dev-spec を使わず議論しながら設計を固めるときの進行様式。議論中は決定台帳 (DESIGN_NOTES.md) だけを追記し、節目に dev-spec 互換の DESIGN.md (1 枚) + docs/design/features/ へゼロから落とし込む。「議論しながら設計したい」「設計の壁打ちを文書に残したい」「台帳に記録して」「設計書に落とし込んで」「一旦まとめて」などで起動。
 ---
 
 # /workflow-design-notes
@@ -8,7 +8,7 @@ description: dev-spec を使わず議論しながら設計を固めるときの�
 議論駆動の設計セッションで、完成文書への継ぎ足し編集を構造的に排除する。アーティファクトを 2 つに分離する:
 
 - **決定台帳** `docs/DESIGN_NOTES.md`: 追記専用の作業記憶。議論中はこれ**だけ**を更新する
-- **設計書** `docs/DESIGN.md` + `docs/features/<機能名>.md`: 台帳からの**再生成物**。議論中に直接 Edit しない
+- **設計書** `docs/design/DESIGN.md` + `docs/design/features/<機能名>.md`: 台帳からの**再生成物**。議論中に直接 Edit しない
 
 継ぎ足しで文書が劣化する根本原因は「議論の作業記憶」と「レビュー用の完成文書」を同じファイルに兼ねさせることにある。台帳は形式が緩く追記の害がなく、設計書は毎回ゼロから生成されるため常に全体整合した状態で読める。
 
@@ -33,7 +33,7 @@ description: dev-spec を使わず議論しながら設計を固めるときの�
 
 1. `rules/core/documentation.md` の手順どおり依拠事実を rg で再検証する
 2. `rules/core/references/doc-formats/design-doc.md`（構造規範）と `../dev-spec/references/design-doc.md`（DESIGN.md テンプレートの正本）・`../dev-spec/references/feature-doc.md`（機能設計書テンプレート）を Read する
-3. 台帳**全体**から `docs/DESIGN.md` + `docs/features/` を**毎回ゼロから生成**する（前回生成物への差分編集をしない）。生成物の冒頭に `<!-- generated-from: docs/DESIGN_NOTES.md -->` を入れる（直接編集への注意標識）
+3. 台帳**全体**から `docs/design/DESIGN.md` + `docs/design/features/` を**毎回ゼロから生成**する（前回生成物への差分編集をしない）。生成物の冒頭に `<!-- generated-from: docs/DESIGN_NOTES.md -->` を入れる（直接編集への注意標識）
 4. design-doc.md の「機械ゲート」判定コマンド（POC_NEEDED blocker=true 残存）を自分で実行し、通らなければ生成をやり直す
 5. `/utility-doc-audit` を設計書 2 ファイル + 決定台帳付きで**フル監査**として起動する（ゼロから全文再生成した直後のため、スコープ監査ではなく観点 1〜6 全体を検査させる。決定カバレッジ観点が台帳→文書の取りこぼし・棄却案の生き残りを検査する）
 6. 監査指摘のうち決定に関わるものは**台帳に反映してから再生成**する（文書だけを直すと台帳と文書が乖離する）。字句レベルの指摘は文書の直接修正でよい

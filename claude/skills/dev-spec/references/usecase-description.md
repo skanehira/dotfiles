@@ -40,7 +40,7 @@
 #### 1.1 前提ドキュメントの読み込み
 
 ```javascript
-Read({ file_path: "docs/USER_STORIES.md" })
+Read({ file_path: "docs/design/USER_STORIES.md" })
 ```
 
 #### 1.2 コンテキストの活用
@@ -303,7 +303,7 @@ BR-004: 無料プランは1日5回まで分析可能
 
 ```javascript
 Write({
-  file_path: "docs/USECASES.md",
+  file_path: "docs/design/USECASES.md",
   content: usecasesContent
 })
 ```
@@ -341,7 +341,7 @@ Agent({
 以下のユースケースドキュメントをレビューし、問題があれば修正してください。
 
 ## レビュー対象ファイル
-- docs/USECASES.md
+- docs/design/USECASES.md
 
 ## レビュー観点
 

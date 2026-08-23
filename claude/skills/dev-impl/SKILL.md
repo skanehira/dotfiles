@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
 
 # dev-impl — 実装ループ
 
-`ready` ラベルの open issue を依存順に最後まで自律的に実装するオーケストレーター。実装の指示はすべて issue 本文と参照 docs (docs/DESIGN.md / docs/features/) から取る — **issue が自己完結しているので、親が文脈を編纂して渡すことはしない**。
+`ready` ラベルの open issue を依存順に最後まで自律的に実装するオーケストレーター。実装の指示はすべて issue 本文と参照 docs (docs/design/DESIGN.md / docs/design/features/) から取る — **issue が自己完結しているので、親が文脈を編纂して渡すことはしない**。
 
 親 (このセッション) は薄いオーケストレーターに徹する: issue の順序管理 / subagent の起動 / コミット・PR・merge / issue のラベル・コメント操作。実装は implementer、検査は review-impl が fresh context で行う。
 
@@ -27,14 +27,14 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
 REPO_DIR=$(git rev-parse --show-toplevel)
 REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 DEFAULT=$(git symbolic-ref --short refs/remotes/origin/HEAD | sed 's|origin/||')
-rg -n 'POC_NEEDED:.*blocker=true' docs/DESIGN.md docs/features/ 2>/dev/null
+rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>/dev/null
 ```
 
 - git / gh が解決できない → 停止して案内する
 - `POC_NEEDED: ... blocker=true` が 1 件以上 → 実装に入らず、`/dev-spec` のフェーズ 5 (PoC 検証) への差し戻しを案内して停止する (未検証の技術前提の上に実装しない)
 - ラベル 4 種を冪等に用意する (dev-spec を経ずに用意された issue でも 2.1 のラベル操作が失敗しないように。コマンドは `~/.claude/skills/dev-spec/references/issue-template.md`「ラベルの用意」と同一)
-- **docs が push 済みか確認する**: ローカルに `docs/DESIGN.md` があるのに `git log origin/$DEFAULT -1 -- docs/DESIGN.md docs/features/` が空なら、ブランチ基点 (origin) に設計 docs が無い。docs を含むコミットの push を人間に依頼して停止する (2.1 のブランチは origin から切るため、push されていないと implementer が docs を読めない)
-- `docs/DESIGN.md` が無い構成でも、issue が自己完結していれば続行してよい (issue の DoD に実行コマンドが揃っていることが条件)
+- **docs が push 済みか確認する**: ローカルに `docs/design/DESIGN.md` があるのに `git log origin/$DEFAULT -1 -- docs/design/DESIGN.md docs/design/features/` が空なら、ブランチ基点 (origin) に設計 docs が無い。docs を含むコミットの push を人間に依頼して停止する (2.1 のブランチは origin から切るため、push されていないと implementer が docs を読めない)
+- `docs/design/DESIGN.md` が無い構成でも、issue が自己完結していれば続行してよい (issue の DoD に実行コマンドが揃っていることが条件)
 
 作業ログ用のディレクトリを作る: `SCRATCH=<scratchpad>/dev-impl-$(date +%Y%m%d-%H%M%S)` (report JSON の置き場。git 管理外)。保留レビュー項目のチェックリストは **`docs/PENDING_REVIEW.html`** に置く (リポジトリ内。issue のコミットに含めて merge されるため、別マシン・別セッション・後続 run にも引き継がれる。追記は 2.3、確認案内は Step 3)。
 

@@ -23,7 +23,7 @@ FEASIBILITY.md に書かれた PoC 計画を**実際に実行して**、技術�
 
 ### 1. 対象の抽出
 
-docs/FEASIBILITY.md を Read し、`status=unresolved` の POC_STATUS 行を抽出する。
+docs/design/FEASIBILITY.md を Read し、`status=unresolved` の POC_STATUS 行を抽出する。
 
 - **blocker=true**: このフェーズでの検証が必須
 - **blocker=false**: 任意。risk=high なら検証を推奨し、ユーザーに確認する
@@ -42,7 +42,7 @@ Agent({
 以下の PoC 計画を検証してください。
 
 - marker: id=<id>, scope=<スコープ1行>, risk=<risk>, blocker=<blocker>
-- context_paths: docs/FEASIBILITY.md (PoC 計画の全文と文脈を読むこと)
+- context_paths: docs/design/FEASIBILITY.md (PoC 計画の全文と文脈を読むこと)
 - output_path: /tmp/tech-investigation-<id>.json
 - workspace_dir: /tmp/poc-<id>/
 
@@ -101,13 +101,13 @@ AskUserQuestion({
 フェーズ完了前に必ず実行する:
 
 ```bash
-rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/FEASIBILITY.md
+rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/design/FEASIBILITY.md
 ```
 
 0 件になるまでこのフェーズを完了扱いにしない (1 件以上残っていればステップ 2 または 4 に戻る)。
 
 ## 後段との連動
 
-- フェーズ 6 (design-doc) は、FEASIBILITY.md の PoC 結果を技術選定の根拠として DESIGN.md に反映し、未検証で残った `blocker=false` の PoC 計画のみ `POC_NEEDED` マーカーとして DESIGN.md の該当節 (機能単体の契約なら docs/features/ の該当ファイル) に転記する
+- フェーズ 6 (design-doc) は、FEASIBILITY.md の PoC 結果を技術選定の根拠として DESIGN.md に反映し、未検証で残った `blocker=false` の PoC 計画のみ `POC_NEEDED` マーカーとして DESIGN.md の該当節 (機能単体の契約なら docs/design/features/ の該当ファイル) に転記する
 - フェーズ 6 は `status=fallback_adopted` / `scope_reduced` の PoC 結果を DESIGN.md「アーキテクチャと技術選定」に転記する (当初案 = 却下案、fallback / スコープ縮小後の案 = 採用案として)
-- 実装ループ (`/dev-impl`) は起動時に docs/DESIGN.md / docs/features/ の `blocker=true` マーカー残存をチェックし、見つけたら実装に入らず本フェーズへの差し戻しを案内する (安全網)
+- 実装ループ (`/dev-impl`) は起動時に docs/design/DESIGN.md / docs/design/features/ の `blocker=true` マーカー残存をチェックし、見つけたら実装に入らず本フェーズへの差し戻しを案内する (安全網)
