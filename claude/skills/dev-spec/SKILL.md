@@ -180,7 +180,7 @@ docs が完成した時点で、書き手と別コンテキストの subagent �
 
 `references/issue-template.md` の「issue 作成手順」に従う。要点:
 
-1. **docs をコミットする**: docs/ 配下の成果物 (DESIGN.md / features/ ほか) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/rules/core/orchestration.md` に従う)。**/dev-impl は origin から切ったブランチで docs を読むため、実装開始前にこのコミットの push が必要** — 手順 4 の案内に含める
+1. **docs をコミットする**: docs/ 配下の成果物 (DESIGN.md / features/ ほか。ただし `docs/PENDING_REVIEW.html` は対象外 — dev-impl が管理する) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/rules/core/orchestration.md` に従う)。**/dev-impl は origin から切ったブランチで docs を読むため、実装開始前にこのコミットの push が必要** — 手順 4 の案内に含める
 
 2. **作成前に人間の同意を取る** (GitHub への書き込みなので):
 
