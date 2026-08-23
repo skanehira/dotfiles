@@ -107,7 +107,7 @@
 特定の専門判断を切り出した sub-agent。
 
 該当する指摘の例:
-- 「設計レビューが甘い」 → architecture-guard agent
+- 「設計レビューが甘い」 → review-impl agent
 - 「型エラーの修正が不正確」 → ts-type-fixer agent (既に fix-lsp-warnings がある)
 
 agent 新規作成は新規スキル同様に保守的に。

@@ -56,7 +56,7 @@ utility-self-improving の `self-improving-judge` subagent が「**観測した�
 | 全タスク・全ファイル | `~/.claude/CLAUDE.md` (user) or project `CLAUDE.md` | 「依頼スコープ外を出さない」「具体例を併記」 |
 | 特定ファイル型・特定ディレクトリ | `.claude/rules/*.md` + `paths` frontmatter | `**/*.tsx` で React ルール、`**/*.go` で Go ルール |
 | ワークフロー手順 | Skill (`.claude/skills/*/SKILL.md`) | `/workflow-commit`, `/utility-self-improving` |
-| 専門判断・context isolation | Subagent (`.claude/agents/*.md`) | `self-improving-judge`, `architecture-guard` |
+| 専門判断・context isolation | Subagent (`.claude/agents/*.md`) | `self-improving-judge`, `review-impl` |
 | 生命周期イベント (block 可能・観測専用) | Hook (`settings.json`) | `PreToolUse` で deny、`SessionEnd` で archive |
 | 外部システム連携 | MCP server | Slack / Figma / DB |
 | 出力スタイル恒久変更 | Output style (`.claude/output-styles/`) | 役割の変更 (例: 教師モード)、フォーマット恒久指定 |
