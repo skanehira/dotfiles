@@ -36,4 +36,4 @@ subagent の起動を機械検証する (PreToolUse Agent)。Agent ツールの 
 - `model` は**未指定のときだけ** deny する。規定と違う値でも明示されていれば意図的な override として通す
 - `MANDATED_MODEL` に無い agent (general-purpose / Explore 等) は検証対象外
 - 無効化: 環境変数 `AGENT_SPAWN_GUARD=off`
-- テスト: `deno test --allow-env claude/hooks/agent-spawn-guard_test.ts`
+- テスト: `deno test --allow-env --allow-run --allow-read claude/hooks/agent-spawn-guard_test.ts` (hook 本体を subprocess で起動する I/O 層のテストを含むため `--allow-run` が要る)
