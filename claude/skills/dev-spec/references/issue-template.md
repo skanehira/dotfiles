@@ -1,6 +1,7 @@
 # issue テンプレートと作成手順 (dev-spec フェーズ 9〜10)
 
 - 種別: テンプレート + 手順書
+- 生成者: dev-spec フェーズ 9 (ドラフト)・フェーズ 10 (issue 作成)
 - 消費者: dev-spec フェーズ 9 (ドラフト作成・ドラフトチェック)、フェーズ 10 (issue 作成)、`/dev-impl` (子 issue を読んで実装)、人間 (issue 単体で作業に着手する)
 
 **issue の情報設計の基準は「人間が issue 本文 + 参照 docs だけで実装に着手できるか」。** AI (dev-impl) はその部分集合しか要らないので、この基準を満たせば両方が読める。
@@ -61,7 +62,7 @@ docs/DESIGN.md 参照
 
 USECASES.md が無い構成 (クイックモード) では「ユースケースと issue の対応」を「issue 一覧」に読み替え、グルーピングせず列挙する。
 
-## ドラフトチェックのチェックリスト (フェーズ 9 の②)
+## ドラフトチェックのチェックリスト (フェーズ 9 のドラフトチェック)
 
 fresh context の検査 subagent に、親 + 子の全ドラフトを一括で渡して検査させる観点:
 
@@ -76,11 +77,10 @@ fresh context の検査 subagent に、親 + 子の全ドラフトを一括で�
 ### 前提条件
 
 ```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
 REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 ```
 
-失敗する (git リポジトリでない / GitHub リモートが無い / `gh` 未認証) なら停止し、「リポジトリを用意してから再実行してください」と案内する。作れないまま成功したように振る舞わない。docs の push は不要 (dev-impl はローカルの docs を読む)。
+失敗する (git リポジトリでない / GitHub リモートが無い / `gh` 未認証) なら停止し、「リポジトリを用意してから再実行してください」と案内する。作れないまま成功したように振る舞わない。
 
 ### ラベルの用意 (冪等)
 
@@ -97,18 +97,20 @@ gh label create tracking    --force --color 5319E7 --description "トラッキ�
 gh issue list --repo "$REPO_SLUG" --state all --limit 200 --json number,title,state,labels
 ```
 
+取得件数が limit に達したら limit を上げて再取得する (無音の取りこぼしは重複作成になる)。
+
 | 既存 issue の状態 | 動作 |
 | --- | --- |
 | 同タイトルが無い | 新規作成 |
 | タイトル一致・open | 本文を比較し、不一致なら `gh issue edit <番号> --body-file` で貼り直す。`in-progress` の issue を書き換えたときは issue コメントで改訂を告知する |
 | タイトル一致・closed | 触らない。本文が現ドラフトと不一致ならその番号を最終報告に列挙する (完了済み issue に改訂が届かないことを人間が把握できるように) |
 
-本文比較はコマンド置換 (`$(...)`) を使わずファイルに落として `cmp` する (末尾改行の欠落を検出するため。`rules/core/verification.md`)。取得側の `sed 's/\r$//'` は CRLF 除去 (GitHub web UI で編集された本文対策):
+本文比較はコマンド置換 (`$(...)`) を使わずファイルに落として `cmp` する (末尾改行の欠落を検出するため。`~/.claude/rules/core/verification.md`)。取得側の `sed 's/\r$//'` は CRLF 除去 (GitHub web UI で編集された本文対策)。`gh` の出力はファイル末尾に改行 1 つが付くため、ドラフト側もファイル末尾を改行 1 つで終える形で Write する (毎回不一致になるときはまず末尾改行の差を疑う):
 
 ```bash
-gh issue view "$ISSUE_NUM" --repo "$REPO_SLUG" --json body -q .body | sed 's/\r$//' > /tmp/issue-current.md
-cmp -s /tmp/issue-current.md /tmp/issue-body.md || \
-  gh issue edit "$ISSUE_NUM" --repo "$REPO_SLUG" --body-file /tmp/issue-body.md
+gh issue view "$ISSUE_NUM" --repo "$REPO_SLUG" --json body -q .body | sed 's/\r$//' > <scratchpad>/issue-current.md
+cmp -s <scratchpad>/issue-current.md <scratchpad>/issue-body.md || \
+  gh issue edit "$ISSUE_NUM" --repo "$REPO_SLUG" --body-file <scratchpad>/issue-body.md
 ```
 
 ### 親 issue の作成と特定
@@ -117,7 +119,7 @@ cmp -s /tmp/issue-current.md /tmp/issue-body.md || \
 
 ```bash
 gh issue list --repo "$REPO_SLUG" --state open --label tracking --json number,title
-PARENT_URL=$(gh issue create --repo "$REPO_SLUG" --title "$PARENT_TITLE" --body-file /tmp/parent-body.md --label tracking)
+PARENT_URL=$(gh issue create --repo "$REPO_SLUG" --title "$PARENT_TITLE" --body-file <scratchpad>/parent-body.md --label tracking)
 PARENT_NUM=$(printf '%s' "$PARENT_URL" | grep -o '[0-9]*$')
 ```
 
@@ -130,10 +132,10 @@ closed の親に新しい子を紐付けることになったら (完了後の�
 
 ### 子 issue の作成
 
-依存の前方参照を避けるため、依存グラフの上流から順に 1 件ずつ作る (依存先の番号が常に確定済みになる)。本文は Write ツールで `/tmp/issue-body.md` に書き出してから渡す:
+依存の前方参照を避けるため、依存グラフの上流から順に 1 件ずつ作る (依存先の番号が常に確定済みになる)。本文は Write ツールで `<scratchpad>/issue-body.md` に書き出してから渡す:
 
 ```bash
-ISSUE_URL=$(gh issue create --repo "$REPO_SLUG" --title "$TITLE" --body-file /tmp/issue-body.md --label ready)
+ISSUE_URL=$(gh issue create --repo "$REPO_SLUG" --title "$TITLE" --body-file <scratchpad>/issue-body.md --label ready)
 ISSUE_NUM=$(printf '%s' "$ISSUE_URL" | grep -o '[0-9]*$')
 ```
 
@@ -163,6 +165,10 @@ gh api "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues" -F sub_issue_id="$CHILD_
 | 親の貼り替え | 別の親に紐付いている子は `-F replace_parent=true` を追加して貼り替える (旧構成の親から移行する場合のみ) |
 
 紐付けに失敗したら停止して人間に伝える: 作成済みの子 issue 番号、未紐付けの組、復旧は本フェーズの再実行で行えること (突き合わせと seed が続きから紐付ける)。
+
+### 親 issue 本文の確定
+
+子 issue の番号は作成するまで確定しないため、親を先に作る際の本文は「ユースケースと issue の対応」を `(子 issue の作成後に確定)` のプレースホルダにしてよい。**全子の作成・紐付けが終わったら、「タイトル → 番号」の対応表から親テンプレートの本文を再生成し、突き合わせと同じ cmp → `gh issue edit "$PARENT_NUM" --body-file` で更新する。** この再生成は再実行でも冪等に働く (子が増減すれば本文不一致として検出される)。
 
 ### 最終報告
 

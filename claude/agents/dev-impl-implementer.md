@@ -68,7 +68,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 | --- | --- |
 | 契約レベルの設計乖離 (上記) | `contract_break` |
 | `category: test-weakening` の finding を渡された | `test_weakening_suspected` |
-| テストが 3 回試みても green にならない | `tests_failing` |
+| テストまたは DoD のコマンドが 3 回試みても green にならない | `tests_failing` |
 | issue と参照 docs の情報だけでは実装方針を決められない | `spec_insufficient` |
 
 設計が沈黙・あいまいで、どちらを選んでもゴールと矛盾しない細部 (デフォルト値・命名・エラーメッセージ書式・ライブラリ API の選択等) は自分で決めてよい。決めた内容は報告の `design_decisions` に残す (親が issue コメントで可視化し、ユーザーが乖離に気付ける状態を保つ)。
@@ -83,7 +83,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
   "mode": "implement|fix",
   "status": "done|escalate|failed",
   "reason": "done 以外の場合のみ (上表の値)",
-  "summary": "実装内容の 1-3 行要約",
+  "summary": "実装内容の 1-3 行要約 (status が escalate / failed のときは、試したアプローチとその結果もここに書く — 親が issue コメントの駐車報告に使う)",
   "files_changed": ["<repo_dir 相対パス>"],
   "test_result": { "command": "...", "exit_code": 0, "passed": 0, "failed": 0 },
   "dod_result": { "command": "...", "exit_code": 0 },
@@ -93,7 +93,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 }
 ```
 
-該当が無い項目も空配列で必ず埋める。`self_review` は報告の直前に `rules/core/testing.md`「セルフレビューチェックリスト」を自分の書いたテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して修正ラウンドが 1 周増えるだけ)。
+該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` を検収してから done と扱う。`self_review` は報告の直前に `~/.claude/rules/core/testing.md`「セルフレビューチェックリスト」を自分の書いたテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して修正ラウンドが 1 周増えるだけ)。
 
 ## 範囲外 (やらないこと)
 

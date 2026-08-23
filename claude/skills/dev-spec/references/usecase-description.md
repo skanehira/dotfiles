@@ -334,7 +334,7 @@ graph LR
 生成したドキュメントのレビューをサブエージェントに委譲する。
 
 ```javascript
-Task({
+Agent({
   description: "ユースケースレビュー",
   subagent_type: "general-purpose",
   prompt: `

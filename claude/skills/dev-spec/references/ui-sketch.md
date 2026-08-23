@@ -383,7 +383,7 @@ AskUserQuestion({
 生成したドキュメントのレビューをサブエージェントに委譲する。
 
 ```javascript
-Task({
+Agent({
   description: "UI/UXスケッチレビュー",
   subagent_type: "general-purpose",
   prompt: `

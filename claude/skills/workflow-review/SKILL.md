@@ -46,7 +46,7 @@ report_path: <scratchpad>/workflow-review-<timestamp>.json`
 })
 ```
 
-`--staged` のときは prompt に `対象はステージ済み差分のみ (git diff --staged で読むこと)` を 1 行追加する。
+`--staged` のときは prompt に `diff_scope: staged` を追加する (review-impl の入力契約のキー)。report JSON が生成されない・パース不能の場合は 1 回だけ再試行し、再失敗ならその旨を伝えて手動レビューを案内する。
 
 ### Step 3: 結果の整形表示
 

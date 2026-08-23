@@ -17,7 +17,7 @@ FEASIBILITY.md に書かれた PoC 計画を**実際に実行して**、技術�
 - `status=fallback_adopted`: 当初案不成立、ユーザーが fallback 採用を決定
 - `status=scope_reduced`: ユーザーがスコープ縮小を決定
 
-フェーズ 7 のゲートはこの行を `rg 'POC_STATUS:.*blocker=true.*status=unresolved'` で判定する。**本文の説明ではなくこの行が唯一の判定ソース**なので、更新漏れ = ゲートが閉じたままになる (安全側)。
+フェーズ 6 のゲートはこの行を `rg 'POC_STATUS:.*blocker=true.*status=unresolved'` で判定する。**本文の説明ではなくこの行が唯一の判定ソース**なので、更新漏れ = ゲートが閉じたままになる (安全側)。
 
 ## ワークフロー
 
@@ -34,7 +34,7 @@ docs/FEASIBILITY.md を Read し、`status=unresolved` の POC_STATUS 行を抽�
 対象の PoC 計画ごとに `tech-investigation` subagent を起動する。**互いに独立な調査なので、同一ターンで全件並列に起動する**こと。
 
 ```javascript
-Task({
+Agent({
   description: "PoC: <id>",
   subagent_type: "tech-investigation",
   model: "opus",   // 調査 fan-out は opus 明示 (rules/core/orchestration.md の割当表)。agent 側 frontmatter も opus だが、明示忘れで無音にセッションモデル継承へ落ちないよう二重に指定する
