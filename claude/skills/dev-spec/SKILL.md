@@ -222,7 +222,7 @@ B: このセッションで続行 — このまま /dev-impl とタイプ
 - [ ] blocker=true の PoC 計画がすべて解決済み (`verified` / `fallback_adopted` / `scope_reduced` のいずれか)
 - [ ] docs/design/DESIGN.md と docs/design/features/ が生成され、フェーズ 8 の設計チェックを通過した (high 0 件、または未解消のまま人間判断に提示済み)
 - [ ] 全ドラフトがフェーズ 9 のドラフトチェックを通過した
-- [ ] 親 issue 全件 + 子 issue 全件が作成され、全子が対応する親に sub-issue として紐付いた (issue-template.md の最終報告の形式で報告した)
+- [ ] 親 issue 全件 + 子 issue 全件が作成され、全子が対応する親に sub-issue として紐付いた。対応 UC 不明で紐付けられなかった子は issue-template.md の最終報告の形式で列挙した
 
 ## 参照ルール
 

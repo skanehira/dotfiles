@@ -186,10 +186,10 @@ gh api "repos/$REPO_SLUG/issues/$N/parent" \
 
 | 結果 | 動作 |
 | --- | --- |
-| 出力に `(HTTP 404)` を含む (親に紐付いていない子) | 何もしない。**正常系** (`gh` は非ゼロで終了しエラー行を出すが、エラーとして扱わない) |
+| 出力に `(HTTP 404)` を含む (親に紐付いていない子) | close はしない。**正常系** (`gh` は非ゼロで終了しエラー行を出すが、エラーとして扱わない)。ただし dev-spec の紐付け漏れの兆候なので、番号を控えて Step 3 の最終報告に載せる |
 | `state` が open (小文字) かつ `completed == total` | close する |
 | `completed < total` (残り子がある) | 親は open のまま次へ進む |
-| それ以外の失敗 (403・5xx・`gh` が sub-issues API 非対応など) | 親 close をスキップし、Step 3 の最終報告に「親 close を判定できなかった子 issue」として列挙する (404 と同じ扱いに丸めない) |
+| それ以外の失敗 (403・5xx・`gh` が sub-issues API 非対応など) | 親 close をスキップし、番号を控えて Step 3 の最終報告に載せる (404 と同じ扱いに丸めない) |
 
 ```bash
 gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の sub-issue がすべて完了したため close する (dev-impl)"
@@ -221,15 +221,17 @@ for P in $(gh issue list --repo "$REPO_SLUG" --state open --label tracking --lim
   SUMMARY=$(gh api "repos/$REPO_SLUG/issues/$P" --jq '"\(.sub_issues_summary.completed) \(.sub_issues_summary.total)"') \
     || { echo "#$P 判定不能"; continue; }
   COMPLETED=${SUMMARY% *}; TOTAL=${SUMMARY#* }
-  if [ "$TOTAL" -gt 0 ] && [ "$COMPLETED" -eq "$TOTAL" ]; then
+  if [ "$TOTAL" -eq 0 ]; then
+    echo "#$P 子ゼロ"
+  elif [ "$COMPLETED" -eq "$TOTAL" ]; then
     gh issue close "$P" --repo "$REPO_SLUG" --comment "この親 issue の sub-issue がすべて完了したため close する (dev-impl)"
   else
-    echo "#$P open のまま ($COMPLETED/$TOTAL)"
+    echo "#$P 子が残っている ($COMPLETED/$TOTAL)"
   fi
 done
 ```
 
-`TOTAL -gt 0` の条件を外さない — 子が 1 件も紐付いていない親 (dev-spec の紐付けが途中で落ちた場合) まで close してしまうため。`else` 側の出力 (子ゼロの親・open な子が残る親) と「判定不能」の親をそのまま最終報告の材料にする。
+`TOTAL -eq 0` の分岐を外さない — 子が 1 件も紐付いていない親 (dev-spec の紐付けが途中で落ちた場合) まで close してしまうため。「子ゼロ」「子が残っている」「判定不能」の 3 種の出力をそのまま最終報告の 3 区分に使う。
 
 **この走査は `tracking` ラベルの open issue を repo 全件対象にする。** dev-spec 由来でない手作りの `tracking` issue がある repo では、close 前に対象一覧を提示して人間に確認する。
 
@@ -237,6 +239,7 @@ done
 3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
    - 実装した issue と PR の一覧
    - close した親 (tracking) issue と、open のまま残した親 (子が残っている / 子ゼロ / 判定不能の別に)
+   - 2.5 で親 close を判定できなかった子 issue の番号 (親に紐付いていない 404 の子と、API 失敗の子を分けて)
    - 保留レビュー項目 (未解消 medium) の件数とチェックリストのパス
    - `needs-human` で駐車した issue と、人間がすべき決定
    - 実装中の設計判断・docs 更新の要約
