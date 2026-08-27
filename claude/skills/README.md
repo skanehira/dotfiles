@@ -8,7 +8,7 @@
 
 | 規模 | 入口 | 中身 |
 |---|---|---|
-| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → 人間が issue を確認 → `/dev-impl` | 設計ループ (要件〜PoC 検証〜DESIGN.md + docs/design/features/〜issue 生成) → 実装ループ (issue を依存順に 1 件ずつ自律実装)。issue は親 1 件 (トラッキング) + 子 N 件で、親を見れば UC 単位の進捗を俯瞰できる。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
+| **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → 人間が issue を確認 → `/dev-impl` | 設計ループ (要件〜PoC 検証〜DESIGN.md + docs/design/features/〜issue 生成) → 実装ループ (issue を依存順に 1 件ずつ自律実装)。issue はユースケース単位の親 (トラッキング) + その sub-issue の子で、親の進捗バーで UC ごとの進捗を俯瞰できる。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
 | **M: 1 機能・リファクタの一括委任 (docs 不要)** | `/dev-impl-quick` | 軽量実装ループ。タスク分解 → 直営 TDD → テストゲート → review-impl (focus: tests) → タスク単位コミット |
 | **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-impl` を自分で起動する |
 | **S: バグ修正・typo** | 直接依頼 | スキル不要。remind-rules hook が既定の品質を守る |
@@ -134,7 +134,7 @@ git index を共有する操作 (コミット) は並列化できないので親
 
 | スキル | 説明 | 入力 | 出力 |
 |---|---|---|---|
-| [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜横断設計 (DESIGN.md 1 枚)〜機能設計 (docs/design/features/)〜設計チェック〜issue ドラフトチェック〜GitHub issue 生成。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + docs/design/features/*.md + GitHub issue 群 (親 1 件 `tracking` + 子 N 件 `ready`、sub-issue 紐付け) |
+| [dev-spec](./dev-spec/) | 設計ループ。ユーザーストーリー〜PoC 検証〜横断設計 (DESIGN.md 1 枚)〜機能設計 (docs/design/features/)〜設計チェック〜issue ドラフトチェック〜GitHub issue 生成。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化 | `cli`/`webapp` + タスク説明 (省略時は推論して確認) | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + docs/design/features/*.md + GitHub issue 群 (ユースケース単位の親 `tracking` + 子 N 件 `ready`、sub-issue 紐付け) |
 | [dev-impl](./dev-impl/) | 実装ループ。GitHub issue を `Depends on #N` の順に 1 件ずつ自律実装 (implementer subagent が issue と docs を直読して TDD → review-impl → 修正 ≤2 ラウンド → PR → DoD ローカル実行 green で merge → close)。詰まった issue は needs-human で駐車して次へ。進捗は issue コメントのみで、2 ラウンド後の未解消 medium はチェックリスト (docs/PENDING_REVIEW.html、リポジトリで持ち回り) に集約して run 終了時に確認を促す | GitHub issue (必須)。docs/design/DESIGN.md + docs/design/features/ は issue から参照される | issue ごとの PR + merge コミット |
 | [dev-impl-quick](./dev-impl-quick/) | 軽量実装ループ。依頼文をタスク分解 → 1 件ずつ直営 TDD → テストゲート → review-impl (focus: tests、model: opus 明示) → タスク単位 commit | 依頼文または簡易タスクリスト (docs 不要) | タスク単位のコミット |
 

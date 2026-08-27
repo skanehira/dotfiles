@@ -20,7 +20,7 @@ argument-hint: "[cli|webapp] [タスク説明]"
 
 - **docs/design/DESIGN.md** (横断設計 1 枚): 目的・アーキテクチャ・開発検証コマンド・スキーマ・API 一覧・横断規約
 - **docs/design/features/<機能名>.md** (機能設計): 機能単位の入出力・API・実装配置・エッジケース・テスト方針。**正本は常に docs 側で、issue は参照するだけ** (ローカルで「この機能の設計はどうなっているか」を AI にも人間にも引ける)
-- **GitHub issue**: 親 1 件 (トラッキング) + 子 N 件 (作業単位)。**人間が issue 本文 + 参照 docs だけで着手できる**ことが情報設計の基準
+- **GitHub issue**: ユースケース単位の親 (`tracking`) + その sub-issue の子 (作業単位) の 2 階層。**人間が issue 本文 + 参照 docs だけで着手できる**ことが情報設計の基準
 
 フェーズごとに Feedback (検証手段) が異なる:
 
@@ -65,7 +65,7 @@ dev-impl はこのスタンプで UI の実機検証 (Playwright E2E) の要否�
 | 7  | 機能設計                          | `references/feature-doc.md`         | docs/design/features/<機能名>.md          | 実行           | 実行       |
 | 8  | 設計チェック                      | (本ファイル下記)                    | 指摘の反映 (docs 修正)             | 実行           | 実行       |
 | 9  | issue ドラフト + ドラフトチェック | `references/issue-template.md`      | ドラフト (scratchpad) + 指摘の反映 | 実行           | 実行       |
-| 10 | GitHub issue 生成                 | `references/issue-template.md`      | 親 issue 1 件 + 子 issue N 件      | 実行           | 実行       |
+| 10 | GitHub issue 生成                 | `references/issue-template.md`      | 親 issue <m> 件 + 子 issue <n> 件  | 実行           | 実行       |
 
 **フェーズ 10 はモードに関係なく常に実行する** (実装ループは issue を入力にとる)。進捗表示の分母は 10。
 
@@ -93,7 +93,7 @@ rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/design/FEASIBILITY.md
 
 ### 0.2 既存ドキュメントの確認と開始点の決定
 
-docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / DESIGN.md / features/) と、GitHub 上の親 issue (`tracking` ラベル) を確認する (先に `gh auth status` を確認し、未認証なら issue 関連の判定はスキップして「フェーズ 10 までに認証が必要」と伝える)。
+docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / DESIGN.md / features/) と、GitHub 上の親 issue (`tracking` ラベル。ユースケース単位) を確認する (先に `gh auth status` を確認し、未認証なら issue 関連の判定はスキップして「フェーズ 10 までに認証が必要」と伝える)。
 
 旧構成の成果物 (DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / DOMAIN_MODEL.md / TODO.md) を見つけたら、本スキルの対象外であることを伝え、「新構成 (DESIGN.md 1 枚 + features/) で設計し直す / 中止」を確認する。旧成果物は読み取りの参考にはするが更新しない。
 
@@ -107,7 +107,7 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 | FEASIBILITY.md (blocker=true が unresolved) | 5 (PoC 検証)                                                   |
 | FEASIBILITY.md (全件解決済み)               | 6 (横断設計)                                                   |
 | DESIGN.md                                   | 7 (機能設計)。features/ 各ファイルの「対象 UC」と USECASES.md の UC 一覧を突合し、全 UC がカバー済みなら 8 (USECASES.md が無い構成では人間に確認する) |
-| GitHub に親 issue (`tracking`) がある       | 9 (ドラフトを docs から再生成) → 10。ドラフトはセッション固有の scratchpad にしか無く、10 単独では突き合わせの比較元が無い |
+| GitHub に `tracking` issue が 1 件以上ある   | 9 (ドラフトを docs から再生成) → 10。ドラフトはセッション固有の scratchpad にしか無く、10 単独では突き合わせの比較元が無い。親が一部しか作られていない中断状態でも、10 の突き合わせが未作成分を補完する |
 
 更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する (DESIGN.md ではスタンプ行を押し出さず 1 行目に保つ)。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。**
 
@@ -170,9 +170,9 @@ docs が完成した時点で、書き手と別コンテキストの subagent �
 
 ## フェーズ 9: issue ドラフト + ドラフトチェック
 
-`references/issue-template.md` を Read し、テンプレートに従って**親 1 件 + 子 N 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。再実行時 (issue への反映・別セッションからの再開) もドラフトは docs から再生成する — 前セッションの scratchpad は残っていない。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。依存は最小限にし、並行して着手できる形を優先する。
+`references/issue-template.md` を Read し、テンプレートに従って**親 <m> 件 + 子 <n> 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。親は USECASES.md の UC 1 件につき 1 件。例外 (基盤親・UC 統合親・クイックモードのフォールバック) は issue-template.md「親 issue テンプレート」の表に従う。再実行時 (issue への反映・別セッションからの再開) もドラフトは docs から再生成する — 前セッションの scratchpad は残っていない。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。依存は最小限にし、並行して着手できる形を優先する。
 
-全ドラフトが揃ったら、`general-purpose` subagent (**`model: "opus"` 明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合と相互の重複・漏れはセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 5 項目を指示文に転記し、機能設計書と DESIGN.md のパスを渡して照合させる。出力形式はフェーズ 8 と同じ。
+全ドラフトが揃ったら、`general-purpose` subagent (**`model: "opus"` 明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合・相互の重複漏れ・UC 帰属はセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 6 項目を指示文に転記し、USECASES.md (あれば)・機能設計書と DESIGN.md のパスを渡して照合させる。出力形式はフェーズ 8 と同じ。
 
 分岐も同じ (**最大 2 周**): high は修正して再実行、2 周で残れば人間に提示、無ければフェーズ 10 へ。
 
@@ -190,7 +190,7 @@ AskUserQuestion({
     question: "issue を作成してよいですか? (ドラフトチェック済み)",
     header: "issue 作成",
     options: [
-      { label: "作成", description: "<owner/name> に子 issue <n> 件 + 親 issue 1 件を作成し、sub-issue として紐付ける" },
+      { label: "作成", description: "<owner/name> に親 issue <m> 件 + 子 issue <n> 件を作成し、各子を対応する親の sub-issue として紐付ける (旧構成の単一親があれば子を貼り替えて旧親を close する)" },
       { label: "ドラフトを見せて", description: "ドラフト全文を表示してから再確認" },
       { label: "中止", description: "ここで終了 (docs とドラフトは残る。issue は作成しない)" }
     ],
@@ -199,11 +199,11 @@ AskUserQuestion({
 })
 ```
 
-3. 手順書どおり作成する: ラベル用意 → 既存 issue との突き合わせ (冪等) → 親の特定/作成 → 子を依存順に作成 → sub-issue 紐付け → 親本文の確定
+3. 手順書どおり作成する: ラベル用意 → 既存 issue との突き合わせ (冪等) → 親の特定/作成 → 子を依存順に作成 → 対応する親へ sub-issue 紐付け (旧構成の単一親があれば貼り替えて close)
 4. 結果を報告し、次を案内する:
 
 ```
-✓ issue を作成しました: 親 #<番号> + 子 <n> 件 (新規 <a> / 更新 <b> / スキップ <c>)
+✓ issue を作成しました: 親 <m> 件 + 子 <n> 件 (新規 <a> / 更新 <b> / スキップ <c>)
 
 GitHub で issue をざっと確認し、docs のコミットを push してください (/dev-impl は origin の docs を読みます)。問題がなければ実装ループを起動します:
 
@@ -222,7 +222,7 @@ B: このセッションで続行 — このまま /dev-impl とタイプ
 - [ ] blocker=true の PoC 計画がすべて解決済み (`verified` / `fallback_adopted` / `scope_reduced` のいずれか)
 - [ ] docs/design/DESIGN.md と docs/design/features/ が生成され、フェーズ 8 の設計チェックを通過した (high 0 件、または未解消のまま人間判断に提示済み)
 - [ ] 全ドラフトがフェーズ 9 のドラフトチェックを通過した
-- [ ] 親 issue 1 件 + 子 issue 全件が作成され、全子が親に sub-issue として紐付いた (issue-template.md の最終報告の形式で報告した)
+- [ ] 親 issue 全件 + 子 issue 全件が作成され、全子が対応する親に sub-issue として紐付いた (issue-template.md の最終報告の形式で報告した)
 
 ## 参照ルール
 

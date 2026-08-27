@@ -2,18 +2,34 @@
 
 - 種別: テンプレート + 手順書
 - 生成者: dev-spec フェーズ 9 (ドラフト)・フェーズ 10 (issue 作成)
-- 消費者: dev-spec フェーズ 9 (ドラフト作成・ドラフトチェック)、フェーズ 10 (issue 作成)、`/dev-impl` (子 issue を読んで実装)、人間 (issue 単体で作業に着手する)
+- 消費者: dev-spec フェーズ 9 (ドラフト作成・ドラフトチェック)、フェーズ 10 (issue 作成)、`/dev-impl` (子 issue を読んで実装・親 issue を close)、人間 (issue 単体で作業に着手する)
 
 **issue の情報設計の基準は「人間が issue 本文 + 参照 docs だけで実装に着手できるか」。** AI (dev-impl) はその部分集合しか要らないので、この基準を満たせば両方が読める。
+
+## issue の階層 (2 階層)
+
+```
+UC-001: マスタと据置端末を整備する          ← 親 (tracking)。ユースケース 1 つ = 1 件
+├─ マスタと据置端末の API・ドメインを実装する   ← 子 (ready)。実装の作業単位
+└─ マスタ管理と据置端末管理の画面を実装する
+基盤: UC に属さない共通実装                  ← 親 (tracking)。UC に属さない子の受け皿
+├─ データスキーマと D1 マイグレーションを整備する
+└─ 監査ログの追記基盤を作る
+```
+
+- **親 = ユースケース**。「どの UC がどこまで進んだか」を GitHub の Sub-issues セクション (進捗バー) で読めるのが存在意義
+- **子 = 実装の作業単位**。1 issue = 独立して検証可能な 1 単位。`/dev-impl` が実装して close し、その親の子が全 closed になった時点で `/dev-impl` が親も close する
+- 親は open のまま複数 run にまたがってよい (UC に子が後から足されることがある)
+- run 全体を束ねる親は作らない。**例外は USECASES.md が無いクイックモード構成だけ** (下記「クイックモード構成」)
 
 ## ラベル (4 種)
 
 | ラベル | 意味 | 付与者 |
 | --- | --- | --- |
-| `ready` | 着手可能 (作成時の既定) | dev-spec フェーズ 10 |
+| `ready` | 着手可能 (子 issue の作成時の既定) | dev-spec フェーズ 10 |
 | `in-progress` | dev-impl が実装中 | dev-impl (着手時) |
 | `needs-human` | 人間の判断待ちで駐車中 | dev-impl (エスカレーション時) |
-| `tracking` | トラッキング用の親 issue。実装対象ではない | dev-spec フェーズ 10 |
+| `tracking` | 親 issue (ユースケース単位)。実装対象ではない | dev-spec フェーズ 10 |
 
 親 issue にライフサイクルラベル (`ready` / `in-progress` / `needs-human`) を付けない — 付けると dev-impl が親を実装対象として拾う。
 
@@ -23,7 +39,8 @@
 
 ```markdown
 ## ゴール
-<この issue で何ができるようになるか (1〜3 行)。対応 UC があれば「UC-<n>: <名前>」を明記>
+対応 UC: <UC-001: <名前>。複数 UC にまたがるなら列挙。どの UC にも属さない子は「基盤」と書く>
+<この issue で何ができるようになるか (1〜3 行)>
 
 ## 設計
 docs/design/features/<機能名>.md 参照
@@ -39,28 +56,39 @@ docs/design/features/<機能名>.md 参照
 
 ## 依存
 Depends on #<番号>
-<依存が無ければ「依存なし」と書く。dev-impl はこの行で着手順を決める>
+<依存が無ければ「依存なし」と書く。dev-impl はこの行で着手順を決める。依存先は別の親に属する子でもよい (親をまたぐ依存は許容する)>
 ```
 
-## 親 issue テンプレート
+**「対応 UC」行は省略しない。** この行が子と親の対応づけの正本で、フェーズ 10 の紐付けとドラフトチェック観点 6 の照合がこれに依存する。
 
-親は run 全体で 1 件。タイトルは `<タスク名> トラッキング`。どの issue 群が完了するとどの UC が満たされるかを一覧できるのが存在意義。
+## 親 issue テンプレート (ユースケース単位)
+
+USECASES.md の UC 1 件につき親 1 件を作る。**タイトルは USECASES.md の見出し表記をそのまま使う** (`## UC-001: マスタと据置端末を整備する` という見出しなら `UC-001: マスタと据置端末を整備する`)。突き合わせがタイトル一致なので、作成後に整形して変えない。
 
 ```markdown
+## ユースケース
+docs/design/USECASES.md「<UC の見出し>」参照
+
 ## 設計
-docs/design/DESIGN.md 参照
+docs/design/features/<機能名>.md 参照
+<この UC を実現する機能設計書を列挙する。横断事項に触れるなら docs/design/DESIGN.md「<節名>」も併記>
 
-## ユースケースと issue の対応
-### UC-<n>: <ユースケース名>
-- #<番号> <タイトル>
-### 基盤 (UC に属さない作業)
-- #<番号> <タイトル>
-
-## 進捗
-残件はこの issue の Sub-issues セクション (進捗バーと子の一覧) を見る。子 issue の close は /dev-impl が行い、全子完了時に本 issue も /dev-impl が close する。
+## 完了の定義
+この親の Sub-issues がすべて close されること。進捗バーと子の一覧は本 issue の Sub-issues セクションを見る。子 issue の close と、全子完了時の本 issue の close は /dev-impl が行う。
 ```
 
-USECASES.md が無い構成 (クイックモード) では「ユースケースと issue の対応」を「issue 一覧」に読み替え、グルーピングせず列挙する。
+例外的に立てる親は 2 種類:
+
+| 親 | タイトル | 立てる条件 |
+| --- | --- | --- |
+| 基盤 | `基盤: UC に属さない共通実装` (固定文字列) | どの UC にも属さない子 (スキーマ整備・監査ログ基盤・CI 整備など) が 1 件以上ある。「ユースケース」節は `該当なし (UC に属さない共通実装)` と書く |
+| UC 統合 | `<UC 番号 1> / <UC 番号 2>: <見出し本文 1> と <見出し本文 2>` (例: `UC-004 / UC-005: 打刻する と 会場間を移動する`) | 2 つの UC が密結合で、子を分けても実装・検証の単位が分かれない。「ユースケース」節に両方の見出しを列挙する |
+
+**統合親のタイトルは上記の合成規則で機械的に導出する** (自由な要約名を付けない)。再実行の突き合わせがタイトル完全一致なので、名前が揺れると同じ UC 群に親が二重に作られる。
+
+### クイックモード構成 (USECASES.md が無い)
+
+UC が存在しないため、親は `<タスク名> トラッキング` 1 件にフォールバックし、全子をそこに紐付ける。本文の「ユースケース」節は省き、「設計」節に DESIGN.md を書く。子の「対応 UC」行は `基盤` と書く。
 
 ## ドラフトチェックのチェックリスト (フェーズ 9 のドラフトチェック)
 
@@ -71,6 +99,9 @@ fresh context の検査 subagent に、親 + 子の全ドラフトを一括で�
 3. **依存の整合**: 依存グラフに循環が無いか。「依存なし」の issue が実は他 issue の成果物を前提にしていないか
 4. **相互の重複・漏れ**: 同じ作業が複数 issue に跨っていないか。機能設計書の「実装の配置」に現れるファイルがどの issue にも属さず漏れていないか
 5. **参照の実在**: 参照する docs パス・節名・UC 名が実在するか
+6. **UC 帰属の整合**: 親ドラフトが USECASES.md の UC を過不足なく覆っているか。各子の「ゴール」に「対応 UC」行があり、その UC を覆う親ドラフトが存在するか。`基盤` の子が基盤親に集約されているか。**次の 2 つは違反ではない**: `基盤: UC に属さない共通実装` 親 (USECASES.md に対応する UC が無くてよい)、複数 UC をまとめた統合親 (タイトルが単一の UC 見出しと一致しなくてよい)
+
+フェーズ 9 は上記 6 項目を検査 subagent の指示文に転記するので、**例外の但し書き (項目 6 の末尾) も一緒に転記する** — 転記しないと検査側は例外表を見ておらず、基盤親・統合親に対して必ず high を上げる。
 
 ## issue 作成手順 (フェーズ 10)
 
@@ -85,13 +116,15 @@ REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 ### ラベルの用意 (冪等)
 
 ```bash
-gh label create ready       --force --color 0E8A16 --description "着手可能"
-gh label create in-progress --force --color 1D76DB --description "dev-impl が実装中"
-gh label create needs-human --force --color D93F0B --description "人間の判断待ちで駐車中"
-gh label create tracking    --force --color 5319E7 --description "トラッキング用の親 issue。実装対象ではない"
+gh label create ready       --repo "$REPO_SLUG" --force --color 0E8A16 --description "着手可能"
+gh label create in-progress --repo "$REPO_SLUG" --force --color 1D76DB --description "dev-impl が実装中"
+gh label create needs-human --repo "$REPO_SLUG" --force --color D93F0B --description "人間の判断待ちで駐車中"
+gh label create tracking    --repo "$REPO_SLUG" --force --color 5319E7 --description "親 issue (ユースケース単位)。実装対象ではない"
 ```
 
 ### 既存 issue との突き合わせ (再実行の冪等化)
+
+親・子の区別なく、**全ドラフトをタイトルで既存 issue と突き合わせる**:
 
 ```bash
 gh issue list --repo "$REPO_SLUG" --state all --limit 200 --json number,title,state,labels
@@ -103,27 +136,35 @@ gh issue list --repo "$REPO_SLUG" --state all --limit 200 --json number,title,st
 | --- | --- |
 | 同タイトルが無い | 新規作成 |
 | タイトル一致・open | 本文を比較し、不一致なら `gh issue edit <番号> --body-file` で貼り直す。`in-progress` の issue を書き換えたときは issue コメントで改訂を告知する |
-| タイトル一致・closed | 触らない。本文が現ドラフトと不一致ならその番号を最終報告に列挙する (完了済み issue に改訂が届かないことを人間が把握できるように) |
+| タイトル一致・closed | 子は触らない。親は新しい子を紐付けるときだけ reopen する (下記「親の reopen」)。いずれも本文が現ドラフトと不一致ならその番号を最終報告に列挙する (完了済み issue に改訂が届かないことを人間が把握できるように) |
+| ドラフトのどの親ともタイトル一致しない既存 `tracking` issue で、子を持つもの | **UC 見出しが改訂された可能性がある。** 勝手に貼り替えず、その親と子の一覧を提示して「どの新しい親へ貼り替えるか / 旧親のまま残すか」を人間に確認する (貼り替えないと、子は単一親制約で旧親に紐付いたままとなり、新親への紐付けが HTTP 422 になる) |
 
-本文比較はコマンド置換 (`$(...)`) を使わずファイルに落として `cmp` する (末尾改行の欠落を検出するため。`~/.claude/rules/core/verification.md`)。取得側の `sed 's/\r$//'` は CRLF 除去 (GitHub web UI で編集された本文対策)。`gh` の出力はファイル末尾に改行 1 つが付くため、ドラフト側もファイル末尾を改行 1 つで終える形で Write する (毎回不一致になるときはまず末尾改行の差を疑う):
+本文比較はコマンド置換 (`$(...)`) を使わずファイルに落として `cmp` する (末尾改行の欠落を検出するため。`~/.claude/rules/core/verification.md`)。取得側の `sed 's/\r$//'` は CRLF 除去 (GitHub web UI で編集された本文対策)。`gh` の出力はファイル末尾に改行 1 つが付くため、ドラフト側もファイル末尾を改行 1 つで終える形で Write する (毎回不一致になるときはまず末尾改行の差を疑う)。`<ドラフトファイル>` は子なら `<scratchpad>/issue-<連番>.md`、親なら `<scratchpad>/parent-<識別子>.md`:
 
 ```bash
 gh issue view "$ISSUE_NUM" --repo "$REPO_SLUG" --json body -q .body | sed 's/\r$//' > <scratchpad>/issue-current.md
-cmp -s <scratchpad>/issue-current.md <scratchpad>/issue-body.md || \
-  gh issue edit "$ISSUE_NUM" --repo "$REPO_SLUG" --body-file <scratchpad>/issue-body.md
+cmp -s <scratchpad>/issue-current.md <ドラフトファイル> || \
+  gh issue edit "$ISSUE_NUM" --repo "$REPO_SLUG" --body-file <ドラフトファイル>
 ```
 
-### 親 issue の作成と特定
+### 親 issue の特定と作成
 
-`tracking` ラベルの open issue を探し、あればそれを親として使う。無ければ作成する。複数見つかったらタイトルで特定し、特定できなければ人間に確認する:
+**親本文は子の番号を含まない** (進捗は GitHub の Sub-issues セクションが持つ) ため、子の作成後に親本文を再生成する工程は無い。親は子より先に作る。
+
+既存の `tracking` issue を一覧し、ドラフトの親タイトルと突き合わせる。無い分だけ作成する。親ドラフトのファイル名は `parent-<識別子>.md` (識別子は UC 番号 `UC-001`、基盤親は `kiban`、統合親は `UC-004-005`、クイックモード親は `quick`):
 
 ```bash
-gh issue list --repo "$REPO_SLUG" --state open --label tracking --json number,title
-PARENT_URL=$(gh issue create --repo "$REPO_SLUG" --title "$PARENT_TITLE" --body-file <scratchpad>/parent-body.md --label tracking)
+gh issue list --repo "$REPO_SLUG" --state all --label tracking --limit 200 --json number,title,state
+PARENT_TITLE="<ドラフトの親タイトル>"
+PARENT_URL=$(gh issue create --repo "$REPO_SLUG" --title "$PARENT_TITLE" --body-file <scratchpad>/parent-<識別子>.md --label tracking)
 PARENT_NUM=$(printf '%s' "$PARENT_URL" | grep -o '[0-9]*$')
 ```
 
-closed の親に新しい子を紐付けることになったら (完了後の設計改訂で issue が増えた場合)、先に reopen する:
+「対応 UC → 親 issue 番号」の対応表を作りながら進める (子の紐付け先の解決に使う)。既存分は突き合わせで得た番号を先に seed する。
+
+#### 親の reopen
+
+closed の親に新しい子を紐付けることになったら (完了後の設計改訂で issue が増えた場合)、先に reopen する (`gh issue view --json state` が返す値は大文字):
 
 ```bash
 [ "$(gh issue view "$PARENT_NUM" --repo "$REPO_SLUG" --json state -q .state)" = "CLOSED" ] && \
@@ -132,10 +173,11 @@ closed の親に新しい子を紐付けることになったら (完了後の�
 
 ### 子 issue の作成
 
-依存の前方参照を避けるため、依存グラフの上流から順に 1 件ずつ作る (依存先の番号が常に確定済みになる)。本文は Write ツールで `<scratchpad>/issue-body.md` に書き出してから渡す:
+依存の前方参照を避けるため、依存グラフの上流から順に 1 件ずつ作る (依存先の番号が常に確定済みになる)。本文は Write ツールで `<scratchpad>/issue-<連番>.md` に書き出してから渡す:
 
 ```bash
-ISSUE_URL=$(gh issue create --repo "$REPO_SLUG" --title "$TITLE" --body-file <scratchpad>/issue-body.md --label ready)
+TITLE="<ドラフトの子タイトル>"
+ISSUE_URL=$(gh issue create --repo "$REPO_SLUG" --title "$TITLE" --body-file <scratchpad>/issue-<連番>.md --label ready)
 ISSUE_NUM=$(printf '%s' "$ISSUE_URL" | grep -o '[0-9]*$')
 ```
 
@@ -143,35 +185,58 @@ ISSUE_NUM=$(printf '%s' "$ISSUE_URL" | grep -o '[0-9]*$')
 
 ### 親への紐付け (GitHub sub-issues API)
 
-**対象は全子 issue であり、今回新規作成した分だけではない** (前回の run が作成直後に落ちていると、既存の子が未紐付けのまま残る)。まず紐付け済みの子を seed する:
+**対象は全子 issue であり、今回新規作成した分だけではない** (前回の run が作成直後に落ちていると、既存の子が未紐付けのまま残る)。まず各親に紐付け済みの子を seed する:
 
 ```bash
 gh api --paginate "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues?per_page=100" --jq '.[].number'
 ```
 
-`--paginate` と `per_page=100` を省かない — このエンドポイントの既定は 1 ページ 30 件で、31 件目以降が見えず二重紐付けの 422 を踏む。seed に無い子だけを紐付ける:
+`--paginate` と `per_page=100` を省かない — このエンドポイントの既定は 1 ページ 30 件で、31 件目以降が見えず二重紐付けの 422 を踏む。seed に無い子だけを、その子の親へ紐付ける:
 
 ```bash
 CHILD_ID=$(gh api "repos/$REPO_SLUG/issues/$ISSUE_NUM" --jq .id)
 gh api "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues" -F sub_issue_id="$CHILD_ID"
 ```
 
-実測で確定した挙動 (使い捨てリポジトリで検証済み):
+紐付け先の親は、**現ドラフトにある子はドラフトの「対応 UC」行から、ドラフトに無い既存の未紐付け子は issue 本文の「対応 UC」行から**決める。本文から読み取れない子は紐付けず、最終報告に「対応 UC 不明の未紐付け子」として番号を列挙する (勝手にどれかの親へ入れない)。
+
+実測で確定した挙動 (2026-08-27 時点、gh 2.97.0・`reedot/HyattTimeKeeper` および使い捨てリポジトリで確認):
 
 | 項目 | 挙動 |
 | --- | --- |
-| パラメータの型 | `-F` (integer) が必須。`-f` (文字列) は `is not of type integer` で HTTP 422。id は `gh api repos/.../issues/<番号> --jq .id` の numeric id (`gh issue view --json id` が返す `I_kwDO...` 形式の node ID は使えない) |
+| パラメータの型 | `-F` (typed) が必須。`-f` (文字列) は `is not of type integer` で HTTP 422。id は `gh api repos/.../issues/<番号> --jq .id` の numeric id (`gh issue view --json id` が返す `I_kwDO...` 形式の node ID は使えない) |
 | 二重紐付け | HTTP 422。メッセージが単一親制約の違反と共通なので、事後に握りつぶさず seed による事前判定で避ける |
-| 親の貼り替え | 別の親に紐付いている子は `-F replace_parent=true` を追加して貼り替える (旧構成の親から移行する場合のみ) |
+| 単一親制約 | 子は同時に 1 つの親にしか紐付かない。別の親に紐付いている子は `-F replace_parent=true` を追加して貼り替える |
+| 親の逆引き | `gh api "repos/$REPO_SLUG/issues/<子番号>/parent"` が親の `number` / `state` / `sub_issues_summary` (`total` / `completed` / `percent_completed`) を返す。親が無い子では HTTP 404 (dev-impl が close 判定に使う) |
+| 親からの進捗取得 | `gh api "repos/$REPO_SLUG/issues/<親番号>" --jq .sub_issues_summary` でも同じ `total` / `completed` が引ける (子を自前で列挙して数えなくてよい) |
+| `state` の大小文字 | `gh api` (REST) は小文字 `open` / `closed`、`gh issue list --json` / `gh issue view --json` は大文字 `OPEN` / `CLOSED`。混ぜない |
 
 紐付けに失敗したら停止して人間に伝える: 作成済みの子 issue 番号、未紐付けの組、復旧は本フェーズの再実行で行えること (突き合わせと seed が続きから紐付ける)。
 
-### 親 issue 本文の確定
+#### 旧構成 (run 全体で親 1 件) からの移行
 
-子 issue の番号は作成するまで確定しないため、親を先に作る際の本文は「ユースケースと issue の対応」を `(子 issue の作成後に確定)` のプレースホルダにしてよい。**全子の作成・紐付けが終わったら、「タイトル → 番号」の対応表から親テンプレートの本文を再生成し、突き合わせと同じ cmp → `gh issue edit "$PARENT_NUM" --body-file` で更新する。** この再生成は再実行でも冪等に働く (子が増減すれば本文不一致として検出される)。
+**USECASES.md が存在するのに `<タスク名> トラッキング` 形式の親がある場合**に移行する (USECASES.md が無ければクイックモード構成として正しいので移行しない)。UC 親を作ったうえで、旧親の子を貼り替える:
+
+```bash
+OLD_PARENT_NUM=$(gh issue list --repo "$REPO_SLUG" --state all --label tracking --limit 200 \
+  --json number,title --jq '.[] | select(.title | endswith(" トラッキング")) | .number')
+for CHILD_NUM in $(gh api --paginate "repos/$REPO_SLUG/issues/$OLD_PARENT_NUM/sub_issues?per_page=100" --jq '.[].number'); do
+  CHILD_ID=$(gh api "repos/$REPO_SLUG/issues/$CHILD_NUM" --jq .id)
+  # PARENT_NUM は「対応 UC → 親 issue 番号」の対応表から、その子の「対応 UC」行で引いた値
+  gh api "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues" -F sub_issue_id="$CHILD_ID" -F replace_parent=true
+done
+```
+
+`OLD_PARENT_NUM` が複数ヒットしたらタイトルを提示して人間に選ばせる。全子の貼り替えが終わって旧親の `sub_issues` が 0 件になったら、旧親を close する:
+
+```bash
+gh issue close "$OLD_PARENT_NUM" --repo "$REPO_SLUG" --comment "ユースケース単位のトラッキング issue へ移行したため close する"
+```
 
 ### 最終報告
 
+- 親 issue: 一覧 (`#3 UC-001: マスタと据置端末を整備する` の形式)。新規作成件数 / 既存流用件数
 - 子 issue: 新規作成件数 / 本文更新件数 / スキップ件数
-- 親 issue: 番号とタイトル (`#12 <タスク名> トラッキング` の形式)
+- 旧構成から移行した場合: 貼り替えた子の件数と close した旧親の番号
+- 対応 UC 不明で紐付けられなかった子の番号 (あれば)
 - closed だが本文不一致の issue 番号 (あれば)
