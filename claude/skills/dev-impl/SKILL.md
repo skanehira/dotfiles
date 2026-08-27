@@ -1,6 +1,6 @@
 ---
 name: dev-impl
-description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に 1 件ずつ「implementer subagent → 統合レビュー → 修正 ≤2 ラウンド → PR → DoD ローカル実行 → merge → close」で自律実装するオーケストレーター。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
+description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に 1 件ずつ「implementer subagent → 統合レビュー → 修正 ≤2 ラウンド → PR → DoD ローカル実行 → merge → close」で自律実装するオーケストレーター。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
 argument-hint: "[issue 番号の絞り込み、省略時は ready 全件]"
 model: opus
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
@@ -50,7 +50,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 - 各 issue の `## 依存` 節から `Depends on #<番号>` を読み、トポロジカル順に並べる。依存先が open のままの issue は、依存先が close されるまで着手しない
 - `needs-human` の issue は着手しない
 - `$ARGUMENTS` で issue 番号が指定されていれば、その issue (と未完了の依存先) だけを対象にする
-- `tracking` ラベルの親 issue は実装対象にしない
+- `tracking` ラベルの親 issue (ユースケース単位のトラッキング) は実装対象にしない
 
 **`in-progress` が残っている、または対象 issue に残置ブランチ `issue-<N>` がある場合は前回の中断・駐車からの復帰。** その issue の状態を確認して再開位置を決める (needs-human から `ready` に戻された issue はラベルでは区別できないため、ブランチの有無で検出する):
 
@@ -177,6 +177,26 @@ merge により `Closes #N` で issue は自動 close される (されていな
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
 
+親 (tracking issue) を逆引きし、その親の子が全て完了していれば親も close する。API の挙動の正本は `~/.claude/skills/dev-spec/references/issue-template.md`「親への紐付け」の実測表:
+
+```bash
+gh api "repos/$REPO_SLUG/issues/$N/parent" \
+  --jq '"\(.number)\t\(.state)\t\(.sub_issues_summary.completed)/\(.sub_issues_summary.total)"' 2>&1
+```
+
+| 結果 | 動作 |
+| --- | --- |
+| 出力に `(HTTP 404)` を含む (親に紐付いていない子) | 何もしない。**正常系** (`gh` は非ゼロで終了しエラー行を出すが、エラーとして扱わない) |
+| `state` が open (小文字) かつ `completed == total` | close する |
+| `completed < total` (残り子がある) | 親は open のまま次へ進む |
+| それ以外の失敗 (403・5xx・`gh` が sub-issues API 非対応など) | 親 close をスキップし、Step 3 の最終報告に「親 close を判定できなかった子 issue」として列挙する (404 と同じ扱いに丸めない) |
+
+```bash
+gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の sub-issue がすべて完了したため close する (dev-impl)"
+```
+
+`sub_issues_summary` は API 側が数える値なので、自前で子を列挙して数え直さない (取りこぼしによる誤 close を避ける)。merge 直後は `Closes #N` の自動 close が非同期で、最後の子でも `completed` が古い値のことがある — **再試行はしない**。取りこぼしは Step 3 の掃き掃除が回収する。
+
 次の issue へ進む (Step 2 の先頭へ)。
 
 ### 2.6 エスカレーション (needs-human 駐車)
@@ -194,18 +214,29 @@ gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が
 
 ## Step 3: 終了処理
 
-1. 対象 issue がすべて closed になったら、親 issue を特定して全子の完了を確認し、全て closed なら親を close する:
+1. **tracking issue の掃き掃除**: 2.5 の随時 close で取りこぼした親 (駐車していた issue が後から解消された場合や、過去 run が残した親) を回収する。open な `tracking` issue を全件走査し、子が 1 件以上あってその全てが完了しているものを close する。判定は 2.5 と同じく `sub_issues_summary` を使う (子を自前で列挙しない):
 
 ```bash
-PARENT_NUM=$(gh issue list --repo "$REPO_SLUG" --state open --label tracking --json number --jq '.[].number')
-# 複数ヒットしたらタイトルで特定し、特定できなければ人間に確認する
-gh api --paginate "repos/$REPO_SLUG/issues/$PARENT_NUM/sub_issues?per_page=100" --jq '.[] | select(.state == "open") | .number'
-# 0 件なら: gh issue close "$PARENT_NUM" --repo "$REPO_SLUG" --comment "全 issue の実装が完了したため close する"
+for P in $(gh issue list --repo "$REPO_SLUG" --state open --label tracking --limit 200 --json number --jq '.[].number'); do
+  SUMMARY=$(gh api "repos/$REPO_SLUG/issues/$P" --jq '"\(.sub_issues_summary.completed) \(.sub_issues_summary.total)"') \
+    || { echo "#$P 判定不能"; continue; }
+  COMPLETED=${SUMMARY% *}; TOTAL=${SUMMARY#* }
+  if [ "$TOTAL" -gt 0 ] && [ "$COMPLETED" -eq "$TOTAL" ]; then
+    gh issue close "$P" --repo "$REPO_SLUG" --comment "この親 issue の sub-issue がすべて完了したため close する (dev-impl)"
+  else
+    echo "#$P open のまま ($COMPLETED/$TOTAL)"
+  fi
+done
 ```
+
+`TOTAL -gt 0` の条件を外さない — 子が 1 件も紐付いていない親 (dev-spec の紐付けが途中で落ちた場合) まで close してしまうため。`else` 側の出力 (子ゼロの親・open な子が残る親) と「判定不能」の親をそのまま最終報告の材料にする。
+
+**この走査は `tracking` ラベルの open issue を repo 全件対象にする。** dev-spec 由来でない手作りの `tracking` issue がある repo では、close 前に対象一覧を提示して人間に確認する。
 
 2. デフォルトブランチへ戻って `git pull` し、`docs/PENDING_REVIEW.html` が存在すれば `open` で開いて (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、未解消 medium <n> 件のチェックが必要」とユーザーに確認を促す (過去 run の未消化分も累積している)。対応要と判断した項目は新しい issue にするか直接の修正依頼で対応し、確認が済んだ項目はユーザーがチェックリストから消す (手動編集または修正依頼。通常のコミットで反映)
 3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
    - 実装した issue と PR の一覧
+   - close した親 (tracking) issue と、open のまま残した親 (子が残っている / 子ゼロ / 判定不能の別に)
    - 保留レビュー項目 (未解消 medium) の件数とチェックリストのパス
    - `needs-human` で駐車した issue と、人間がすべき決定
    - 実装中の設計判断・docs 更新の要約
