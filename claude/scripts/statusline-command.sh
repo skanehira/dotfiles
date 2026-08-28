@@ -2,7 +2,7 @@
 # Claude Code の statusLine コマンド。stdin の JSON (フィールドは 2026-08-22 に
 # v2.1.238 の実出力をダンプして確認) を 1 行のステータスラインに整形する。
 #
-#   4m24s | $5.28 | ctx:11% | 5h:36% →8/22 18:00, 7d:51% →8/27 17:00 | Opus 5, high, think
+#   4m24s | $5.28 | ctx:11% | 5h:36% →8/22 18:00, 7d:51% →8/27 17:00 | Opus 5, high, think | sid:82e5c700
 #
 # 欠落しうるフィールド (effort はモデル非対応時に不在、context_window の各値は
 # セッション初期に null、rate_limits は Claude.ai サブスクリプション外では不在) が
@@ -15,7 +15,7 @@ input=$(cat)
 # 区切りに \x1f (unit separator) を使うのは、IFS が空白文字だと空フィールドが
 # 詰められて以降の代入位置がずれるため。
 IFS=$'\x1f' read -r -d '' \
-  api_duration_ms cost_usd ctx_pct rate_5h reset_5h rate_7d reset_7d model_name effort thinking fast \
+  api_duration_ms cost_usd ctx_pct rate_5h reset_5h rate_7d reset_7d model_name effort thinking fast session_id \
   < <(printf '%s' "$input" | jq -j '
         # resets_at は Unix epoch 秒。date の書式が BSD (-r) と GNU (-d @) で割れるため
         # jq 側でローカル時刻に整形して渡す。
@@ -33,7 +33,8 @@ IFS=$'\x1f' read -r -d '' \
           (.model.display_name // .model.id // ""),
           (.effort.level // ""),
           (if .thinking.enabled == true then "1" else "" end),
-          (if .fast_mode == true then "1" else "" end)
+          (if .fast_mode == true then "1" else "" end),
+          (.session_id // "")
         ] | map(tostring) | join("\u001f")
       '; printf '\0')
 
@@ -104,6 +105,11 @@ fast_label=""
 [[ -n $fast ]] && fast_label="fast"
 model_group=$(join_comma "$model_short" "$effort" "$thinking_label" "$fast_label")
 [[ -n $model_group ]] && groups+=("$model_group")
+
+# 6. セッション ID
+# --resume の照合や archive の jsonl 特定に使う。UUID 全体は 1 行に載せると長いので
+# 先頭 8 文字に切る (セッションの識別にはこれで足りる)。
+[[ -n $session_id ]] && groups+=("sid:${session_id:0:8}")
 
 line=""
 for group in "${groups[@]}"; do
