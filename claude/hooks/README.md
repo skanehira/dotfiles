@@ -6,6 +6,7 @@ Custom hooks for Claude Code.
 
 - `commit-msg-guard.ts` — コミット規約ゲート (PreToolUse Bash)
 - `agent-spawn-guard.ts` — subagent 起動ゲート (PreToolUse Agent)
+- `fix-round-guard.ts` — 修正ラウンド上限ゲート (PreToolUse Agent)
 - `remind-rules.ts` — 実装系プロンプト検知時に CLAUDE.md ルールを再注入 (UserPromptSubmit)
 - `archive-transcript.ts` — transcript のアーカイブ (SessionEnd / PreCompact)
 
@@ -37,3 +38,19 @@ subagent の起動を機械検証する (PreToolUse Agent)。Agent ツールの 
 - `MANDATED_MODEL` に無い agent (general-purpose / Explore 等) は検証対象外
 - 無効化: 環境変数 `AGENT_SPAWN_GUARD=off`
 - テスト: `deno test --allow-env --allow-run --allow-read claude/hooks/agent-spawn-guard_test.ts` (hook 本体を subprocess で起動する I/O 層のテストを含むため `--allow-run` が要る)
+
+### Fix Round Guard Hook
+
+dev-impl の修正ラウンド上限を機械検証する (PreToolUse Agent)。`skills/dev-impl/SKILL.md` 2.3 は「修正は最大 2 ラウンド (固定)」と規定しているが、オーケストレーター自身が「r3・規定超過」と書きながら 3 周目を起動した実測がある (セッション e6b5eb50: 22 issue 中 6 件が r3 以上に入り、規定超過分だけで 5.7h を消費)。指示文の規定は破られるので起動そのものを止める。
+
+検証する内容:
+
+| 対象 | 判定 |
+| --- | --- |
+| `dev-impl-implementer` を `mode: fix` で起動し、`findings_path` が `review-<issue>-r<ラウンド>.json` を指す | ラウンドが 3 以上なら deny し、規定の分岐 (high 残存 → 駐車 / medium のみ → `PENDING_REVIEW.html`) を提示する |
+
+- **状態を持たない**。ラウンド数は `findings_path` から読む (実測で `mode: fix` の起動 29/29 がこの形式のパスを渡している)。スキルの再実行は新しい SCRATCH で r1 から採番し直すため、それがそのままカウンタのリセットになる
+- `mode: implement` / 他の agent / ラウンドを読み取れない起動 (検収差し戻しなど) は allow
+- 駐車から人間の指示で再開する場合はラウンドが続くため deny される。意図した継続なら `FIX_ROUND_GUARD=off` で解除する (deny メッセージにも案内がある)
+- 無効化: 環境変数 `FIX_ROUND_GUARD=off`
+- テスト: `deno test --allow-env --allow-run --allow-read claude/hooks/fix-round-guard_test.ts`
