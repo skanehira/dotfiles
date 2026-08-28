@@ -1,6 +1,6 @@
 ---
 name: dev-impl
-description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に 1 件ずつ「implementer subagent → 統合レビュー → 修正 ≤2 ラウンド → PR → DoD ローカル実行 → merge → close」で自律実装するオーケストレーター。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
+description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー → 修正 ≤2 ラウンド → PR → DoD ローカル実行 → merge → close」で自律実装するオーケストレーター。前提を満たすプロジェクトでは同じ依存レベルの issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
 argument-hint: "[issue 番号の絞り込み、省略時は ready 全件]"
 model: opus
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
@@ -51,6 +51,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 - `needs-human` の issue は着手しない
 - `$ARGUMENTS` で issue 番号が指定されていれば、その issue (と未完了の依存先) だけを対象にする
 - `tracking` ラベルの親 issue (ユースケース単位のトラッキング) は実装対象にしない
+- あわせて**依存レベル**を求める。依存が無い issue を L0、それ以外は「依存先のレベルの最大値 + 1」とする。同じレベルの issue は互いに依存しないので同時に着手してよい (2.0 の並列実行が使う)。**着手順はトポロジカル順のまま**で、レベルは「どこまで同時に走らせてよいか」の判定にだけ使う (レベルを優先度に読み替えて順序を組み替えない)
 
 **`in-progress` が残っている、または対象 issue に残置ブランチ `issue-<N>` がある場合は前回の中断・駐車からの復帰。** その issue の状態を確認して再開位置を決める (needs-human から `ready` に戻された issue はラベルでは区別できないため、ブランチの有無で検出する):
 
@@ -64,20 +65,53 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 
 ## Step 2: issue ごとの実装サイクル
 
-対象 issue を依存順に 1 件ずつ、次のサイクルで消化する。
+対象 issue をトポロジカル順に、次のサイクルで消化する。**同じ依存レベルの issue は最大 3 件まで並列に走らせる** (2.0)。並列の前提が満たせないプロジェクトでは 1 件ずつになる。
+
+### 2.0 並列実行の可否と枠組み
+
+直列実行では実装ループの経過時間が消化コストの総和になる。同一レベルの issue は互いに依存しないので、実装とレビューは同時に走らせてよい。**ただし merge は必ず 1 件ずつ直列に行う** (2.4 手順 4)。並列で merge するとデフォルトブランチが競合し、後続の rebase が連鎖する。
+
+**並列にしてよいのは、プロジェクトが次の 2 つを満たすときだけ。** 満たさなければ**並列度 1** で回す (誤った green を出すより遅い方がよい):
+
+1. `docs/design/DESIGN.md`「開発・検証コマンド」に **worktree セットアップ手順**が書かれている (依存インストールなど、チェックアウト直後の作業ツリーで DoD を実行可能にする手順)
+2. テスト・E2E が**固定ポートを共有しない**こと。dev server を起動する検証がある場合、ポートを外から指定でき、指定したポートで起動できなければ失敗する (既存サーバに相乗りしない) 契約になっていること。**相乗りする設定 (Playwright の `reuseExistingServer: true` + 固定 `baseURL` など) のまま並列にすると、別の worktree のサーバに対してテストが通り、静かに誤った green を出す**
+
+満たす場合、レベルごとに次の手順で流す:
+
+```bash
+# スロット s (0 始まり、最大 3) に issue N を割り当てる
+WT="$REPO_DIR/.claude/worktrees/issue-$N"
+git -C "$REPO_DIR" worktree add -b "issue-$N" "$WT" "origin/$DEFAULT"
+```
+
+worktree には git 管理外のファイル (`.env` 系・ローカル設定) が無いので、そのままでは DoD が実行できない。**リポジトリルートの `.worktreeinclude` に列挙されたものを複製する。** これは Claude Code が worktree を作るときにも使うファイルで、書式は `.gitignore` と同じ (1 行 1 パターン、`#` はコメント)。**複製されるのは gitignored なファイルだけ**で、追跡されているファイルは対象にならない。用意するのは人間か、プロジェクトを scaffold したスキル。無ければ何も複製しない (その場合は前提 1 のセットアップ手順が代わりを果たす必要がある):
+
+```
+# .worktreeinclude の例
+.dev.vars
+.env.local
+```
+
+依存ディレクトリ (`node_modules` 等) は容量が大きいのでここに列挙せず、前提 1 のセットアップ手順でインストールする。
+
+- **`.claude/worktrees/` が `.gitignore` に無いプロジェクトでは並列にしない**。worktree を作った時点で親の作業ツリーが dirty になり、2.1 の clean チェックが全 issue で失敗する。並列を使うなら先に `.gitignore` へ追加する (それ自体を 1 コミットにしてよい)
+- ポートは**スロット番号から決めて implementer に渡す** (例: 基準ポート + s × 10)。渡し方はプロジェクトの worktree セットアップ手順に従う
+- issue が終わったら `git -C "$REPO_DIR" worktree remove "$WT"` で片付ける。駐車 (2.6) した issue の worktree は、WIP を push したうえで削除する (残すと次回の clean チェックに掛かる)
 
 ### 2.1 着手
 
-1. `git -C "$REPO_DIR" status --porcelain` が空であることを確認する。残骸があれば停止して人間に報告する (前作業の未コミット差分の上に実装しない)
-2. ブランチを origin のデフォルトブランチ最新から切り、基準 SHA を控える:
+以下の `$WORK_DIR` は、直列実行なら `$REPO_DIR`、並列実行なら 2.0 で作った worktree のパス。**implementer・review-impl には `repo_dir` としてこの `$WORK_DIR` を渡す** (どちらも絶対パスで受ける契約なので、直列・並列で指示の形は変わらない)。
+
+1. `git -C "$WORK_DIR" status --porcelain` が空であることを確認する。残骸があれば停止して人間に報告する (前作業の未コミット差分の上に実装しない)
+2. ブランチを origin のデフォルトブランチ最新から切り、基準 SHA を控える。並列実行では 2.0 の `worktree add -b` で既にブランチが作られているので `switch` は行わず、`fetch` と `BASE_SHA` の取得だけを行う:
 
 ```bash
 git -C "$REPO_DIR" fetch origin
-git -C "$REPO_DIR" switch -c "issue-$N" "origin/$DEFAULT"
-BASE_SHA=$(git -C "$REPO_DIR" rev-parse HEAD)
+git -C "$WORK_DIR" switch -c "issue-$N" "origin/$DEFAULT"   # 直列実行のみ
+BASE_SHA=$(git -C "$WORK_DIR" rev-parse HEAD)
 ```
 
-3. switch が成功してからラベルとコメントを更新する (先にラベルを変えると、switch 失敗時に `in-progress` だけが残る):
+3. 作業ツリーが `issue-$N` に乗ってからラベルとコメントを更新する (先にラベルを変えると、失敗時に `in-progress` だけが残る):
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label ready --add-label in-progress
@@ -92,7 +126,7 @@ Agent({
   subagent_type: "dev-impl-implementer",
   model: "opus",
   prompt: `mode: implement
-repo_dir: <REPO_DIR>
+repo_dir: <WORK_DIR>
 issue_number: <N>
 report_path: <SCRATCH>/impl-<N>.json`
 })
@@ -113,7 +147,7 @@ Agent({
   description: "issue #<N> のレビュー",
   subagent_type: "review-impl",
   model: "opus",
-  prompt: `repo_dir: <REPO_DIR>
+  prompt: `repo_dir: <WORK_DIR>
 base_sha: <BASE_SHA>       // 2.1 で控えた値
 issue_number: <N>
 focus: all
@@ -174,7 +208,9 @@ EOF
 gh pr merge --repo "$REPO_SLUG" --squash --delete-branch
 ```
 
-merge がコンフリクトで失敗したら (駐車 → 再開の間にデフォルトブランチが進んだ場合)、`git rebase origin/$DEFAULT` を試み、全体テスト green を確認して push し直す。解消できなければ 2.6 へ。
+**並列実行でも merge はここで 1 件ずつ直列に行う。** 同時に merge するとデフォルトブランチが競合し、残りの worktree がまとめて rebase 待ちになる。他の issue が実装・レビュー中でも、merge の順番待ちだけを直列化すればよい。merge した issue の worktree は 2.0 の手順で削除する。
+
+merge がコンフリクトで失敗したら (駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合)、`git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで全体テストの green を確認してから** push し直す (先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない)。解消できなければ 2.6 へ。
 
 ### 2.5 完了処理
 
@@ -213,7 +249,7 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ### 2.6 エスカレーション (needs-human 駐車)
 
-解消できない issue (2 ラウンド後の high 残存 / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / push・merge の解消不能) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。退避後:
+解消できない issue (2 ラウンド後の high 残存 / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / push・merge の解消不能) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human
