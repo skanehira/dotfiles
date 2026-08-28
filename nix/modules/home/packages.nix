@@ -111,6 +111,7 @@ let
   # メディア / ファイル
   mediaTools = with pkgs; [
     ffmpeg
+    ghostscript # gs; PDF の再生成による圧縮 (画像ダウンサンプル + フォント統合)
     libreoffice-bin # pptx/docx のヘッドレス PDF 変換 (スライド視覚 QA 用)
     libsixel # SIXEL 画像プロトコル
     poppler-utils # PDF レンダリング + pdftoppm 等の CLI (lib は poppler-glib を内包)
