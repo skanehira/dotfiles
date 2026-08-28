@@ -18,7 +18,7 @@ argument-hint: "[cli|webapp] [タスク説明]"
 
 設計ループを回して docs/design/ 配下に設計成果物を生成し、GitHub issue に落として実装ループ (`/dev-impl`) に引き渡す。成果物は 3 種:
 
-- **docs/design/DESIGN.md** (横断設計 1 枚): 目的・アーキテクチャ・開発検証コマンド・スキーマ・API 一覧・横断規約
+- **docs/design/DESIGN.md** (横断設計 1 枚): 目的・アーキテクチャ・開発検証コマンド・スキーマ・API 一覧・横断規約・既知の制約
 - **docs/design/features/<機能名>.md** (機能設計): 機能単位の入出力・API・実装配置・エッジケース・テスト方針。**正本は常に docs 側で、issue は参照するだけ** (ローカルで「この機能の設計はどうなっているか」を AI にも人間にも引ける)
 - **GitHub issue**: ユースケース単位の親 (`tracking`) + その sub-issue の子 (作業単位) の 2 階層。**人間が issue 本文 + 参照 docs だけで着手できる**ことが情報設計の基準
 
