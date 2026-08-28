@@ -64,6 +64,10 @@
           {
             "type": "command",
             "command": "deno run --allow-env $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/agent-spawn-guard.ts"
+          },
+          {
+            "type": "command",
+            "command": "deno run --allow-env $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/fix-round-guard.ts"
           }
         ]
       }
