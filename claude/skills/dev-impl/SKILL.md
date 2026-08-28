@@ -117,17 +117,29 @@ Agent({
 base_sha: <BASE_SHA>       // 2.1 で控えた値
 issue_number: <N>
 focus: all
+previous_findings_path: <SCRATCH>/review-<N>-r<前ラウンド>.json   // r2 以降のみ。初回は行ごと省く
 report_path: <SCRATCH>/review-<N>-r<ラウンド>.json`
 })
 ```
 
-**`checked` の検収**: findings の件数を見る前に `checked` を確認する。`tests_run: false`、または UI に触れる差分なのに `e2e` が理由の無い `skipped` なら、その検査は成立していない — 指示を明確化して 1 回再実行し、再発なら 2.6 へ (「何も検出できない検証の実行は検証ではない」)。review JSON が無い・パース不能の場合も同様に 1 回再起動 → 再失敗で 2.6。
+**レビューと修正の回数はこう数える。初回レビューを r1 とし、レビューのたびに 1 ずつ増やす** (この採番は hook が修正ラウンド数の判定に使うので、r0 から始めると 3 回目の修正が素通しになる)。レビューは r1 (実装直後) / r2 (fix 1 回目の後) / r3 (fix 2 回目の後) の最大 3 回、`mode: fix` は r1 と r2 の findings に対する最大 2 回。「最大 2 ラウンド」が数えているのは **fix の回数**であって review の回数ではない。`previous_findings_path` は r2 と r3 の 2 回渡ることになる。
+
+`previous_findings_path` を渡すと、レビュワーは「前ラウンドの指摘が閉じたか」に加えて「同じ壊れ方が別の箇所へ転移していないか」を検査する (review-impl の検査項目 5)。渡さないと fresh context のレビュワーは前ラウンドの存在を知らないため、修正が作った同型の穴を次の周まで見逃す。**再開 run で前 run の review JSON が SCRATCH に無い場合は渡さない** (SCRATCH は run ごとに新規作成されるため)。その場合は項目 5 が働かないことを完了コメントに記す。
+
+**`checked` の検収**: findings の件数を見る前に `checked` を確認する。次のいずれかなら検査が成立していないので、指示を明確化して 1 回再実行し、再発なら 2.6 へ (「何も検出できない検証の実行は検証ではない」):
+
+- `tests_run: false`
+- UI に触れる差分なのに `e2e` が理由の無い `skipped`
+- `previous_findings_path` を渡したのに `previous_findings` が `none` (検査項目 5 の未実施) または `unreadable(...)` (パスの渡し間違い — この場合はパスを直して再実行する)
+
+review JSON が無い・パース不能の場合も同様に 1 回再起動 → 再失敗で 2.6。**検収の失敗による再実行は同じ `report_path` を上書きする** (r 番号を進めない。r 番号は fix ラウンドの判定と `previous_findings_path` の選択に使われるので、実際には行われていない fix を 1 回数えてしまう)。
 
 findings の分岐:
 
 - **high / medium が 0 件** → 2.4 へ (low は完了コメントに「報告のみ」として記載)
-- **high / medium がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して修正させ、レビューを再実行する。**このループは最大 2 ラウンド (固定)**。2 ラウンド後に **high が残る → 2.6**。**medium だけが残る → `docs/PENDING_REVIEW.html` に追記して 2.4 へ進む** (下記「保留レビュー項目の記録」)
-- **`category: test-weakening` の finding** → implementer に直させず親が裁定する: 弱体化が事実なら該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要 — 2.4 の全体テストが検証する。ラウンド数にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む
+- **high / medium がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して修正させ、レビューを再実行する。**このループは最大 2 ラウンド (固定)**。2 ラウンド後に **high が残る → 2.6**。**medium だけが残る → `docs/PENDING_REVIEW.html` に追記して 2.4 へ進む** (下記「保留レビュー項目の記録」)。この上限は `~/.claude/hooks/fix-round-guard.ts` が機械検証しており、3 回目の `mode: fix` 起動は `findings_path` のラウンド番号から検知されて deny される (`findings_path` の命名規約を守っている限り、ラウンド数の管理は自制に頼らない)。**deny されたら 2.2 の「1 回だけ再起動」を適用しない** — 同条件では必ず再び deny される。deny メッセージが示すとおり、high が残っていれば 2.6、medium だけなら `docs/PENDING_REVIEW.html` に追記して 2.4 へ進む。人間が明示的に継続を指示した場合に限り `FIX_ROUND_GUARD=off` で解除できる
+- **`category: test-weakening` の finding** → implementer に直させず親が裁定する: 弱体化が事実なら該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要 — 2.4 の全体テストが検証する。ラウンド数にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む。
+  **裁定した finding には、その review JSON の該当 finding へ `"adjudication": {"verdict": "false_positive|fixed_by_parent", "rationale": "<根拠の一文>"}` を足す。** この JSON は次ラウンドで `previous_findings_path` としてレビュワーに渡るため、印を付けないと裁定済みの指摘が「未解消」として再計上され、同じ指摘で駐車に落ちる (レビュワー側は `adjudication` の付いた finding を残存判定の対象外にする規約)
 
 #### 保留レビュー項目の記録
 
@@ -257,4 +269,4 @@ done
 
 - **dev-spec**: 上流の設計ループ。issue の生成元
 - **dev-impl-implementer** (subagent): 実装の葉。issue と docs を直読する
-- **review-impl** (subagent): 統合レビュワー (テスト品質 / 設計準拠 / コード品質 / E2E)
+- **review-impl** (subagent): 統合レビュワー (テスト品質 / 設計準拠 / コード品質 / E2E。2 周目以降は前ラウンド指摘の再発・転移)

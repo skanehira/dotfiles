@@ -51,6 +51,6 @@ dev-impl の修正ラウンド上限を機械検証する (PreToolUse Agent)。`
 
 - **状態を持たない**。ラウンド数は `findings_path` から読む (実測で `mode: fix` の起動 29/29 がこの形式のパスを渡している)。スキルの再実行は新しい SCRATCH で r1 から採番し直すため、それがそのままカウンタのリセットになる
 - `mode: implement` / 他の agent / ラウンドを読み取れない起動 (検収差し戻しなど) は allow
-- 駐車から人間の指示で再開する場合はラウンドが続くため deny される。意図した継続なら `FIX_ROUND_GUARD=off` で解除する (deny メッセージにも案内がある)
+- deny されるのは**同一 run 内で 2 ラウンドを超えて継続する場合だけ**。スキルを再実行して再開する経路は Step 0 が新しい SCRATCH を作り r1 から採番し直すため deny されない。同一 run 内で意図的に続けたいときは `FIX_ROUND_GUARD=off` で解除する (deny メッセージにも案内がある)
 - 無効化: 環境変数 `FIX_ROUND_GUARD=off`
 - テスト: `deno test --allow-env --allow-run --allow-read claude/hooks/fix-round-guard_test.ts`

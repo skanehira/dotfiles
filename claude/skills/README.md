@@ -38,7 +38,8 @@
 │  POC_NEEDED 残存ガード → ready issue を Depends on 順に:       │
 │    in-progress → implementer subagent (issue と docs を直読、  │
 │    TDD。UI は Playwright E2E も書く) →                         │
-│    review-impl 1 本 (テスト品質/設計準拠/コード品質/E2E) →     │
+│    review-impl 1 本 (テスト品質/設計準拠/コード品質/E2E      │
+│    + 2 周目以降は前ラウンド指摘の再発・転移) →                │
 │    high/medium は fix (最大 2 ラウンド固定) →                  │
 │    commit → PR → DoD ローカル実行 green → merge → close        │
 │  詰まったら needs-human + コメントで駐車して次の issue へ      │
