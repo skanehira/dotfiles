@@ -159,6 +159,7 @@ let
     ]
     ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
       screen-capture-mcp-server # Claude Code 用画面キャプチャ MCP サーバー
+      (pkgs.callPackage ../../pkgs/kanary.nix { }) # Kanary 音声入力 (Homebrew cask 未収録)
     ];
 
   # LSP servers (Mason 廃止、全て Nix declarative 管理)。
