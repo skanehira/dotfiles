@@ -47,6 +47,14 @@
     # よって substituter を足しても効かず、rev を上げるたびに手元でビルドが走る
     # (実測 3 分 34 秒 / 依存の初回 DL 込み)。rev が変わらない限り drs で再ビルドはしない。
     neovim-nightly-overlay.url = "github:nix-community/neovim-nightly-overlay";
+    # nix store への .app symlink を「trampoline」となる実体 .app に置き換え、Spotlight /
+    # Launchpad / Dock ピン留めを機能させる (mac only)。Spotlight は symlink を辿らないため、
+    # これが無いと home.packages 由来の GUI アプリ (Kanary / LibreOffice 等) が ⌘Space で
+    # 引けない (実測: mdfind で LibreOffice.app が 0 件)。
+    mac-app-util = {
+      url = "github:hraban/mac-app-util";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -96,10 +104,14 @@
         modules = [
           ./modules/overlays.nix
           ./darwin.nix
+          inputs.mac-app-util.darwinModules.default
           home-manager.darwinModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
+            # nix-darwin 側 (system 全体) と HM 側 (home.packages) の両方の .app を
+            # trampoline 化するため、sharedModules にも入れる
+            home-manager.sharedModules = [ inputs.mac-app-util.homeManagerModules.default ];
             # 既存ファイル衝突時に *.hm-backup へ退避してから symlink を張る。
             # 初回 bootstrap で claude/install.sh などが先に置いた dotfiles 直
             # symlink と HM の mkOutOfStoreSymlink が同 path を要求するケースで
