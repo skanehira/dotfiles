@@ -146,6 +146,9 @@
               tsp-server = pkgs.callPackage ./pkgs/tsp-server.nix { };
               gh-actions-language-server = pkgs.callPackage ./pkgs/gh-actions-language-server.nix { };
             }
+            // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+              kanary = pkgs.callPackage ./pkgs/kanary.nix { };
+            }
           );
 
       # `nix fmt` で呼ばれるフォーマッター。RFC 166 準拠の公式 nixfmt の
