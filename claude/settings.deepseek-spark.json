@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://spark-head.local:8888",
+    "ANTHROPIC_MODEL": "deepseek-v4-flash-vision-exp[1m]",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-flash-vision-exp[1m]",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-flash-vision-exp[1m]",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-flash-vision-exp[1m]",
+    "ANTHROPIC_DEFAULT_FABLE_MODEL": "deepseek-v4-flash-vision-exp[1m]",
+    "CLAUDE_CODE_EFFORT_LEVEL": "max",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "ENABLE_COMMIT_REVIEW": "0"
+  },
+  "fallbackModel": [
+    "deepseek-v4-flash-vision-exp[1m]"
+  ]
+}
