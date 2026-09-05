@@ -39,7 +39,8 @@ paths:
 | `ocsp` | OpenCode を本クラスタに向けて起動する zsh 関数。1Password も alias も使わない | `zsh/functions/opencode-spark.zsh` | dotfiles | 人 |
 | `OCSP_MODEL` | `ocsp` が使うモデル名を保持するシェル変数。`ocsp model` が書き換える。**新しいシェルでは Vision-Exp に戻る** | 同上 | `ocsp model` | `ocsp` |
 | `settings.deepseek-spark.json` | Claude Code 側のモデル名・コンテキスト上限・無効化プラグイン | `claude/settings.deepseek-spark.json` | dotfiles | `ccsp` が `--settings` で渡す |
-| `opencode.json` | OpenCode の `provider.spark` (接続先とキーの読み出し先)。**dotfiles 管理外の実ファイル** | Mac の `~/.config/opencode/opencode.json` | 人 (手で作る) | `opencode` 本体 / `ocsp status` |
+| `opencode.json` | OpenCode の `provider.spark` (接続先とキーの読み出し先)。dotfiles 管理。`~/.config/opencode/` の他のファイル (`tui.json` / `skills/` / `node_modules`) は opencode 自身のもの | `opencode/opencode.json` | dotfiles (`nix/modules/home/opencode.nix` が symlink) | `opencode` 本体 / `ocsp status` |
+| `spark-base-url` | Spark の baseURL の実値。opencode の `{file:…}` 置換が読む。**IP を含むので dotfiles には入れない** | Mac の `~/.config/opencode/spark-base-url` | 人 (`printf` で書き出す) | `opencode` 本体 / `ocsp` |
 | `/tmp/spark.key` | vLLM の Bearer トークンを平文で置いた作業ファイル。**Mac と head に別々に要る。再起動で消える** | Mac と head の `/tmp/spark.key` | 人 (1Password から書き出す) | `opencode` (Mac) / `bench.py` (head) |
 | `drs` | dotfiles の Nix 設定を Mac に適用する zsh alias | `nix/modules/home/zsh.nix` | dotfiles | 人 |
 | `.env.dspark` | レシピの設定を集約した 1 枚。git 管理外 (`.gitignore` 済み)。**現行と `~/dspark-0731` に 1 枚ずつある** | 各レシピディレクトリ | 人 (`.env.dspark.example` から複製) | 起動・停止・検証スクリプト |
@@ -302,7 +303,7 @@ Nix (`drs`) では入らないものが 5 つある。
 | `known_hosts` の 3 エントリ | Claude の非対話 ssh | 「接続する」節の `ssh-keyscan` (人が実行) |
 | 1Password へのサインイン | `ccsp` のトークン取得 | `op signin` |
 | `/tmp/spark.key` (Mac と head) | OpenCode と `bench.py` | 「API キーの流れ」節 |
-| `~/.config/opencode/opencode.json` | OpenCode の接続先 | 「OpenCode (`ocsp`)」節 |
+| `~/.config/opencode/spark-base-url` | OpenCode の接続先 (IP を含むため管理外) | 「OpenCode (`ocsp`)」節 |
 
 `ccsp` / `ocsp` の関数本体と `opencode` バイナリは Nix 経由なので、**`drs` を実行してから新しいシェルを開くまで存在しない** (既存シェルには旧定義が残る)。Tailscale 本体は `nix/modules/darwin/homebrew.nix` の cask `tailscale-app` で入る。
 
@@ -340,28 +341,20 @@ ocsp status                # 接続先・モデル・サーバの配信中モデ
 ocsp -h                    # 使い方とモデル名の短縮表を出して終了
 ```
 
-実体は `zsh/functions/opencode-spark.zsh` である。**`ccsp` と違って 1Password も alias も使わない**ので、解除操作 (`off` に相当するもの) が要らない。モデル選択だけはシェル変数 `OCSP_MODEL` に残り、新しいシェルでは Vision-Exp に戻る。接続先とキーの読み出し先は `~/.config/opencode/opencode.json` の `provider.spark` が持ち、OpenCode 本体が直接読む。
+実体は `zsh/functions/opencode-spark.zsh` である。**`ccsp` と違って 1Password も alias も使わない**ので、解除操作 (`off` に相当するもの) が要らない。モデル選択だけはシェル変数 `OCSP_MODEL` に残り、新しいシェルでは Vision-Exp に戻る。接続先とキーは `~/.config/opencode/opencode.json` の `provider.spark` が持ち、OpenCode 本体が直接読む。
 
-**`~/.config/opencode/opencode.json` は dotfiles 管理外なので新マシンでは手で作る。** 接続先に mDNS 名ではなく IP を書いてあり (上記の IPv6 フォールバックを避けるため)、このリポジトリは公開なので取り込めない。既存の `provider` (Ollama など) を消さないようマージする。
+**設定は `opencode/opencode.json` として dotfiles にあり、`nix/modules/home/opencode.nix` が `mkOutOfStoreSymlink` で `~/.config/opencode/opencode.json` に貼る** (`claude/settings.json` と同じ live edit)。`~/.config/opencode/` には opencode 自身が書く `tui.json` / `skills/` / `node_modules` / `package.json` が同居するので、**symlink するのは `opencode.json` 1 枚だけ**である。
 
-```jsonc
-{
-  "provider": {
-    "spark": {
-      "name": "DGX Spark (vLLM)",
-      "npm": "@ai-sdk/openai-compatible",
-      "options": {
-        "baseURL": "http://<spark-head の LAN IP>:8888/v1",
-        "apiKey": "{file:/tmp/spark.key}"
-      },
-      "models": {
-        "deepseek-v4-flash-vision-exp": {},
-        "deepseek-v4-flash-0731": {}
-      }
-    }
-  }
-}
+**IP はそこに書かない。** 接続先の実値は opencode の `{file:…}` 置換で `~/.config/opencode/spark-base-url` から読む。このファイルは dotfiles 管理外なので、新しいマシンでは自分で作る。`{file:…}` は `~` 起点のパスを受け付け、値は読んだ内容そのものなので**末尾に改行を入れない** (`printf` を使う)。
+
+```bash
+printf 'http://<spark-head の LAN IP>:8888/v1' > ~/.config/opencode/spark-base-url
+chmod 600 ~/.config/opencode/spark-base-url
 ```
+
+mDNS 名 (`http://spark-head.local:8888/v1`) を書いても動くが、接続あたり約 210 ms 遅くなる (実測 224 ms 対 7〜21 ms)。`ccsp` が `NODE_OPTIONS` で回避しているのと同じ IPv6 フォールバックで、opencode には相当する回避手段が無いため IP を使う。
+
+このファイルか `/tmp/spark.key` が無いと `ocsp` は接続先を解決できず、どのファイルが読めないかを表示して止まる。`autoupdate` は `false` にしてある (本体は Nix 管理で、store は書き換えられないため)。
 
 ## 実測値
 
@@ -469,7 +462,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 - **`~/sparkDash/docker-compose.yml`** — 上流の追跡ファイル。上書きは `docker-compose.override.yml` に置く
 - **`docker compose restart`** — vLLM には使わない。`stop` → `start`
 - **`.env.dspark.bak` のような控え** — `.gitignore` が拾わずキーごと公開リポジトリに載る
-- **本書と `zsh/functions/*.zsh` への IP 直書き** — 公開リポジトリのため。IP は `CCSP_LAN_HOST` と `opencode.json` (どちらも dotfiles 管理外) で渡す
+- **公開リポジトリ内のファイルへの IP 直書き** — 本書・`zsh/functions/*.zsh`・`opencode/opencode.json` のいずれにも書かない。IP は `CCSP_LAN_HOST` と `~/.config/opencode/spark-base-url` (どちらも dotfiles 管理外) で渡す
 - **sparkDash のポート 5555** — 認証が無いので信頼できないネットワークへ出さない
 
 ## 既知の制約
