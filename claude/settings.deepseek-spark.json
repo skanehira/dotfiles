@@ -13,5 +13,8 @@
   },
   "fallbackModel": [
     "deepseek-v4-flash-vision-exp"
-  ]
+  ],
+  "enabledPlugins": {
+    "security-guidance@claude-plugins-official": false
+  }
 }

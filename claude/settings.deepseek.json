@@ -11,5 +11,8 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "ENABLE_COMMIT_REVIEW": "0"
   },
-  "fallbackModel": ["deepseek-v4-flash[1m]"]
+  "fallbackModel": ["deepseek-v4-flash[1m]"],
+  "enabledPlugins": {
+    "security-guidance@claude-plugins-official": false
+  }
 }
