@@ -19,6 +19,7 @@
     ./modules/home/git.nix
     ./modules/home/herdr.nix
     ./modules/home/neovim.nix
+    ./modules/home/opencode.nix
     ./modules/home/packages.nix
     ./modules/home/rustup.nix
     ./modules/home/tmux.nix
