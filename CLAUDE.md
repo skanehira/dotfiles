@@ -265,7 +265,8 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 ### Rules (claude/rules/)
 - `core/tdd.md` — TDD 方法論
 - `core/commit.md` — Conventional Commit 形式
-- `backend/go/`, `backend/rust/` — 言語別コーディング規約
+- `backend/go/`, `backend/rust/`, `frontend/react/` — 言語・フレームワーク別コーディング規約
+- `infra/dgx-spark.md` — 自宅の DGX Spark 2 台クラスタの環境リファレンス
 
 ### Installation
 
