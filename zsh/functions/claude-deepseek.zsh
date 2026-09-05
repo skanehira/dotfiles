@@ -48,9 +48,9 @@ ccds() {
 # ANTHROPIC_API_KEY ではなく ANTHROPIC_AUTH_TOKEN を使う。
 #
 # 注意:
-# - export は子プロセスに継承されるが alias は継承されない。ccsp の後にサブシェルや
-#   スクリプトから「素の claude」を打つと --settings が効かず、本体 settings.json の
-#   モデル名を vLLM に送って model not found になる。claude は必ずこのシェルで起動する
+# - ccsp は接続先を整えたうえで claude をその場で起動する。alias も張るので、
+#   同じシェルで claude を打ち直しても --settings が効く。ただし alias は子プロセスに
+#   継承されないため、サブシェルやスクリプトからは ccsp 経由で起動する
 # - 別のバックエンドに切り替えるときは先に off を打つ。ANTHROPIC_AUTH_TOKEN が
 #   残っていると使い回され、相手先で 401 になる
 ccsp() {
@@ -79,8 +79,23 @@ ccsp() {
       echo "ccsp: Anthropic に戻しました"
       return 0
       ;;
-    lan) base_url="$lan_url" ;;
-    ts) base_url="$ts_url" ;;
+    status)
+      echo "  接続先: ${ANTHROPIC_BASE_URL:-(未設定)}"
+      echo "  設定  : $settings"
+      echo -n "  モデル: "
+      python3 -c "import json;print(json.load(open('$settings'))['env']['ANTHROPIC_MODEL'])" 2>/dev/null || echo "(読めず)"
+      echo -n "  LAN   : "
+      curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$lan_url/health" && echo "$lan_url に到達" || echo "$lan_url に届かない"
+      echo -n "  TS    : "
+      curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$ts_url/health" && echo "$ts_url に到達" || echo "$ts_url に届かない"
+      return 0
+      ;;
+    lan) base_url="$lan_url"; shift ;;
+    ts) base_url="$ts_url"; shift ;;
+    -h|--help)
+      echo "usage: ccsp [lan|ts|off|status] [claude に渡す引数...]" >&2
+      return 0
+      ;;
     '')
       # 到達した方を選ぶ。/health は無認証なので API キー無しで叩ける。
       # --connect-timeout は名前解決にも効く (curl は AsynchDNS 付き) ため、
@@ -96,9 +111,18 @@ ccsp() {
         return 1
       fi
       ;;
+    # それ以外の引数は claude にそのまま渡す (接続先は自動選択)
     *)
-      echo "usage: ccsp [lan|ts|off]" >&2
-      return 1
+      for url in "$lan_url" "$ts_url"; do
+        if curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$url/health"; then
+          base_url="$url"
+          break
+        fi
+      done
+      if [[ -z "$base_url" ]]; then
+        echo "ccsp: LAN にも Tailscale にも届きません (ccsp lan / ccsp ts で強制できます)" >&2
+        return 1
+      fi
       ;;
   esac
 
@@ -128,5 +152,8 @@ ccsp() {
   fi
 
   alias claude="claude --settings $settings"
-  echo "ccsp: Spark モード ($base_url)。claude で起動、ccsp off で解除"
+  echo "ccsp: Spark モード ($base_url)。ccsp off で解除"
+
+  # 接続先を整えたらそのまま起動する。alias は同じシェルで打ち直す用に残す
+  command claude --settings "$settings" "$@"
 }
