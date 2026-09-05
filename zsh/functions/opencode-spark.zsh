@@ -5,11 +5,45 @@
 # - 環境変数も alias も張らないので off に相当する解除操作が要らない
 #
 # 接続先とキーは ~/.config/opencode/opencode.json の provider.spark が持つ。
-# このファイルは dotfiles 管理外 (ローカル実体)。ホスト名ではなく IP を書いて
-# あるのは、mDNS 名が到達できない IPv6 を返して接続が 210ms 遅くなるため
+# この設定は dotfiles 管理 (nix/modules/home/opencode.nix が symlink する) だが、
+# 接続先の実値は opencode の {file:...} 置換で ~/.config/opencode/spark-base-url
+# から読む。このリポジトリは公開なので IP を置けないため。
+# IP を使うのは、mDNS 名が到達できない IPv6 を返して接続が 210ms 遅くなるため
 # (ccsp が NODE_OPTIONS=--dns-result-order=ipv4first で回避しているのと同じ問題)。
 
 : ${OCSP_MODEL:=deepseek-v4-flash-vision-exp}
+
+# opencode の設定値は {file:...} / {env:...} 置換を通してから使う。接続先も鍵も
+# その形で外部ファイルに逃がしてあるので、リテラルのままでは繋がらない。
+# 引数: $1 = 設定ファイル, $2 = provider.spark.options のキー名
+_ocsp_resolve() {
+  python3 - "$1" "$2" <<'PY'
+import json, os, re, sys
+
+cfg, key = sys.argv[1], sys.argv[2]
+try:
+    value = json.load(open(cfg))["provider"]["spark"]["options"][key]
+except Exception:
+    sys.exit(1)
+
+m = re.fullmatch(r"\{file:(.+)\}", value)
+if m:
+    path = os.path.expanduser(m.group(1))
+    try:
+        value = open(path).read().strip()
+    except OSError:
+        sys.stderr.write(f"{key}: {path} が読めません\n")
+        sys.exit(2)
+
+m = re.fullmatch(r"\{env:(.+)\}", value)
+if m:
+    value = os.environ.get(m.group(1), "")
+
+if not value:
+    sys.exit(3)
+print(value)
+PY
+}
 
 ocsp() {
   local cfg="$HOME/.config/opencode/opencode.json"
@@ -21,14 +55,10 @@ ocsp() {
     return 1
   fi
 
-  base=$(python3 -c "
-import json, sys
-try:
-    print(json.load(open('$cfg'))['provider']['spark']['options']['baseURL'])
-except Exception:
-    sys.exit(1)
-" 2>/dev/null) || {
-    echo "ocsp: $cfg に provider.spark がありません" >&2
+  base=$(_ocsp_resolve "$cfg" baseURL 2>/dev/null) || {
+    echo "ocsp: $cfg の provider.spark.options.baseURL を解決できません" >&2
+    echo "      {file:...} で外部ファイルを指している場合は、そのファイルを作ってください" >&2
+    echo "      例: printf 'http://<spark-head の IP>:8888/v1' > ~/.config/opencode/spark-base-url" >&2
     return 1
   }
 
@@ -64,16 +94,10 @@ USAGE
       echo "  モデル: $OCSP_MODEL"
       echo -n "  サーバ: "
       if curl -fs -m 5 -o /dev/null "${base%/v1}/health"; then
-        # /v1/models は Bearer が要る。キーは opencode.json の {file:...} と同じものを読む
-        local keyfile models
-        keyfile=$(python3 -c "
-import json, re
-v = json.load(open('$cfg'))['provider']['spark']['options'].get('apiKey', '')
-m = re.fullmatch(r'\{file:(.+)\}', v)
-print(m.group(1) if m else '')
-" 2>/dev/null)
-        if [[ -n "$keyfile" && -f "$keyfile" ]]; then
-          models=$(curl -s -m 5 -H "Authorization: Bearer $(cat "$keyfile")" "${base}/models" \
+        # /v1/models は Bearer が要る。opencode が読むのと同じ経路で解決する
+        local key models
+        if key=$(_ocsp_resolve "$cfg" apiKey 2>/dev/null); then
+          models=$(curl -s -m 5 -H "Authorization: Bearer $key" "${base}/models" \
             | python3 -c "import json,sys; print(', '.join(m['id'] for m in json.load(sys.stdin).get('data',[])))" 2>/dev/null)
         fi
         echo "health OK / 配信中: ${models:-(取得できず)}"
