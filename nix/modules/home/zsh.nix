@@ -120,6 +120,7 @@
     ".config/zsh/functions/tmuxpopup.zsh".source = ../../../zsh/functions/tmuxpopup.zsh;
     ".config/zsh/functions/gss.zsh".source = ../../../zsh/functions/gss.zsh;
     ".config/zsh/functions/claude-deepseek.zsh".source = ../../../zsh/functions/claude-deepseek.zsh;
+    ".config/zsh/functions/opencode-spark.zsh".source = ../../../zsh/functions/opencode-spark.zsh;
   }
   // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
     # sleepctl は pmset/ioreg 依存の mac 専用機能
