@@ -54,7 +54,7 @@ ccds() {
 # - 別のバックエンドに切り替えるときは先に off を打つ。ANTHROPIC_AUTH_TOKEN が
 #   残っていると使い回され、相手先で 401 になる
 ccsp() {
-  local settings="$GHQ_ROOT/github.com/skanehira/dotfiles/claude/settings.deepseek-spark.json"
+  local settings="$GHQ_ROOT/github.com/skanehira/dotfiles/claude/settings.spark.json"
   # LAN 側のホストは CCSP_LAN_HOST で上書きできる。mDNS 名は到達できない IPv6 を
   # 2 つ返し、curl / Node が毎回それを試してから IPv4 に落ちるため接続が 220ms 増える
   # (IPv4 強制なら 12ms)。IP を直に使いたいときは CCSP_LAN_HOST に IP を入れる。
