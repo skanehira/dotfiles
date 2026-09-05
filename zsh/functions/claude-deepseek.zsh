@@ -55,13 +55,26 @@ ccds() {
 #   残っていると使い回され、相手先で 401 になる
 ccsp() {
   local settings="$GHQ_ROOT/github.com/skanehira/dotfiles/claude/settings.deepseek-spark.json"
-  local lan_url="http://spark-head.local:8888"
+  # LAN 側のホストは CCSP_LAN_HOST で上書きできる。mDNS 名は到達できない IPv6 を
+  # 2 つ返し、curl / Node が毎回それを試してから IPv4 に落ちるため接続が 220ms 増える
+  # (IPv4 強制なら 12ms)。IP を直に使いたいときは CCSP_LAN_HOST に IP を入れる。
+  # このリポジトリは公開のため IP は直書きしない。
+  local lan_url="http://${CCSP_LAN_HOST:-spark-head.local}:8888"
   local ts_url="http://spark-head:8888"
   local base_url url token
 
   case "$1" in
     off)
       unset ANTHROPIC_AUTH_TOKEN ANTHROPIC_BASE_URL
+      # NODE_OPTIONS は ccsp が足した分だけ戻す (元から入っていた値は残す)
+      if [[ -n "${_CCSP_NODE_OPTIONS_SAVED+x}" ]]; then
+        if [[ -n "$_CCSP_NODE_OPTIONS_SAVED" ]]; then
+          export NODE_OPTIONS="$_CCSP_NODE_OPTIONS_SAVED"
+        else
+          unset NODE_OPTIONS
+        fi
+        unset _CCSP_NODE_OPTIONS_SAVED
+      fi
       unalias claude 2>/dev/null
       echo "ccsp: Anthropic に戻しました"
       return 0
@@ -104,6 +117,16 @@ ccsp() {
   fi
 
   export ANTHROPIC_BASE_URL="$base_url"
+
+  # mDNS 名は到達できない IPv6 を 2 つ返し、Node が毎回それを試してから IPv4 に
+  # 落ちるため接続が 210ms 増えて network retry の原因になる (実測: 名前解決 8ms /
+  # 接続 223ms、IPv4 強制なら 12ms)。IPv4 を先に試させて回避する。
+  if [[ "$NODE_OPTIONS" != *--dns-result-order=* ]]; then
+    : ${_CCSP_NODE_OPTIONS_SAVED=$NODE_OPTIONS}
+    export _CCSP_NODE_OPTIONS_SAVED
+    export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--dns-result-order=ipv4first"
+  fi
+
   alias claude="claude --settings $settings"
   echo "ccsp: Spark モード ($base_url)。claude で起動、ccsp off で解除"
 }
