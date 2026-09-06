@@ -165,7 +165,7 @@ LAN は 2.4 GHz の WiFi で、実効 8 MB/s しか出ない。**HuggingFace か
 | vLLM (Qwen 系配信中) | 同上 | 同上 | **なし** |
 | sparkDash | `http://spark-head.local:5555` | `http://spark-head:5555` | **なし** |
 
-**認証の有無は配信中の系統で変わる。** DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` で `/v1/*` に Bearer を要求し、`/health` と `/metrics` だけが無認証である。**Qwen 系は `--api-key` を渡さないので `/v1/*` も含めて全部が無認証になる** (→「Qwen3.8-Flash-Next」の「認証」)。`/health` は `ccsp` / `ocsp` の到達判定が、`/metrics` は sparkDash と `~/spark-bench/snap.py` がポーリングして消費する。
+**認証の有無は配信中の系統で変わる。** DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` を `docker-compose.dspark.yml` がコンテナの環境変数に渡し、vLLM が `/v1/*` に Bearer を要求する。`/health` と `/metrics` だけが無認証である (**2026-09-06 時点では DeepSeek 系が停止中で、この挙動は設定の配線を追って確認したもの。ランタイムでの再検証は未実施**)。**Qwen 系は `--api-key` を渡さないので `/v1/*` も含めて全部が無認証になる** (→「Qwen3.8-Flash-Next」の「認証」)。`/health` は `ccsp` / `ocsp` の到達判定が、`/metrics` は sparkDash と `~/spark-bench/snap.py` がポーリングして消費する。
 
 **したがって Qwen 配信中はポート 8888 を信頼できないネットワークへ出さない。** sparkDash のポート 5555 と同じ扱いにする。
 
@@ -324,7 +324,7 @@ ssh -n spark-head "docker exec sparkDash node -e \"console.log(JSON.parse(requir
 
 ### Qwen3.8-Flash-Next (別系統のレシピ)
 
-**DeepSeek 系とは別リポジトリ・別イメージ・別スクリプト名である。** 混同すると停止スクリプトが効かない。2026-09-06 に配置・起動・`ccsp` / `ocsp` からの疎通まで確認した。
+**DeepSeek 系とは別リポジトリ・別イメージ・別スクリプト名である。** 混同すると停止スクリプトが効かない。2026-09-06 に配置・起動・`ccsp` / `ocsp` からの疎通まで確認した (`ocsp` は `drs` 未適用のため検証用の `HOME` に設定を置いて確認した)。
 
 **この構成には認証が無い。** 下の「認証」を先に読む。
 
@@ -369,18 +369,21 @@ cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && ./start-deepseek-v4-flash-dspark.s
 
 **`--launch` を使う。** 引数なしの `./start.sh` は HuggingFace からのダウンロードと worker への rsync から始める。どちらも完了済みなので `--launch` が両方を飛ばす。
 
-**cold start は約 11 分である** (上流計測、2026-09-05 時点の README: NCCL 約 40 秒、重みロード 458 秒、engine init 92 秒、graph capture 約 7 秒)。DeepSeek 系の約 6 分より長い。15 分を過ぎても上がらなければ両ノードで `docker logs vllm-fn` を見る (worker は「worker に入る」節の入れ子 ssh)。
+**cold start は約 11 分である** (上流計測、2026-09-05 時点の README: NCCL 約 40 秒、重みロード 458 秒、engine init 92 秒、graph capture 約 7 秒)。DeepSeek 系の約 6 分より長い。20 分を過ぎても上がらなければ両ノードで `docker logs vllm-fn` を見る (worker は「worker に入る」節の入れ子 ssh)。
 
 **実測値 (2026-09-06 の初回起動)。** 上流 README が載せている数字は別のチェックポイントで採ったものなので一致しない。
 
 | 項目 | 実測 |
 | --- | --- |
-| 重みロード | 419 秒 (11 シャード) |
+| 重みロード (本体) | head 423 秒 / worker 463 秒 (11 シャード) |
+| 重みロード (MTP ドラフタ) | head 75 秒 / worker 52 秒 |
 | engine init (profile + KV 確保 + warmup) | 163 秒 |
-| CUDA graph capture | 16 秒 / 0.39 GiB |
-| コンテナ起動から `/health` 200 まで | 約 12 分 |
-| KV キャッシュ | 35.35 GiB — 3,809,995 トークン |
+| CUDA graph capture | 16 秒 (head 0.39 GiB / worker 0.77 GiB) |
+| コンテナ起動から `/health` 200 まで | 823 秒 (13.7 分) |
+| KV キャッシュ | head 35.35 GiB / worker 33.42 GiB — 3,809,995 トークン |
 | 262,144 トークン時の同時実行 | 14.53 倍 |
+
+上流 README の「約 11 分」より 2〜3 分長い。**判定にはこの実測値 (約 14 分) を使う。**
 
 **起動できたかは 3 段で判定する。**
 
@@ -390,9 +393,16 @@ curl -s http://spark-head.local:8888/v1/models                               # 2
 ocsp qwen run "1+1 は?"                                                       # 3. 実際に生成が通る
 ```
 
-2 段目に Bearer が要らないのは Qwen が無認証だからである (DeepSeek 系配信中は `-H "Authorization: Bearer $KEY"` を足す)。3 段目の `ocsp` は `/tmp/spark.key` の**存在**を要求する (中身は Qwen では使われない)。Qwen レシピには DeepSeek 系の `smoke-…sh` に相当するスクリプトが無いので、3 段目はクライアントから叩いて代用する。
+2 段目に Bearer が要らないのは Qwen が無認証だからである (DeepSeek 系配信中は `-H "Authorization: Bearer $KEY"` を足す)。3 段目は Qwen 配信中ならキーファイルが無くても通る (下記)。2 段目に Bearer が要らないのは Qwen が無認証だからである (DeepSeek 系配信中は `-H "Authorization: Bearer $KEY"` を足す)。**3 段目は `drs` 適用済みの Mac でしか通らない** (`~/.config/opencode/opencode.json` の symlink が要る)。未適用なら次で代用する。
 
-**認証。 このレシピは vLLM に `--api-key` を渡さないので、Qwen 配信中はポート 8888 が無認証になる。** `.env` にも `.env.sample` にも API キーのキーが無く (`grep -nE "API_KEY" .env` は `EXTRA_VLLM_ARGS` のコメント行しか返さない)、`docker inspect vllm-fn` の実引数にも `--api-key` は無い。**Bearer 無しで `/v1/chat/completions` が通ることを実測で確認した。** DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` で Bearer を要求するので、**切り替えると認証の有無が変わる**。sparkDash (ポート 5555) と同じく、Qwen 配信中のポート 8888 も信頼できないネットワークへ出さない。認証を付けたい場合は `.env` の `EXTRA_VLLM_ARGS="--api-key <値>"` で渡せる (未検証)。
+```bash
+curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: application/json' \
+  -d '{"model":"qwen3.8-flash-next","messages":[{"role":"user","content":"1+1 は?"}],"max_tokens":64}'
+```
+
+Qwen レシピには DeepSeek 系の `smoke-…sh` に相当するスクリプトが無いので、3 段目はクライアントから叩いて代用する。
+
+**認証。 このレシピは vLLM に `--api-key` を渡さないので、Qwen 配信中はポート 8888 が無認証になる。** `.env` にも `.env.sample` にも API キーのキーが無く (`grep -nE "API_KEY" .env` は 1 行も返さず exit 1)、`docker inspect vllm-fn` の実引数にも `--api-key` は無い。**Bearer 無しで `/v1/chat/completions` が通ることを実測で確認した。** DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` で Bearer を要求するので、**切り替えると認証の有無が変わる**。sparkDash (ポート 5555) と同じく、Qwen 配信中のポート 8888 も信頼できないネットワークへ出さない。認証を付けたい場合は `.env` の `EXTRA_VLLM_ARGS="--api-key <値>"` で渡せる (未検証)。
 
 **Claude Code と OpenCode の両方から使える (2026-09-06 に実測)。** このイメージの vLLM は `/v1/messages` (Anthropic Messages API) をフラグ無しで登録するので (`vllm/entrypoints/generate/api_router.py` が `register_anthropic_api_router(app)` を無条件に呼ぶ)、`ANTHROPIC_BASE_URL` を向ける `ccsp` が通る。`ccsp qwen` は `max_model_len` 262,144 の半分である 131,072 をコンテキスト上限に入れて起動する。
 
@@ -455,7 +465,7 @@ ocsp -h                    # 使い方とモデル名の短縮表を出して終
 
 実体は `zsh/functions/opencode-spark.zsh` である。**`ccsp` と違って 1Password も alias も使わない**ので、解除操作 (`off` に相当するもの) が要らない。接続先とキーは `~/.config/opencode/opencode.json` の `provider.spark` が持ち、OpenCode 本体が直接読む。
 
-**モデルの決め方は `ccsp` と同じである。** 引数で短縮名を渡せばその起動だけそれを使い、渡さなければ `/v1/models` の配信中モデルを採る。`ocsp model <名前>` はシェル変数 `OCSP_MODEL` を書き換えるので以降の起動に効く (新しいシェルでは未設定に戻り、また配信中のモデルを採る)。要求したモデルが配信されていなければ起動前に exit 1 で止まる。**配信中の一覧そのものが引けないときも止まる。** `ocsp` は `opencode.json` の `apiKey` を必ず解決してから `/v1/models` を叩くので、**キーファイル (既定 `/tmp/spark.key`) の存在が前提になる** (中身が使われるかは配信中の系統による。Qwen 系は無認証なので中身は不問)。`ccsp` と同じ挙動である。**`opencode.json` の `models` に宣言が無いモデルは OpenCode 側が拒否するので、モデルを増やしたらこの JSON にも足す。** 値の決め方は `limit.context` = `/v1/models` の `max_model_len` の半分、`limit.output` = 65536、`reasoning` と `tool_call` は `true` である。**`ccsp` と違ってこれは人が書く静的値なので、サーバ側の `MAX_MODEL_LEN` を変えると取り残される** (`workerLabel` と同型の乖離経路)。
+**モデルの決め方は `ccsp` と同じである。** 引数で短縮名を渡せばその起動だけそれを使い、渡さなければ `/v1/models` の配信中モデルを採る。`ocsp model <名前>` はシェル変数 `OCSP_MODEL` を書き換えるので以降の起動に効く (新しいシェルでは未設定に戻り、また配信中のモデルを採る)。要求したモデルが配信されていなければ起動前に exit 1 で止まる。**配信中の一覧そのものが引けないときも止まる** (`ccsp` と同じ挙動)。ただし**キーファイルの要否は配信中の系統で変わる。** `ocsp` は `apiKey` の解決に失敗しても握り潰して空の Bearer を送るので、**Qwen 配信中 (無認証) はキーファイルが無くても一覧が引けて起動する** (2026-09-06 実測)。DeepSeek 配信中は空 Bearer が 401 になるため、`/tmp/spark.key` の存在と中身の両方が要る。**`opencode.json` の `models` に宣言が無いモデルは OpenCode 側が拒否するので、モデルを増やしたらこの JSON にも足す。** 値の決め方は `limit.context` = `/v1/models` の `max_model_len` の半分、`limit.output` = 65536、`reasoning` と `tool_call` は `true` である。**`ccsp` と違ってこれは人が書く静的値なので、サーバ側の `MAX_MODEL_LEN` を変えると取り残される** (`workerLabel` と同型の乖離経路)。
 
 **設定は `opencode/opencode.json` として dotfiles にあり、`nix/modules/home/opencode.nix` が `mkOutOfStoreSymlink` で `~/.config/opencode/opencode.json` に貼る** (`claude/settings.json` と同じ live edit)。`~/.config/opencode/` には opencode 自身が書く `tui.json` / `skills/` / `node_modules` / `package.json` が同居するので、**symlink するのは `opencode.json` 1 枚だけ**である。
 
@@ -560,9 +570,9 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | 起動に失敗する | `./logs-deepseek-v4-flash-dspark.sh` (Qwen 系は `docker logs vllm-fn`) | DeepSeek 系の `no usable RoCEv2 GID` は RoCE 2 本目の IP か MTU (Qwen 系は `IB_HCA` が 1 本なのでこの形では出ない)。Qwen 系は相手系統が GPU を掴んだままだと `REQUIRE_IDLE_GPU` で拒否される |
 | `model not found` が出る | `curl .../v1/models` で配信名を見る | セッション起動後にサーバ側で切り替えた。`ccsp` / `ocsp` は起動時のモデル名を送り続けるので起動し直す |
 | `ccsp` / `ocsp` が「配信されていません」で止まる | メッセージが出す配信中の一覧 | 要求した短縮名と実際の配信モデルが違う。これは異常ではなく起動前の検査が効いた状態 |
-| `ocsp` が「配信中のモデルを取得できません」で止まる | Mac の `/tmp/spark.key` | 再起動で消えている。「API キーの流れ」の `op read` で書き直す |
+| `ocsp` が「配信中のモデルを取得できません」で止まる | サーバの状態と、DeepSeek 配信中なら Mac の `/tmp/spark.key` | サーバが落ちている。DeepSeek 配信中はキーが消えていることもある (`/tmp` は再起動で消える。「API キーの流れ」の `op read` で書き直す)。Qwen 配信中は無認証なのでキーは要らない |
 | OpenCode がモデルを拒否する | `opencode/opencode.json` の `provider.spark.models` | 宣言の無いモデル名は OpenCode 側が受け付けない |
-| 起動待ちが長すぎる | head は `docker logs <コンテナ名>`、worker は「worker に入る」節のコマンドで同じものを打つ | 正常な所要は DeepSeek 系が約 6 分、Qwen 系が約 12 分 (実測)。DeepSeek 系は 10 分、Qwen 系は 15 分を超えたら worker 側だけ落ちていることがあるので両ランクを見る |
+| 起動待ちが長すぎる | head は `docker logs <コンテナ名>`、worker は「worker に入る」節のコマンドで同じものを打つ | 正常な所要は DeepSeek 系が約 6 分、Qwen 系が約 14 分 (実測)。DeepSeek 系は 10 分、Qwen 系は 20 分を超えたら worker 側だけ落ちていることがあるので両ランクを見る |
 | 起動直後から空きメモリが 6 GiB | `free -h` | 正常。`GPU_MEMORY_UTILIZATION_TEXT=0.835` の先取り (「メモリの使われ方」) |
 | `hi` と打っただけで network retry | `ccsp status` で LAN 到達を確認 | mDNS の IPv6 フォールバック。`NODE_OPTIONS` に `--dns-result-order=ipv4first` が入っているか見る |
 | 応答後に 200 秒以上返らない | `settings.spark.json` の `enabledPlugins` | `security-guidance` の Stop hook (→「遅いと感じたときに疑う順序」1) |
