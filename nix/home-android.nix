@@ -35,12 +35,19 @@
   home.homeDirectory = "/home/${username}";
 
   # Home Manager standalone は chsh を実行せず、proot-distro のユーザーは
-  # 初期シェルが bash のまま。対話シェルのときだけ zsh へ引き渡す。
+  # 初期シェルが bash のまま。そこで bash から zsh へ引き渡す。
+  #
+  # 対話判定は HM が生成する .bashrc 冒頭の `[[ $- == *i* ]] || return` に任せる
+  # (initExtra はその後ろに置かれるので、非対話 bash ではここまで到達しない)。
+  # 自前で `[ -t 1 ]` を足すと、stdout をリダイレクトした対話シェルで zsh に
+  # 移れなくなるだけで、守れる範囲は増えない。
+  #
   # -l を付けるのは HM が PATH と sessionVariables を .zprofile に書くため。
+  # zsh が未導入のときに exec して端末を失わないよう、実行可能性だけ確認する。
   programs.bash = {
     enable = true;
     initExtra = ''
-      if [ -z "$ZSH_VERSION" ] && [ -t 1 ] && [ -x "$HOME/.nix-profile/bin/zsh" ]; then
+      if [ -x "$HOME/.nix-profile/bin/zsh" ]; then
         exec "$HOME/.nix-profile/bin/zsh" -l
       fi
     '';

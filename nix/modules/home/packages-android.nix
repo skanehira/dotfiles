@@ -24,6 +24,7 @@ let
     tmux
     ghq # zsh/functions/ghq-fzf.zsh
     nh # zsh.nix の hms alias
+    tirith # zsh.nix の initContent が `tirith init --shell zsh` を無条件で eval する
     tree-sitter # nvim-treesitter main が parser compile に要求
   ];
 
