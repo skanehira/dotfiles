@@ -138,16 +138,20 @@ USAGE
   esac
   : ${model:=$OCSP_MODEL}
 
+  # 配信中の一覧が引けないまま起動すると、モデル名の検査を素通りしたうえで
+  # opencode が同じ鍵で 401 になる。ccsp と同じく、ここで止める。
   key=$(_ocsp_resolve "$cfg" apiKey 2>/dev/null) || key=""
   served=$(_ocsp_models "$base" "$key")
+  if [[ -z "$served" ]]; then
+    echo "ocsp: 配信中のモデルを $base から取得できません" >&2
+    echo "      /v1/models は Bearer が要る。opencode.json の apiKey が指すファイル" >&2
+    echo "      (既定は /tmp/spark.key。再起動で消える) とサーバの状態を確認する" >&2
+    echo "      サーバ側の切り分けは ocsp status" >&2
+    return 1
+  fi
   if [[ -z "$model" ]]; then
     model=$(echo "$served" | head -1)
-    if [[ -z "$model" ]]; then
-      echo "ocsp: 配信中のモデルを $base から取得できません" >&2
-      echo "      サーバの状態は ocsp status で確認できます" >&2
-      return 1
-    fi
-  elif [[ -n "$served" ]] && ! echo "$served" | grep -qx -- "$model"; then
+  elif ! echo "$served" | grep -qx -- "$model"; then
     echo "ocsp: $model は配信されていません" >&2
     echo "      配信中: $(echo "$served" | paste -sd, -)" >&2
     return 1
