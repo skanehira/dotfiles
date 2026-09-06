@@ -21,7 +21,12 @@
     envExtra = ''
       # PATH の重複を抑止 (zsh 配列ユニーク化)
       typeset -gU PATH
-      . "$HOME/.cargo/env"
+      # rustup を入れないプロファイル (home-android.nix) では ~/.cargo/env が無い。
+      # .zshenv は非対話シェルでも評価されるので、無条件 source だと全 zsh 起動で
+      # エラーになる
+      if [ -f "$HOME/.cargo/env" ]; then
+        . "$HOME/.cargo/env"
+      fi
     '';
 
     history = {
