@@ -158,6 +158,8 @@ ccsp() {
   vision  -> deepseek-v4-flash-vision-exp
 モデルを省略すると配信中のモデルを自動で使う。短縮名に無いものは
 CCSP_MODEL=<配信名> ccsp で渡す。
+コンテキスト上限は max_model_len から出力用の余白 (既定 32768、
+CCSP_OUTPUT_RESERVE で変更可) を引いた値になる。
 USAGE
       return 0
       ;;
@@ -234,7 +236,15 @@ USAGE
     return 1
   fi
   served="${line%% *}"
-  ctx=$(( ${line##* } / 2 ))
+  # サーバの max_model_len は入力と出力の合計なので、出力用の余白を引いた分を
+  # Claude Code の窓にする。既定の余白は CCSP_OUTPUT_RESERVE で変えられる。
+  # 半分にしていた頃の根拠 (1M のまま使うと長文脈の品質劣化とプレフィル遅延を
+  # 招く) は、サーバ側を常用長に合わせて設定する運用に切り替えたので不要になった。
+  ctx=$(( ${line##* } - ${CCSP_OUTPUT_RESERVE:-32768} ))
+  if (( ctx < 1 )); then
+    echo "ccsp: max_model_len (${line##* }) が出力用の余白 ${CCSP_OUTPUT_RESERVE:-32768} 以下です" >&2
+    return 1
+  fi
 
   mkdir -p "${rendered:h}" || return 1
   _ccsp_render_settings "$base" "$served" "$ctx" "$rendered" || {
