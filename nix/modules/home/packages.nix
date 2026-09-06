@@ -87,37 +87,54 @@ let
   ];
 
   # モダン CLI
-  modernCli = with pkgs; [
-    bat
-    ripgrep
-    dua
-    duckdb
-    htop
-    nvtopPackages.full # nvtop: GPU モニタ TUI (darwin=Apple GPU / linux=全 GPU backend)
-    jq
-    lsd
-    tree
-    just
-    tokei
-    jnv
-    nh # darwin-rebuild / home-manager の上位ラッパー (nom 出力 + diff 表示 + GC 統合)
-    nix-sweep
-    nix-output-monitor # nom: drs / nix build の進捗を見やすく可視化
-    mdbook
-    fd
-    stripe-cli
-  ];
+  modernCli =
+    with pkgs;
+    [
+      bat
+      ripgrep
+      dua
+      duckdb
+      htop
+      jq
+      lsd
+      tree
+      just
+      tokei
+      jnv
+      nh # darwin-rebuild / home-manager の上位ラッパー (nom 出力 + diff 表示 + GC 統合)
+      nix-sweep
+      nix-output-monitor # nom: drs / nix build の進捗を見やすく可視化
+      mdbook
+      fd
+      stripe-cli
+    ]
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+      # nvtop: GPU モニタ TUI。darwin は Apple GPU backend のみだが、Linux では
+      # 全 backend が有効になり cuda_nvml_dev (unfree, CUDA EULA) を引く。
+      # flake.nix の allowUnfreePredicate は terraform しか許さないので Linux では
+      # 評価が停止する。Linux で GPU を見る必要が出たら linux 用に
+      # nvtopPackages.{amd,intel} 等の backend 限定版を足す
+      nvtopPackages.full
+    ];
 
   # メディア / ファイル
-  mediaTools = with pkgs; [
-    ffmpeg
-    ghostscript # gs; PDF の再生成による圧縮 (画像ダウンサンプル + フォント統合)
-    libreoffice-bin # pptx/docx のヘッドレス PDF 変換 (スライド視覚 QA 用)
-    libsixel # SIXEL 画像プロトコル
-    poppler-utils # PDF レンダリング + pdftoppm 等の CLI (lib は poppler-glib を内包)
-    qpdf
-    yt-dlp
-  ];
+  mediaTools =
+    with pkgs;
+    [
+      ffmpeg
+      ghostscript # gs; PDF の再生成による圧縮 (画像ダウンサンプル + フォント統合)
+      libsixel # SIXEL 画像プロトコル
+      poppler-utils # PDF レンダリング + pdftoppm 等の CLI (lib は poppler-glib を内包)
+      qpdf
+      yt-dlp
+    ]
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+      # pptx/docx のヘッドレス PDF 変換 (スライド視覚 QA 用)。
+      # nixpkgs の libreoffice-bin は platforms = [ "aarch64-darwin" ] の
+      # darwin 専用 derivation なので Linux では evaluation error になる。
+      # Linux で必要になったら libreoffice (ソースビルド版) を使う
+      libreoffice-bin
+    ];
 
   # エディタ / TUI
   editors = with pkgs; [
