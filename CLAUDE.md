@@ -44,9 +44,26 @@ cd dotfiles/nix
 nix run home-manager/master -- switch --flake ".#skanehira"
 ```
 
-aarch64 マシンは `.#skanehira` を `.#skanehira-aarch64` に置換 (flake output が `homeConfigurations` に 2 つ用意してある)。Linux 専用 bootstrap script は用意していない (上記コマンドを手で叩く)。
+aarch64 マシンは `.#skanehira` を `.#skanehira-aarch64` に置換する。Linux 専用 bootstrap script は用意していない (上記コマンドを手で叩く)。
+
+`linuxUsers` に列挙したユーザーごとに 3 つの output が生える。用途で選ぶ。
+
+| output | system | 入口 | 用途 |
+| --- | --- | --- | --- |
+| `.#<user>` | x86_64-linux | `home-linux.nix` | 通常の Linux (Ubuntu container / サーバー) |
+| `.#<user>-aarch64` | aarch64-linux | `home-linux.nix` | 同上の arm 版 |
+| `.#<user>-android` | aarch64-linux | `home-android.nix` | Android の Termux + proot-distro Debian |
 
 ログインユーザーが `skanehira` でないマシン (CI / 検証箱など) では、`flake.nix` の `linuxUsers` にそのユーザー名を足してから `.#<ユーザー名>` を指定する (例: ubuntu なら `.#ubuntu`)。`$USER` を動的に読む impure 方式は `nh` / `home-manager` が pure 評価で output を引くため `hms` 等で壊れる。よって pure に列挙する。
+
+### 初回セットアップ (Android / Galaxy Z Fold 8 Ultra)
+
+Snapdragon 機は Android 標準の Linux ターミナル (AVF = Android Virtualization Framework) を起動できないので、Termux + proot-distro Debian を使う。手順とその根拠は `docs/android-dev-setup.md` にまとめてある。通常の Linux とは以下が違う。
+
+- Nix は single-user (`--no-daemon`)。proot に systemd が無いため
+- `~/.config/nix/nix.conf` に `sandbox = false` が要る。proot は user namespace を作れないため
+- proot 内のユーザー名は `skanehira` にする (`linuxUsers` に既にあるので flake の変更が要らない)
+- 適用は `.#skanehira-android`。フルセットではなく軽量プロファイルが当たる
 
 ### 設定変更を反映
 
@@ -55,12 +72,14 @@ aarch64 マシンは `.#skanehira` を `.#skanehira-aarch64` に置換 (flake ou
 drs   # alias: noglob nh darwin switch ~/dev/.../nix -H skanehira
 
 # Linux (Home Manager standalone)
-hms   # alias: noglob nh home switch ~/dev/.../nix -c <username>
+hms   # alias: noglob nh home switch ~/dev/.../nix -c <configName>
 ```
 
 両 alias は `zsh.nix` の `programs.zsh.shellAliases` で OS 別に `lib.optionalAttrs` 分岐済 (darwin=drs / linux=hms)。手動でフルコマンドを叩くより楽。
 
-設定名は `nh` の `-H` (darwin) / `-c` (home) で**明示**する。`nh` 4.x は `<flake>#name` の `#name` を素の flake 属性として解決し (`darwinConfigurations` / `homeConfigurations` を前置しない) `#name` では引けないため。`hms` の `-c` には activate 中の username が入るので、`linuxUsers` に列挙したユーザーであればそのまま動く。
+設定名は `nh` の `-H` (darwin) / `-c` (home) で**明示**する。`nh` 4.x は `<flake>#name` の `#name` を素の flake 属性として解決し (`darwinConfigurations` / `homeConfigurations` を前置しない) `#name` では引けないため。
+
+`hms` の `-c` には **flake の attr 名そのもの** (`configName`) が入る。`flake.nix` の `mkLinuxHome` が output 名と同じ文字列を `extraSpecialArgs` で `zsh.nix` に渡し、`zsh.nix` がそれを alias に埋める。したがって aarch64 では `-c skanehira-aarch64`、Android では `-c skanehira-android` になる。ここに username を埋めると aarch64 機でも `-c skanehira` を渡すことになり、x86_64 用の config を掴んで失敗する。
 
 ### Linux 動作確認 (Ubuntu container、ad-hoc)
 
@@ -97,12 +116,14 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 ### Nix 管理（中核）
 
 - **nix/** — flake-based config（最も重要）
-  - `flake.nix` — inputs, outputs (`darwinConfigurations.skanehira` + `homeConfigurations.{skanehira,skanehira-aarch64}`)
-  - `home.nix` — クロスプラットフォーム共通の Home Manager base
+  - `flake.nix` — inputs, outputs (`darwinConfigurations.skanehira` + `homeConfigurations.{skanehira,skanehira-aarch64,skanehira-android}`)
+  - `home-core.nix` — 全プロファイル共通の土台 (dotfilesRoot / stateVersion / programs.home-manager)。module の import は持たない
+  - `home.nix` — フルセットのプロファイル (mac と通常 Linux が共有)
   - `home-darwin.nix` — mac 用エントリ (home.nix + karabiner + `homeDirectory = /Users/...`)
-  - `home-linux.nix` — Linux 用エントリ (home.nix + `homeDirectory = /home/...`)
+  - `home-linux.nix` — 通常 Linux 用エントリ (home.nix + `homeDirectory = /home/...`)
+  - `home-android.nix` — Android (Termux + proot) 用エントリ (home-core.nix + 軽量 module のみ)
   - `darwin.nix` — nix-darwin imports のみ
-  - `modules/home/` — Home Manager modules（CLI パッケージ、env、git、zsh、aliases、fzf、direnv、tmux、wezterm、karabiner 等）
+  - `modules/home/` — Home Manager modules（CLI パッケージ、env、git、gh、zsh、fzf、direnv、tmux、wezterm、karabiner 等）
   - `modules/darwin/` — nix-darwin modules（system、homebrew）
   - `modules/overlays.nix` — nix-darwin 用 overlays モジュール (overlays-list.nix を消費)
   - `modules/overlays-list.nix` — overlay の素のリスト (mac/Linux 両側で共有)
@@ -129,6 +150,8 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 - **vim/** — Neovim 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `init.lua` / `lua/` / `after/` — 編集即反映、`drs` 不要
   - `.luarc.json` — lua_ls の dotfiles 内 lua 編集用設定 (track 対象)
+- **docs/** — Nix 設定だけでは伝わらない環境固有の手順書
+  - `android-dev-setup.md` — Galaxy Z Fold 8 Ultra を Termux + proot-distro Debian で開発端末にする手順と制約
 
 ## Nix モジュール構成（詳細）
 
@@ -136,9 +159,11 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 nix/
 ├── flake.nix              ← inputs + darwinConfigurations + homeConfigurations
 ├── flake.lock
-├── home.nix               ← 共通 base (cross-platform module の imports)
+├── home-core.nix          ← 全プロファイル共通の土台 (module の imports は持たない)
+├── home.nix               ← フルセット (home-core.nix + 全 module の imports)
 ├── home-darwin.nix        ← home.nix + karabiner + homeDirectory=/Users/...
 ├── home-linux.nix         ← home.nix + homeDirectory=/home/...
+├── home-android.nix       ← home-core.nix + 軽量 module + homeDirectory=/home/...
 ├── darwin.nix             ← imports modules/darwin/
 ├── install.sh             ← mac bootstrap
 └── modules/
@@ -147,17 +172,24 @@ nix/
     ├── home/
     │   ├── claude.nix    — Claude Code (bootstrap install + mkOutOfStoreSymlink で設定 live edit)
     │   ├── codex.nix     — Codex (`~/.codex/AGENTS.md` symlink + config.toml 生成)
+    │   ├── deno.nix      — bootstrap-install (~/.deno/bin/deno 不在時のみ公式 installer 実行)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── env.nix       — sessionVariables / sessionPath
     │   ├── fzf.nix       — programs.fzf (default command/options, zsh integration)
+    │   ├── gh.nix        — programs.gh (GitHub CLI)
     │   ├── git.nix       — programs.git (LFS, alias, difftastic)
+    │   ├── herdr.nix     — herdr の config.toml を mkOutOfStoreSymlink で live edit
     │   ├── karabiner.nix — goku で karabiner.edn → karabiner.json (mac only。home-darwin.nix からのみ import)
+    │   ├── mac-app-util-icons.nix — .app の trampoline アイコン調整 (mac only)
     │   ├── neovim.nix    — vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
-    │   ├── packages.nix  — home.packages 群（CLI 50+、terminal-notifier は darwin only）
+    │   ├── opencode.nix  — opencode.json を mkOutOfStoreSymlink で live edit
+    │   ├── packages.nix  — home.packages 群（CLI 50+、nvtop / libreoffice-bin / terminal-notifier は darwin only）
+    │   ├── packages-android.nix — Android 用の明示リスト (18 エントリ。binary cache から取れる軽量なものだけ)
     │   ├── rustup.nix    — bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
     │   ├── tmux.nix      — tmux/tmux.conf を mkOutOfStoreSymlink で live edit。plugins.conf のみ Nix 生成 (resurrect + themepack)
+    │   ├── vite-plus-bootstrap.nix — bootstrap-install (~/.vite-plus/bin/vp 不在時のみ公式 installer 実行。Android のみ import)
     │   ├── wezterm.nix   — programs.wezterm (extraConfig は wezterm.lua を readFile)
-    │   └── zsh.nix       — programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済) + shellAliases (drs/hms を OS 別 lib.optionalAttrs)
+    │   └── zsh.nix       — programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済) + shellAliases (drs/hms を OS 別 lib.optionalAttrs。hms の -c には configName が入る)
     └── darwin/
         ├── homebrew.nix  — declarative brews / casks
         └── system.nix    — users, nix.settings, Touch ID, primaryUser
@@ -165,9 +197,17 @@ nix/
 
 ### 重要な設計判断
 
-- **darwinConfigurations / homeConfigurations の key**: ホスト名ではなく `username = "skanehira"` を使用。複数マシンでも同じ設定が走る前提。
-- **system 値**: darwin は `aarch64-darwin` 固定 (Apple Silicon)。Linux は `homeConfigurations.skanehira` (x86_64-linux) と `skanehira-aarch64` (aarch64-linux) の 2 出力。
-- **モジュール共有**: `home.nix` が cross-platform base、`home-darwin.nix` / `home-linux.nix` が OS 別 wrapper。共通 module は `modules/home/` 配下、mac 専用は `karabiner.nix` のみで `home-darwin.nix` からだけ import。`tmux.nix` / `zsh.nix` は内部で `lib.optionalString isDarwin/isLinux` 分岐済。
+- **設定の key**: ホスト名は使わない。複数マシンで同じ設定が走る前提。`darwinConfigurations` の key は username (`skanehira`)、`homeConfigurations` の key は `configName` (username にプロファイル接尾辞を足したもの。`skanehira` / `skanehira-aarch64` / `skanehira-android`)。
+- **system 値**: darwin は `aarch64-darwin` 固定 (Apple Silicon)。Linux は `skanehira` (x86_64-linux)、`skanehira-aarch64` (aarch64-linux)、`skanehira-android` (aarch64-linux) の 3 出力。
+- **モジュール共有**: `home-core.nix` が全プロファイル共通の土台 (dotfilesRoot / stateVersion / programs.home-manager) で、module の import は持たない。「どのツールを入れるか」はプロファイル側の決定なので、`home.nix` (フルセット) と `home-android.nix` (軽量) がそれぞれ import 一覧を持つ。`home-darwin.nix` / `home-linux.nix` は `home.nix` に homeDirectory を足す wrapper。mac 専用 module は `karabiner.nix` / `wezterm.nix` / `mac-app-util-icons.nix` で `home-darwin.nix` からだけ import。`tmux.nix` / `zsh.nix` は内部で `lib.optionalString isDarwin/isLinux` 分岐済。
+- **Android を別プロファイルにする理由**: proot は RAM が数 GB でストレージも Termux のアプリ内領域に載り、binary cache に無いものをローカルビルドできない。フルセットは完走しないため、`packages-android.nix` に軽量なものを 18 エントリだけ明示列挙する (`programs.git` 等が足す分と HM 内部を含めて `home.packages` は 33 件)。規模の差は下表のとおり。neovim は nightly overlay ではなく nixpkgs の stable を使う。
+
+  | プロファイル (aarch64-linux) | ローカルビルド | fetch 件数 | ダウンロード | 展開後 |
+  | --- | --- | --- | --- | --- |
+  | `skanehira-android` | 46 件 (全て HM の設定生成と wrapper。コンパイルなし) | 324 | 532.9 MiB | 1.8 GiB |
+  | `skanehira-aarch64` (フルセット) | 693 件 (neovim nightly / terraform / herdr 等のコンパイルを含む) | 1545 | 3.5 GiB | 13.0 GiB |
+
+  計測条件: 2026-09-06、mac (aarch64-darwin) から `nix build --dry-run` を両者連続実行。Claude Code / Deno / Vite+ は activation 時に公式インストーラを走らせるので、この数値には含まれない。fetch 件数は実行マシンの nix store に既にある分を除いた値なので、まっさらな端末では増える。
 - **overlays の共有**: `modules/overlays-list.nix` が overlay の素のリストを export し、nix-darwin (`modules/overlays.nix` 経由) と HM standalone (`flake.nix` の `import nixpkgs` 経由) の両方から参照される。
 - **Homebrew**: GUI app (cask) と CLI のうち (a) cask の依存になるコア formula、(b) nixpkgs 未収録 (例: `aqua`) のみ管理 (mac only)。それ以外の CLI ツールは Nix 管理。`brews` には `ca-certificates` / `openssl@3` / `sqlite` を保険として明示宣言 (cask 依存リンクが切れた時の巻き添え削除を防止)。`onActivation.cleanup = "uninstall"` で宣言外は drs 時に自動撤去。
 - **Touch ID for sudo**: `security.pam.services.sudo_local.touchIdAuth + reattach` で tmux 内含めて指紋認証 (mac only)。
@@ -239,7 +279,9 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 
 ### Neovim 本体
 
-`pkgs.neovim` を nixpkgs-unstable の **stable release** から取得 (`cache.nixos.org` 経由でビルド済)。アップデートは `nix flake update nixpkgs`。
+フルセット (mac / 通常 Linux) は `neovim-nightly-overlay` の **nightly ビルド**を使う。binary cache が無く更新時は手元でビルドする。アップデートは `nix flake update neovim-nightly-overlay`。
+
+Android プロファイルだけは `pkgs.neovim` (nixpkgs-unstable の **stable release**、`cache.nixos.org` 経由でビルド済) を使う。proot で nightly をビルドできないため。こちらのアップデートは `nix flake update nixpkgs`。
 
 ## Claude Code Integration
 
@@ -286,6 +328,6 @@ cd claude && ./install.sh
 
 ### 新規ツール追加
 
-- CLI: `modules/home/packages.nix` に追記
+- CLI: `modules/home/packages.nix` に追記。Android でも使うなら `modules/home/packages-android.nix` にも足す (別リストなので自動では入らない)
 - 設定ファイル: `programs.<tool>` モジュールがあれば使う、無ければ `home.file.*` で配置
 - macOS GUI app: `modules/darwin/homebrew.nix` の `casks` に追記
