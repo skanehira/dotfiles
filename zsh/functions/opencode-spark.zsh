@@ -11,31 +11,10 @@
 # サーバが認証を要求するようになったら opencode.json の options に apiKey を足す。
 # {file:...} / {env:...} 置換は下の _ocsp_resolve が解いてから使う。
 
-# モデルの短縮名を vLLM の SERVED_MODEL_NAME に展開する。
-# 短縮名に無いものはそのまま返し、配信名として扱う (ccsp と同じ表)。
-_ocsp_served_name() {
-  case "$1" in
-    qwen) echo "qwen3.8-flash-next" ;;
-    vision) echo "deepseek-v4-flash-vision-exp" ;;
-    *) echo "$1" ;;
-  esac
-}
-
-# 配信中のモデル名を 1 行ずつ返す。引数: $1 = base URL, $2 = Bearer トークン (空可)
-# 空のときは Authorization ヘッダ自体を送らない (認証なしのサーバ向け)。
-_ocsp_models() {
-  local -a auth=()
-  [[ -n "$2" ]] && auth=(-H "Authorization: Bearer $2")
-  curl -fs -m 10 "${auth[@]}" "$1/models" 2>/dev/null | python3 -c '
-import json, sys
-try:
-    data = json.load(sys.stdin).get("data", [])
-except Exception:
-    sys.exit(1)
-for m in data:
-    print(m["id"])
-' 2>/dev/null
-}
+# 短縮名の表と /v1/models の照会は zsh/functions/spark-common.zsh が持つ
+# (ccsp / ocsp の 2 つで共有する)。ocsp は max_model_len を使わないので
+# 配信名の列だけを取り出す。
+_ocsp_models() { _spark_models "$1" "$2" | awk '{print $1}' }
 
 # opencode の設定値は {file:...} / {env:...} 置換を通してから使う。接続先も鍵も
 # その形で外部ファイルに逃がしてあるので、リテラルのままでは繋がらない。
@@ -107,7 +86,7 @@ USAGE
         echo "ocsp: モデル名が要ります (qwen / vision / 明示名)" >&2
         return 1
       fi
-      OCSP_MODEL="$(_ocsp_served_name "$2")"
+      OCSP_MODEL="$(_spark_served_name "$2")"
       echo "ocsp: モデルを $OCSP_MODEL にしました"
       return 0
       ;;
@@ -133,7 +112,7 @@ USAGE
   # ので、表を持たずにサーバへ聞くのが常に正しい。
   local model="" key served
   case "$1" in
-    qwen|vision) model="$(_ocsp_served_name "$1")"; shift ;;
+    qwen|vision) model="$(_spark_served_name "$1")"; shift ;;
   esac
   : ${model:=$OCSP_MODEL}
 
