@@ -457,8 +457,6 @@ ocsp -h                    # 使い方とモデル名の短縮表を出して終
 
 **モデルの決め方は `ccsp` と同じである。** 引数で短縮名を渡せばその起動だけそれを使い、渡さなければ `/v1/models` の配信中モデルを採る。`ocsp model <名前>` はシェル変数 `OCSP_MODEL` を書き換えるので以降の起動に効く (新しいシェルでは未設定に戻り、また配信中のモデルを採る)。要求したモデルが配信されていなければ起動前に exit 1 で止まる。**配信中の一覧そのものが引けないときも止まる。** `ocsp` は `opencode.json` の `apiKey` を必ず解決してから `/v1/models` を叩くので、**キーファイル (既定 `/tmp/spark.key`) の存在が前提になる** (中身が使われるかは配信中の系統による。Qwen 系は無認証なので中身は不問)。`ccsp` と同じ挙動である。**`opencode.json` の `models` に宣言が無いモデルは OpenCode 側が拒否するので、モデルを増やしたらこの JSON にも足す。** 値の決め方は `limit.context` = `/v1/models` の `max_model_len` の半分、`limit.output` = 65536、`reasoning` と `tool_call` は `true` である。**`ccsp` と違ってこれは人が書く静的値なので、サーバ側の `MAX_MODEL_LEN` を変えると取り残される** (`workerLabel` と同型の乖離経路)。
 
-**`opencode` は起動すると `opencode.json` を書き戻すことがある。** 2026-09-06 に `ocsp` の検証で実 `opencode` を起動したところ、`provider.ollama` と配信中でない `deepseek-v4-flash-0731` の宣言が消えた。symlink 越しなので dotfiles の実体が書き換わる。**起動後は `git diff opencode/opencode.json` を見て、意図しない削除があれば `git checkout --` で戻す。**
-
 **設定は `opencode/opencode.json` として dotfiles にあり、`nix/modules/home/opencode.nix` が `mkOutOfStoreSymlink` で `~/.config/opencode/opencode.json` に貼る** (`claude/settings.json` と同じ live edit)。`~/.config/opencode/` には opencode 自身が書く `tui.json` / `skills/` / `node_modules` / `package.json` が同居するので、**symlink するのは `opencode.json` 1 枚だけ**である。
 
 **IP はそこに書かない。** 接続先の実値は opencode の `{file:…}` 置換で `~/.config/opencode/spark-base-url` から読む。このファイルは dotfiles 管理外なので、新しいマシンでは自分で作る。`{file:…}` は `~` 起点のパスを受け付け、値は読んだ内容そのものなので**末尾に改行を入れない** (`printf` を使う)。
