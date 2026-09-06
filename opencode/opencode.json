@@ -1,5 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "permission": "allow",
   "provider": {
     "spark": {
       "npm": "@ai-sdk/openai-compatible",
@@ -12,6 +13,9 @@
           "name": "DeepSeek V4 Flash Vision-Exp (Spark)",
           "reasoning": true,
           "tool_call": true,
+          "options": {
+            "reasoningEffort": "high"
+          },
           "limit": {
             "context": 524288,
             "output": 65536
@@ -21,6 +25,9 @@
           "name": "Qwen3.8 Flash-Next NVFP4 (Spark)",
           "reasoning": true,
           "tool_call": true,
+          "options": {
+            "reasoningEffort": "xhigh"
+          },
           "limit": {
             "context": 524288,
             "output": 65536
