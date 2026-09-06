@@ -4,10 +4,12 @@
   pkgs,
   username,
   dotfilesRoot,
-  # homeConfigurations の attr 名 (flake.nix の mkLinuxHome が渡す)。
-  # Linux の hms alias が nh の -c に埋める。nix-darwin 経路では渡されないので
-  # username にフォールバックする (darwin では hms 自体が生えない)
-  configName ? username,
+  # 設定の attr 名 (darwinConfigurations / homeConfigurations の key)。
+  # Linux の hms alias が nh の -c に埋める。デフォルト値を持たせないのは、
+  # 渡し忘れが username へ静かにフォールバックすると「-c skanehira を渡して
+  # x86_64 用 config を掴む」バグが再発し、しかも評価は通ってしまうため。
+  # darwin 側は drs が -H に username を使うので同じ値を渡している
+  configName,
   ...
 }:
 

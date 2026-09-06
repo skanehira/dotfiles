@@ -16,8 +16,11 @@ let
     opencode # ターミナル用コーディングエージェント (Claude Code は claude.nix が bootstrap)
   ];
 
-  # 共有設定 (zsh / tmux / neovim) が参照するので、無いと設定が壊れるもの
+  # 共有設定 (zsh / tmux / neovim / git) が参照するので、無いと設定が壊れるもの。
+  # 共有 module が設定ファイルにバイナリ名を直書きしている箇所と 1 対 1 で対応する。
+  # 共有 module 側にコマンドを足したらここも見直す
   sharedConfigDeps = with pkgs; [
+    difftastic # git.nix の difftool.difftastic.cmd が `difft` を呼ぶ
     # neovim は nixpkgs の stable release。packages.nix の nightly overlay は
     # binary cache が無く proot でビルドできない
     neovim

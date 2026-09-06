@@ -126,7 +126,12 @@
             # symlink と HM の mkOutOfStoreSymlink が同 path を要求するケースで
             # activation が止まらないようにする
             home-manager.backupFileExtension = "hm-backup";
-            home-manager.extraSpecialArgs = { inherit username inputs; };
+            # configName は zsh.nix が drs / hms の設定名に使う。darwin の
+            # darwinConfigurations は key が username そのものなので同じ値を渡す
+            home-manager.extraSpecialArgs = {
+              inherit username inputs;
+              configName = username;
+            };
             home-manager.users.${username} = import ./home-darwin.nix;
           }
         ];
