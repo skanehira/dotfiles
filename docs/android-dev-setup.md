@@ -195,7 +195,7 @@ Phase 0 で入れた Claude Code と Vite+ は再インストールされない�
 
 `nix/home-android.nix` が入口で、通常の Linux プロファイル (`nix/home-linux.nix`) とは別系統。`cache.nixos.org` に無いパッケージと大物を外し、proot の限られた RAM とストレージで完走することを優先している。
 
-`packages-android.nix` が明示列挙するのは 18 エントリ。これに `programs.git` / `programs.gh` / `programs.zsh` / `programs.fzf` / `programs.direnv` が足す分と Home Manager 内部のものが乗って、`home.packages` は 33 件になる。
+`packages-android.nix` が明示列挙するのは 19 エントリ。これに `programs.git` / `programs.gh` / `programs.zsh` / `programs.fzf` / `programs.direnv` が足す分と Home Manager 内部のものが乗って、`home.packages` は 34 件になる。
 
 - 言語ランタイム: nodejs / pnpm
 - エージェント: Claude Code (activation 時に公式インストーラを実行) / OpenCode (nixpkgs)
@@ -204,7 +204,7 @@ Phase 0 で入れた Claude Code と Vite+ は再インストールされない�
 - エディタと端末: neovim (nixpkgs の stable。nightly ではない) / tmux
 - 軽量 CLI: bat / fd / jq / lsd / ripgrep / tree
 - LSP: typescript-go / lua-language-server / nixd
-- 共有設定が参照するので外せないもの: tirith (zsh の起動時に無条件で初期化される) / ghq (`ghq-fzf` 関数) / nh (`hms` alias) / tree-sitter (nvim-treesitter の parser ビルド)
+- 共有設定が参照するので外せないもの: tirith (zsh の起動時に無条件で初期化される) / difftastic (`git.nix` の difftool が `difft` を呼ぶ) / ghq (`ghq-fzf` 関数) / nh (`hms` alias) / tree-sitter (nvim-treesitter の parser ビルド)
 - module が入れるもの: git / gh / zsh / fzf / direnv / home-manager
 
 通常の Linux プロファイルに入っていて Android には入れていないもの:
