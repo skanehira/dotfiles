@@ -74,6 +74,9 @@ ocsp() {
   ocsp qwen run "<指示>"     モデルを指定して headless 実行
   ocsp model <名前>          このシェルの既定モデルを切り替える
   ocsp status               接続先・モデル・サーバの状態を表示
+  ocsp session list ...     opencode のサブコマンドは素通し (検査・--model なし)
+  ocsp -- <引数...>           解釈をやめて残り全部を opencode へ
+                             (help / model / status など予約語を本体に渡す解除語)
 モデル名の短縮:
   qwen    -> qwen3.8-flash-next
   vision  -> deepseek-v4-flash-vision-exp
@@ -107,6 +110,17 @@ USAGE
       ;;
   esac
 
+  # 先頭の -- は ocsp の解釈を打ち切る解除語で、残り全部を opencode に素渡しする
+  # (help / model / status など予約語や、サブコマンド先頭の組み立てを迂回したいとき)。
+  # 配信検査と --model 注入も通らないので、サーバが落ちていても素の opencode と
+  # 同じ挙動になる。-- 自体は opencode に渡さない (option 解析の終端マーカーとして
+  # 後続の組み立てに影響させる意図はない)。
+  if [[ "$1" == "--" ]]; then
+    shift
+    command opencode "$@"
+    return $?
+  fi
+
   # 先頭がモデル短縮名ならこの起動だけそれを使う (シェルの既定は変えない)。
   # 指定が無ければ配信中のモデルを採る。Spark は同時に 1 モデルしか配信しない
   # ので、表を持たずにサーバへ聞くのが常に正しい。
@@ -115,6 +129,21 @@ USAGE
     qwen|vision) model="$(_spark_served_name "$1")"; shift ;;
   esac
   : ${model:=$OCSP_MODEL}
+
+  # opencode のサブコマンド (run を除く) はモデルを使わないので、配信検査も
+  # --model 注入もしない。--model を前置すると yargs がそのサブコマンドで
+  # 未知の option として扱い、実行の代わりに help 表示になる (実測:
+  # opencode --model spark/fake session list は help を出すだけ)。
+  # run は --model を受け付けるので下の専用経路に任せる。一覧は opencode --help の commands と対応。
+  if [[ "$1" != "run" ]]; then
+    case "$1" in
+      completion|acp|mcp|attach|providers|auth|agent|upgrade|uninstall|serve|\
+      web|models|stats|export|import|github|pr|session|plugin|plug|db|debug)
+        command opencode "$@"
+        return $?
+        ;;
+    esac
+  fi
 
   # 配信中の一覧が引けないまま起動すると、モデル名の検査を素通りしたうえで
   # opencode が同じ経路で失敗する。ccsp と同じく、ここで止める。
