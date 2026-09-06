@@ -85,16 +85,25 @@
       # nix-darwin と違い HM standalone は module system 経由で nixpkgs.overlays /
       # nixpkgs.config を設定できないので、import nixpkgs に直接渡す。
       # overlays は modules/overlays-list.nix で nix-darwin と共有。
+      # configName は homeConfigurations の attr 名そのもの。zsh.nix の `hms` alias が
+      # `nh home switch -c <configName>` に埋めるため、attr 名を単一の情報源にする
+      # (nh 4.x は homeConfigurations.<name> を直接引くので、attr 名と -c は一致必須)。
+      # entry は プロファイルの入口 (通常 Linux / Android)。
       mkLinuxHome =
-        { system, username }:
+        {
+          system,
+          username,
+          configName,
+          entry ? ./home-linux.nix,
+        }:
         home-manager.lib.homeManagerConfiguration {
           pkgs = import nixpkgs {
             inherit system;
             overlays = import ./modules/overlays-list.nix { inherit inputs; };
             config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [ "terraform" ];
           };
-          extraSpecialArgs = { inherit username inputs; };
-          modules = [ ./home-linux.nix ];
+          extraSpecialArgs = { inherit username configName inputs; };
+          modules = [ entry ];
         };
     in
     {
@@ -123,9 +132,15 @@
         ];
       };
 
-      # Home Manager standalone (非 NixOS Linux 想定。Ubuntu/Arch 等)
-      # 使い方: nix run home-manager/master -- switch --flake .#skanehira
-      # (別ユーザーは上の linuxUsers に足すと .#<user> / .#<user>-aarch64 が生える)
+      # Home Manager standalone
+      # - <user> / <user>-aarch64: 通常の Linux (非 NixOS。Ubuntu/Arch 等)
+      #     nix run home-manager/master -- switch --flake .#skanehira
+      # - <user>-android: Android の Termux + proot-distro Debian (aarch64 のみ)
+      #     nix run home-manager/master -- switch --flake .#skanehira-android
+      #     proot は RAM / ストレージが限られ binary cache に無いものをビルドできない
+      #     ので、通常 Linux とは別のプロファイル (home-android.nix) を使う。
+      #     手順は docs/android-dev-setup.md
+      # (別ユーザーは上の linuxUsers に足すと 3 つとも生える)
       homeConfigurations = builtins.listToAttrs (
         builtins.concatMap (u: [
           {
@@ -133,6 +148,7 @@
             value = mkLinuxHome {
               system = "x86_64-linux";
               username = u;
+              configName = u;
             };
           }
           {
@@ -140,6 +156,16 @@
             value = mkLinuxHome {
               system = "aarch64-linux";
               username = u;
+              configName = "${u}-aarch64";
+            };
+          }
+          {
+            name = "${u}-android";
+            value = mkLinuxHome {
+              system = "aarch64-linux";
+              username = u;
+              configName = "${u}-android";
+              entry = ./home-android.nix;
             };
           }
         ]) linuxUsers
