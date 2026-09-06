@@ -42,10 +42,14 @@ ccds() {
 #   ccsp lan qwen       接続先とモデルは順不同で並べられる
 #   ccsp off            Anthropic に戻す
 #   ccsp status         起動せずに接続先・モデル・両経路の到達性を表示
+#   ccsp -- <引数...>   解釈をやめて残り全部を claude へ (予約語を本体に渡す解除語)
 #
 # モデルを指定しなかった場合は /v1/models が返す配信中のモデルをそのまま使う。
 # Spark は同時に 1 モデルしか配信しないので、これが常に正しい既定値になる。
 # 短縮名にないモデルは CCSP_MODEL=<配信名> ccsp で渡す。
+#
+# reasoning effort は配信モデルごとに受け付ける語彙が違うので _ccsp_effort が
+# 配信名から決める。上書きは CCSP_EFFORT=<値> ccsp で行う。
 #
 # 接続先 (ANTHROPIC_BASE_URL) は settings JSON に置かず、ここで export する。
 # settings JSON の env はシェルの export を無条件に上書きするため、JSON に書くと
@@ -70,14 +74,27 @@ ccds() {
 # 短縮名の表・接続先・/v1/models の照会は zsh/functions/spark-common.zsh が持つ
 # (ccsp / ocsp の 2 つで共有する)。
 
-# base の settings にモデル名とコンテキスト上限を注入した設定を書き出す。
-# 毎回上書きするので、base を編集すれば次の起動から効く。
-# 引数: $1 = base, $2 = 配信名, $3 = コンテキスト上限, $4 = 出力先
+# 配信モデルに対して使える最大の reasoning effort を返す。
+# 値はモデルのチャットテンプレートが検査するので、語彙にない値を送ると最初の
+# リクエストが 400 で止まる (ccsp の経路 /v1/messages で Qwen が受けるのは
+# low / medium / xhigh の 3 つ。high と max はテンプレートが、none はスキーマが
+# 弾く)。vision (DeepSeek 系) の high はレシピの DEFAULT_THINKING の語彙
+# (off / low / high / max) に合わせた値で、配信中に実測していない。
+_ccsp_effort() {
+  case "$1" in
+    qwen3.8-flash-next) echo "xhigh" ;;
+    *) echo "high" ;;
+  esac
+}
+
+# base の settings にモデル名・コンテキスト上限・reasoning effort を注入した
+# 設定を書き出す。毎回上書きするので、base を編集すれば次の起動から効く。
+# 引数: $1 = base, $2 = 配信名, $3 = コンテキスト上限, $4 = effort, $5 = 出力先
 _ccsp_render_settings() {
-  python3 - "$1" "$2" "$3" "$4" <<'PY'
+  python3 - "$1" "$2" "$3" "$4" "$5" <<'PY'
 import json, sys
 
-base, model, ctx, out = sys.argv[1:5]
+base, model, ctx, effort, out = sys.argv[1:6]
 cfg = json.load(open(base))
 env = cfg.setdefault("env", {})
 for key in (
@@ -89,6 +106,7 @@ for key in (
 ):
     env[key] = model
 env["CLAUDE_CODE_MAX_CONTEXT_TOKENS"] = str(ctx)
+env["CLAUDE_CODE_EFFORT_LEVEL"] = effort
 cfg["fallbackModel"] = [model]
 with open(out, "w") as f:
     json.dump(cfg, f, indent=2, ensure_ascii=False)
@@ -101,7 +119,7 @@ ccsp() {
   local rendered="${XDG_CACHE_HOME:-$HOME/.cache}/ccsp/settings.json"
   local lan_url="$(_spark_lan_url)"
   local ts_url="$(_spark_ts_url)"
-  local base_url requested transport served ctx line
+  local base_url requested transport served ctx effort line
 
   case "$1" in
     off)
@@ -125,6 +143,9 @@ ccsp() {
   ccsp [lan|ts] [qwen|vision] [claude に渡す引数...]
   ccsp status               起動せずに接続先・配信モデル・到達性を表示
   ccsp off                  Anthropic に戻す
+  ccsp -- [claude に渡す引数...]
+                            解釈をやめて残り全部を claude へ渡す
+                            (status / -h など予約語を claude 側に届けたいとき)
 モデル名の短縮:
   qwen    -> qwen3.8-flash-next
   vision  -> deepseek-v4-flash-vision-exp
@@ -132,6 +153,10 @@ ccsp() {
 CCSP_MODEL=<配信名> ccsp で渡す。
 コンテキスト上限は max_model_len から出力用の余白 (既定 32768、
 CCSP_OUTPUT_RESERVE で変更可) を引いた値になる。
+reasoning effort は配信モデルごとの最大値を使う (qwen3.8-flash-next は
+xhigh、他は high)。CCSP_EFFORT=<値> ccsp で上書きできるが、モデルの語彙に
+無い値を渡すと最初のリクエストが 400 で落ちる (Qwen で渡せるのは
+low / medium / xhigh の 3 つ)。
 USAGE
       return 0
       ;;
@@ -139,6 +164,7 @@ USAGE
       echo "  接続先: ${ANTHROPIC_BASE_URL:-(未設定)}"
       echo "  base  : $base"
       echo "  要求  : ${CCSP_MODEL:-(指定なし。配信中のモデルを使う)}"
+      echo "  effort: ${CCSP_EFFORT:-(配信モデルで決める: qwen3.8-flash-next→xhigh / 他→high)}"
       local reachable="" probe
       echo -n "  LAN   : "
       if curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$lan_url/health"; then
@@ -165,12 +191,16 @@ USAGE
   esac
 
   # 接続先とモデルは順不同で並べられる。認識しない語はそこで打ち切り、
-  # 残りをすべて claude への引数として渡す。
+  # 残りをすべて claude への引数として渡す。-- も打ち切り語で、予約語
+  # (off / status / -h) を claude 側に届けたいときの解除語にする。-- 自体は
+  # ccsp で消費して渡さない (渡すと claude が option 解析の終端として扱い、
+  # 後続の語を prompt 位置に回してしまって意図に合わない)。
   while (( $# > 0 )); do
     case "$1" in
       lan) transport="$lan_url"; shift ;;
       ts) transport="$ts_url"; shift ;;
       qwen|vision) requested="$(_spark_served_name "$1")"; shift ;;
+      --) shift; break ;;
       *) break ;;
     esac
   done
@@ -209,8 +239,11 @@ USAGE
     return 1
   fi
 
+  # reasoning effort もモデル依存なので配信名から決める (上書きは CCSP_EFFORT)。
+  effort="${CCSP_EFFORT:-$(_ccsp_effort "$served")}"
+
   mkdir -p "${rendered:h}" || return 1
-  _ccsp_render_settings "$base" "$served" "$ctx" "$rendered" || {
+  _ccsp_render_settings "$base" "$served" "$ctx" "$effort" "$rendered" || {
     echo "ccsp: 設定の生成に失敗しました: $rendered" >&2
     return 1
   }
@@ -227,7 +260,7 @@ USAGE
   fi
 
   alias claude="claude --settings $rendered"
-  echo "ccsp: Spark モード ($base_url / $served / コンテキスト $ctx)。ccsp off で解除"
+  echo "ccsp: Spark モード ($base_url / $served / コンテキスト $ctx / effort $effort)。ccsp off で解除"
 
   # 接続先を整えたらそのまま起動する。alias は同じシェルで打ち直す用に残す
   command claude --settings "$rendered" "$@"
