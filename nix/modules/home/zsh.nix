@@ -4,6 +4,10 @@
   pkgs,
   username,
   dotfilesRoot,
+  # homeConfigurations の attr 名 (flake.nix の mkLinuxHome が渡す)。
+  # Linux の hms alias が nh の -c に埋める。nix-darwin 経路では渡されないので
+  # username にフォールバックする (darwin では hms 自体が生えない)
+  configName ? username,
   ...
 }:
 
@@ -110,8 +114,10 @@
     drs = "noglob nh darwin switch ${dotfilesRoot}/nix -H ${username}";
   }
   // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-    # Home Manager standalone 切替 (Linux)
-    hms = "noglob nh home switch ${dotfilesRoot}/nix -c ${username}";
+    # Home Manager standalone 切替 (Linux)。-c には flake の attr 名を渡す。
+    # username そのままだと aarch64 (skanehira-aarch64) や Android
+    # (skanehira-android) の config を引けず、x86_64 用を掴んで失敗する
+    hms = "noglob nh home switch ${dotfilesRoot}/nix -c ${configName}";
   };
 
   # ~/.config/zsh/functions/ 配下にカスタム関数ファイルを配置
