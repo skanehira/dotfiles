@@ -58,8 +58,8 @@
   programs.bash = {
     enable = true;
     initExtra = ''
-      if [ -x "$HOME/.nix-profile/bin/zsh" ]; then
-        exec "$HOME/.nix-profile/bin/zsh" -l
+      if [ -x "${config.home.profileDirectory}/bin/zsh" ]; then
+        exec "${config.home.profileDirectory}/bin/zsh" -l
       fi
     '';
   };
