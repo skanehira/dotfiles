@@ -197,7 +197,7 @@ op read 'op://Personal/DGX Spark vLLM API Key/credential' | ssh spark-head 'cat 
 | --- | --- |
 | チェックポイント (`DSPARK_MODEL_OFFICIAL` / `DSPARK_REVISION`) | `deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` @ `86f746b36186f0e567729a5c06a8c918caba82a9` |
 | API 上のモデル名 (`SERVED_MODEL_NAME`) | `deepseek-v4-flash-vision-exp` |
-| コンテキスト上限 (`MAX_MODEL_LEN`) | サーバ 1,048,576 トークン / Claude Code からは 524,288 (`ccsp` が `/v1/models` の `max_model_len` の半分を入れる) |
+| コンテキスト上限 (`MAX_MODEL_LEN`) | サーバ 1,048,576 トークン (ネイティブ。YaRN 不要) / Claude Code からは 1,015,808 (`ccsp` が出力用の余白 32,768 を引く) |
 | 同時リクエスト上限 (`MAX_NUM_SEQS`) | 6 リクエスト。超過分はエラーにならずキューで待つ |
 | 投機デコード (`MTP_NUM_TOKENS`) | DSpark、draft 6 トークン |
 | メモリ確保率 (`GPU_MEMORY_UTILIZATION_TEXT`) | 0.835 (意味は「メモリの使われ方」) |
@@ -329,7 +329,7 @@ ssh -n spark-head "docker exec sparkDash node -e \"console.log(JSON.parse(requir
 | 重み | 124 GiB / safetensors 11 本 (`du -sh` の実測。レシピの `.env` のコメントは 133G と書いているが実測と食い違う)。**両ノードに配置済み** |
 | API 上のモデル名 (`SERVED_MODEL_NAME`) | `qwen3.8-flash-next` |
 | 画像入力 | 使える (2026-09-06 に実測。8x8 の赤い PNG を data URL で渡して「赤」と回答) |
-| コンテキスト上限 (`MAX_MODEL_LEN`) | サーバ 262,144 トークン / Claude Code からは 131,072 (`ccsp` が `max_model_len` の半分を入れる)。`YARN_ENABLE` は `false` (取りうる値: `true` / `false`。`true` かつ `MAX_MODEL_LEN` > 262144 で約 1M まで伸びる) |
+| コンテキスト上限 (`MAX_MODEL_LEN`) | サーバ 524,288 トークン / Claude Code からは 491,520 (`ccsp` が出力用の余白 32,768 を引く)。**ネイティブは 262,144 で、`YARN_ENABLE=true` + `YARN_FACTOR=2.0` で伸ばしている** |
 | 同時リクエスト上限 (`MAX_NUM_SEQS`) | 8 リクエスト |
 | 投機デコード (`MTP_NUM_SPECULATIVE_TOKENS`) | MTP、draft 3 トークン |
 | KV キャッシュ (`KV_CACHE_DTYPE`) | `fp8` |
@@ -394,9 +394,27 @@ curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: appli
 
 Qwen レシピには DeepSeek 系の `smoke-…sh` に相当するスクリプトが無いので、3 段目はクライアントから叩いて代用する。
 
+**YaRN で伸ばしている。 ネイティブは 262,144 で、それを超える分は rope スケーリングによる拡張である。**
+
+| 項目 | 値 |
+| --- | --- |
+| ネイティブ長 (`config.json` の `max_position_embeddings`) | 262,144 |
+| `YARN_FACTOR` | 2.0 (262,144 × 2.0 = 524,288) |
+| 出荷時の `config.json` の `rope_type` | `default` (YaRN は無効。`start.sh` が `--hf-overrides` で `yarn` に差し替える) |
+
+**係数は常用する長さに合わせる。** Qwen 公式のモデルカードが理由と選び方を書いている。
+
+> All the notable open-source frameworks implement static YaRN, which means the scaling factor remains constant regardless of input length, potentially impacting performance on shorter texts. We advise modifying the `rope_parameters` configuration only when processing long contexts is required. It is also recommended to modify the `factor` as needed. For example, if the typical context length for your application is 524,288 tokens, it would be better to set `factor` as 2.0.
+
+静的 YaRN は入力長によらず係数が一定なので、短い入力の品質にも影響する。だから必要な長さちょうどに合わせる。**係数 4.0 (1M) は常用 500k に対しては過剰である。**
+
+**このキットでの YaRN は検証されていない。** 上流の CHANGELOG によれば、2026-09-05 まで `--hf-overrides` の出力先が誤っていて YaRN は無効 (silent no-op) だった。それ以前の「1M で動いた」報告はすべてスケーリングなしの rope で 1M を流していたものである。修正後に品質を測った報告は上流にもコミュニティにも無い。**長文脈の回答を信用する前に自分で確かめる。**
+
+**262,144 に戻すなら YaRN も切る。** `start.sh` は `MAX_MODEL_LEN` が 262,144 以下のとき `YARN_ENABLE` を強制的に false にする (`start.sh:121-123`)。ネイティブ以下では rope スケーリングは品質を落とすだけだからである。
+
 **認証。 このレシピは vLLM に `--api-key` を渡さないので、Qwen 配信中はポート 8888 が無認証になる。** `.env` にも `.env.sample` にも API キーのキーが無く (`grep -nE "API_KEY" .env` は 1 行も返さず exit 1)、`docker inspect vllm-fn` の実引数にも `--api-key` は無い。**Bearer 無しで `/v1/chat/completions` が通ることを実測で確認した。** DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` で Bearer を要求するので、**切り替えると認証の有無が変わる**。sparkDash (ポート 5555) と同じく、Qwen 配信中のポート 8888 も信頼できないネットワークへ出さない。認証を付けたい場合は `.env` の `EXTRA_VLLM_ARGS="--api-key <値>"` で渡せる (未検証)。
 
-**Claude Code と OpenCode の両方から使える (2026-09-06 に実測)。** このイメージの vLLM は `/v1/messages` (Anthropic Messages API) をフラグ無しで登録するので (`vllm/entrypoints/generate/api_router.py` が `register_anthropic_api_router(app)` を無条件に呼ぶ)、`ANTHROPIC_BASE_URL` を向ける `ccsp` が通る。`ccsp qwen` は `max_model_len` 262,144 の半分である 131,072 をコンテキスト上限に入れて起動する。
+**Claude Code と OpenCode の両方から使える (2026-09-06 に実測)。** このイメージの vLLM は `/v1/messages` (Anthropic Messages API) をフラグ無しで登録するので (`vllm/entrypoints/generate/api_router.py` が `register_anthropic_api_router(app)` を無条件に呼ぶ)、`ANTHROPIC_BASE_URL` を向ける `ccsp` が通る。`ccsp qwen` は `max_model_len` 524,288 から出力用の余白 32,768 を引いた 491,520 をコンテキスト上限に入れて起動する。
 
 **`ccsp` も `ocsp` も API キーを扱わないので、1Password は要らない。** Qwen 配信中はこれで完結する。
 
@@ -440,7 +458,7 @@ ccsp lan -p "..." --allowedTools Read   # 認識しない語から先は claude 
 - **`ANTHROPIC_BASE_URL` を settings JSON に書かない。** settings の `env` はシェルの export を無条件に上書きするため、JSON に書くと出先での切り替えが効かなくなる。接続先は `ccsp` が export する
 - **`ccsp` は `NODE_OPTIONS` に `--dns-result-order=ipv4first` を足し、`off` で元に戻す。** mDNS 名は到達できない IPv6 を 2 つ返し、Node が毎回それを試してから IPv4 に落ちるため接続が 223 ms かかる (IPv4 強制なら約 12 ms)。これが「`hi` と打っただけで network retry」の原因だった。IP を直接使いたいときは `CCSP_LAN_HOST` に IP を入れる (公開リポジトリなので関数内には直書きしない)
 - **2 つの設定ファイルで反映経路が違う。** `settings.spark.json` は `ccsp` が dotfiles を直参照するので編集すれば次の起動から効く。`zsh/functions/*.zsh` は Nix store 経由で配られるので `drs` と新しいシェルが要る。**旧定義が残っているかは `ccsp -h` で判る** (新しい版は短縮名の表を出す)。旧のまま `ccsp qwen` を打つと `qwen` が短縮名として認識されず `claude` への引数に回り、プロンプト "qwen" として無言で起動してしまう
-- **モデル名とコンテキスト上限は `ccsp` が `/v1/models` から取る。** 配信名をそのまま使い、`CLAUDE_CODE_MAX_CONTEXT_TOKENS` には `max_model_len` の半分を入れて `~/.cache/ccsp/settings.json` を毎回生成する。配信側のモデルを変えても Mac 側の編集は要らない。短縮名 (`qwen` / `vision` / `0731`) を渡した場合はそれが配信されているかを起動前に検査し、載っていなければ配信中の一覧を出して exit 1 で止まる。短縮名に無いモデルは `CCSP_MODEL=<配信名> ccsp` で渡す
+- **モデル名とコンテキスト上限は `ccsp` が `/v1/models` から取る。** 配信名をそのまま使い、`CLAUDE_CODE_MAX_CONTEXT_TOKENS` には `max_model_len` から出力用の余白 (既定 32,768。`CCSP_OUTPUT_RESERVE` で変更可) を引いた値を入れて `~/.cache/ccsp/settings.json` を毎回生成する。`max_model_len` は入力と出力の合計なので、窓をそれと同値にすると生成時に溢れる。配信側のモデルを変えても Mac 側の編集は要らない。短縮名 (`qwen` / `vision` / `0731`) を渡した場合はそれが配信されているかを起動前に検査し、載っていなければ配信中の一覧を出して exit 1 で止まる。短縮名に無いモデルは `CCSP_MODEL=<配信名> ccsp` で渡す
 
 `settings.spark.json` は **`security-guidance` プラグインを無効にしている** (`enabledPlugins` のキーは完全名 `security-guidance@claude-plugins-official`)。このプラグインの Stop hook は自前の既定モデル名 `claude-opus-4-7` を `ANTHROPIC_BASE_URL` に投げるため、Spark 相手では 404 を受けて延々とリトライし、レビューを 1 件も出さないまま 1 セッションあたり約 231 秒を捨てる。`settings.deepseek.json` (DeepSeek 本家) も同じ理由で無効にしてある。
 
@@ -458,7 +476,7 @@ ocsp -h                    # 使い方とモデル名の短縮表を出して終
 
 実体は `zsh/functions/opencode-spark.zsh` である。**`ccsp` と違って環境変数も alias も張らない**ので、解除操作 (`off` に相当するもの) が要らない。接続先は `~/.config/opencode/opencode.json` の `provider.spark` が持ち、OpenCode 本体が直接読む。
 
-**モデルの決め方は `ccsp` と同じである。** 引数で短縮名を渡せばその起動だけそれを使い、渡さなければ `/v1/models` の配信中モデルを採る。`ocsp model <名前>` はシェル変数 `OCSP_MODEL` を書き換えるので以降の起動に効く (新しいシェルでは未設定に戻り、また配信中のモデルを採る)。要求したモデルが配信されていなければ起動前に exit 1 で止まる。**配信中の一覧そのものが引けないときも止まる** (`ccsp` と同じ挙動)。**`opencode.json` に `apiKey` は無い。** `ocsp` はキーが空なら Authorization ヘッダ自体を送らないので、Qwen 配信中 (無認証) はそのまま一覧が引けて起動する (2026-09-06 実測)。DeepSeek 系を認証ありで起動すると 401 になるので、そのときは `options` に `apiKey` を足す (→「API キーの流れ」)。**`opencode.json` の `models` に宣言が無いモデルは OpenCode 側が拒否するので、モデルを増やしたらこの JSON にも足す。** 値の決め方は `limit.context` = `/v1/models` の `max_model_len` の半分、`limit.output` = 65536、`reasoning` と `tool_call` は `true` である。**`ccsp` と違ってこれは人が書く静的値なので、サーバ側の `MAX_MODEL_LEN` を変えると取り残される** (`workerLabel` と同型の乖離経路)。
+**モデルの決め方は `ccsp` と同じである。** 引数で短縮名を渡せばその起動だけそれを使い、渡さなければ `/v1/models` の配信中モデルを採る。`ocsp model <名前>` はシェル変数 `OCSP_MODEL` を書き換えるので以降の起動に効く (新しいシェルでは未設定に戻り、また配信中のモデルを採る)。要求したモデルが配信されていなければ起動前に exit 1 で止まる。**配信中の一覧そのものが引けないときも止まる** (`ccsp` と同じ挙動)。**`opencode.json` に `apiKey` は無い。** `ocsp` はキーが空なら Authorization ヘッダ自体を送らないので、Qwen 配信中 (無認証) はそのまま一覧が引けて起動する (2026-09-06 実測)。DeepSeek 系を認証ありで起動すると 401 になるので、そのときは `options` に `apiKey` を足す (→「API キーの流れ」)。**`opencode.json` の `models` に宣言が無いモデルは OpenCode 側が拒否するので、モデルを増やしたらこの JSON にも足す。** 値の決め方は `limit.context` = `/v1/models` の `max_model_len` (2026-09-06 時点で 524,288)、`limit.output` = 65536、`reasoning` と `tool_call` は `true` である。**`ccsp` と違ってこれは人が書く静的値なので、サーバ側の `MAX_MODEL_LEN` を変えると取り残される** (`workerLabel` と同型の乖離経路)。
 
 **設定は `opencode/opencode.json` として dotfiles にあり、`nix/modules/home/opencode.nix` が `mkOutOfStoreSymlink` で `~/.config/opencode/opencode.json` に貼る** (`claude/settings.json` と同じ live edit)。`~/.config/opencode/` には opencode 自身が書く `tui.json` / `skills/` / `node_modules` / `package.json` が同居するので、**symlink するのは `opencode.json` 1 枚だけ**である。
 
