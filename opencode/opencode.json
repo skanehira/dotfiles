@@ -38,6 +38,15 @@
             "context": 524288,
             "output": 65536
           }
+        },
+        "qwen3.8-flash-next": {
+          "name": "Qwen3.8 Flash-Next NVFP4 (Spark)",
+          "reasoning": true,
+          "tool_call": true,
+          "limit": {
+            "context": 131072,
+            "output": 65536
+          }
         }
       }
     }

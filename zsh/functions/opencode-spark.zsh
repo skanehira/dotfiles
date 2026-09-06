@@ -11,7 +11,29 @@
 # IP を使うのは、mDNS 名が到達できない IPv6 を返して接続が 210ms 遅くなるため
 # (ccsp が NODE_OPTIONS=--dns-result-order=ipv4first で回避しているのと同じ問題)。
 
-: ${OCSP_MODEL:=deepseek-v4-flash-vision-exp}
+# モデルの短縮名を vLLM の SERVED_MODEL_NAME に展開する。
+# 短縮名に無いものはそのまま返し、配信名として扱う (ccsp と同じ表)。
+_ocsp_served_name() {
+  case "$1" in
+    qwen) echo "qwen3.8-flash-next" ;;
+    vision) echo "deepseek-v4-flash-vision-exp" ;;
+    0731) echo "deepseek-v4-flash-0731" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+# 配信中のモデル名を 1 行ずつ返す。引数: $1 = base URL, $2 = Bearer トークン
+_ocsp_models() {
+  curl -fs -m 10 -H "Authorization: Bearer $2" "$1/models" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin).get("data", [])
+except Exception:
+    sys.exit(1)
+for m in data:
+    print(m["id"])
+' 2>/dev/null
+}
 
 # opencode の設定値は {file:...} / {env:...} 置換を通してから使う。接続先も鍵も
 # その形で外部ファイルに逃がしてあるので、リテラルのままでは繋がらない。
@@ -67,38 +89,37 @@ ocsp() {
       cat <<'USAGE'
 使い方:
   ocsp                      対話 TUI をカレントディレクトリで起動
+  ocsp qwen                 モデルを指定して起動 (qwen / vision / 0731)
   ocsp run "<指示>"          headless で 1 回実行
-  ocsp model <名前>          使うモデルを切り替える (0731 / vision / 明示名)
+  ocsp qwen run "<指示>"     モデルを指定して headless 実行
+  ocsp model <名前>          このシェルの既定モデルを切り替える
   ocsp status               接続先・モデル・サーバの状態を表示
 モデル名の短縮:
-  0731    -> deepseek-v4-flash-0731
+  qwen    -> qwen3.8-flash-next
   vision  -> deepseek-v4-flash-vision-exp
+  0731    -> deepseek-v4-flash-0731
+モデルを省略すると配信中のモデルを自動で使う。
 USAGE
       return 0
       ;;
     model)
-      case "$2" in
-        0731) OCSP_MODEL=deepseek-v4-flash-0731 ;;
-        vision) OCSP_MODEL=deepseek-v4-flash-vision-exp ;;
-        '')
-          echo "ocsp: モデル名が要ります (0731 / vision / 明示名)" >&2
-          return 1
-          ;;
-        *) OCSP_MODEL="$2" ;;
-      esac
+      if [[ -z "$2" ]]; then
+        echo "ocsp: モデル名が要ります (qwen / vision / 0731 / 明示名)" >&2
+        return 1
+      fi
+      OCSP_MODEL="$(_ocsp_served_name "$2")"
       echo "ocsp: モデルを $OCSP_MODEL にしました"
       return 0
       ;;
     status)
       echo "  接続先: $base"
-      echo "  モデル: $OCSP_MODEL"
+      echo "  要求  : ${OCSP_MODEL:-(指定なし。配信中のモデルを使う)}"
       echo -n "  サーバ: "
       if curl -fs -m 5 -o /dev/null "${base%/v1}/health"; then
         # /v1/models は Bearer が要る。opencode が読むのと同じ経路で解決する
         local key models
         if key=$(_ocsp_resolve "$cfg" apiKey 2>/dev/null); then
-          models=$(curl -s -m 5 -H "Authorization: Bearer $key" "${base}/models" \
-            | python3 -c "import json,sys; print(', '.join(m['id'] for m in json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+          models=$(_ocsp_models "$base" "$key" | paste -sd, -)
         fi
         echo "health OK / 配信中: ${models:-(取得できず)}"
       else
@@ -106,16 +127,41 @@ USAGE
       fi
       return 0
       ;;
-    run)
-      shift
-      if [[ -z "$1" ]]; then
-        echo 'ocsp: 指示文が要ります  例: ocsp run "README を要約して"' >&2
-        return 1
-      fi
-      command opencode run --model "spark/$OCSP_MODEL" --dir "$PWD" "$@"
-      return $?
-      ;;
   esac
 
-  command opencode --model "spark/$OCSP_MODEL" "$@"
+  # 先頭がモデル短縮名ならこの起動だけそれを使う (シェルの既定は変えない)。
+  # 指定が無ければ配信中のモデルを採る。Spark は同時に 1 モデルしか配信しない
+  # ので、表を持たずにサーバへ聞くのが常に正しい。
+  local model="" key served
+  case "$1" in
+    qwen|vision|0731) model="$(_ocsp_served_name "$1")"; shift ;;
+  esac
+  : ${model:=$OCSP_MODEL}
+
+  key=$(_ocsp_resolve "$cfg" apiKey 2>/dev/null) || key=""
+  served=$(_ocsp_models "$base" "$key")
+  if [[ -z "$model" ]]; then
+    model=$(echo "$served" | head -1)
+    if [[ -z "$model" ]]; then
+      echo "ocsp: 配信中のモデルを $base から取得できません" >&2
+      echo "      サーバの状態は ocsp status で確認できます" >&2
+      return 1
+    fi
+  elif [[ -n "$served" ]] && ! echo "$served" | grep -qx -- "$model"; then
+    echo "ocsp: $model は配信されていません" >&2
+    echo "      配信中: $(echo "$served" | paste -sd, -)" >&2
+    return 1
+  fi
+
+  if [[ "$1" == "run" ]]; then
+    shift
+    if [[ -z "$1" ]]; then
+      echo 'ocsp: 指示文が要ります  例: ocsp run "README を要約して"' >&2
+      return 1
+    fi
+    command opencode run --model "spark/$model" --dir "$PWD" "$@"
+    return $?
+  fi
+
+  command opencode --model "spark/$model" "$@"
 }

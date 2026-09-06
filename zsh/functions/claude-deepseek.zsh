@@ -35,10 +35,17 @@ ccds() {
 
 # Claude Code のバックエンドを DGX Spark 上のローカル vLLM に切り替える (現在のシェルのみ)
 #
-#   ccsp      自動判定 (LAN に届けば LAN、届かなければ Tailscale)
-#   ccsp lan  自宅 LAN 直結を強制 (プローブしない)
-#   ccsp ts   Tailscale 経由を強制 (プローブしない)
-#   ccsp off  Anthropic に戻す
+#   ccsp                自動判定 (LAN に届けば LAN、届かなければ Tailscale)
+#   ccsp lan            自宅 LAN 直結を強制 (プローブしない)
+#   ccsp ts             Tailscale 経由を強制 (プローブしない)
+#   ccsp qwen           使うモデルを指定する (qwen / vision / 0731)
+#   ccsp lan qwen       接続先とモデルは順不同で並べられる
+#   ccsp off            Anthropic に戻す
+#   ccsp status         起動せずに接続先・モデル・両経路の到達性を表示
+#
+# モデルを指定しなかった場合は /v1/models が返す配信中のモデルをそのまま使う。
+# Spark は同時に 1 モデルしか配信しないので、これが常に正しい既定値になる。
+# 短縮名にないモデルは CCSP_MODEL=<配信名> ccsp で渡す。
 #
 # 接続先 (ANTHROPIC_BASE_URL) は settings JSON に置かず、ここで export する。
 # settings JSON の env はシェルの export を無条件に上書きするため、JSON に書くと
@@ -53,15 +60,68 @@ ccds() {
 #   継承されないため、サブシェルやスクリプトからは ccsp 経由で起動する
 # - 別のバックエンドに切り替えるときは先に off を打つ。ANTHROPIC_AUTH_TOKEN が
 #   残っていると使い回され、相手先で 401 になる
+
+# モデルの短縮名を vLLM の SERVED_MODEL_NAME に展開する。
+# 短縮名に無いものはそのまま返し、配信名として扱う。
+_ccsp_served_name() {
+  case "$1" in
+    qwen) echo "qwen3.8-flash-next" ;;
+    vision) echo "deepseek-v4-flash-vision-exp" ;;
+    0731) echo "deepseek-v4-flash-0731" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+# 配信中のモデルを「配信名 max_model_len」の行で返す。
+# 引数: $1 = base URL, $2 = Bearer トークン
+_ccsp_models() {
+  curl -fs -m 10 -H "Authorization: Bearer $2" "$1/v1/models" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin).get("data", [])
+except Exception:
+    sys.exit(1)
+for m in data:
+    print(m["id"], m.get("max_model_len", 0))
+' 2>/dev/null
+}
+
+# base の settings にモデル名とコンテキスト上限を注入した設定を書き出す。
+# 毎回上書きするので、base を編集すれば次の起動から効く。
+# 引数: $1 = base, $2 = 配信名, $3 = コンテキスト上限, $4 = 出力先
+_ccsp_render_settings() {
+  python3 - "$1" "$2" "$3" "$4" <<'PY'
+import json, sys
+
+base, model, ctx, out = sys.argv[1:5]
+cfg = json.load(open(base))
+env = cfg.setdefault("env", {})
+for key in (
+    "ANTHROPIC_MODEL",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+    "ANTHROPIC_DEFAULT_FABLE_MODEL",
+):
+    env[key] = model
+env["CLAUDE_CODE_MAX_CONTEXT_TOKENS"] = str(ctx)
+cfg["fallbackModel"] = [model]
+with open(out, "w") as f:
+    json.dump(cfg, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+PY
+}
+
 ccsp() {
-  local settings="$GHQ_ROOT/github.com/skanehira/dotfiles/claude/settings.spark.json"
+  local base="$GHQ_ROOT/github.com/skanehira/dotfiles/claude/settings.spark.json"
+  local rendered="${XDG_CACHE_HOME:-$HOME/.cache}/ccsp/settings.json"
   # LAN 側のホストは CCSP_LAN_HOST で上書きできる。mDNS 名は到達できない IPv6 を
   # 2 つ返し、curl / Node が毎回それを試してから IPv4 に落ちるため接続が 220ms 増える
   # (IPv4 強制なら 12ms)。IP を直に使いたいときは CCSP_LAN_HOST に IP を入れる。
   # このリポジトリは公開のため IP は直書きしない。
   local lan_url="http://${CCSP_LAN_HOST:-spark-head.local}:8888"
   local ts_url="http://spark-head:8888"
-  local base_url url token
+  local base_url url token requested transport served ctx line
 
   case "$1" in
     off)
@@ -79,55 +139,72 @@ ccsp() {
       echo "ccsp: Anthropic に戻しました"
       return 0
       ;;
+    -h|--help)
+      cat <<'USAGE' >&2
+使い方:
+  ccsp [lan|ts] [qwen|vision|0731] [claude に渡す引数...]
+  ccsp status               起動せずに接続先・配信モデル・到達性を表示
+  ccsp off                  Anthropic に戻す
+モデル名の短縮:
+  qwen    -> qwen3.8-flash-next
+  vision  -> deepseek-v4-flash-vision-exp
+  0731    -> deepseek-v4-flash-0731
+モデルを省略すると配信中のモデルを自動で使う。短縮名に無いものは
+CCSP_MODEL=<配信名> ccsp で渡す。
+USAGE
+      return 0
+      ;;
     status)
       echo "  接続先: ${ANTHROPIC_BASE_URL:-(未設定)}"
-      echo "  設定  : $settings"
-      echo -n "  モデル: "
-      python3 -c "import json;print(json.load(open('$settings'))['env']['ANTHROPIC_MODEL'])" 2>/dev/null || echo "(読めず)"
+      echo "  base  : $base"
+      echo "  要求  : ${CCSP_MODEL:-(指定なし。配信中のモデルを使う)}"
       echo -n "  LAN   : "
       curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$lan_url/health" && echo "$lan_url に到達" || echo "$lan_url に届かない"
       echo -n "  TS    : "
       curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$ts_url/health" && echo "$ts_url に到達" || echo "$ts_url に届かない"
-      return 0
-      ;;
-    lan) base_url="$lan_url"; shift ;;
-    ts) base_url="$ts_url"; shift ;;
-    -h|--help)
-      echo "usage: ccsp [lan|ts|off|status] [claude に渡す引数...]" >&2
-      return 0
-      ;;
-    '')
-      # 到達した方を選ぶ。/health は無認証なので API キー無しで叩ける。
-      # --connect-timeout は名前解決にも効く (curl は AsynchDNS 付き) ため、
-      # mDNS がハングしてもここで打ち切られる。
-      for url in "$lan_url" "$ts_url"; do
-        if curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$url/health"; then
-          base_url="$url"
-          break
-        fi
-      done
-      if [[ -z "$base_url" ]]; then
-        echo "ccsp: LAN にも Tailscale にも届きません (ccsp lan / ccsp ts で強制できます)" >&2
-        return 1
+      echo -n "  配信中: "
+      if [[ -n "$ANTHROPIC_AUTH_TOKEN" && -n "$ANTHROPIC_BASE_URL" ]]; then
+        _ccsp_models "$ANTHROPIC_BASE_URL" "$ANTHROPIC_AUTH_TOKEN" | awk '{printf "%s (max_model_len %s) ", $1, $2}' || true
+        echo
+      else
+        echo "(トークン未取得。ccsp を一度起動すると表示できる)"
       fi
-      ;;
-    # それ以外の引数は claude にそのまま渡す (接続先は自動選択)
-    *)
-      for url in "$lan_url" "$ts_url"; do
-        if curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$url/health"; then
-          base_url="$url"
-          break
-        fi
-      done
-      if [[ -z "$base_url" ]]; then
-        echo "ccsp: LAN にも Tailscale にも届きません (ccsp lan / ccsp ts で強制できます)" >&2
-        return 1
-      fi
+      return 0
       ;;
   esac
 
-  if [[ ! -f "$settings" ]]; then
-    echo "ccsp: 設定ファイルが見つかりません: $settings" >&2
+  # 接続先とモデルは順不同で並べられる。認識しない語はそこで打ち切り、
+  # 残りをすべて claude への引数として渡す。
+  while (( $# > 0 )); do
+    case "$1" in
+      lan) transport="$lan_url"; shift ;;
+      ts) transport="$ts_url"; shift ;;
+      qwen|vision|0731) requested="$(_ccsp_served_name "$1")"; shift ;;
+      *) break ;;
+    esac
+  done
+  : ${requested:=$CCSP_MODEL}
+
+  if [[ -n "$transport" ]]; then
+    base_url="$transport"
+  else
+    # 到達した方を選ぶ。/health は無認証なので API キー無しで叩ける。
+    # --connect-timeout は名前解決にも効く (curl は AsynchDNS 付き) ため、
+    # mDNS がハングしてもここで打ち切られる。
+    for url in "$lan_url" "$ts_url"; do
+      if curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$url/health"; then
+        base_url="$url"
+        break
+      fi
+    done
+    if [[ -z "$base_url" ]]; then
+      echo "ccsp: LAN にも Tailscale にも届きません (ccsp lan / ccsp ts で強制できます)" >&2
+      return 1
+    fi
+  fi
+
+  if [[ ! -f "$base" ]]; then
+    echo "ccsp: 設定ファイルが見つかりません: $base" >&2
     return 1
   fi
 
@@ -140,6 +217,23 @@ ccsp() {
     export ANTHROPIC_AUTH_TOKEN="$token"
   fi
 
+  # モデル名とコンテキスト上限はサーバに聞く。表を持たないので配信側を変えても
+  # ここは追従不要で、要求したモデルが載っていなければ起動前に落とせる。
+  line=$(_ccsp_models "$base_url" "$ANTHROPIC_AUTH_TOKEN" | if [[ -n "$requested" ]]; then grep -x -- "$requested [0-9]*" || true; else head -1; fi)
+  if [[ -z "$line" ]]; then
+    echo "ccsp: ${requested:-配信中のモデル} を $base_url から取得できません" >&2
+    echo "      配信中: $(_ccsp_models "$base_url" "$ANTHROPIC_AUTH_TOKEN" | awk '{print $1}' | paste -sd, - 2>/dev/null || echo '(取得できず)')" >&2
+    return 1
+  fi
+  served="${line%% *}"
+  ctx=$(( ${line##* } / 2 ))
+
+  mkdir -p "${rendered:h}" || return 1
+  _ccsp_render_settings "$base" "$served" "$ctx" "$rendered" || {
+    echo "ccsp: 設定の生成に失敗しました: $rendered" >&2
+    return 1
+  }
+
   export ANTHROPIC_BASE_URL="$base_url"
 
   # mDNS 名は到達できない IPv6 を 2 つ返し、Node が毎回それを試してから IPv4 に
@@ -151,9 +245,9 @@ ccsp() {
     export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--dns-result-order=ipv4first"
   fi
 
-  alias claude="claude --settings $settings"
-  echo "ccsp: Spark モード ($base_url)。ccsp off で解除"
+  alias claude="claude --settings $rendered"
+  echo "ccsp: Spark モード ($base_url / $served / コンテキスト $ctx)。ccsp off で解除"
 
   # 接続先を整えたらそのまま起動する。alias は同じシェルで打ち直す用に残す
-  command claude --settings "$settings" "$@"
+  command claude --settings "$rendered" "$@"
 }
