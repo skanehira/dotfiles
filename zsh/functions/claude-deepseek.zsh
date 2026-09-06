@@ -67,32 +67,8 @@ ccds() {
 #   ccds が入れた ANTHROPIC_AUTH_TOKEN が残っていると、それがそのまま Spark へ
 #   送られる (無認証なので通ってしまい、気づきにくい)
 
-# モデルの短縮名を vLLM の SERVED_MODEL_NAME に展開する。
-# 短縮名に無いものはそのまま返し、配信名として扱う。
-_ccsp_served_name() {
-  case "$1" in
-    qwen) echo "qwen3.8-flash-next" ;;
-    vision) echo "deepseek-v4-flash-vision-exp" ;;
-    *) echo "$1" ;;
-  esac
-}
-
-# 配信中のモデルを「配信名 max_model_len」の行で返す。
-# 引数: $1 = base URL, $2 = Bearer トークン (空可)
-# 空のときは Authorization ヘッダ自体を送らない (認証なしのサーバ向け)。
-_ccsp_models() {
-  local -a auth=()
-  [[ -n "$2" ]] && auth=(-H "Authorization: Bearer $2")
-  curl -fs -m 10 "${auth[@]}" "$1/v1/models" 2>/dev/null | python3 -c '
-import json, sys
-try:
-    data = json.load(sys.stdin).get("data", [])
-except Exception:
-    sys.exit(1)
-for m in data:
-    print(m["id"], m.get("max_model_len", 0))
-' 2>/dev/null
-}
+# 短縮名の表・接続先・/v1/models の照会は zsh/functions/spark-common.zsh が持つ
+# (ccsp / ocsp の 2 つで共有する)。
 
 # base の settings にモデル名とコンテキスト上限を注入した設定を書き出す。
 # 毎回上書きするので、base を編集すれば次の起動から効く。
@@ -123,13 +99,9 @@ PY
 ccsp() {
   local base="$GHQ_ROOT/github.com/skanehira/dotfiles/claude/settings.spark.json"
   local rendered="${XDG_CACHE_HOME:-$HOME/.cache}/ccsp/settings.json"
-  # LAN 側のホストは CCSP_LAN_HOST で上書きできる。mDNS 名は到達できない IPv6 を
-  # 2 つ返し、curl / Node が毎回それを試してから IPv4 に落ちるため接続が 220ms 増える
-  # (IPv4 強制なら 12ms)。IP を直に使いたいときは CCSP_LAN_HOST に IP を入れる。
-  # このリポジトリは公開のため IP は直書きしない。
-  local lan_url="http://${CCSP_LAN_HOST:-spark-head.local}:8888"
-  local ts_url="http://spark-head:8888"
-  local base_url url requested transport served ctx line
+  local lan_url="$(_spark_lan_url)"
+  local ts_url="$(_spark_ts_url)"
+  local base_url requested transport served ctx line
 
   case "$1" in
     off)
@@ -183,7 +155,7 @@ USAGE
       echo -n "  配信中: "
       probe="${ANTHROPIC_BASE_URL:-$reachable}"
       if [[ -n "$probe" ]]; then
-        _ccsp_models "$probe" "$ANTHROPIC_AUTH_TOKEN" | awk '{printf "%s (max_model_len %s) ", $1, $2}' || true
+        _spark_models "$probe" "$ANTHROPIC_AUTH_TOKEN" | awk '{printf "%s (max_model_len %s) ", $1, $2}' || true
         echo
       else
         echo "(どちらにも届かないので取得できない)"
@@ -198,7 +170,7 @@ USAGE
     case "$1" in
       lan) transport="$lan_url"; shift ;;
       ts) transport="$ts_url"; shift ;;
-      qwen|vision) requested="$(_ccsp_served_name "$1")"; shift ;;
+      qwen|vision) requested="$(_spark_served_name "$1")"; shift ;;
       *) break ;;
     esac
   done
@@ -207,19 +179,10 @@ USAGE
   if [[ -n "$transport" ]]; then
     base_url="$transport"
   else
-    # 到達した方を選ぶ。/health は無認証なので API キー無しで叩ける。
-    # --connect-timeout は名前解決にも効く (curl は AsynchDNS 付き) ため、
-    # mDNS がハングしてもここで打ち切られる。
-    for url in "$lan_url" "$ts_url"; do
-      if curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$url/health"; then
-        base_url="$url"
-        break
-      fi
-    done
-    if [[ -z "$base_url" ]]; then
+    base_url="$(_spark_base_url)" || {
       echo "ccsp: LAN にも Tailscale にも届きません (ccsp lan / ccsp ts で強制できます)" >&2
       return 1
-    fi
+    }
   fi
 
   if [[ ! -f "$base" ]]; then
@@ -229,10 +192,10 @@ USAGE
 
   # モデル名とコンテキスト上限はサーバに聞く。表を持たないので配信側を変えても
   # ここは追従不要で、要求したモデルが載っていなければ起動前に落とせる。
-  line=$(_ccsp_models "$base_url" "$ANTHROPIC_AUTH_TOKEN" | if [[ -n "$requested" ]]; then grep -x -- "$requested [0-9]*" || true; else head -1; fi)
+  line=$(_spark_models "$base_url" "$ANTHROPIC_AUTH_TOKEN" | if [[ -n "$requested" ]]; then grep -x -- "$requested [0-9]*" || true; else head -1; fi)
   if [[ -z "$line" ]]; then
     echo "ccsp: ${requested:-配信中のモデル} を $base_url から取得できません" >&2
-    echo "      配信中: $(_ccsp_models "$base_url" "$ANTHROPIC_AUTH_TOKEN" | awk '{print $1}' | paste -sd, - 2>/dev/null || echo '(取得できず)')" >&2
+    echo "      配信中: $(_spark_models "$base_url" "$ANTHROPIC_AUTH_TOKEN" | awk '{print $1}' | paste -sd, - 2>/dev/null || echo '(取得できず)')" >&2
     return 1
   fi
   served="${line%% *}"

@@ -119,6 +119,10 @@
     ".config/zsh/functions/ghq-fzf.zsh".source = ../../../zsh/functions/ghq-fzf.zsh;
     ".config/zsh/functions/tmuxpopup.zsh".source = ../../../zsh/functions/tmuxpopup.zsh;
     ".config/zsh/functions/gss.zsh".source = ../../../zsh/functions/gss.zsh;
+    # Spark 系クライアント。spark-common.zsh が短縮名・接続先・/v1/models の照会を
+    # 2 つ (ccsp / ocsp) に供給する。関数定義は呼び出し時に解決されるので
+    # zshrc の source ループの順序には依存しない。
+    ".config/zsh/functions/spark-common.zsh".source = ../../../zsh/functions/spark-common.zsh;
     ".config/zsh/functions/claude-deepseek.zsh".source = ../../../zsh/functions/claude-deepseek.zsh;
     ".config/zsh/functions/opencode-spark.zsh".source = ../../../zsh/functions/opencode-spark.zsh;
   }
