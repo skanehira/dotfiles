@@ -62,7 +62,7 @@ ssh spark-head 'ps -eo pid,etime,cmd | grep "[p]repare-dspark-model-cache"'
 ダウンロードはコンテナ内 (root) で走るため、成果物が root 所有になる。この状態で rsync すると**受信側が全ブロブで `Permission denied` を返すのに、送信側の進捗表示は 600 MB/s で流れて成功に見える**。1 バイトも書けていないので必ず先に直す。
 
 ```bash
-D=models--<org>--<name>          # 例: models--deepseek-ai--DeepSeek-V4-Flash-0731
+D=models--<org>--<name>          # 例: models--nvidia--Qwen3.8-Flash-Next-NVFP4
 IMG=ghcr.io/anemll/dspark-vllm-gx10:0.1.1   # .env.dspark の DSPARK_VLLM_IMAGE
 docker run --rm -v "$HOME/.cache/huggingface:/c" --entrypoint chown "$IMG" -R 1000:1000 "/c/hub/$D"
 ```

@@ -5,7 +5,7 @@
 必要なシャードを列挙し、symlink を辿った実体が存在して非ゼロであることを確認する。
 
 使い方 (両ノードで同じものを実行して突き合わせる):
-    python3 verify_shards.py models--deepseek-ai--DeepSeek-V4-Flash-0731
+    python3 verify_shards.py models--nvidia--Qwen3.8-Flash-Next-NVFP4
 
 欠落があれば exit 1。
 """
