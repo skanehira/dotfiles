@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   username,
@@ -68,7 +69,7 @@
         eval "$(/opt/homebrew/bin/brew shellenv)"
       ''
       + lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
-        export SHELL=/usr/bin/zsh
+        export SHELL=${config.home.profileDirectory}/bin/zsh
         brew=/home/linuxbrew/.linuxbrew/bin/brew
         if [ -f "$brew" ]; then
           eval "$($brew shellenv)"
