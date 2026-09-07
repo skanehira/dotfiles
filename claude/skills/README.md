@@ -11,7 +11,7 @@
 | **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → 人間が issue を確認 → `/dev-impl` | 設計ループ (要件〜PoC 検証〜DESIGN.md + docs/design/features/〜issue 生成) → 実装ループ (issue を依存順に 1 件ずつ自律実装)。issue はユースケース単位の親 (トラッキング) + その sub-issue の子で、親の進捗バーで UC ごとの進捗を俯瞰できる。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
 | **M: 1 機能・リファクタの一括委任 (docs 不要)** | `/dev-impl-quick` | 軽量実装ループ。タスク分解 → 直営 TDD → テストゲート → review-impl (focus: tests) → タスク単位コミット |
 | **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-impl` を自分で起動する |
-| **S: バグ修正・typo** | 直接依頼 | スキル不要。remind-rules hook が既定の品質を守る |
+| **S: バグ修正・typo** | 直接依頼 | スキル不要。`~/.claude/CLAUDE.md`「実装時」の rules を自分で Read して守る |
 
 横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-draft-pr` (PR 作成) / `/workflow-design-notes` (設計の壁打ち台帳 → dev-spec 互換 docs へ落とし込み)。
 
@@ -84,8 +84,8 @@ skills/
 | dev-spec (設計ループ) | セッション継承 (最上位 tier 推奨) | 検証器が人間しかいないため、生成側を賢くする |
 | dev-spec フェーズ 8・9 のチェック subagent (general-purpose) | `model: opus` (呼び出し時明示) | 検証器は実行器より下げない |
 | dev-impl / dev-impl-quick | `model: opus` (frontmatter) | 実装の質がそのまま成果物の質になるため実行器を下げない |
-| dev-impl-implementer subagent | `model: opus` (frontmatter + 呼び出し時明示) | 実行器。`agent-spawn-guard` hook が呼び出し時の model 未指定を deny する |
-| review-impl subagent (統合レビュワー) | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。呼び出し時の明示忘れは `agent-spawn-guard` hook が deny する (model 未指定は frontmatter ではなく親のセッションモデルを継承するため、frontmatter は防御にならない) |
+| dev-impl-implementer subagent | `model: opus` (frontmatter + 呼び出し時明示) | 実行器 |
+| review-impl subagent (統合レビュワー) | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。**呼び出し時の明示を忘れないこと**。model 未指定は frontmatter ではなく親のセッションモデルを継承するため、frontmatter は防御にならない (機械ゲートは無いので自律遵守する) |
 | tech-investigation subagent (dev-spec フェーズ 5) | `model: opus` (frontmatter + 呼び出し時明示) | 「何をどこまで検証すれば行けると言えるか」を自分で設計する探索的な調査 |
 | コミット実行・巨大出力のテスト実行 | `model: haiku` (subagent) | 機械実行。`rules/core/orchestration.md`「委譲の判断」 |
 
@@ -115,7 +115,6 @@ git index を共有する操作 (コミット) は並列化できないので親
 
 | skill (wrapper) | agent (本体) |
 |---|---|
-| `/utility-self-improving` | `self-improving-extractor` + `self-improving-judge` |
 | `/workflow-review` | `review-impl` (統合レビュワー 1 本。セキュリティは security-guidance プラグインに委譲) |
 
 ### agent only (skill 無し、上位 orchestrator 専用)
@@ -167,7 +166,6 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [utility-creating-rules](./utility-creating-rules/) | .claude/rules/ にルールファイルを作成 |
 | [utility-drawio](./utility-drawio/) | draw.io 図 (.drawio) の生成と PNG/SVG/PDF 書き出し |
 | [utility-reviewing-skills](./utility-reviewing-skills/) | スキルをベストプラクティスに基づいてレビュー |
-| [utility-self-improving](./utility-self-improving/) | 過去セッション履歴から繰り返し指摘を抽出し設定を改善 |
 | [utility-doc-reading](./utility-doc-reading/) | 知識プロファイルを参照しながらドキュメント読解を支援 |
 | [utility-doc-audit](./utility-doc-audit/) | ドキュメントの整合性・フォーマット適合を fresh context の fan-out で監査 |
 | [utility-pdf-compress](./utility-pdf-compress/) | PDF のロスレス圧縮 |
