@@ -94,7 +94,9 @@ ocsp() {
 モデル名の短縮:
   qwen    -> qwen3.8-flash-next
   vision  -> deepseek-v4-flash-vision-exp
-モデルを省略すると配信中のモデルを自動で使う。
+モデルを省略すると配信中のモデルを自動で使う。接続先を省略すると
+LAN -> Tailscale の順に /health をプローブして到達する方を使う。
+status と model は先頭に置く (ocsp ts status は通らない)。
 LAN 側に IP を使いたいときは CCSP_LAN_HOST に入れる (ccsp と共通)。
 USAGE
       return 0
