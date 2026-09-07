@@ -12,7 +12,7 @@ dotfiles リポジトリ。macOS は **Nix (nix-darwin + Home Manager)**、Linux
 
 ```bash
 # clone 先は ~/dev/github.com/skanehira/dotfiles 固定
-# (mkOutOfStoreSymlink が claude.nix / neovim.nix でこの path を直参照するため)
+# (claude.nix / neovim.nix の mkOutOfStoreSymlink と darwin/codex.nix の environment.etc がこの path を直参照するため)
 mkdir -p ~/dev/github.com/skanehira
 cd ~/dev/github.com/skanehira
 git clone https://github.com/skanehira/dotfiles.git
@@ -45,6 +45,8 @@ nix run home-manager/master -- switch --flake ".#skanehira"
 ```
 
 aarch64 マシンは `.#skanehira` を `.#skanehira-aarch64` に置換する。Linux 専用 bootstrap script は用意していない (上記コマンドを手で叩く)。
+
+activation 中に `modules/home/codex.nix` が `sudo` で `/etc/codex/config.toml` を `codex/config.toml` へ symlink する (Home Manager standalone には `/etc` を宣言する option が無いため。`codex.nix` を import しない `-android` は対象外)。`sudo` が使えない環境では警告と手動コマンドが表示されるだけで activation は失敗しない。
 
 `linuxUsers` に列挙したユーザーごとに 3 つの output が生える。用途で選ぶ。
 
@@ -124,7 +126,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `home-android.nix` — Android (Termux + proot) 用エントリ (home-core.nix + 軽量 module のみ)
   - `darwin.nix` — nix-darwin imports のみ
   - `modules/home/` — Home Manager modules（CLI パッケージ、env、git、gh、zsh、fzf、direnv、tmux、wezterm、karabiner 等）
-  - `modules/darwin/` — nix-darwin modules（system、homebrew）
+  - `modules/darwin/` — nix-darwin modules（system、homebrew、codex）
   - `modules/overlays.nix` — nix-darwin 用 overlays モジュール (overlays-list.nix を消費)
   - `modules/overlays-list.nix` — overlay の素のリスト (mac/Linux 両側で共有)
   - `install.sh` — mac bootstrap 用（一度限り）
@@ -143,10 +145,12 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
 - **claude/** — Claude Code 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `CLAUDE.md` / `settings.json` / `agents/` / `hooks/` / `rules/` / `skills/` — 編集即反映、`drs` 不要
-- **codex/** — Codex 設定
-  - `config.base.toml` — git 管理する Codex base config。`[projects.*]` trust state は含めない
+- **codex/** — Codex 設定（`/etc/codex/config.toml` へ dotfiles 直接 symlink、live edit 可能）
+  - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる
   - `AGENTS.md` — `~/.codex/AGENTS.md` に symlink するグローバル Codex 指示
-  - `scripts/merge-config.py` — base config とローカル trust state を `~/.codex/config.toml` にマージ
+  - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[mcp_servers.*]` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける
+  - 旧方式 (Home Manager が `~/.codex/config.toml` を生成) を使っていたマシンでは、`drs` / `hms` 後に 1 回だけ `~/.codex/config.toml` から `codex/config.toml` と重複するキーを手で削除する。残さないと `/etc` 側の値が遮蔽される
+  - 配布の確認: `readlink -f /etc/codex/config.toml` が dotfiles の `codex/config.toml` に解決すること
 - **vim/** — Neovim 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `init.lua` / `lua/` / `after/` — 編集即反映、`drs` 不要
   - `.luarc.json` — lua_ls の dotfiles 内 lua 編集用設定 (track 対象)
@@ -171,7 +175,7 @@ nix/
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
     ├── home/
     │   ├── claude.nix    — Claude Code (bootstrap install + mkOutOfStoreSymlink で設定 live edit)
-    │   ├── codex.nix     — Codex (`~/.codex/AGENTS.md` symlink + config.toml 生成)
+    │   ├── codex.nix     — Codex (`~/.codex/AGENTS.md` symlink + claude/skills の個別 symlink。Linux のみ /etc/codex/config.toml を sudo で symlink)
     │   ├── deno.nix      — bootstrap-install (~/.deno/bin/deno 不在時のみ公式 installer 実行)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── env.nix       — sessionVariables / sessionPath
@@ -191,6 +195,7 @@ nix/
     │   ├── wezterm.nix   — programs.wezterm (extraConfig は wezterm.lua を readFile)
     │   └── zsh.nix       — programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済) + shellAliases (drs/hms を OS 別 lib.optionalAttrs。hms の -c には configName が入る)
     └── darwin/
+        ├── codex.nix     — /etc/codex/config.toml を codex/config.toml へ symlink (environment.etc)
         ├── homebrew.nix  — declarative brews / casks
         └── system.nix    — users, nix.settings, Touch ID, primaryUser
 ```
