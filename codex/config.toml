@@ -1,10 +1,7 @@
 #:schema https://raw.githubusercontent.com/openai/codex/main/codex-rs/core/config.schema.json
-# Tracked Codex defaults.
-#
-# Home Manager activation merges this file into ~/.codex/config.toml while
-# preserving local [projects.*] trust entries from the previous config. Keep
-# machine-local state such as project trust, auth, notices, history, and caches
-# out of this file.
+# Codex の共通設定。/etc/codex/config.toml (system レイヤー) として全クライアントに読まれる。
+# ~/.codex/config.toml (user レイヤー) は Codex 自身が書く可変状態 (project trust / [notice] / /model の選択 /
+# notify / [mcp_servers.*]) 用に明け渡すので、dotfiles では管理しない。user レイヤーの同名キーはこのファイルより優先される。
 
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
