@@ -5,7 +5,7 @@
 #
 # alias と export はシェルプロセスローカルなので、他のシェルには影響しない。
 ccds() {
-  local settings="$GHQ_ROOT/github.com/skanehira/dotfiles/claude/settings.deepseek.json"
+  local settings="$GHQ_ROOT/github.com/skanehira/dotfiles/agents/bindings/claude/settings.deepseek.json"
 
   if [[ "$1" == "off" ]]; then
     # ccsp が ANTHROPIC_BASE_URL を export するので、ここでも消さないと Spark を向いたまま残る
@@ -115,7 +115,7 @@ PY
 }
 
 ccsp() {
-  local base="$GHQ_ROOT/github.com/skanehira/dotfiles/claude/settings.spark.json"
+  local base="$GHQ_ROOT/github.com/skanehira/dotfiles/agents/bindings/claude/settings.spark.json"
   local rendered="${XDG_CACHE_HOME:-$HOME/.cache}/ccsp/settings.json"
   local lan_url="$(_spark_lan_url)"
   local ts_url="$(_spark_ts_url)"

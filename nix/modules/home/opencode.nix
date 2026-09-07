@@ -16,10 +16,15 @@
   # IP を書けば接続あたり約 210ms 速いが、このリポジトリは公開なので置かない
   # (IP を使いたいマシンは CCSP_LAN_HOST に入れる)。
   # vLLM が認証を要求しないので API キーは持たない (詳細は
-  # claude/rules/infra/dgx-spark.md)。
+  # agents/rules/infra/dgx-spark.md)。
   home.file.".config/opencode/opencode.json".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/opencode/opencode.json";
+    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/opencode.json";
 
   home.file.".config/opencode/tui.json".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/opencode/tui.json";
+    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/tui.json";
+
+  # グローバル指示の正本を OpenCode にも配る。OpenCode は AGENTS.md を優先し、
+  # 無いときだけ ~/.claude/CLAUDE.md にフォールバックする。明示的に置いて経路を 1 本にする。
+  home.file.".config/opencode/AGENTS.md".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/AGENTS.md";
 }

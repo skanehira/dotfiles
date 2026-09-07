@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/commit-msg-guard.ts"
+            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/agents/hooks/commit-msg-guard.ts"
           }
         ]
       },
@@ -52,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "deno run --allow-env $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/fix-round-guard.ts"
+            "command": "deno run --allow-env $GHQ_ROOT/github.com/skanehira/dotfiles/agents/hooks/fix-round-guard.ts"
           }
         ]
       },
@@ -204,7 +204,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/claude/scripts/statusline-command.sh"
+    "command": "bash $GHQ_ROOT/github.com/skanehira/dotfiles/agents/scripts/statusline-command.sh"
   },
   "enabledPlugins": {
     "archify@misty-lantern": true,

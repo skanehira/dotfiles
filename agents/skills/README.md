@@ -97,7 +97,7 @@ skills/
 
 「**skill = ユーザー向けエントリ + 表示整形 / agent = 実体ロジック (subagent 化前提)**」のパターンを推奨する。新規実装はこの形に揃える。
 
-|  | skill (`claude/skills/<name>/SKILL.md`) | agent (`claude/agents/<name>.md`) |
+|  | skill (`agents/skills/<name>/SKILL.md`) | agent (`agents/subagents/<name>.md`) |
 |---|---|---|
 | 用途 | ユーザー向けエントリポイント (`/<name>` で起動) | 内部 subagent (Agent ツールから起動) |
 | 役割 | 薄い orchestrator + 表示整形 + 確認ダイアログ | 実体ロジック、構造化 JSON 返却 |
@@ -107,7 +107,7 @@ skills/
 
 subagent への委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」と「fresh context の独立性 (実装者と別コンテキストのレビュー)」のために行う。逐次依存する修正・コミットは**メインループ直営** (`rules/core/orchestration.md`「委譲の判断」)。
 
-**dev-impl の実装だけがこの原則の明示的な例外**で、issue 1 件ずつの逐次実装であっても `dev-impl-implementer` subagent に出す。issue が自己完結しているため親による文脈編纂が不要で、issue ごとに fresh context で始まることで長い run でもメインループのコンテキストが単調増加しない。前提は **implementer が葉である** (子 subagent を起動しない) こと — 葉性は `agents/dev-impl-implementer.md` の `tools` から `Agent` を除いて構造的に強制する (subagent には親の hooks が届かず、指示文では違反を検出できないため)。
+**dev-impl の実装だけがこの原則の明示的な例外**で、issue 1 件ずつの逐次実装であっても `dev-impl-implementer` subagent に出す。issue が自己完結しているため親による文脈編纂が不要で、issue ごとに fresh context で始まることで長い run でもメインループのコンテキストが単調増加しない。前提は **implementer が葉である** (子 subagent を起動しない) こと — 葉性は `agents/subagents/dev-impl-implementer.md` の `tools` から `Agent` を除いて構造的に強制する (subagent には親の hooks が届かず、指示文では違反を検出できないため)。
 
 git index を共有する操作 (コミット) は並列化できないので親に残す。なお subagent の Bash は**呼び出しごとに cwd が親セッションのものへ戻る**ため、作業ディレクトリは引数で絶対パスを渡し `git -C <path>` を使わせる (`cd` の状態は次の呼び出しに残らない)。
 

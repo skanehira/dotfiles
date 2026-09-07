@@ -23,22 +23,25 @@
   '';
 
   # 設定は dotfiles repo への直接 symlink (mkOutOfStoreSymlink) で扱う
-  # → skills/rules/hooks/CLAUDE.md の編集が drs 不要で即反映される (live edit)
+  # → skills/rules/hooks/AGENTS.md の編集が drs 不要で即反映される (live edit)
   # 通常の home.file.X.source = ./path だと /nix/store にコピーされ drs 必須になる
+  #
+  # 正本は `agents/` に置き、ランタイム固有の名前 (~/.claude/CLAUDE.md 等) はここで与える。
+  # Claude Code 固有の設定ファイルは agents/bindings/claude/ にまとめてある。
   home.file = {
-    ".claude/CLAUDE.md".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/CLAUDE.md";
+    ".claude/CLAUDE.md".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/AGENTS.md";
     ".claude/settings.json".source =
-      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/settings.json";
+      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/claude/settings.json";
     ".claude/keybindings.json".source =
-      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/keybindings.json";
-    ".claude/agents".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/agents";
-    ".claude/hooks".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/hooks";
-    ".claude/rules".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/rules";
-    ".claude/skills".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/skills";
+      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/claude/keybindings.json";
+    ".claude/agents".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/subagents";
+    ".claude/hooks".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/hooks";
+    ".claude/rules".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/rules";
+    ".claude/skills".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/skills";
     # agent / skill から `~/.claude/scripts/<name>` の形で呼ぶ決定的スクリプト置き場。
     # 検査対象は dotfiles とは別のリポジトリなので、repo 相対では解決できない
-    ".claude/scripts".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/scripts";
+    ".claude/scripts".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/scripts";
     ".claude/knowledge-profile.md".source =
-      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/claude/knowledge-profile.md";
+      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/knowledge-profile.md";
   };
 }

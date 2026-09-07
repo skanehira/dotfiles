@@ -18,7 +18,7 @@ Hooks are configured in `../settings.json` and run automatically on the specifie
 - 適用範囲: cwd が `$GHQ_ROOT/github.com/skanehira/` 配下の自リポジトリのみ (外部リポの別規約を誤 deny しない)
 - 検証不能なケース (`--amend` / `-F` / メッセージ抽出不能) は allow
 - 無効化: 環境変数 `COMMIT_GUARD=off`
-- テスト: `deno test claude/hooks/commit-msg-guard_test.ts`
+- テスト: `deno test agents/hooks/commit-msg-guard_test.ts`
 
 ### Fix Round Guard Hook
 
@@ -34,7 +34,7 @@ dev-impl の修正ラウンド上限を機械検証する (PreToolUse Agent)。`
 - `mode: implement` / 他の agent / ラウンドを読み取れない起動 (検収差し戻しなど) は allow
 - deny されるのは**同一 run 内で 2 ラウンドを超えて継続する場合だけ**。スキルを再実行して再開する経路は Step 0 が新しい SCRATCH を作り r1 から採番し直すため deny されない。同一 run 内で意図的に続けたいときは `FIX_ROUND_GUARD=off` で解除する (deny メッセージにも案内がある)
 - 無効化: 環境変数 `FIX_ROUND_GUARD=off`
-- テスト: `deno test --allow-env --allow-run --allow-read claude/hooks/fix-round-guard_test.ts`
+- テスト: `deno test --allow-env --allow-run --allow-read agents/hooks/fix-round-guard_test.ts`
 
 ## 機械ゲートを置いていない規律
 

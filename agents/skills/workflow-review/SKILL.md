@@ -7,7 +7,7 @@ allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion
 
 # /workflow-review - 統合コードレビュー (subagent wrapper)
 
-`review-impl` subagent を fresh context で起動してローカル差分をレビューする薄い orchestrator。本体の検査ロジックと入出力契約は `claude/agents/review-impl.md` が正本。
+`review-impl` subagent を fresh context で起動してローカル差分をレビューする薄い orchestrator。本体の検査ロジックと入出力契約は `agents/subagents/review-impl.md` が正本。
 
 - **dev-impl (実装ループ) は本 skill を呼ばない** (dev-impl 本体が issue サイクル内で review-impl を直接起動する)。本 skill は手動レビュー用
 - セキュリティレビューは Anthropic 公式プラグイン `security-guidance@claude-plugins-official` に委譲 (Edit/Write 時の pattern 検知 + Stop hook の LLM diff review が自動で走る)

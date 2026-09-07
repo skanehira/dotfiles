@@ -143,11 +143,12 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 - **tmux/** — tmux 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `tmux.conf` — 編集即反映、`prefix + r` で reload。`drs` 不要
   - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
-- **claude/** — Claude Code 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
-  - `CLAUDE.md` / `settings.json` / `agents/` / `hooks/` / `rules/` / `skills/` — 編集即反映、`drs` 不要
+- **agents/** — AI エージェント共通のハーネス正本（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
+  - `AGENTS.md` / `skills/` / `rules/` / `hooks/` / `subagents/` / `scripts/` / `bindings/` — 編集即反映、`drs` 不要
+  - 配布先と構成は「AI エージェントのハーネス (agents/)」節を参照
 - **codex/** — Codex 設定（`/etc/codex/config.toml` へ dotfiles 直接 symlink、live edit 可能）
   - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる
-  - `config.toml` の `[[hooks.PreToolUse]]` は `claude/hooks/commit-msg-guard.ts` を Codex 側でも起動する。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) なので、hook スクリプトを両ランタイムで共有できる。**system レイヤーに置いた hooks は信頼ゲートを通らず発火する**のに対し、`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**される (実測。承認を促すメッセージも出ない)。したがって dotfiles で配る hooks は必ず `codex/config.toml` に書く
+  - `config.toml` の `[[hooks.PreToolUse]]` は `agents/hooks/commit-msg-guard.ts` を Codex 側でも起動する。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) なので、hook スクリプトを両ランタイムで共有できる。**system レイヤーに置いた hooks は信頼ゲートを通らず発火する**のに対し、`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**される (実測。承認を促すメッセージも出ない)。したがって dotfiles で配る hooks は必ず `codex/config.toml` に書く
   - hook の `command` はシェル経由で解釈されるため `$GHQ_ROOT` が展開できる。mac と Linux で dotfiles の絶対パスが違うので、パスは環境変数経由で書く
   - `AGENTS.md` — `~/.codex/AGENTS.md` に symlink するグローバル Codex 指示
   - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[mcp_servers.*]` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける
@@ -176,8 +177,8 @@ nix/
     ├── overlays.nix       ← nix-darwin 用 module (overlays-list.nix を nixpkgs.overlays に流す)
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
     ├── home/
-    │   ├── claude.nix    — Claude Code (bootstrap install + mkOutOfStoreSymlink で設定 live edit)
-    │   ├── codex.nix     — Codex (`~/.codex/AGENTS.md` symlink + claude/skills の個別 symlink。Linux のみ /etc/codex/config.toml を sudo で symlink)
+    │   ├── claude.nix    — Claude Code (bootstrap install + agents/ を ~/.claude/* へ mkOutOfStoreSymlink)
+    │   ├── codex.nix     — Codex (`~/.codex/AGENTS.md` symlink + agents/skills を ~/.agents/skills へ個別 symlink。Linux のみ /etc/codex/config.toml を sudo で symlink)
     │   ├── deno.nix      — bootstrap-install (~/.deno/bin/deno 不在時のみ公式 installer 実行)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── env.nix       — sessionVariables / sessionPath
@@ -290,40 +291,54 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 
 Android プロファイルだけは `pkgs.neovim` (nixpkgs-unstable の **stable release**、`cache.nixos.org` 経由でビルド済) を使う。proot で nightly をビルドできないため。こちらのアップデートは `nix flake update nixpkgs`。
 
-## Claude Code Integration
+## AI エージェントのハーネス (agents/)
 
-### Development Workflow Skills
+プロンプト・スキル・ルール・hooks・subagent の正本は `agents/` に置き、Claude Code / Codex / OpenCode の 3 者へ symlink で配る。ランタイム固有の名前 (`~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` 等) は Nix module 側で与える。
+
+```
+agents/
+├── AGENTS.md            ← グローバル指示の正本。~/.claude/CLAUDE.md と ~/.config/opencode/AGENTS.md へ配る
+├── skills/              ← ~/.agents/skills/<name> へ個別 symlink (Codex と OpenCode が直読み)
+├── rules/               ← core/ backend/ frontend/ infra/
+├── hooks/               ← commit-msg-guard.ts / fix-round-guard.ts
+├── subagents/           ← ~/.claude/agents へ配る 4 本
+├── scripts/             ← agent / skill から ~/.claude/scripts/<name> の形で呼ぶ
+└── bindings/            ← ランタイム固有の設定ファイル
+    ├── claude/          ← settings.json / keybindings.json / settings.{deepseek,spark}.json
+    └── opencode/        ← opencode.json / tui.json
+```
+
+Codex 向けの binding だけは `codex/` に残してある (`config.toml` は `/etc/codex/config.toml` の system レイヤーとして配るため、`nix/modules/darwin/codex.nix` が絶対パスを直参照する)。
+
+### 開発ワークフローのスキル
 
 ```
 /dev-spec (設計ループ) → 承認ゲート (人間が起動) → /dev-impl (実装ループ)
 ```
 
-詳細は `claude/skills/README.md` を参照 (タスク規模別の入口・モデル方針を含む)。主要スキル：
+詳細は `agents/skills/README.md` を参照 (タスク規模別の入口・モデル方針を含む)。主要スキル：
 - `/dev-spec` — 設計ループ (ユーザーストーリー → ... → PoC 検証 → DESIGN/DETAIL → TODO 生成 → 承認ゲート。手順は references/ に集約、クイックモード・部分実行可)
 - `/dev-impl` — 実装ループ (TODO 全フェーズを自律実装、`model: opus`。中小タスクはスキルを使わず plan mode / 直接依頼 + 直営 TDD)
+- `/workflow-review` (レビュー) / `/workflow-commit` (コミット) / `/workflow-create-draft-pr` (Draft PR) / `/workflow-debate` (壁打ち)
 
-### Workflow Skills
-- `/workflow-review` — コードレビュー (3 観点並列、修正はメインループ直営 TDD)
-- `/workflow-commit` — Conventional Commit 形式で commit (push は手動)
-- `/workflow-create-draft-pr` — Draft PR 作成
-- `/workflow-debate` — 複数視点の議論・壁打ち
+### hooks (agents/hooks/)
 
-### Hooks (settings.json)
-- **PostToolUse** — Write/Edit 後に自動フォーマット
+自作は 2 本だけで、両方とも `PreToolUse` で deny する機械ゲート。詳細と「機械ゲートを置いていない規律」は `agents/hooks/README.md` にある。
 
-### Rules (claude/rules/)
-- `core/tdd.md` — TDD 方法論
-- `core/commit.md` — Conventional Commit 形式
-- `backend/go/`, `backend/rust/`, `frontend/react/` — 言語・フレームワーク別コーディング規約
+| hook | 起動元 | 役割 |
+| --- | --- | --- |
+| `commit-msg-guard.ts` | Claude Code の `settings.json` と Codex の `codex/config.toml` | `git commit` の subject を Conventional Commit 形式で機械検証する |
+| `fix-round-guard.ts` | Claude Code の `settings.json` のみ (Agent ツール入力に依存するため Codex へは移植しない) | dev-impl の修正ラウンド上限 (2 周) を強制する |
+
+### rules (agents/rules/)
+
+- `core/` — tdd.md / commit.md / design.md / testing.md / implementation.md / verification.md / orchestration.md ほか
+- `backend/` `frontend/` — 言語・フレームワーク別コーディング規約
 - `infra/dgx-spark.md` — 自宅の DGX Spark 2 台クラスタの環境リファレンス
 
-### Installation
+### 配布
 
-```bash
-cd claude && ./install.sh
-```
-
-`~/.config/claude/` に symlink を作成。
+`drs` (mac) / `hms` (Linux) が `nix/modules/home/{claude,codex,opencode}.nix` を適用して symlink を張る。専用のインストールスクリプトは無い。
 
 ## Working with This Repository
 
