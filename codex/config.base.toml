@@ -1,3 +1,4 @@
+#:schema https://raw.githubusercontent.com/openai/codex/main/codex-rs/core/config.schema.json
 # Tracked Codex defaults.
 #
 # Home Manager activation merges this file into ~/.codex/config.toml while
@@ -9,8 +10,8 @@ approval_policy = "never"
 sandbox_mode = "danger-full-access"
 
 notify = ["terminal-notifier", "-message", "codex task done", "-sound", "default"]
-model = "gpt-5.6-sol"
-model_reasoning_effort = "medium"
+model = "gpt-6-astra"
+model_reasoning_effort = "high"
 personality = "pragmatic"
 service_tier = "default"
 plan_mode_reasoning_effort = "high"
@@ -18,6 +19,7 @@ web_search = "live"
 
 [features]
 memories = true
+default_mode_request_user_input = true
 
 [mcp_servers.context7]
 command = "npx"
