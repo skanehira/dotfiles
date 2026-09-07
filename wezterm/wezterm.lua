@@ -27,6 +27,9 @@ local keys = {
   -- WezTerm 側で herdr の prefix (ctrl+s = \x13) + キーのバイト列を送出する
   { key = "[", mods = "CMD|CTRL",   action = action.SendString '\x13{' },
   { key = "]", mods = "CMD|CTRL",   action = action.SendString '\x13}' },
+  -- opencode の command list ( Cmd+p )。CMD 修飾は pty へ送れないため alt+p に変換して
+  -- 送出する (opencode 側 tui.json で alt+p を command_list に紐付け)
+  { key = "p", mods = "CMD",         action = action.SendKey { key = "p", mods = "ALT" } },
   -- { key = "¥", mods = "CMD", action=action{SplitHorizontal={domain="CurrentPaneDomain"}}},
   -- { key = "-", mods = "CMD", action=action{SplitVertical={domain="CurrentPaneDomain"}}},
   -- { key = "h", mods = "LEADER", action=action{AdjustPaneSize={"Left", 5}}},
