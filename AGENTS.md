@@ -9,7 +9,7 @@
 
 ## Codex設定
 
-- `codex/config.base.toml` はgit管理するCodex設定のベース。
-- `~/.codex/config.toml` はHome Manager activationで生成され、既存のローカル `[projects.*]` trust state を保持する。
-- project trust、`auth.json`、sqlite state、logs、history、cacheはgit管理しない。
+- `codex/config.toml` はgit管理するCodex共通設定。`/etc/codex/config.toml` (systemレイヤー) にsymlinkされて全クライアント (CLI / ChatGPT.app内Codex) に読まれる。
+- `~/.codex/config.toml` (userレイヤー) はCodex自身が書く可変状態 (`[projects.*]` trust、`[notice]`、`/model` の選択、`notify`、`[mcp_servers.*]`) で、dotfilesでは管理しない。ここにあるキーはsystemレイヤーの同名キーより優先される。
+- `auth.json`、sqlite state、logs、history、cacheはgit管理しない。
 - `codex/AGENTS.md` は `~/.codex/AGENTS.md` にsymlinkされるグローバルCodex指示。
