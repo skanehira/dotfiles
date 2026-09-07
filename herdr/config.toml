@@ -14,6 +14,13 @@ navigate_workspace_down = "j"
 previous_workspace = ["prefix+{", "alt+ctrl+["]
 next_workspace = ["prefix+}", "alt+ctrl+]"]
 
+[[keys.command]]
+# mac は WezTerm 側で cmd+r を "\x13i" (prefix + i) として送出する
+# (CMD 修飾は kitty keyboard protocol 無しでは pty へ届かないため)
+key = "prefix+i"
+type = "plugin_action"
+command = "persiyanov.reviewr.toggle"   # <plugin_id>.<action_id> — name ではなく id
+
 [ui]
 show_agent_labels_on_pane_borders = false
 agent_panel_sort = "priority"
