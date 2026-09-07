@@ -38,5 +38,5 @@ args = ["chrome-devtools-mcp@latest"]
 matcher = "Bash"
 [[hooks.PreToolUse.hooks]]
 type = "command"
-command = "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/commit-msg-guard.ts"
+command = "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/agents/hooks/commit-msg-guard.ts"
 timeout = 20

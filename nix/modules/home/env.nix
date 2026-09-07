@@ -15,6 +15,10 @@
     RUSTUP_HOME = "$HOME/.rustup";
     HOMEBREW_INSTALL_CLEANUP = "1";
     CHROME_BUNDLE_IDENTIFIER = "com.vivaldi.Vivaldi";
+    # OpenCode は ~/.claude/skills と ~/.agents/skills の両方を探索する。dotfiles は
+    # 同じスキルを両方から見える状態にしているので、Claude Code 互換の経路を切って
+    # 二重列挙を防ぐ (正本は ~/.agents/skills)。
+    OPENCODE_DISABLE_CLAUDE_CODE_SKILLS = "1";
     # 1Password 参照（実値ではなく vault path、commit 安全）
     CF_TOKEN_1P_REF = "op://Personal/Cloudflare Token/credential";
     CF_ACCOUNT_1P_REF = "op://Personal/Cloudflare Token/account_id";

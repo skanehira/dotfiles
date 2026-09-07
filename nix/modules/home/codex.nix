@@ -29,32 +29,58 @@
     ''
   );
 
-  # ~/.codex/skills/ also holds Codex CLI-managed content (skill-installer 導入分、
-  # .system/ の組み込みスキル) なので、~/.claude/skills 同様のディレクトリ全体 symlink はできない。
-  # claude/skills/ 配下の各スキルだけを個別 symlink し、削除されたスキルの残骸は prune する。
-  home.activation.linkCodexSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    codex_skills_dir="$HOME/.codex/skills"
-    claude_skills_dir="${dotfilesRoot}/claude/skills"
+  # スキルの配布先は `~/.agents/skills/`。Codex と OpenCode の両方がここを直接読む
+  # (実測: 同じスキルが Codex の $skill 起動と `opencode agent list` の双方に出る)。
+  # Codex の公式ドキュメントが user scope として挙げるのもこのパスで、旧来使っていた
+  # `$CODEX_HOME/skills` はソースコメントが deprecated と呼ぶ。
+  #
+  # ~/.agents/skills/ には他ツール (vercel の skills CLI 等) が入れた実体も同居するため、
+  # ディレクトリ全体の symlink はできない。agents/skills/ 配下の各スキルだけを個別 symlink し、
+  # 削除されたスキルの残骸は prune する。同名の実体があるときは上書きせず警告する
+  # (`ln -sfn` は既存ディレクトリの *中* にリンクを作ってしまうため)。
+  home.activation.linkAgentSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    agent_skills_dir="$HOME/.agents/skills"
+    src_skills_dir="${dotfilesRoot}/agents/skills"
 
-    run mkdir -p "$codex_skills_dir"
+    run mkdir -p "$agent_skills_dir"
 
-    if [ -d "$claude_skills_dir" ]; then
-      for skill_path in "$claude_skills_dir"/*/; do
+    if [ -d "$src_skills_dir" ]; then
+      for skill_path in "$src_skills_dir"/*/; do
         [ -d "$skill_path" ] || continue
         skill_name="$(basename "$skill_path")"
-        run ln -sfn "$skill_path" "$codex_skills_dir/$skill_name"
+        dest="$agent_skills_dir/$skill_name"
+        if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+          warnEcho "skipping $dest: 同名の実体があるため symlink を張らない (手で退避してから再実行する)"
+          continue
+        fi
+        run ln -sfn "$skill_path" "$dest"
       done
     fi
 
-    for link in "$codex_skills_dir"/*; do
+    for link in "$agent_skills_dir"/*; do
       [ -L "$link" ] || continue
       target="$(readlink "$link")"
       case "$target" in
-        "$claude_skills_dir"/*)
+        "$src_skills_dir"/*)
           [ -e "$link" ] || run rm -f "$link"
           ;;
       esac
     done
+
+    # 旧配布先 (~/.codex/skills) に残った dotfiles 由来の symlink を撤去する。
+    # 残すと Codex が同じスキルを 2 回列挙する (同名スキルはマージされない仕様)。
+    codex_skills_dir="$HOME/.codex/skills"
+    if [ -d "$codex_skills_dir" ]; then
+      for link in "$codex_skills_dir"/*; do
+        [ -L "$link" ] || continue
+        target="$(readlink "$link")"
+        case "$target" in
+          "${dotfilesRoot}"/agents/skills/* | "$src_skills_dir"/*)
+            run rm -f "$link"
+            ;;
+        esac
+      done
+    fi
   '';
 
   home.file = {

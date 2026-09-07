@@ -19,10 +19,10 @@
 
 文字列置換が空振りしたまま「テストが緑 = 変異を殺せなかった」と判定した。**実験そのものが成立していなかった。**
 
-**対策: 変異検証は手で組まず `claude/scripts/mutate-check.ts` を使う。** baseline が緑であること・変異が実際にファイルへ適用されたこと・復元がバイト一致したことを対照として取り、1 つでも崩れたら `killed` / `survived` ではなく **`invalid`** を返す。exit code は `killed=0` / `survived=1` / `invalid=2` で区別できる。
+**対策: 変異検証は手で組まず `agents/scripts/mutate-check.ts` を使う。** baseline が緑であること・変異が実際にファイルへ適用されたこと・復元がバイト一致したことを対照として取り、1 つでも崩れたら `killed` / `survived` ではなく **`invalid`** を返す。exit code は `killed=0` / `survived=1` / `invalid=2` で区別できる。
 
 ```bash
-claude/scripts/mutate-check.ts <file> <old> <new> -- <test command...>
+agents/scripts/mutate-check.ts <file> <old> <new> -- <test command...>
 ```
 
 手で書く場合も同じ 3 対照を必ず取る。`s.replace(old, new)` の前に `assert old in s` を置く。

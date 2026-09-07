@@ -29,7 +29,7 @@ Android 16 以降の標準「Linux ターミナル」(Android Virtualization Fra
 | PC | 任意。手順 2 のプロセスキラー対策が端末の設定だけで効かないときに adb を打つ用途 |
 | 所要時間 | Phase 0 が 30 分程度、Phase 1 の初回 switch は回線と発熱しだいで 1 時間以上 |
 
-Docker はこの構成では使えない。proot はホストのカーネルを共有するだけで名前空間を作れないため。コンテナが必要な作業は DGX Spark (`claude/rules/infra/dgx-spark.md`) か VPS へ SSH する。
+Docker はこの構成では使えない。proot はホストのカーネルを共有するだけで名前空間を作れないため。コンテナが必要な作業は DGX Spark (`agents/rules/infra/dgx-spark.md`) か VPS へ SSH する。
 
 ## Phase 0: 端末 spike
 
@@ -199,7 +199,7 @@ Phase 0 で入れた Claude Code と Vite+ は再インストールされない�
 
 - 言語ランタイム: nodejs / pnpm
 - エージェント: Claude Code (activation 時に公式インストーラを実行) / OpenCode (nixpkgs)
-- Deno: `claude/settings.json` の hook 5 本が `deno run` で起動するので外せない。activation 時に公式インストーラを実行する
+- Deno: `agents/bindings/claude/settings.json` の hook 2 本が `deno run` で起動するので外せない。activation 時に公式インストーラを実行する
 - フロントエンド: Vite+ (activation 時に公式インストーラを実行。nixpkgs 未収録で、overlay 版は aarch64-linux でビルドが落ちるため)
 - エディタと端末: neovim (nixpkgs の stable。nightly ではない) / tmux
 - 軽量 CLI: bat / fd / jq / lsd / ripgrep / tree
@@ -248,8 +248,8 @@ proot-distro login debian --user skanehira --shared-tmp
 | ビルド速度 | proot は評価もビルドも遅い。キャッシュに無いものはローカルビルドになり実質不可と考える |
 | treesitter の parser | nvim-treesitter は parser を cc でコンパイルする。手順 3 で `build-essential` を入れているが、proot でのビルドは遅い。数が多いと待たされる |
 | クリップボード | `tmux/tmux.conf` の Linux 分岐は `xsel` を前提としている。proot 内に X が無いので、copy-mode の `y` によるコピーと `prefix + ]` による貼り付けが両方失敗する |
-| OpenCode の接続先 | `opencode/opencode.json` は自宅の `spark-head.local` を mDNS で引く。外出先ではモデルに繋がらない |
-| Claude Code の SessionStart hook | `claude/settings.json` の 1 本が `/Users/skanehira/...` という mac 固定パス (herdr 用) を指す。Linux では毎回失敗するが、他の hook と Claude Code 本体には影響しない |
+| OpenCode の接続先 | `agents/bindings/opencode/opencode.json` は自宅の `spark-head.local` を mDNS で引く。外出先ではモデルに繋がらない |
+| Claude Code の SessionStart hook | `agents/bindings/claude/settings.json` の 1 本が `/Users/skanehira/...` という mac 固定パス (herdr 用) を指す。Linux では毎回失敗するが、他の hook と Claude Code 本体には影響しない |
 | Claude Code の自動更新 | 更新でバイナリが差し替わる。壊れた場合は `nix/modules/home/env.nix` の `home.sessionVariables` に `DISABLE_AUTOUPDATER = "1"` を足して `hms` する |
 | Vite+ のシェル設定追記 | installer は `~/.zshrc` などに env の source を追記しようとするが、Home Manager がそれらを read-only symlink として管理しているので失敗する。PATH は `home.sessionPath` で通すので実害はない |
 | DeX | この端末は外部ディスプレイ接続時のみ。内蔵画面では使えない |
