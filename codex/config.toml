@@ -13,6 +13,7 @@ personality = "pragmatic"
 service_tier = "default"
 plan_mode_reasoning_effort = "high"
 web_search = "live"
+suppress_unstable_features_warning = true
 
 [features]
 memories = true
