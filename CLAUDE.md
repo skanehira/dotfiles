@@ -147,6 +147,8 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `CLAUDE.md` / `settings.json` / `agents/` / `hooks/` / `rules/` / `skills/` — 編集即反映、`drs` 不要
 - **codex/** — Codex 設定（`/etc/codex/config.toml` へ dotfiles 直接 symlink、live edit 可能）
   - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる
+  - `config.toml` の `[[hooks.PreToolUse]]` は `claude/hooks/commit-msg-guard.ts` を Codex 側でも起動する。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) なので、hook スクリプトを両ランタイムで共有できる。**system レイヤーに置いた hooks は信頼ゲートを通らず発火する**のに対し、`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**される (実測。承認を促すメッセージも出ない)。したがって dotfiles で配る hooks は必ず `codex/config.toml` に書く
+  - hook の `command` はシェル経由で解釈されるため `$GHQ_ROOT` が展開できる。mac と Linux で dotfiles の絶対パスが違うので、パスは環境変数経由で書く
   - `AGENTS.md` — `~/.codex/AGENTS.md` に symlink するグローバル Codex 指示
   - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[mcp_servers.*]` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける
   - 旧方式 (Home Manager が `~/.codex/config.toml` を生成) を使っていたマシンでは、`drs` / `hms` 後に 1 回だけ `~/.codex/config.toml` から `codex/config.toml` と重複するキーを手で削除する。残さないと `/etc` 側の値が遮蔽される

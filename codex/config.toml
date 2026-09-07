@@ -29,3 +29,14 @@ args = ["-y", "@upstash/context7-mcp"]
 [mcp_servers.chrome-devtools]
 command = "npx"
 args = ["chrome-devtools-mcp@latest"]
+
+# コミット規約ゲート。Claude Code の settings.json と同じ hook スクリプトを共有する。
+# system レイヤー (/etc/codex/config.toml) に置いた hooks は信頼ゲート (/hooks での承認) を
+# 通らずに発火する (user レイヤーの ~/.codex/hooks.json は承認するまで無言でスキップされる)。
+# command 文字列はシェル経由で解釈されるので $GHQ_ROOT が展開でき、mac と Linux で同じ記述が使える。
+[[hooks.PreToolUse]]
+matcher = "Bash"
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/claude/hooks/commit-msg-guard.ts"
+timeout = 20
