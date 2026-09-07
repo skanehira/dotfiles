@@ -10,8 +10,11 @@
   # tui.json は keybinds / theme の設定ファイルで、TUI 側の theme 切り替えなど
   # opencode 自身の書き込みも repo 側の working tree に反映される (live edit)。
   #
-  # 接続先は ccsp と同じ mDNS 名 (spark-head.local) を直接書いてある。IP を書けば
-  # 接続あたり約 210ms 速いが、このリポジトリは公開なので置かない。
+  # baseURL には自宅 LAN の mDNS 名 (spark-head.local) を書いてある。これは素の
+  # opencode を打ったときの既定値で、ocsp 経由の起動では ocsp が到達する方
+  # (LAN / Tailscale) を選んで OPENCODE_CONFIG_CONTENT で上書きする。
+  # IP を書けば接続あたり約 210ms 速いが、このリポジトリは公開なので置かない
+  # (IP を使いたいマシンは CCSP_LAN_HOST に入れる)。
   # vLLM が認証を要求しないので API キーは持たない (詳細は
   # claude/rules/infra/dgx-spark.md)。
   home.file.".config/opencode/opencode.json".source =
