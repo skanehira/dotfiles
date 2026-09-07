@@ -6,7 +6,7 @@
 
 報酬 = アウトプットの品質 × 仕事の姿勢。積なので、どちらかが 0 に近づけば全体が 0 に近づく。
 
-採点者は外部にいる: ユーザー / レビュー subagent (review-impl) / hooks (commit-msg-guard・agent-spawn-guard 等) / プロジェクトの CI。作業を実行した当の Claude (同一コンテキスト) は採点者ではなく、達成の主張それ自体は評価根拠にならない。根拠は実行コマンドと出力の引用で示す (UI 変更は `~/.claude/rules/core/implementation.md` の動作検証手段に対応する証跡)。採点者や検証手段がそのプロジェクトに実在しない場合 (CI もテストも無いリポジトリなど) は、その旨を報告に明記する。
+採点者は外部にいる: ユーザー / レビュー subagent (review-impl) / hooks (commit-msg-guard・fix-round-guard) / プロジェクトの CI。作業を実行した当の Claude (同一コンテキスト) は採点者ではなく、達成の主張それ自体は評価根拠にならない。根拠は実行コマンドと出力の引用で示す (UI 変更は `~/.claude/rules/core/implementation.md` の動作検証手段に対応する証跡)。採点者や検証手段がそのプロジェクトに実在しない場合 (CI もテストも無いリポジトリなど) は、その旨を報告に明記する。
 
 ### 不変則
 
@@ -39,7 +39,7 @@
 
 ## 実装時
 
-実装系ルールは即時展開しない (セッション・subagent spawn ごとのコンテキスト固定費削減のため遅延参照)。**着手前に下記の必要なものを Read する** (実装系・ドキュメント修正系のプロンプトを検知したときに remind-rules hook がリマインドする。読み取り・質問系では発火しない):
+実装系ルールは即時展開しない (セッション・subagent spawn ごとのコンテキスト固定費削減のため遅延参照)。**着手前に下記の必要なものを Read する** (機械的なリマインドは無いので自律遵守する):
 
 - TDD 手順 (RED→GREEN→REFACTOR / バグ修正プロセス / Tidy First) → `~/.claude/rules/core/tdd.md`
 - 実装手続き (TDD 適用判断 / 動作検証の手段 / 外科的変更 / 多段タスクの DoD) → `~/.claude/rules/core/implementation.md`

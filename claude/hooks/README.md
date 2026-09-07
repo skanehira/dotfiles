@@ -5,10 +5,7 @@ Custom hooks for Claude Code.
 ## Files
 
 - `commit-msg-guard.ts` — コミット規約ゲート (PreToolUse Bash)
-- `agent-spawn-guard.ts` — subagent 起動ゲート (PreToolUse Agent)
 - `fix-round-guard.ts` — 修正ラウンド上限ゲート (PreToolUse Agent)
-- `remind-rules.ts` — 実装系プロンプト検知時に CLAUDE.md ルールを再注入 (UserPromptSubmit)
-- `archive-transcript.ts` — transcript のアーカイブ (SessionEnd / PreCompact)
 
 ## Usage
 
@@ -22,22 +19,6 @@ Hooks are configured in `../settings.json` and run automatically on the specifie
 - 検証不能なケース (`--amend` / `-F` / メッセージ抽出不能) は allow
 - 無効化: 環境変数 `COMMIT_GUARD=off`
 - テスト: `deno test claude/hooks/commit-msg-guard_test.ts`
-
-### Agent Spawn Guard Hook
-
-subagent の起動を機械検証する (PreToolUse Agent)。Agent ツールの `model` は未指定だと agent 定義ではなく親のセッションモデルを継承するため、「指示文には model を書いたのに起動時に指定し忘れて意図しない単価で走る」事故を、指示ではなくコードで塞ぐ (旧構成のログ実測で「書かれているのに守られていない」ことを確認済み)。
-
-検証する内容:
-
-| 対象 | 判定 |
-| --- | --- |
-| `MANDATED_MODEL` の agent (dev-impl-implementer / review-impl / fix-lsp-warnings) | `model` が未指定なら deny し、規定値を提示する |
-
-- 適用範囲: 全リポジトリ (対象 agent は `~/.claude/agents` の個人定義なので他人のリポジトリで誤検知しない)
-- `model` は**未指定のときだけ** deny する。規定と違う値でも明示されていれば意図的な override として通す
-- `MANDATED_MODEL` に無い agent (general-purpose / Explore 等) は検証対象外
-- 無効化: 環境変数 `AGENT_SPAWN_GUARD=off`
-- テスト: `deno test --allow-env --allow-run --allow-read claude/hooks/agent-spawn-guard_test.ts` (hook 本体を subprocess で起動する I/O 層のテストを含むため `--allow-run` が要る)
 
 ### Fix Round Guard Hook
 
@@ -54,3 +35,10 @@ dev-impl の修正ラウンド上限を機械検証する (PreToolUse Agent)。`
 - deny されるのは**同一 run 内で 2 ラウンドを超えて継続する場合だけ**。スキルを再実行して再開する経路は Step 0 が新しい SCRATCH を作り r1 から採番し直すため deny されない。同一 run 内で意図的に続けたいときは `FIX_ROUND_GUARD=off` で解除する (deny メッセージにも案内がある)
 - 無効化: 環境変数 `FIX_ROUND_GUARD=off`
 - テスト: `deno test --allow-env --allow-run --allow-read claude/hooks/fix-round-guard_test.ts`
+
+## 機械ゲートを置いていない規律
+
+以下は hook で強制せず、`~/.claude/CLAUDE.md` と `../skills/README.md` の記述による自律遵守に委ねている。
+
+- **実装系ルールの遅延参照**: 着手前に `../rules/core/` の必要なものを Read する。プロンプトを検知してリマインドする仕組みは持たない
+- **subagent 起動時の `model` 明示**: Agent ツールの `model` は未指定だと agent 定義の frontmatter ではなく親のセッションモデルを継承する。呼び出し時に必ず明示する
