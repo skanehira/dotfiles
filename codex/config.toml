@@ -19,6 +19,9 @@ suppress_unstable_features_warning = true
 memories = true
 default_mode_request_user_input = true
 
+[features.context_management]
+experimental_mode = true
+
 [mcp_servers.context7]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp"]
