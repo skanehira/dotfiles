@@ -1,7 +1,9 @@
 { config, dotfilesRoot, ... }:
 
 {
-  # Neovim 本体は packages.nix の `neovim` (nixpkgs-unstable の stable release) で管理
+  # Neovim 本体はプロファイルごとに別。フルセットは packages.nix が
+  # neovim-nightly-overlay の nightly を、Android は packages-android.nix が
+  # nixpkgs の stable を入れる (proot で nightly をビルドできないため)
   # 設定ファイルは dotfiles repo へ直接 symlink (mkOutOfStoreSymlink)
   # → vim/lua/* の編集が drs 不要で即反映 (live edit)
   # lazy.nvim はそのまま動作 (HM の plugins 機構は使わない)

@@ -182,7 +182,7 @@ let
 
   # LSP servers (Mason 廃止、全て Nix declarative 管理)。
   # vim/lua/plugins/lsp/lspconfig.lua の vim.lsp.enable(servers) で起動される。
-  # mason の名前 → nixpkgs attr の対応は CLAUDE.md 参照。
+  # 各エントリの行末コメントに、対応する LSP 名を書いてある。
   lspServers =
     with pkgs;
     [
