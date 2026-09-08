@@ -573,6 +573,59 @@ Deno.test("buildTree_prunes_only_what_its_own_previous_manifest_listed_and_keeps
   });
 });
 
+Deno.test("buildTree_removes_a_legacy_symlink_into_dotfiles_instead_of_writing_the_output_through_it", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    // 旧方式は正本のスキル 1 本ずつを配布先へ symlink していた。残っていると
+    // mkdir -p + rename がリンク越しに解決して正本を生成物で上書きする
+    await Deno.mkdir(`${base}/alpha`, { recursive: true });
+    const canonical = `${base}/alpha/SKILL.md`;
+    await Deno.writeTextFile(canonical, "# alpha\n\n{{@ask-user}} を使う。\n");
+    await Deno.symlink(`${base}/alpha`, `${out}/alpha`);
+    // 他ツールが張った dotfiles 外の symlink は撤去の対象外
+    const foreign = await Deno.makeTempDir();
+    await Deno.symlink(foreign, `${out}/foreign`);
+
+    try {
+      await buildTree({
+        baseDir: base, overlayDir: overlay, outDir: out,
+        runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+      });
+
+      assertEquals(await Deno.readTextFile(canonical), "# alpha\n\n{{@ask-user}} を使う。\n");
+      assertEquals(Deno.lstatSync(`${out}/alpha`).isSymlink, false);
+      assertEquals(
+        await Deno.readTextFile(`${out}/alpha/SKILL.md`),
+        "# alpha\n\nrequest_user_input を使う。\n",
+      );
+      assertEquals(Deno.readLinkSync(`${out}/foreign`), foreign);
+    } finally {
+      await Deno.remove(foreign, { recursive: true });
+    }
+  });
+});
+
+Deno.test("buildTree_that_fails_before_writing_leaves_a_legacy_symlink_in_place", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    // 撤去してから生成が落ちると、旧リンクも生成物も無い空の配布先が残る。
+    // 撤去は書き込み直前に行い、失敗時は元の状態のままにする
+    await Deno.mkdir(`${base}/alpha`, { recursive: true });
+    await Deno.writeTextFile(`${base}/alpha/SKILL.md`, "# alpha\n\n{{@not-in-vocabulary}}\n");
+    await Deno.symlink(`${base}/alpha`, `${out}/alpha`);
+
+    await assertRejects(
+      () =>
+        buildTree({
+          baseDir: base, overlayDir: overlay, outDir: out,
+          runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+        }),
+      Error,
+      "語彙表に {{@not-in-vocabulary}} がありません",
+    );
+    assertEquals(Deno.lstatSync(`${out}/alpha`).isSymlink, true);
+    assertEquals(Deno.readLinkSync(`${out}/alpha`), `${base}/alpha`);
+  });
+});
+
 Deno.test("buildTree_with_an_out_dir_inside_dotfiles_root_throws_before_writing_anything", async () => {
   await withTrees(async ({ base, overlay, dotfiles }) => {
     await Deno.writeTextFile(`${base}/a.md`, "# a\n");
@@ -628,6 +681,26 @@ Deno.test("removeDotfilesLinks_removes_only_symlinks_resolving_into_dotfiles_and
     );
   } finally {
     for (const d of [dotfiles, shared, elsewhere]) await Deno.remove(d, { recursive: true });
+  }
+});
+
+Deno.test("removeDotfilesLinks_removes_a_broken_link_into_dotfiles_and_keeps_a_broken_link_outside", async () => {
+  const dotfiles = await Deno.makeTempDir();
+  const outside = await Deno.makeTempDir();
+  const shared = await Deno.makeTempDir();
+  try {
+    // 壊れたリンクは realPath で解決できないので readlink 側にフォールバックする。
+    // その戻り値を canonicalize しないと、/var → /private/var のような symlink を挟む
+    // 一時ディレクトリで dotfilesRoot 側とだけ形が揃い、判定が滑る
+    await Deno.symlink(`${dotfiles}/gone`, `${shared}/mine`);
+    await Deno.symlink(`${outside}/gone`, `${shared}/theirs`);
+
+    assertEquals(await removeDotfilesLinks(shared, dotfiles), ["mine"]);
+    assertEquals(Deno.lstatSync(`${shared}/theirs`).isSymlink, true);
+  } finally {
+    for (const dir of [dotfiles, outside, shared]) {
+      await Deno.remove(dir, { recursive: true });
+    }
   }
 });
 

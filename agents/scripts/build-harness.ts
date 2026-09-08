@@ -324,6 +324,13 @@ export async function buildTree(
       `${JSON.stringify({ generatedBy: GENERATOR, paths: written }, null, 2)}\n`,
     );
 
+    // 旧方式が配布先へ張った個別 symlink をここで撤去する。残っていると下の mkdir と
+    // rename がリンク越しに解決し、生成物を正本へ書き戻して agents/ を壊す
+    // (assertSafeOutRoot は出力先ルートしか見ないので、中の 1 段は素通りする)。
+    // 撤去を staging の構築より後に置くのは、生成が途中で落ちたときに配布先を
+    // 元のまま残すため。
+    await removeDotfilesLinks(options.outDir, options.dotfilesRoot);
+
     await Deno.mkdir(options.outDir, { recursive: true });
     for (const rel of [...written, MANIFEST_NAME]) {
       const destination = join(options.outDir, rel);
@@ -388,6 +395,9 @@ export async function buildFile(options: BuildFileOptions): Promise<void> {
  * Home Manager は activation script が張った symlink を自動では撤去しない。判定は
  * 「target が dotfilesRoot 配下に解決する symlink」で、実測では我々の 28 件ちょうどに
  * 一致し、他ツールの 9 件 (すべて実体ディレクトリ) は掛からない。
+ *
+ * `buildTree` も書き込みの前にこれを呼ぶ。配布先に旧方式のリンクが 1 段でも残っていると、
+ * 生成物をそのリンク越しに正本へ書き戻してしまうため。
  */
 export async function removeDotfilesLinks(
   dir: string,
@@ -411,8 +421,9 @@ export async function removeDotfilesLinks(
     try {
       target = Deno.realPathSync(path);
     } catch {
-      // 壊れた symlink も対象にできるよう readlink から解決する
-      target = resolve(dirname(path), Deno.readLinkSync(path));
+      // 壊れた symlink も対象にできるよう readlink から解決する。root 側と同じ形に
+      // 揃えないと、/var → /private/var のような symlink を挟むパスで判定が滑る
+      target = resolveIntendedPath(resolve(dirname(path), Deno.readLinkSync(path)));
     }
     if (target === root || target.startsWith(`${root}/`)) {
       await Deno.remove(path, { recursive: true });
