@@ -43,6 +43,50 @@
     fi
   '';
 
+  # プラグインの導入。marketplace もインストールも宣言では効かない (実測: config.toml に
+  # [marketplaces.*] を書くと空ディレクトリを見に行って "marketplace root does not contain
+  # a supported manifest" で失敗し、[plugins.*] を書いても "not installed" のまま)。
+  # `codex plugin marketplace add` がリポジトリを取得し、`codex plugin add` が
+  # インストールする。どちらも冪等なので毎回流す。
+  #
+  # 自分のリポジトリ 2 本は clone 先がマシンごとに変わるのでローカルパスで登録する。
+  # いずれも Claude 形式 (.claude-plugin/marketplace.json) だが Codex がそのまま読む。
+  # ネットワークやリポジトリの不在で失敗しても activation は止めない。
+  home.activation.installCodexPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if ! command -v codex >/dev/null 2>&1; then
+      warnEcho "codex が無いのでプラグインの導入をスキップした"
+    else
+      for source in \
+        anthropics/skills \
+        anthropics/claude-plugins-official \
+        nextlevelbuilder/ui-ux-pro-max-skill \
+        u-ichi/compact-plus
+      do
+        run codex plugin marketplace add "$source" \
+          || warnEcho "codex plugin marketplace add $source に失敗した (ネットワーク断など)"
+      done
+
+      for repo in misty-lantern slide-plugin; do
+        repo_path="$HOME/dev/github.com/skanehira/$repo"
+        [ -d "$repo_path" ] || continue
+        run codex plugin marketplace add "$repo_path" \
+          || warnEcho "codex plugin marketplace add $repo_path に失敗した"
+      done
+
+      for plugin in \
+        document-skills@anthropic-agent-skills \
+        frontend-design@claude-plugins-official \
+        ui-ux-pro-max@ui-ux-pro-max-skill \
+        compact-plus@compact-plus \
+        archify@misty-lantern \
+        slide-plugin@slide-plugin
+      do
+        run codex plugin add "$plugin" \
+          || warnEcho "codex plugin add $plugin に失敗した"
+      done
+    fi
+  '';
+
   home.file = {
     ".codex/AGENTS.md".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/codex/AGENTS.md";
   };
