@@ -33,6 +33,12 @@
   home.file.".config/opencode/AGENTS.md".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/AGENTS.md";
 
+  # OpenCode 固有の読み替え規約。共通の正本とルールは Claude Code 向けの語彙で
+  # 書かれているので、ツール名の対応と「hooks が動かない」ことをここで補う。
+  # AGENTS.md は 1 枚しか読まれないため、opencode.json の instructions で追加する。
+  home.file.".config/opencode/AGENTS-opencode.md".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/AGENTS-opencode.md";
+
   # subagent は OpenCode 独自スキーマ (`mode: subagent` が要る) なので、正本
   # agents/subagents/*.md から生成する。生成物は git 管理しない。
   # deno を使うので bootstrapDeno の後に置く。

@@ -317,7 +317,7 @@ agents/
 ├── knowledge-profile.md ← ~/.claude/knowledge-profile.md へ symlink (utility-doc-reading が読み書きする)
 └── bindings/            ← ランタイム固有の設定ファイル
     ├── claude/          ← settings.json / keybindings.json / settings.{deepseek,spark}.json (後 2 者は zsh/functions/claude-deepseek.zsh が --settings で読む)
-    └── opencode/        ← opencode.json / tui.json
+    └── opencode/        ← opencode.json / tui.json / AGENTS-opencode.md (OpenCode 固有の読み替え規約)
 ```
 
 **Codex 向けだけは `codex/` に残してある。** `config.toml` は `/etc/codex/config.toml` の system レイヤーとして配るため `nix/modules/darwin/codex.nix` が絶対パスを直参照する。`codex/AGENTS.md` も Codex 専用の別正本で、`~/.codex/AGENTS.md` へはこちらが symlink される (Claude Code と OpenCode が受け取る `agents/AGENTS.md` とは中身が違う)。**グローバル指示だけは 3 者で 1 枚に統一できていない。**
@@ -360,7 +360,18 @@ OpenCode はシェル hooks を持たないので、どの hook も発火しな�
 | `~/.codex/agents/*.toml` | `name` / `description` / `developer_instructions` の 3 キー | `codex.nix` が `sync-subagents.ts ... codex` を実行 |
 | `~/.config/opencode/agents/*.md` | `description` + `mode: subagent` の frontmatter | `opencode.nix` が `sync-subagents.ts ... opencode` を実行 |
 
+subagent が 3 者に配られる一方、**hooks は Claude Code と Codex の 2 者にしか無い**。OpenCode はシェル hooks を持たず、JS プラグイン API もコマンドに stdin を渡さないため deny する機械ゲートに使えない。OpenCode 上ではコミット規約と修正ラウンド上限が自律遵守になる。
+
 **落とすキーが 3 つある。** `tools` は Codex に対応キーが無く、OpenCode は真偽値マップで意味が反転する。`model` は Codex では実モデル名が要り alias が使えないため、世代交代に追従できるよう生成物には書かない (固定するなら `codex/config.toml` の `[agents] default_subagent_model` に 1 箇所だけ書く。現状は未設定で、Codex 側の subagent は親のモデルを継承する)。`context: fork` に相当する概念はどちらにも無い。
+
+### ランタイム固有の読み替え規約
+
+共通の正本 (`agents/AGENTS.md`) とルールは Claude Code の語彙で書かれているので、他 2 者にはツール名の対応表を別に配る。どちらも「読み替えが要る記述は上記が全て」を走査コマンド付きで宣言し、規約に無い記述に出会ったら止まって指示を仰ぐ形にしてある。
+
+| ランタイム | 規約の置き場 | 配布経路 |
+| --- | --- | --- |
+| Codex | `codex/AGENTS.md` | `~/.codex/AGENTS.md` へ symlink (Codex はグローバル指示を 1 枚しか読まないので、共通の正本ではなくこちらが載る) |
+| OpenCode | `agents/bindings/opencode/AGENTS-opencode.md` | `~/.config/opencode/AGENTS-opencode.md` へ symlink し、`opencode.json` の `instructions` で追加読み込みする (AGENTS.md は 1 枚しか読まれないため) |
 
 ### rules (agents/rules/)
 
