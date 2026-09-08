@@ -69,13 +69,14 @@
 
     # 旧配布先 (~/.codex/skills) に残った dotfiles 由来の symlink を撤去する。
     # 残すと Codex が同じスキルを 2 回列挙する (同名スキルはマージされない仕様)。
+    # 改名前の claude/skills/ を指すリンクも対象にする (このディレクトリはもう存在しない)。
     codex_skills_dir="$HOME/.codex/skills"
     if [ -d "$codex_skills_dir" ]; then
       for link in "$codex_skills_dir"/*; do
         [ -L "$link" ] || continue
         target="$(readlink "$link")"
         case "$target" in
-          "${dotfilesRoot}"/agents/skills/* | "$src_skills_dir"/*)
+          "$src_skills_dir"/* | "${dotfilesRoot}"/claude/skills/*)
             run rm -f "$link"
             ;;
         esac
