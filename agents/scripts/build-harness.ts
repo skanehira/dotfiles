@@ -13,7 +13,7 @@
 
 import { basename, dirname, join, relative, resolve } from "jsr:@std/path@1";
 import { walk } from "jsr:@std/fs@1/walk";
-import { parseSubagent, toCodexToml, toOpencodeMarkdown } from "./sync-subagents.ts";
+import { parseSubagent, toCodexToml, toOpencodeMarkdown } from "./subagent-format.ts";
 
 /** 語彙表。`{{@<name>}}` → ランタイム別の実語。vocabulary.json の形と一致させる */
 export type Vocabulary = Record<string, Record<string, string>>;

@@ -4,9 +4,8 @@ import {
   parseSubagent,
   toCodexToml,
   toOpencodeMarkdown,
-} from "./sync-subagents.ts";
+} from "./subagent-format.ts";
 
-const SCRIPT = new URL("./sync-subagents.ts", import.meta.url).pathname;
 
 /** frontmatter と body を差し替えられるフィクスチャ。既定は実正本に近い形 */
 function subagentMarkdown(
@@ -138,30 +137,4 @@ Deno.test("toCodexToml_with_triple_quote_in_body_throws_instead_of_emitting_brok
     Error,
     "review-impl: 本文に ''' が含まれるため TOML の literal string に入れられません",
   );
-});
-
-Deno.test("main_generates_from_source_prunes_only_its_own_output_and_keeps_hand_written_files", async () => {
-  const src = await Deno.makeTempDir();
-  const out = await Deno.makeTempDir();
-  try {
-    await Deno.writeTextFile(`${src}/a.md`, subagentMarkdown({ frontmatter: "name: a\ndescription: da" }));
-    await Deno.writeTextFile(`${src}/b.md`, subagentMarkdown({ frontmatter: "name: b\ndescription: db" }));
-    // 前回の生成物。正本から消えたので撤去されるべき
-    await Deno.writeTextFile(`${out}/gone.toml`, `${GENERATED_MARKER}\nname = "gone"\n`);
-    // 人が置いた同拡張子のファイル。マーカーが無いので残すべき
-    await Deno.writeTextFile(`${out}/hand-written.toml`, 'name = "hand-written"\n');
-    // 別拡張子。対象外なので残すべき
-    await Deno.writeTextFile(`${out}/notes.txt`, "keep\n");
-
-    const { code } = await new Deno.Command(Deno.execPath(), {
-      args: ["run", "--allow-read", "--allow-write", SCRIPT, src, "codex", out],
-    }).output();
-    assertEquals(code, 0);
-
-    const names = [...Deno.readDirSync(out)].map((e) => e.name).sort();
-    assertEquals(names, ["a.toml", "b.toml", "hand-written.toml", "notes.txt"]);
-  } finally {
-    await Deno.remove(src, { recursive: true });
-    await Deno.remove(out, { recursive: true });
-  }
 });
