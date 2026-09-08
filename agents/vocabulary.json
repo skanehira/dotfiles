@@ -1,0 +1,108 @@
+{
+  "_comment": [
+    "ランタイム中立の語彙 → 各ランタイムの実語。agents/scripts/build-harness.ts が読む。",
+    "本文には {{@<key>}} の形で書く。素の {{...}} は既存文書 ({{transcript}} 等) と衝突するので使わない。",
+    "task 系を 3 つに分けているのは Claude 方向を全単射に保つため。1 つに畳むと",
+    "TaskCreate / TaskUpdate / TodoWrite に戻せず、可逆性の検証が成立しない。"
+  ],
+  "ask-user": {
+    "claude": "AskUserQuestion",
+    "codex": "request_user_input",
+    "opencode": "question"
+  },
+  "todo-write": {
+    "claude": "TodoWrite",
+    "codex": "update_plan",
+    "opencode": "todowrite"
+  },
+  "task-create": {
+    "claude": "TaskCreate",
+    "codex": "update_plan",
+    "opencode": "todowrite"
+  },
+  "task-update": {
+    "claude": "TaskUpdate",
+    "codex": "update_plan",
+    "opencode": "todowrite"
+  },
+  "spawn-subagent": {
+    "claude": "Agent ツール",
+    "codex": "spawn_agent",
+    "opencode": "task ツール"
+  },
+  "invoke-skill": {
+    "claude": "Skill ツール",
+    "codex": "`$<name>` 形式のスキル呼び出し",
+    "opencode": "skill ツール"
+  },
+  "web-fetch": {
+    "claude": "WebFetch",
+    "codex": "curl",
+    "opencode": "webfetch"
+  },
+  "web-search": {
+    "claude": "WebSearch",
+    "codex": "web search",
+    "opencode": "websearch"
+  },
+  "background-run": {
+    "claude": "run_in_background",
+    "codex": "バックグラウンド実行",
+    "opencode": "バックグラウンド実行"
+  },
+  "plan-mode": {
+    "claude": "plan mode",
+    "codex": "Plan mode",
+    "opencode": "plan agent"
+  },
+  "devtools-mcp": {
+    "claude": "chrome-devtools:",
+    "codex": "chrome-devtools",
+    "opencode": "chrome-devtools (未配布)"
+  },
+  "explore-agent": {
+    "claude": "Explore",
+    "codex": "explorer",
+    "opencode": "explore"
+  },
+  "general-agent": {
+    "claude": "general-purpose",
+    "codex": "worker",
+    "opencode": "general"
+  },
+  "headless-run": {
+    "claude": "claude -p",
+    "codex": "codex exec",
+    "opencode": "opencode run"
+  },
+  "instructions-file": {
+    "claude": "CLAUDE.md",
+    "codex": "AGENTS.md",
+    "opencode": "AGENTS.md"
+  },
+  "rules-root": {
+    "claude": "~/.claude/rules",
+    "codex": "~/.agents/rules/codex",
+    "opencode": "~/.agents/rules/opencode"
+  },
+  "rules-import": {
+    "claude": "@rules",
+    "codex": "~/.agents/rules/codex",
+    "opencode": "~/.agents/rules/opencode"
+  },
+  "skills-root": {
+    "claude": "~/.claude/skills",
+    "codex": "~/.codex/skills",
+    "opencode": "~/.config/opencode/skills"
+  },
+  "subagents-root": {
+    "claude": "~/.claude/agents",
+    "codex": "~/.codex/agents",
+    "opencode": "~/.config/opencode/agents"
+  },
+  "scripts-root": {
+    "claude": "~/.claude/scripts",
+    "codex": "~/.claude/scripts",
+    "opencode": "~/.claude/scripts"
+  }
+}

@@ -11,7 +11,8 @@
  * 現時点では純粋関数だけのライブラリで、CLI と配布への接続は配布切り替えのフェーズで足す。
  */
 
-import { basename, dirname, join, resolve } from "jsr:@std/path@1";
+import { basename, dirname, join, relative, resolve } from "jsr:@std/path@1";
+import { walk } from "jsr:@std/fs@1/walk";
 
 /** 語彙表。`{{@<name>}}` → ランタイム別の実語。vocabulary.json の形と一致させる */
 export type Vocabulary = Record<string, Record<string, string>>;
@@ -213,4 +214,263 @@ export function assertSafeOutRoot(outRoot: string, dotfilesRoot: string): void {
   if (target === root || target.startsWith(`${root}/`)) {
     throw new Error(`出力先が正本の中を指しています: ${outRoot} → ${target}`);
   }
+}
+
+/** 生成物の台帳。prune はここに載っているものだけを対象にする */
+export const MANIFEST_NAME = ".harness-manifest.json";
+
+const GENERATOR = "agents/scripts/build-harness.ts";
+
+/** 前回の台帳にあって今回書かれなかったものが撤去対象 */
+export function planPrune(previous: string[], current: string[]): string[] {
+  const now = new Set(current);
+  return previous.filter((p) => !now.has(p)).sort();
+}
+
+async function readManifest(outDir: string): Promise<string[]> {
+  try {
+    const parsed = JSON.parse(await Deno.readTextFile(join(outDir, MANIFEST_NAME)));
+    return Array.isArray(parsed?.paths) ? parsed.paths : [];
+  } catch {
+    return [];
+  }
+}
+
+export type BuildOptions = {
+  baseDir: string;
+  overlayDir: string;
+  outDir: string;
+  runtime: string;
+  vocabulary: Vocabulary;
+  dotfilesRoot: string;
+};
+
+/**
+ * base を 1 ランタイム分の完成品へ変換して outDir に配る。
+ *
+ * `.md` は overlay をマージしてから置換し、それ以外はパーミッションごと素通しでコピーする
+ * (スキルの scripts/ には実行ビットを持つファイルがあり、落とすとスキルが壊れる)。
+ *
+ * 生成は outDir の隣の staging に行い、閉包チェックを通ってから rename で運ぶ。途中で
+ * 失敗しても配布先が半端な状態で残らない。staging を隣に置くのは同一ファイルシステムを
+ * 保証して rename を成立させるため。
+ */
+export async function buildTree(
+  options: BuildOptions,
+): Promise<{ written: string[]; pruned: string[] }> {
+  assertSafeOutRoot(options.outDir, options.dotfilesRoot);
+
+  const staging = `${options.outDir}.harness-staging-${crypto.randomUUID().slice(0, 8)}`;
+  try {
+    const written: string[] = [];
+    for await (const entry of walk(options.baseDir, { includeDirs: false })) {
+      const rel = relative(options.baseDir, entry.path);
+      if (basename(rel) === ".DS_Store") continue;
+
+      const destination = join(staging, rel);
+      await Deno.mkdir(dirname(destination), { recursive: true });
+
+      if (rel.endsWith(".md")) {
+        let overlay = "";
+        try {
+          overlay = await Deno.readTextFile(join(options.overlayDir, rel));
+        } catch {
+          // overlay が無いファイルは base のまま通す
+        }
+        const merged = mergeSections(await Deno.readTextFile(entry.path), overlay);
+        await Deno.writeTextFile(
+          destination,
+          substitute(merged, options.vocabulary, options.runtime),
+        );
+      } else {
+        // copyFile はパーミッションごと複製する。スキルの scripts/ には実行ビットを
+        // 持つファイルがあり、テキストとして読み書きし直すと落ちる。
+        await Deno.copyFile(entry.path, destination);
+      }
+      written.push(rel);
+    }
+    written.sort();
+
+    const previous = await readManifest(options.outDir);
+    await Deno.writeTextFile(
+      join(staging, MANIFEST_NAME),
+      `${JSON.stringify({ generatedBy: GENERATOR, paths: written }, null, 2)}\n`,
+    );
+
+    await Deno.mkdir(options.outDir, { recursive: true });
+    for (const rel of [...written, MANIFEST_NAME]) {
+      const destination = join(options.outDir, rel);
+      await Deno.mkdir(dirname(destination), { recursive: true });
+      await Deno.rename(join(staging, rel), destination);
+    }
+
+    const pruned = planPrune(previous, written);
+    for (const rel of pruned) {
+      try {
+        await Deno.remove(join(options.outDir, rel));
+      } catch {
+        // 既に人が消していても失敗にしない
+      }
+    }
+    return { written, pruned };
+  } finally {
+    try {
+      await Deno.remove(staging, { recursive: true });
+    } catch {
+      // staging を作る前に落ちた場合は何もしない
+    }
+  }
+}
+
+export type BuildFileOptions = {
+  baseFile: string;
+  overlayFile: string;
+  outFile: string;
+  runtime: string;
+  vocabulary: Vocabulary;
+  dotfilesRoot: string;
+};
+
+/**
+ * 単一ファイルを 1 ランタイム分に変換して配る (グローバル指示 AGENTS.md 用)。
+ *
+ * 配布先のファイル名がランタイムごとに違う (~/.claude/CLAUDE.md と ~/.codex/AGENTS.md) ので
+ * ディレクトリ単位の buildTree では扱えない。出力が固定 1 ファイルなので台帳も prune も要らない。
+ */
+export async function buildFile(options: BuildFileOptions): Promise<void> {
+  assertSafeOutRoot(options.outFile, options.dotfilesRoot);
+
+  let overlay = "";
+  try {
+    overlay = await Deno.readTextFile(options.overlayFile);
+  } catch {
+    // overlay が無ければ base のまま通す
+  }
+  const merged = mergeSections(await Deno.readTextFile(options.baseFile), overlay);
+  await Deno.mkdir(dirname(options.outFile), { recursive: true });
+  await Deno.writeTextFile(
+    options.outFile,
+    substitute(merged, options.vocabulary, options.runtime),
+  );
+}
+
+/**
+ * 旧方式が張った symlink だけを撤去する。
+ *
+ * 配布をやめたディレクトリ (~/.agents/skills) には他ツールが置いた実体が同居しており、
+ * Home Manager は activation script が張った symlink を自動では撤去しない。判定は
+ * 「target が dotfilesRoot 配下に解決する symlink」で、実測では我々の 28 件ちょうどに
+ * 一致し、他ツールの 9 件 (すべて実体ディレクトリ) は掛からない。
+ */
+export async function removeDotfilesLinks(
+  dir: string,
+  dotfilesRoot: string,
+): Promise<string[]> {
+  let entries: Deno.DirEntry[];
+  try {
+    entries = [...Deno.readDirSync(dir)];
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return [];
+    throw error;
+  }
+
+  const root = resolveIntendedPath(dotfilesRoot);
+  const removed: string[] = [];
+  for (const entry of entries) {
+    const path = join(dir, entry.name);
+    if (!Deno.lstatSync(path).isSymlink) continue;
+
+    let target: string;
+    try {
+      target = Deno.realPathSync(path);
+    } catch {
+      // 壊れた symlink も対象にできるよう readlink から解決する
+      target = resolve(dirname(path), Deno.readLinkSync(path));
+    }
+    if (target === root || target.startsWith(`${root}/`)) {
+      await Deno.remove(path, { recursive: true });
+      removed.push(entry.name);
+    }
+  }
+  return removed.sort();
+}
+
+/** vocabulary.json を読む。`_comment` などメタキーは語彙として扱わない */
+export async function loadVocabulary(path: string): Promise<Vocabulary> {
+  const parsed = JSON.parse(await Deno.readTextFile(path));
+  const vocabulary: Vocabulary = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (key.startsWith("_")) continue;
+    vocabulary[key] = value as Record<string, string>;
+  }
+  return vocabulary;
+}
+
+const USAGE = `usage:
+  build-harness.ts --runtime <name> --base <dir> --out <dir> \\
+      [--overlay <dir>] [--vocabulary <file>] [--dotfiles-root <dir>]
+  build-harness.ts --remove-dotfiles-links <dir> --dotfiles-root <dir>`;
+
+function parseArgs(args: string[]): Record<string, string> {
+  const parsed: Record<string, string> = {};
+  for (let i = 0; i < args.length; i += 2) {
+    if (!args[i].startsWith("--") || args[i + 1] === undefined) {
+      throw new Error(`引数を解釈できません: ${args[i]}\n${USAGE}`);
+    }
+    parsed[args[i].slice(2)] = args[i + 1];
+  }
+  return parsed;
+}
+
+async function main(args: string[]): Promise<number> {
+  const options = parseArgs(args);
+
+  if (options["remove-dotfiles-links"]) {
+    const dotfilesRoot = options["dotfiles-root"];
+    if (!dotfilesRoot) throw new Error(`--dotfiles-root が要ります\n${USAGE}`);
+    const removed = await removeDotfilesLinks(options["remove-dotfiles-links"], dotfilesRoot);
+    console.log(`撤去した旧 symlink: ${removed.length} 件${removed.length ? ` (${removed.join(", ")})` : ""}`);
+    return 0;
+  }
+
+  const { runtime, base, out } = options;
+  if (!runtime || !base || !out) {
+    console.error(USAGE);
+    return 2;
+  }
+  const vocabulary = options.vocabulary ? await loadVocabulary(options.vocabulary) : {};
+  const dotfilesRoot = options["dotfiles-root"] ?? ".";
+
+  // --base がファイルなら単一ファイルモード (グローバル指示)
+  if ((await Deno.stat(base)).isFile) {
+    await buildFile({
+      baseFile: base,
+      overlayFile: options.overlay ?? `${base}.__no_overlay__`,
+      outFile: out,
+      runtime,
+      vocabulary,
+      dotfilesRoot,
+    });
+    console.log(`${runtime}: ${base} → ${out}`);
+    return 0;
+  }
+
+  const result = await buildTree({
+    baseDir: base,
+    overlayDir: options.overlay ?? `${base}/__no_overlay__`,
+    outDir: out,
+    runtime,
+    vocabulary,
+    dotfilesRoot,
+  });
+  console.log(
+    `${runtime}: ${result.written.length} 件を生成${
+      result.pruned.length ? ` / ${result.pruned.length} 件を撤去 (${result.pruned.join(", ")})` : ""
+    } → ${out}`,
+  );
+  return 0;
+}
+
+if (import.meta.main) {
+  Deno.exit(await main(Deno.args));
 }
