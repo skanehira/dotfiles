@@ -1,6 +1,6 @@
 # テスト共通ルール
 
-詳細なコード例 → `rules/core/references/testing-examples.md`、言語別テスト命名 → `references/test-naming.md`、テストダブルの使い分け → `references/test-doubles.md`（必要になったら Read する）。
+詳細なコード例 → `~/.claude/rules/core/references/testing-examples.md`、言語別テスト命名 → `references/test-naming.md`、テストダブルの使い分け → `references/test-doubles.md`（必要になったら Read する）。
 
 ## テスト戦略（上位方針）
 
@@ -34,7 +34,7 @@
   - (b) **必須**。テスト本体に、**テスト対象を no-op に置き換えたら失敗する正のアサーション**が 1 つ以上ある。状態の assert（`expect(button).toBeDisabled()`）でも、対象が無ければ throw する取得クエリ（`getByRole(...)`）でもよい。`queryBy*` のように不在でも throw しないクエリは (b) を満たさない
   - (c) 対になる正の振る舞い（enabled なら submit される）が同一または隣接テストで検証されている
 - ここでいう否定形とは「何かが起きない・存在しない」ことだけを述べるアサーションを指す。**戻り値や状態の期待値として `null` / `false` / 空配列を完全一致で assert するのは正のアサーション**であり対象外（例: 仕様「未登録キーは null を返す」に対する `expect(store.get('missing')).toBeNull()`、`expect(isValidEmail('')).toBe(false)`）
-- 3 条件を満たさない否定形は「何が起きるか」の正のアサーションに書き換える（例: `not.toThrow()` → 戻り値の期待値を完全一致で assert）。コード例 → `rules/core/references/testing-examples.md`
+- 3 条件を満たさない否定形は「何が起きるか」の正のアサーションに書き換える（例: `not.toThrow()` → 戻り値の期待値を完全一致で assert）。コード例 → `~/.claude/rules/core/references/testing-examples.md`
 
 ## モックと外部依存
 

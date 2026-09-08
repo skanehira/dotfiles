@@ -77,7 +77,7 @@ skills/
 
 ## モデル方針 (ループエンジニアリング)
 
-モデル割当の正は **`rules/core/orchestration.md`** (トリアージ手順・割当マトリクス・alias フォールバック規定)。ここではスキル側への適用だけを記す。原則: **実行器のモデル ≤ 検証器のモデル**。設計思想の全体像 (7 要素・三大失敗モード) は [rules/core/references/loop-engineering.md](../rules/core/references/loop-engineering.md) を参照。
+モデル割当の正は **`~/.claude/rules/core/orchestration.md`** (トリアージ手順・割当マトリクス・alias フォールバック規定)。ここではスキル側への適用だけを記す。原則: **実行器のモデル ≤ 検証器のモデル**。設計思想の全体像 (7 要素・三大失敗モード) は `~/.claude/rules/core/references/loop-engineering.md` を参照。
 
 | 対象 | モデル | 理由 |
 |---|---|---|
@@ -87,7 +87,7 @@ skills/
 | dev-impl-implementer subagent | `model: opus` (frontmatter + 呼び出し時明示) | 実行器 |
 | review-impl subagent (統合レビュワー) | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。**呼び出し時の明示を忘れないこと**。model 未指定は frontmatter ではなく親のセッションモデルを継承するため、frontmatter は防御にならない (機械ゲートは無いので自律遵守する) |
 | tech-investigation subagent (dev-spec フェーズ 5) | `model: opus` (frontmatter + 呼び出し時明示) | 「何をどこまで検証すれば行けると言えるか」を自分で設計する探索的な調査 |
-| コミット実行・巨大出力のテスト実行 | `model: haiku` (subagent) | 機械実行。`rules/core/orchestration.md`「委譲の判断」 |
+| コミット実行・巨大出力のテスト実行 | `model: haiku` (subagent) | 機械実行。`~/.claude/rules/core/orchestration.md`「委譲の判断」 |
 
 モデル指定はすべて alias (`opus` / `sonnet` / `haiku`) で書く (固定 ID 禁止。世代交代への自動追従のため)。
 
@@ -105,7 +105,7 @@ skills/
 | 並列化 | 単発 | 同一メッセージ内の複数 Agent tool_use で並列起動可 |
 | hook 適用 | parent の Stop/PostToolUse/UserPromptSubmit | parent の hooks は継承されない |
 
-subagent への委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」と「fresh context の独立性 (実装者と別コンテキストのレビュー)」のために行う。逐次依存する修正・コミットは**メインループ直営** (`rules/core/orchestration.md`「委譲の判断」)。
+subagent への委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」と「fresh context の独立性 (実装者と別コンテキストのレビュー)」のために行う。逐次依存する修正・コミットは**メインループ直営** (`~/.claude/rules/core/orchestration.md`「委譲の判断」)。
 
 **dev-impl の実装だけがこの原則の明示的な例外**で、issue 1 件ずつの逐次実装であっても `dev-impl-implementer` subagent に出す。issue が自己完結しているため親による文脈編纂が不要で、issue ごとに fresh context で始まることで長い run でもメインループのコンテキストが単調増加しない。前提は **implementer が葉である** (子 subagent を起動しない) こと — 葉性は `agents/subagents/dev-impl-implementer.md` の `tools` から `Agent` を除いて構造的に強制する (subagent には親の hooks が届かず、指示文では違反を検出できないため)。
 

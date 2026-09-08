@@ -25,7 +25,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ### 変更タイプのプレフィックス
 
-Tidy First (rules/core/tdd.md) に基づき、subject に変更タイプを明示する：
+Tidy First (~/.claude/rules/core/tdd.md) に基づき、subject に変更タイプを明示する：
 
 - `[STRUCTURAL]`: 動作を変更しないコミット
 - `[BEHAVIORAL]`: 動作を変更するコミット

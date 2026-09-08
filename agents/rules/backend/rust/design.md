@@ -5,7 +5,7 @@ paths:
 
 # Rust 設計思想
 
-共通の設計原則は `core/design.md` を参照。
+共通の設計原則は `~/.claude/rules/core/design.md` を参照。
 
 ## 型システムの活用
 

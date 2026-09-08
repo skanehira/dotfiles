@@ -66,7 +66,7 @@ if let Some(value) = optional_value {
 
 ## 命名規則
 
-共通の命名規則は `core/design.md` を参照。
+共通の命名規則は `~/.claude/rules/core/design.md` を参照。
 
 ### トレイト名
 
