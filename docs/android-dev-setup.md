@@ -249,7 +249,7 @@ proot-distro login debian --user skanehira --shared-tmp
 | treesitter の parser | nvim-treesitter は parser を cc でコンパイルする。手順 3 で `build-essential` を入れているが、proot でのビルドは遅い。数が多いと待たされる |
 | クリップボード | `tmux/tmux.conf` の Linux 分岐は `xsel` を前提としている。proot 内に X が無いので、copy-mode の `y` によるコピーと `prefix + ]` による貼り付けが両方失敗する |
 | OpenCode の接続先 | `agents/bindings/opencode/opencode.json` は自宅の `spark-head.local` を mDNS で引く。外出先ではモデルに繋がらない |
-| Claude Code の SessionStart hook | `agents/bindings/claude/settings.json` の 1 本が `/Users/skanehira/...` という mac 固定パス (herdr 用) を指す。Linux では毎回失敗するが、他の hook と Claude Code 本体には影響しない |
+| Claude Code の SessionStart hook | `agents/bindings/claude/settings.json` の 1 本が `/Users/skanehira/...` という mac 固定パス (herdr 用) を指す。Linux では毎回失敗するが、Claude Code 本体には影響しない (ほかに登録されているのは orca の 12 件だけで、これらは元から no-op) |
 | Claude Code の自動更新 | 更新でバイナリが差し替わる。壊れた場合は `nix/modules/home/env.nix` の `home.sessionVariables` に `DISABLE_AUTOUPDATER = "1"` を足して `hms` する |
 | Vite+ のシェル設定追記 | installer は `~/.zshrc` などに env の source を追記しようとするが、Home Manager がそれらを read-only symlink として管理しているので失敗する。PATH は `home.sessionPath` で通すので実害はない |
 | DeX | この端末は外部ディスプレイ接続時のみ。内蔵画面では使えない |
