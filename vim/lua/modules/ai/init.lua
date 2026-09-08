@@ -7,11 +7,19 @@ local comments = require("modules.ai.comments")
 
 local M = {}
 
+-- opencode は Spark の接続先解決 (LAN/Tailscale プローブ + 配信モデル検査 + --model 注入) を
+-- 持つ ocsp を経由させる。argv の先頭 4 要素が固定前置になり、以降のユーザー引数が
+-- zsh -c '<script>' ocsp <args...> の $@ に入る
+local OCSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
+  .. "; source ~/.config/zsh/functions/opencode-spark.zsh; ocsp \"$@\""
+
 -- ツール固有の設定
---   display   : 入力バッファ名・通知に出す表示名
---   base_args : 起動時に必ず前置する CLI 引数
---   shift_tab : Shift+Tab として送るキー（herdr send-keys のキー名）
---   newline   : 送信テキストの末尾に改行を付けるか
+--   display     : 入力バッファ名・通知に出す表示名
+--   base_args   : 起動時に必ず前置する CLI 引数
+--   shift_tab   : Shift+Tab として送るキー（herdr send-keys のキー名）
+--   newline     : 送信テキストの末尾に改行を付けるか
+--   argv_prefix : 起動 argv の固定前置（省略時は { ツール名 }）
+--   name        : herdr のエージェント名（省略時は argv の先頭要素）
 local TOOL_CONFIG = {
   claude = {
     display = "Claude",
@@ -22,6 +30,12 @@ local TOOL_CONFIG = {
     display = "Codex",
     newline = true,
     shift_tab = "shift+tab",
+  },
+  opencode = {
+    display = "OpenCode",
+    shift_tab = "shift+tab",
+    argv_prefix = { "zsh", "-c", OCSP_SCRIPT, "ocsp" },
+    name = "opencode",
   },
 }
 
@@ -84,16 +98,18 @@ local function get_or_create_pane(tool_name, args)
     return pane_id
   end
 
-  -- argvを構築（引数があれば追加）
-  local argv = { tool_name }
+  -- argvを構築（ツール固有の前置 + ユーザー引数）
+  local cfg = TOOL_CONFIG[tool_name]
+  local argv = vim.deepcopy(cfg.argv_prefix or { tool_name })
   if args and args ~= "" then
     vim.list_extend(argv, vim.split(args, "%s+", { trimempty = true }))
   end
 
-  -- 新規ペインを作成（既存nvimペイン40% / 新規ツールペイン60%）、シェルを経由せずargvを直接起動する
+  -- 新規ペインを作成（既存nvimペイン40% / 新規ツールペイン60%）、argvを直接起動する
+  -- （opencode だけは ocsp を呼ぶために zsh を挟む。claude/codex はシェルを経由しない）
   -- コマンド終了時にペインも自動的に閉じられる
   local err
-  pane_id, err = herdr.create_pane(40, argv)
+  pane_id, err = herdr.create_pane(40, argv, cfg.name)
   if not pane_id then
     vim.notify("herdrペインの作成に失敗しました:\n" .. (err or "不明なエラー"), vim.log.levels.ERROR)
     return nil
@@ -373,6 +389,13 @@ function M.open_codex(args, context)
   open_input_buffer("codex", args, context or find_thread_context_at_cursor("codex"))
 end
 
+-- opencodeを開く（ocsp 経由。context 無し時は Claude 同様にカーソル位置のスレッドを検索）
+-- @param args string|nil コマンド引数（例: "--continue"）
+-- @param context table|nil 範囲コンテキスト
+function M.open_opencode(args, context)
+  open_input_buffer("opencode", args, context or find_thread_context_at_cursor("opencode"))
+end
+
 -- コメントスタックを一括送信
 function M.submit(tool_name)
   if not herdr.is_in_herdr() then
@@ -487,6 +510,14 @@ function M.setup()
     desc = "Open Codex in herdr pane with input buffer",
   })
 
+  -- :Opencode コマンド（引数を受け取る）
+  vim.api.nvim_create_user_command("Opencode", function(opts)
+    M.open_opencode(opts.args)
+  end, {
+    nargs = "*",
+    desc = "Open OpenCode in herdr pane with input buffer",
+  })
+
   -- コメントスタック操作系コマンド
   vim.api.nvim_create_user_command("ClaudeSubmit", function() M.submit("claude") end,
     { desc = "Submit stacked Claude comments" })
@@ -504,6 +535,14 @@ function M.setup()
     { desc = "Delete Claude comment at cursor line" })
   vim.api.nvim_create_user_command("CodexDelete", function() M.delete_comment_at_cursor("codex") end,
     { desc = "Delete Codex comment at cursor line" })
+  vim.api.nvim_create_user_command("OpencodeSubmit", function() M.submit("opencode") end,
+    { desc = "Submit stacked OpenCode comments" })
+  vim.api.nvim_create_user_command("OpencodeClear", function() M.clear_comments("opencode") end,
+    { desc = "Clear OpenCode comment stack" })
+  vim.api.nvim_create_user_command("OpencodeList", function() M.list_comments("opencode") end,
+    { desc = "List OpenCode comments in quickfix" })
+  vim.api.nvim_create_user_command("OpencodeDelete", function() M.delete_comment_at_cursor("opencode") end,
+    { desc = "Delete OpenCode comment at cursor line" })
 
   local map_opts = { noremap = true, silent = true }
 
@@ -553,6 +592,22 @@ function M.setup()
     M.open_codex("resume --last", ctx)
   end), vim.tbl_extend("force", map_opts, { desc = "Open Codex resume --last with selection context" }))
 
+  -- キーマップ: OpenCode（ノーマルモード）
+  vim.keymap.set("n", "<leader>oc", "<Cmd>Opencode<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open OpenCode" }))
+
+  vim.keymap.set("n", "<leader>or", "<Cmd>Opencode --continue<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open OpenCode --continue" }))
+
+  -- キーマップ: OpenCode（ビジュアルモード）
+  vim.keymap.set("x", "<leader>oc", visual_keymap_handler(function(ctx)
+    M.open_opencode("", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open OpenCode with selection context" }))
+
+  vim.keymap.set("x", "<leader>or", visual_keymap_handler(function(ctx)
+    M.open_opencode("--continue", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open OpenCode --continue with selection context" }))
+
   -- キーマップ: コメントスタック操作
   vim.keymap.set("n", "<leader>aS", "<Cmd>ClaudeSubmit<CR>",
     vim.tbl_extend("force", map_opts, { desc = "Submit Claude comment stack" }))
@@ -570,6 +625,14 @@ function M.setup()
     vim.tbl_extend("force", map_opts, { desc = "Delete Claude comment at cursor line" }))
   vim.keymap.set("n", "<leader>xd", "<Cmd>CodexDelete<CR>",
     vim.tbl_extend("force", map_opts, { desc = "Delete Codex comment at cursor line" }))
+  vim.keymap.set("n", "<leader>oS", "<Cmd>OpencodeSubmit<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Submit OpenCode comment stack" }))
+  vim.keymap.set("n", "<leader>oX", "<Cmd>OpencodeClear<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Clear OpenCode comment stack" }))
+  vim.keymap.set("n", "<leader>oL", "<Cmd>OpencodeList<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "List OpenCode comments" }))
+  vim.keymap.set("n", "<leader>od", "<Cmd>OpencodeDelete<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Delete OpenCode comment at cursor line" }))
 end
 
 return M
