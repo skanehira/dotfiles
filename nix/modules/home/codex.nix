@@ -1,5 +1,4 @@
 {
-  config,
   lib,
   pkgs,
   dotfilesRoot,
@@ -43,6 +42,12 @@
     if [ ! -x "$HOME/.deno/bin/deno" ]; then
       warnEcho "deno が無いので Codex 向けハーネスの生成をスキップした"
     else
+      run "$HOME/.deno/bin/deno" run --allow-read --allow-write --allow-env \
+        "${dotfilesRoot}/agents/scripts/build-harness.ts" --runtime codex \
+        --dotfiles-root "${dotfilesRoot}" --vocabulary "${dotfilesRoot}/agents/vocabulary.json" \
+        --base "${dotfilesRoot}/agents/AGENTS.md" \
+        --overlay "${dotfilesRoot}/agents/bindings/codex/overlay/AGENTS.md" \
+        --out "$HOME/.codex/AGENTS.md"
       run "$HOME/.deno/bin/deno" run --allow-read --allow-write --allow-env \
         "${dotfilesRoot}/agents/scripts/build-harness.ts" --runtime codex \
         --dotfiles-root "${dotfilesRoot}" --vocabulary "${dotfilesRoot}/agents/vocabulary.json" \
@@ -108,8 +113,4 @@
     fi
   '';
 
-  home.file = {
-    ".codex/AGENTS.md".source =
-      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/codex/AGENTS.md";
-  };
 }

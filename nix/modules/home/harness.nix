@@ -23,6 +23,15 @@ let
         --out "${out}" ${extra}
     '';
 
+  # グローバル指示は配布先のファイル名がランタイムごとに違うので単一ファイルで扱う
+  buildFile =
+    runtime: out:
+    build runtime ''
+      --base "${dotfilesRoot}/agents/AGENTS.md" \
+        --overlay "${dotfilesRoot}/agents/bindings/${runtime}/overlay/AGENTS.md" \
+        --out "${out}"
+    '';
+
   # deno は bootstrapDeno が入れる。無ければ生成をスキップして activation は成功させる
   # (生成物は前回のまま残る)。
   withDeno = body: ''
@@ -39,18 +48,22 @@ let
   ];
 in
 {
-  # ハーネス (ルール / スキル / subagent) を 3 ランタイム分コンパイルして配る。
+  # ハーネス (グローバル指示 / ルール / スキル / subagent) を 3 ランタイム分コンパイルして配る。
   #
   # 正本 agents/ は 1 セットで、ランタイム別の差分は agents/bindings/<runtime>/overlay/ に
-  # 節単位で置く。読み手はそれぞれ自分の語彙で書かれた完成品だけを読む。
+  # 節単位で置く。読み手はそれぞれ自分の語彙で書かれた完成品 1 セットだけを読む。
   #
-  # グローバル指示 (AGENTS.md) はまだ symlink のまま。3 者で中身が違い、overlay へ移すのは
-  # 語彙の中立化と同じフェーズでまとめて行う。
+  # グローバル指示は overlay を base にマージした 1 枚を配る。Codex も OpenCode も
+  # AGENTS.md を 1 枚しか読まないため、以前は「共通の正本を別途 Read せよ」と指示する
+  # 別文書を配っていた。マージすればその往復が要らなくなる。
+  # Claude 向けの overlay は置かない (base = 生成物 のままにして可逆性の検証を成立させる)。
   home.activation.buildHarness = after (withDeno ''
+    ${buildFile "claude" "$HOME/.claude/CLAUDE.md"}
     ${buildTree "claude" "rules" "$HOME/.claude/rules" ""}
     ${buildTree "claude" "skills" "$HOME/.claude/skills" ""}
     ${buildTree "claude" "subagents" "$HOME/.claude/agents" ""}
 
+    ${buildFile "opencode" "$HOME/.config/opencode/AGENTS.md"}
     ${buildTree "opencode" "rules" "$HOME/.agents/rules/opencode" ""}
     ${buildTree "opencode" "skills" "$HOME/.config/opencode/skills" ""}
     ${buildTree "opencode" "subagents" "$HOME/.config/opencode/agents" "--subagent-format opencode"}
