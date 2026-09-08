@@ -32,9 +32,9 @@ echo $OPENCODE_DISABLE_CLAUDE_CODE_SKILLS             # 1 でなければター�
 
 ## hooks は OpenCode では動かない
 
-**`fix-round-guard` は OpenCode では発火しない。** OpenCode はシェル hooks を持たず、JS プラグイン API しか無い。しかもそのプラグインはコマンドに stdin を渡さず stdout も解釈しないため、deny する機械ゲートとしては使えない。
+**OpenCode に hooks は配られていない。** そもそもこのハーネスは機械ゲートを 1 本も持っていないうえ、OpenCode はシェル hooks 自体を持たない (JS プラグイン API しか無く、しかもコマンドに stdin を渡さず stdout も解釈しないため deny するゲートには使えない)。
 
-したがって OpenCode 上では dev-impl の修正ラウンド上限が**機械ゲート無しの自律遵守**になり、上記「評価関数」が採点者として挙げる 4 者のうち hooks が居ない。残るのはユーザー / レビュー subagent / プロジェクトの CI である。
+dev-impl の修正ラウンド上限は**自律遵守**である。
 
 ## 読み替えが要らなくなったもの / まだ要るもの
 

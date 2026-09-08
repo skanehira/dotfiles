@@ -36,7 +36,7 @@ args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
 args = ["chrome-devtools-mcp@latest"]
 
-# hooks はこのファイルには無い。ハーネスの自作 hook は fix-round-guard 1 本だけで、
-# Claude Code の Agent ツール入力に依存するため Codex へは移植していない。
+# hooks はこのファイルには無い。このハーネスは機械ゲートを 1 本も持たないので、
+# 移植すべきものが無い (Claude Code 向けにも無い)。
 # 追加するときは必ずこのファイル (system レイヤー) に書く。~/.codex/hooks.json (user レイヤー)
 # に置いたものは /hooks で承認するまで無言でスキップされ、警告も出ない。
