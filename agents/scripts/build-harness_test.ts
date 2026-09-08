@@ -9,7 +9,7 @@ import {
   substitute,
   type Vocabulary,
 } from "./build-harness.ts";
-import { GENERATED_MARKER } from "./sync-subagents.ts";
+import { GENERATED_MARKER } from "./subagent-format.ts";
 
 /**
  * 実際の vocabulary.json に近い最小の語彙表。
