@@ -154,7 +154,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - 配布先と構成は「AI エージェントのハーネス (agents/)」節を参照
 - **agents/bindings/codex/** — Codex 固有の設定 (ハーネス本体は `agents/` 直下)
   - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として dotfiles 直接 symlink され、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる (live edit 可能)
-  - `config.toml` に hooks は書いていない。自作ゲート `fix-round-guard.ts` は Claude Code の Agent ツール入力に依存するため Codex へは移植していない。Codex へ hook を配るときの置き場とレイヤーごとの発火差は `overlay/AGENTS.md` の「hooks を追加するときの置き場」節にある
+  - `config.toml` に hooks は書いていない。このハーネスは機械ゲートを 1 本も持たないので移植すべきものが無い。将来 Codex へ hook を配るときの置き場とレイヤーごとの発火差は `overlay/AGENTS.md` の「hooks を追加するときの置き場」節にある
   - `overlay/AGENTS.md` — 共通の正本にマージして `~/.codex/AGENTS.md` を生成するための Codex 固有の節
   - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける。`[mcp_servers.*]` は両レイヤーに現れる。全マシン共通のサーバ (context7 / chrome-devtools) は `config.toml` で配り、マシン固有のものは Codex が user レイヤーに書く
   - 旧方式 (Home Manager が `~/.codex/config.toml` を生成) を使っていたマシンでは、`drs` / `hms` 後に 1 回だけ `~/.codex/config.toml` から重複するキーを手で削除する。残さないと `/etc` 側の値が遮蔽される
@@ -316,7 +316,7 @@ agents/
 ├── skills/              ← 28 本
 ├── subagents/           ← 4 本 (Claude Code 形式が正本)
 ├── vocabulary.json      ← 中立語彙 → 3 ランタイムの実語 (19 件)
-├── hooks/               ← fix-round-guard.ts / herdr-agent-state.sh
+├── hooks/               ← herdr-agent-state.sh のみ (herdr 本体の配布物。自作ゲートは無い)
 ├── scripts/             ← build-harness.ts (生成器) / subagent-format.ts / mutate-check.ts ほか
 ├── knowledge-profile.md ← utility-doc-reading が読み書きする
 └── bindings/            ← ランタイム固有
@@ -393,18 +393,28 @@ symlink のまま残しているのは次のものだけ。
 
 ### hooks (agents/hooks/)
 
-deny する機械ゲートは 1 本で、ほかに herdr 連携用のスクリプトが 1 本ある。詳細と「機械ゲートを置いていない規律」は `agents/hooks/README.md` にある。
+**自作の機械ゲートは 1 本も無い。** `agents/hooks/` に置いてあるのは herdr 本体が配布する `herdr-agent-state.sh` の 1 本だけで、これは deny するゲートではなく herdr へセッション状態を渡すスクリプトである。
 
-ゲートは `settings.json` に書いた `$GHQ_ROOT` 経由の絶対パスを `deno run` で叩くので、`~/.claude/hooks` の symlink は経由しない (`GHQ_ROOT` は `nix/modules/home/env.nix` が `$HOME/dev` に設定する)。`~/.claude/hooks` が要るのは herdr の 1 本だけである。
-
-| hook | 起動元 | 役割 |
+| ファイル | 起動元 | 役割 |
 | --- | --- | --- |
-| `fix-round-guard.ts` | Claude Code の `settings.json` のみ (Agent ツール入力に依存するため Codex へは移植しない) | dev-impl の修正ラウンド上限 (2 周) を強制する |
 | `herdr-agent-state.sh` | Claude Code の `settings.json` の SessionStart (`~/.claude/hooks/` 経由) | herdr にセッション状態を渡す。herdr 本体が配布するファイルで mac の絶対パスが埋まっており、Linux では発火しない |
 
-Codex と OpenCode には hook が 1 本も配られていない (Codex は移植していないため、OpenCode はシェル hooks を持たないため)。Claude Code に残る `fix-round-guard` も検証するのは修正ラウンド数だけで、コミット subject を見るゲートはどのランタイムにも無い。したがって**コミット規約は 3 ランタイムとも自律遵守**である。Codex へ hook を追加するときの置き場は Codex 向け生成物の「hooks を追加するときの置き場」節にある (正本は `agents/bindings/codex/overlay/AGENTS.md`)。
+`~/.claude/hooks` の symlink はこの 1 本のためだけにある。ディレクトリごと消すと herdr の SessionStart が絶対パスで参照できなくなる。
 
-`settings.json` の登録は全 14 件で、上表の 2 本以外は**外部ツール orca が書き込んだ 12 件**である (12 イベントに 1 件ずつ)。orca の分は `~/.orca/agent-hooks/claude-hook.sh` が無ければ空の `{}` を返すだけで、このマシンには `~/.orca` が存在しないので全件 no-op になっている。自作 hook を数えるときはこれらと区別する。
+3 ランタイムのどれにも hooks は配っていない。Codex は移植すべきものが無く、OpenCode はシェル hooks 自体を持たない (JS プラグイン API はコマンドに stdin を渡さず stdout も解釈しないため deny するゲートに使えない)。Codex へ hook を追加したくなったときの置き場は `agents/bindings/codex/overlay/AGENTS.md` の「hooks を追加するときの置き場」節にある。
+
+`settings.json` の登録は全 13 件で、上表の 1 本以外は**外部ツール orca が書き込んだ 12 件**である (12 イベントに 1 件ずつ)。orca の分は `~/.orca/agent-hooks/claude-hook.sh` が無ければ空の `{}` を返すだけで、このマシンには `~/.orca` が存在しないので全件 no-op になっている。
+
+#### 機械ゲートを置いていない規律
+
+以下は hook で強制せず、記述による自律遵守に委ねている。**破っても止まらないことを承知したうえでの設計判断**であり、設計思想は `agents/rules/core/references/loop-engineering.md` にある。
+
+| 規律 | 正本 | 破られたときに何が起きるか |
+| --- | --- | --- |
+| コミット規約 (`<emoji> <type>: <subject>`) | `agents/rules/core/commit.md` | 形式の揃わないコミットが履歴に残る。push 前なら `git commit --amend` で直せる |
+| dev-impl の修正ラウンド上限 (2 周) | `agents/skills/dev-impl/SKILL.md` | 収束しない issue に時間とトークンが溶ける。**実測で 22 issue 中 6 件が 3 周目以降に入り、超過分だけで 5.7h を消費したことがある** |
+| 実装系ルールの遅延参照 | `agents/AGENTS.md`「実装時」 | TDD やテスト方針を知らないまま実装が進む。リマインドする仕組みは持たない |
+| subagent 起動時の `model` 明示 | `agents/rules/core/orchestration.md` | 未指定だと agent 定義の frontmatter ではなく親のセッションモデルを継承する。検証器が実行器より弱くなりうる |
 
 ### subagents (agents/subagents/)
 

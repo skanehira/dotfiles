@@ -18,8 +18,8 @@
 
     ./modules/home/harness.nix
     ./modules/home/claude.nix
-    # agents/bindings/claude/settings.json の hook 1 本 (fix-round-guard) が `deno run` で起動するので、
-    # Claude Code を使う以上 deno は外せない (bootstrap は公式 installer を curl するだけ)
+    # ハーネスの生成器 (agents/scripts/build-harness.ts) が deno で動くので外せない。
+    # harness.nix の activation がこれを呼ぶ (bootstrap は公式 installer を curl するだけ)
     ./modules/home/deno.nix
     ./modules/home/direnv.nix
     ./modules/home/env.nix

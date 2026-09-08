@@ -81,9 +81,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 
 ## hooks は Codex には配られていない
 
-**Codex 側の hooks は 0 本である。** ハーネスの自作 hook は `fix-round-guard` (dev-impl の修正ラウンド上限) 1 本だけで、これは Claude Code の Agent ツール入力に依存するため移植していない。dev-impl 系のスキルを Codex で回すときは、ラウンド上限を自律遵守する。
-
-したがって Codex 上では、上記「評価関数」が採点者として挙げる 4 者のうち hooks が居ない。残るのはユーザー / レビュー subagent / プロジェクトの CI である。
+**Codex 側の hooks は 0 本である。** そもそもこのハーネスは機械ゲートを 1 本も持っていない (Claude Code 向けにも無い) ので、移植すべきものが無い。dev-impl 系のスキルを Codex で回すときは、修正ラウンド上限を自律遵守する。
 
 ## hooks を追加するときの置き場
 
