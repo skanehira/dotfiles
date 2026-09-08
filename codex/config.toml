@@ -31,13 +31,7 @@ args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
 args = ["chrome-devtools-mcp@latest"]
 
-# コミット規約ゲート。Claude Code の settings.json と同じ hook スクリプトを共有する。
-# system レイヤー (/etc/codex/config.toml) に置いた hooks は信頼ゲート (/hooks での承認) を
-# 通らずに発火する (user レイヤーの ~/.codex/hooks.json は承認するまで無言でスキップされる)。
-# command 文字列はシェル経由で解釈されるので $GHQ_ROOT が展開でき、mac と Linux で同じ記述が使える。
-[[hooks.PreToolUse]]
-matcher = "Bash"
-[[hooks.PreToolUse.hooks]]
-type = "command"
-command = "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/agents/hooks/commit-msg-guard.ts"
-timeout = 20
+# hooks はこのファイルには無い。ハーネスの自作 hook は fix-round-guard 1 本だけで、
+# Claude Code の Agent ツール入力に依存するため Codex へは移植していない。
+# 追加するときは必ずこのファイル (system レイヤー) に書く。~/.codex/hooks.json (user レイヤー)
+# に置いたものは /hooks で承認するまで無言でスキップされ、警告も出ない。

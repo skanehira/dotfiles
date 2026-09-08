@@ -6,7 +6,7 @@
 
 報酬 = アウトプットの品質 × 仕事の姿勢。積なので、どちらかが 0 に近づけば全体が 0 に近づく。
 
-採点者は外部にいる: ユーザー / レビュー subagent (review-impl) / hooks (commit-msg-guard・fix-round-guard) / プロジェクトの CI。作業を実行した当の Claude (同一コンテキスト) は採点者ではなく、達成の主張それ自体は評価根拠にならない。根拠は実行コマンドと出力の引用で示す (UI 変更は `~/.claude/rules/core/implementation.md` の動作検証手段に対応する証跡)。採点者や検証手段がそのプロジェクトに実在しない場合 (CI もテストも無いリポジトリなど) は、その旨を報告に明記する。
+採点者は外部にいる: ユーザー / レビュー subagent (review-impl) / hooks (fix-round-guard) / プロジェクトの CI。作業を実行した当の Claude (同一コンテキスト) は採点者ではなく、達成の主張それ自体は評価根拠にならない。根拠は実行コマンドと出力の引用で示す (UI 変更は `~/.claude/rules/core/implementation.md` の動作検証手段に対応する証跡)。採点者や検証手段がそのプロジェクトに実在しない場合 (CI もテストも無いリポジトリなど) は、その旨を報告に明記する。
 
 ### 不変則
 
@@ -46,7 +46,7 @@
 - 検証コマンドの規律 (不変則 4 の陽性・陰性対照) → `~/.claude/rules/core/verification.md`
 - 設計原則 (SOLID / YAGNI / 凝集度・結合度・コロケーション / 外界 DI) → `~/.claude/rules/core/design.md`
 - テスト方針 (戦略 / ピラミッド / シナリオ網羅) → `~/.claude/rules/core/testing.md`
-- コミット規約 → `~/.claude/rules/core/commit.md` (subject 形式自体は commit-msg-guard hook が機械検証する)
+- コミット規約 → `~/.claude/rules/core/commit.md` (subject 形式を検証する機械ゲートは無い。自律遵守する)
 - 実装はメインループ直営で行い、テスト実行 (巨大出力のみ) とコミット実行は Haiku に委譲する (判断基準は `~/.claude/rules/core/orchestration.md`「委譲の判断」)
 - 実装が一段落したらレビュー subagent で事後検証する (起動条件は `~/.claude/rules/core/implementation.md`)
 
