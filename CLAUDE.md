@@ -393,7 +393,9 @@ symlink のまま残しているのは次のものだけ。
 
 ### hooks (agents/hooks/)
 
-**自作の機械ゲートは 1 本も無い。** `agents/hooks/` に置いてあるのは herdr 本体が配布する `herdr-agent-state.sh` の 1 本だけで、これは deny するゲートではなく herdr へセッション状態を渡すスクリプトである。
+**deny する自作 hook は 1 本も無い。** `agents/hooks/` に置いてあるのは herdr 本体が配布する `herdr-agent-state.sh` の 1 本だけで、これは deny するゲートではなく herdr へセッション状態を渡すスクリプトである。
+
+hook 以外の機械的な強制は 1 つだけ残っている。`agents/subagents/dev-impl-implementer.md` の `tools` から `Agent` を除いて**葉性を構造的に強制**している (subagent には親の hooks が届かず、指示文では違反を検出できないため)。
 
 | ファイル | 起動元 | 役割 |
 | --- | --- | --- |
@@ -401,7 +403,15 @@ symlink のまま残しているのは次のものだけ。
 
 `~/.claude/hooks` の symlink はこの 1 本のためだけにある。ディレクトリごと消すと herdr の SessionStart が絶対パスで参照できなくなる。
 
-3 ランタイムのどれにも hooks は配っていない。Codex は移植すべきものが無く、OpenCode はシェル hooks 自体を持たない (JS プラグイン API はコマンドに stdin を渡さず stdout も解釈しないため deny するゲートに使えない)。Codex へ hook を追加したくなったときの置き場は `agents/bindings/codex/overlay/AGENTS.md` の「hooks を追加するときの置き場」節にある。
+3 ランタイムのどれにも hooks は配っていない。Codex は移植すべきものが無く、OpenCode はシェル hooks 自体を持たない (JS プラグイン API はコマンドに stdin を渡さず stdout も解釈しないため deny するゲートに使えない)。
+
+hook を追加したくなったときの置き場は次のとおり。
+
+| ランタイム | 置き場 |
+| --- | --- |
+| Claude Code | スクリプトを `agents/hooks/` に置き、`agents/bindings/claude/settings.json` の `hooks` に `$GHQ_ROOT` 経由の絶対パスで登録する。`~/.claude/hooks` の symlink は経由しない (`GHQ_ROOT` は `nix/modules/home/env.nix` が `$HOME/dev` に設定する) |
+| Codex | `agents/bindings/codex/config.toml`。レイヤーごとの発火差は `agents/bindings/codex/overlay/AGENTS.md` の「hooks を追加するときの置き場」節にある |
+| OpenCode | 不可 (シェル hooks を持たない) |
 
 `settings.json` の登録は全 13 件で、上表の 1 本以外は**外部ツール orca が書き込んだ 12 件**である (12 イベントに 1 件ずつ)。orca の分は `~/.orca/agent-hooks/claude-hook.sh` が無ければ空の `{}` を返すだけで、このマシンには `~/.orca` が存在しないので全件 no-op になっている。
 
@@ -409,12 +419,12 @@ symlink のまま残しているのは次のものだけ。
 
 以下は hook で強制せず、記述による自律遵守に委ねている。**破っても止まらないことを承知したうえでの設計判断**であり、設計思想は `agents/rules/core/references/loop-engineering.md` にある。
 
-| 規律 | 正本 | 破られたときに何が起きるか |
-| --- | --- | --- |
-| コミット規約 (`<emoji> <type>: <subject>`) | `agents/rules/core/commit.md` | 形式の揃わないコミットが履歴に残る。push 前なら `git commit --amend` で直せる |
-| dev-impl の修正ラウンド上限 (2 周) | `agents/skills/dev-impl/SKILL.md` | 収束しない issue に時間とトークンが溶ける。**実測で 22 issue 中 6 件が 3 周目以降に入り、超過分だけで 5.7h を消費したことがある** |
-| 実装系ルールの遅延参照 | `agents/AGENTS.md`「実装時」 | TDD やテスト方針を知らないまま実装が進む。リマインドする仕組みは持たない |
-| subagent 起動時の `model` 明示 | `agents/rules/core/orchestration.md` | 未指定だと agent 定義の frontmatter ではなく親のセッションモデルを継承する。検証器が実行器より弱くなりうる |
+| 規律 | 正本 | 破られたときに何が起きるか | 事後に気づく手段 |
+| --- | --- | --- | --- |
+| コミット規約 (`<emoji> <type>: <subject>`) | `agents/rules/core/commit.md` | 形式の揃わないコミットが履歴に残る。push 前なら `git commit --amend` で直せる | `git log -1 --pretty=%s` を型と照合する (commit.md が手順として規定) |
+| dev-impl の修正ラウンド上限 (2 周) | `agents/skills/dev-impl/SKILL.md` | 収束しない issue に時間とトークンが溶ける。**実測で 22 issue 中 6 件が 3 周目以降に入り、超過分だけで 5.7h を消費したことがある** | issue の完了コメントに残る「review-impl の周回数」 |
+| 実装系ルールの遅延参照 | `agents/AGENTS.md`「実装時」 | TDD やテスト方針を知らないまま実装が進む | **無い**。リマインドも事後検出もしない |
+| subagent 起動時の `model` 明示 | `agents/rules/core/orchestration.md` | 未指定だと agent 定義の frontmatter ではなく親のセッションモデルを継承する。検証器が実行器より弱くなりうる | **無い**。セッションのログを人が読むしかない |
 
 ### subagents (agents/subagents/)
 
