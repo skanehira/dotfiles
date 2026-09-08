@@ -23,6 +23,11 @@ default_mode_request_user_input = true
 [features.context_management]
 experimental_mode = true
 
+[tui]
+status_line = ["model-with-reasoning", "git-branch", "weekly-limit", "five-hour-limit", "context-remaining"]
+status_line_use_colors = true
+session_picker_view = "comfortable"
+
 [mcp_servers.context7]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp"]
