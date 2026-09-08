@@ -365,6 +365,12 @@ OpenCode は `~/.claude/skills` も探索する。`nix/modules/home/env.nix` の
 
 未定義のプレースホルダが残っていると例外で止まる。deno が無ければ警告してスキップし activation は成功する (生成物は前回のまま残る)。
 
+生成器と subagent 変換のテストはこう回す。**権限フラグを省くと 18 件が落ちる** (一時ディレクトリの作成やサブプロセス起動を使うため)。CI では回していないので、`agents/scripts/` を触ったら自分で実行する。
+
+```bash
+deno test --allow-env --allow-run --allow-read --allow-write agents/
+```
+
 ### live edit の範囲
 
 **ルール・スキル・subagent・グローバル指示は生成物になったので、編集しても `drs` / `hms` (または生成器の手動実行) まで反映されない。**
@@ -403,7 +409,7 @@ hook 以外の機械的な強制は 1 つだけ残っている。`agents/subagen
 
 `~/.claude/hooks` の symlink はこの 1 本のためだけにある。ディレクトリごと消すと herdr の SessionStart が絶対パスで参照できなくなる。
 
-3 ランタイムのどれにも hooks は配っていない。Codex は移植すべきものが無く、OpenCode はシェル hooks 自体を持たない (JS プラグイン API はコマンドに stdin を渡さず stdout も解釈しないため deny するゲートに使えない)。
+**deny する自作ゲートは 3 ランタイムのどれにも配っていない。**Claude Code に配っている hook は上表の herdr 連携 1 本だけである。Codex は移植すべきものが無く、OpenCode はシェル hooks 自体を持たない (JS プラグイン API はコマンドに stdin を渡さず stdout も解釈しないため deny するゲートに使えない)。
 
 hook を追加したくなったときの置き場は次のとおり。
 
