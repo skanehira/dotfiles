@@ -149,7 +149,8 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
 - **agents/** — AI エージェント共通のハーネス正本（ランタイムごとにコンパイルして配る。一部だけ直接 symlink で live edit 可能）
   - `AGENTS.md` / `rules/` / `skills/` / `subagents/` はランタイムごとにコンパイルして配るので、編集の反映に `drs` / `hms` (または生成器の手動実行) が要る
-  - `hooks/` / `scripts/` / `bindings/` / `knowledge-profile.md` は直 symlink なので編集即反映
+  - `hooks/` / `scripts/` / `knowledge-profile.md` と `bindings/` の**一部ファイル**は直 symlink なので編集即反映 (どれが symlink かは「live edit の範囲」の表を参照)
+  - `bindings/*/overlay/` は生成器の**入力**であって配布物ではない。編集の反映には `drs` / `hms` が要る
   - 配布先と構成は「AI エージェントのハーネス (agents/)」節を参照
 - **agents/bindings/codex/** — Codex 固有の設定 (ハーネス本体は `agents/` 直下)
   - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として dotfiles 直接 symlink され、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる (live edit 可能)
@@ -360,7 +361,7 @@ OpenCode は `~/.claude/skills` も探索する。`nix/modules/home/env.nix` の
 
 - **出力先の検査**: symlink または正本配下に解決する出力先を拒否する。activation は旧 symlink の撤去 (`linkGeneration`) より前に走りうるため、素直に書くと生成物を旧 symlink 越しに `agents/` 自身へ書き込んで正本を壊す
 - **staging → rename**: 生成は出力先の隣で行い、閉包チェックを通ってから移す。途中で失敗しても配布先が半端な状態で残らない
-- **manifest による prune**: 撤去対象は `.harness-manifest.json` に載っているものだけ。配布先には他ツールが置いたスキルが同居するので、拡張子やマーカー行では選別できない
+- **manifest による prune**: 撤去対象は各出力ディレクトリ直下の `.harness-manifest.json` に載っているものだけ。配布先には他ツールが置いたスキルが同居するので、拡張子やマーカー行では選別できない
 
 未定義のプレースホルダが残っていると例外で止まる。deno が無ければ警告してスキップし activation は成功する (生成物は前回のまま残る)。
 
@@ -428,7 +429,9 @@ Codex と OpenCode には hook が 1 本も配られていない (Codex は移�
 **配布の確認**:
 
 ```bash
-ls ~/.claude/skills ~/.codex/skills ~/.config/opencode/skills   # それぞれに生成物がある
+# 生成でしか作られない manifest を見る (ls だと他ツールのスキルが同居していて判定できない)
+ls ~/.claude/skills/.harness-manifest.json ~/.codex/skills/.harness-manifest.json \
+   ~/.config/opencode/skills/.harness-manifest.json
 ls ~/.codex/agents ~/.config/opencode/agents                     # subagent 4 本の生成物がある
 rg -F '{{@' ~/.codex/AGENTS.md || echo 'プレースホルダの残骸なし'  # -F が要る ({ は正規表現で構文エラー)
 readlink -f /etc/codex/config.toml                               # agents/bindings/codex/config.toml に解決する

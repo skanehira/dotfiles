@@ -1,6 +1,6 @@
 # Claude Code Hooks
 
-deny する自作ゲートは `fix-round-guard.ts` の 1 本だけで、起動元は Claude Code の `../bindings/claude/settings.json` の `hooks` のみ。Agent ツールの入力に依存するため Codex へは移植しておらず、`../../codex/config.toml` に hooks は無い。OpenCode はシェル hooks を持たないので対象外。
+deny する自作ゲートは `fix-round-guard.ts` の 1 本だけで、起動元は Claude Code の `../bindings/claude/settings.json` の `hooks` のみ。Agent ツールの入力に依存するため Codex へは移植しておらず、`../bindings/codex/config.toml` に hooks は無い。OpenCode はシェル hooks を持たないので対象外。
 
 ディレクトリにはこのほか `herdr-agent-state.sh` (SessionStart で herdr にセッション状態を渡す) がある。herdr 本体が配布するファイルで、自作ゲートではないので本書の対象外。
 

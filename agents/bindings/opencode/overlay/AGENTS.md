@@ -20,9 +20,11 @@
 配布されているか自分で確かめる:
 
 ```bash
-opencode debug skill | rg -c '"name"'    # スキルが並ぶ
-opencode agent list                       # subagent 4 本が出る
-echo $OPENCODE_DISABLE_CLAUDE_CODE_SKILLS # 1 でなければターミナルを開き直す
+# パイプに繋ぐと出力が途中で切れるので必ずファイルに落とす (実測: パイプだと毎回違う件数になる)
+opencode debug skill > /tmp/s.json && rg -c '"name"' /tmp/s.json
+ls ~/.config/opencode/skills/.harness-manifest.json  # 生成でしか作られない
+opencode agent list                                   # subagent 4 本が出る
+echo $OPENCODE_DISABLE_CLAUDE_CODE_SKILLS             # 1 でなければターミナルを開き直す
 ```
 
 生成物には `.harness-manifest.json` が同居し、`drs` / `hms` のたびに上書きされる。**手で編集しない。**

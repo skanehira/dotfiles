@@ -19,7 +19,7 @@ CLAUDE.md「全タスク共通」のトリアージと「実装時」の委譲�
 
 {{@spawn-subagent}}の `model` は**未指定だと親のセッションモデルを継承する** (agent 定義の frontmatter は防御にならない)。最上位 tier のセッションでは委譲しても安くならないため、調査・実装の fan-out では必ず model を明示する。**これを強制する機械ゲートは無いので自律遵守する。**
 
-Codex も既定は同じ継承で、優先順位は「spawn 時の明示指定 > `[agents] default_subagent_model` > 親エージェントの値」である。違いは**呼び出し側の規律に頼らず設定で固定できる**点で、`codex/config.toml` に `[agents] default_subagent_model` を書けば書き忘れの失敗モードごと消える。このリポジトリでは未設定なので、現状は Claude Code と同じく明示が要る。
+Codex も既定は同じ継承で、優先順位は「spawn 時の明示指定 > `[agents] default_subagent_model` > 親エージェントの値」である。違いは**呼び出し側の規律に頼らず設定で固定できる**点で、`agents/bindings/codex/config.toml` に `[agents] default_subagent_model` を書けば書き忘れの失敗モードごと消える。このリポジトリでは未設定なので、現状は Claude Code と同じく明示が要る。
 
 セッションモデルが最上位 tier (Fable/Mythos 級) で実装作業が支配的なタスクを受けたら、着手前に `/model opus` への切替をユーザーに提案する (Claude は自分でセッションモデルを変更できない)。単価の調整はサブエージェント委譲ではなく**セッション単位のモデル選択**で行う。
 

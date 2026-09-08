@@ -31,7 +31,7 @@
 配布されているか自分で確かめる:
 
 ```bash
-ls ~/.codex/skills                     # スキルが実ディレクトリで並ぶ
+ls ~/.codex/skills/.harness-manifest.json  # 生成でしか作られない (ls だけだと他ツールのスキルと区別できない)
 ls ~/.codex/agents                     # subagent の .toml がある
 readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/config.toml に解決する
 ```
