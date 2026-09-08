@@ -55,11 +55,6 @@
     "codex": "Plan mode",
     "opencode": "plan agent"
   },
-  "devtools-mcp": {
-    "claude": "chrome-devtools:",
-    "codex": "chrome-devtools",
-    "opencode": "chrome-devtools (未配布)"
-  },
   "explore-agent": {
     "claude": "Explore",
     "codex": "explorer",

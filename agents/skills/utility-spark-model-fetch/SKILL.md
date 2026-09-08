@@ -21,7 +21,7 @@ allowed-tools: Bash, AskUserQuestion
 
 ## 前提
 
-環境の詳細は `~/.claude/rules/infra/dgx-spark.md` を読む。要点は次のとおり。
+環境の詳細は `{{@rules-root}}/infra/dgx-spark.md` を読む。要点は次のとおり。
 
 - head から worker へは `.env.dspark` の `WORKER_HOST` (RoCE 側アドレス) で ssh する。**LAN 側 (WiFi) は使わない**
 - HF キャッシュは両ノードの `~/.cache/huggingface/hub/`
@@ -112,4 +112,4 @@ find ~/.cache/huggingface/hub/$D -name "*.incomplete" -delete -print
 
 ## 完了後
 
-配布しただけでは使えない。起動と設定の切り替えは別作業で、`~/.claude/rules/infra/dgx-spark.md` の「起動と停止」「Mac から使う」に従う。レシピが対象モデルに対応していない場合は、対応していた頃のコミットで `git worktree` を作る手もある。
+配布しただけでは使えない。起動と設定の切り替えは別作業で、`{{@rules-root}}/infra/dgx-spark.md` の「起動と停止」「Mac から使う」に従う。レシピが対象モデルに対応していない場合は、対応していた頃のコミットで `git worktree` を作る手もある。

@@ -7,7 +7,7 @@ paths:
 
 # テストルールの詳細例
 
-~/.claude/rules/core/testing.md の原則に対応するコード例集。
+{{@rules-root}}/core/testing.md の原則に対応するコード例集。
 
 ## 振る舞い vs 実装詳細
 

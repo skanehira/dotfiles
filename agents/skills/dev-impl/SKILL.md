@@ -16,10 +16,10 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
 
 | 役割 | 実行 | モデル |
 | --- | --- | --- |
-| オーケストレーション (本ループ) | メインセッション | opus (frontmatter 指定。Skill ツール経由起動では効かないため、ユーザーが直接起動する) |
+| オーケストレーション (本ループ) | メインセッション | opus (frontmatter 指定。{{@invoke-skill}}経由起動では効かないため、ユーザーが直接起動する) |
 | 実装 | `dev-impl-implementer` subagent | `model: "opus"` 明示 |
 | レビュー | `review-impl` subagent | `model: "opus"` 明示 |
-| コミット実行・巨大出力のテスト実行 (E2E 等) | subagent | `model: "haiku"` (`~/.claude/rules/core/orchestration.md`「委譲の判断」。メッセージ起草・対象ファイルの判断は親が行い、実行だけを委譲する) |
+| コミット実行・巨大出力のテスト実行 (E2E 等) | subagent | `model: "haiku"` (`{{@rules-root}}/core/orchestration.md`「委譲の判断」。メッセージ起草・対象ファイルの判断は親が行い、実行だけを委譲する) |
 
 ## Step 0: 前提チェック
 
@@ -32,7 +32,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 
 - git / gh が解決できない → 停止して案内する
 - `POC_NEEDED: ... blocker=true` が 1 件以上 → 実装に入らず、`/dev-spec` のフェーズ 5 (PoC 検証) への差し戻しを案内して停止する (未検証の技術前提の上に実装しない)
-- ラベル 4 種を冪等に用意する (dev-spec を経ずに用意された issue でも 2.1 のラベル操作が失敗しないように。コマンドは `~/.claude/skills/dev-spec/references/issue-template.md`「ラベルの用意」と同一)
+- ラベル 4 種を冪等に用意する (dev-spec を経ずに用意された issue でも 2.1 のラベル操作が失敗しないように。コマンドは `{{@skills-root}}/dev-spec/references/issue-template.md`「ラベルの用意」と同一)
 - **docs が push 済みか確認する**: ローカルに `docs/design/DESIGN.md` があるのに `git log origin/$DEFAULT -1 -- docs/design/DESIGN.md docs/design/features/` が空なら、ブランチ基点 (origin) に設計 docs が無い。docs を含むコミットの push を人間に依頼して停止する (2.1 のブランチは origin から切るため、push されていないと implementer が docs を読めない)
 - `docs/design/DESIGN.md` が無い構成でも、issue が自己完結していれば続行してよい (issue の DoD に実行コマンドが揃っていることが条件)
 
@@ -181,7 +181,7 @@ findings の分岐:
 
 ### 2.4 コミット・PR・merge
 
-1. **コミット**: 変更を論理単位で Conventional Commit (`~/.claude/rules/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針の表)。implementer の `docs_updates` (乖離補正) と、2.3 で追記した `docs/PENDING_REVIEW.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)
+1. **コミット**: 変更を論理単位で Conventional Commit (`{{@rules-root}}/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針の表)。implementer の `docs_updates` (乖離補正) と、2.3 で追記した `docs/PENDING_REVIEW.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)
 2. **全体テスト**: プロジェクトのテストスイート全体と lint を実行し green を確認する (巨大出力になる場合は Haiku subagent に実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る)
 3. **PR**: `git push -u origin "issue-$N"` してから作成する (再開で PR が既にあればスキップ)。push が失敗したら (前 run の同名 remote ブランチ残骸等)、原因を確認して解消できなければ 2.6 へ:
 
@@ -225,7 +225,7 @@ merge により `Closes #N` で issue は自動 close される (されていな
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
 
-親 (tracking issue) を逆引きし、その親の子が全て完了していれば親も close する。API の挙動の正本は `~/.claude/skills/dev-spec/references/issue-template.md`「親への紐付け」の実測表:
+親 (tracking issue) を逆引きし、その親の子が全て完了していれば親も close する。API の挙動の正本は `{{@skills-root}}/dev-spec/references/issue-template.md`「親への紐付け」の実測表:
 
 ```bash
 gh api "repos/$REPO_SLUG/issues/$N/parent" \
@@ -298,8 +298,8 @@ done
 
 ## 参照ルール
 
-- コミット規約: `~/.claude/rules/core/commit.md` / 委譲の判断: `~/.claude/rules/core/orchestration.md`
-- implementer・review-impl の入出力契約は各 agent 定義 (`~/.claude/agents/dev-impl-implementer.md` / `review-impl.md`) が正本
+- コミット規約: `{{@rules-root}}/core/commit.md` / 委譲の判断: `{{@rules-root}}/core/orchestration.md`
+- implementer・review-impl の入出力契約は各 agent 定義 (`{{@subagents-root}}/dev-impl-implementer.md` / `review-impl.md`) が正本
 
 ## 関連スキル・エージェント
 

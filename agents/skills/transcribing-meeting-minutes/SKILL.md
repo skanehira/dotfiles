@@ -45,7 +45,7 @@ work_dir="$(mktemp -d "${TMPDIR:-/tmp}/meeting-minutes.XXXXXX")"
 scripts/transcribe.sh "<recording>" "${work_dir}" ja
 ```
 
-録音時間に比例して数分〜数十分かかるため、同期実行せず`run_in_background: true`で起動する。完了まで定期的に出力を確認し、進捗をユーザーへ伝える。`transcript.json`、`transcript.txt`、`transcript.vtt`が生成される。既存出力を上書きしない。
+録音時間に比例して数分〜数十分かかるため、同期実行せず`{{@background-run}}: true`で起動する。完了まで定期的に出力を確認し、進捗をユーザーへ伝える。`transcript.json`、`transcript.txt`、`transcript.vtt`が生成される。既存出力を上書きしない。
 
 ### 4. 全編を時系列で確認する
 

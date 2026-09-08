@@ -24,7 +24,7 @@ argument-hint: "[cli|webapp] [タスク説明]"
 
 フェーズごとに Feedback (検証手段) が異なる:
 
-- 要件・設計の妥当性 → **人間の確認** (AskUserQuestion) + **fresh context の検査 subagent** (フェーズ 8・9)
+- 要件・設計の妥当性 → **人間の確認** ({{@ask-user}}) + **fresh context の検査 subagent** (フェーズ 8・9)
 - 技術的実現可能性 → **PoC の実行結果** (tech-investigation subagent)。「できるはず」という自己申告のまま設計に進むことを禁止する
 
 ### モデルガード
@@ -89,7 +89,7 @@ rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/design/FEASIBILITY.md
 
 `$ARGUMENTS` の先頭トークン群のうち、`cli` / `webapp` に完全一致するものは**プロダクトモード**として消費し、残りをタスク説明とする。タスク説明が無ければ事前の会話から推論し、それも不明なら「どのようなタスクの設計を行いますか?」と質問する。
 
-**既存の docs から復元できる項目は質問しない。** `docs/design/DESIGN.md` があればプロダクトモードはスタンプから復元する。トークン指定も復元もできない場合だけ、タスク説明と会話履歴から推論し、推論結果を推奨ラベル (`(推論)` + 根拠 1 行) にして AskUserQuestion で確認する (確定済みなら呼ばない)。
+**既存の docs から復元できる項目は質問しない。** `docs/design/DESIGN.md` があればプロダクトモードはスタンプから復元する。トークン指定も復元もできない場合だけ、タスク説明と会話履歴から推論し、推論結果を推奨ラベル (`(推論)` + 根拠 1 行) にして {{@ask-user}} で確認する (確定済みなら呼ばない)。
 
 ### 0.2 既存ドキュメントの確認と開始点の決定
 
@@ -97,7 +97,7 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 
 旧構成の成果物 (DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / DOMAIN_MODEL.md / TODO.md) を見つけたら、本スキルの対象外であることを伝え、「新構成 (DESIGN.md 1 枚 + features/) で設計し直す / 中止」を確認する。旧成果物は読み取りの参考にはするが更新しない。
 
-途中まで存在する場合は「続きから (推奨) / 最初から / 既存を更新」を AskUserQuestion で確認する。「続きから」の再開フェーズは次の表で決める (存在する成果物のうち最も下流のものを見る):
+途中まで存在する場合は「続きから (推奨) / 最初から / 既存を更新」を {{@ask-user}} で確認する。「続きから」の再開フェーズは次の表で決める (存在する成果物のうち最も下流のものを見る):
 
 | 最も下流の既存成果物                        | 再開フェーズ                                                   |
 | ------------------------------------------- | -------------------------------------------------------------- |
@@ -114,7 +114,7 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 ### 0.3 モード選択
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [{
     question: "設計ループの回し方を選んでください",
     header: "モード",
@@ -127,7 +127,7 @@ AskUserQuestion({
 })
 ```
 
-クイック選択時は、まず Claude 自身がタスク説明と会話履歴から不確実性候補 (未経験ライブラリ / 外部 API 連携 / 性能・スケール懸念 / 新しいプラットフォーム機能) を走査して列挙し、その候補を提示した上で「これらを含め、成立するか未検証の技術要素はありますか?」と AskUserQuestion で確認する (人間の記憶だけに頼らない)。あればフェーズ 4 → 5 を実行してから 6 へ、なければ 6 から開始する (この「不確実性なし」の確認が、ゲート条件の「FEASIBILITY.md 無し」通過の根拠になる)。
+クイック選択時は、まず Claude 自身がタスク説明と会話履歴から不確実性候補 (未経験ライブラリ / 外部 API 連携 / 性能・スケール懸念 / 新しいプラットフォーム機能) を走査して列挙し、その候補を提示した上で「これらを含め、成立するか未検証の技術要素はありますか?」と {{@ask-user}} で確認する (人間の記憶だけに頼らない)。あればフェーズ 4 → 5 を実行してから 6 へ、なければ 6 から開始する (この「不確実性なし」の確認が、ゲート条件の「FEASIBILITY.md 無し」通過の根拠になる)。
 
 ### 部分実行
 
@@ -146,15 +146,15 @@ AskUserQuestion({
 ```
 
 2. 手順書を Read し、手順に従って実行する
-3. フェーズ完了後、AskUserQuestion で「次へ進む / ここで終了」を確認する
+3. フェーズ完了後、{{@ask-user}} で「次へ進む / ここで終了」を確認する
 4. ユーザーが修正内容を入力した場合は反映して再承認を取る (承認されるまで繰り返す)
-5. フェーズ 6・7 では、プロダクト判断が要る点をその場で AskUserQuestion で確認しながら書く (独立したインタビューフェーズは無い。聞き方の基準は各手順書の「記入基準」)
+5. フェーズ 6・7 では、プロダクト判断が要る点をその場で {{@ask-user}} で確認しながら書く (独立したインタビューフェーズは無い。聞き方の基準は各手順書の「記入基準」)
 
 ## フェーズ 8: 設計チェック (fresh context)
 
 docs が完成した時点で、書き手と別コンテキストの subagent に全文を突合させる。書き手自身は「定義したつもり」バイアスで漏れ・矛盾を検出できないため。**issue 生成の前に行う** — 設計の穴は issue 化してから見つかるほど手戻りが大きい。
 
-`general-purpose` subagent を **`model: "opus"` 明示**で 1 本起動する (機能設計書が 8 本を超える場合は機能ごとに分担させて並列 fan-out し、横断の整合は親がまとめる)。指示文に含める内容:
+`{{@general-agent}}` subagent を **`model: "opus"` 明示**で 1 本起動する (機能設計書が 8 本を超える場合は機能ごとに分担させて並列 fan-out し、横断の整合は親がまとめる)。指示文に含める内容:
 
 > docs/design/USECASES.md (あれば)・docs/design/DESIGN.md・docs/design/features/*.md を**全文 Read** し、次を検査して指摘だけを返せ (修正はしない):
 >
@@ -166,13 +166,13 @@ docs が完成した時点で、書き手と別コンテキストの subagent �
 >
 > 出力: `[severity] 該当箇所 / 問題の一文 / 修正案の一文` (severity: high = 実装が詰まる / medium = 曖昧さが残る / low = 可読性)
 
-結果の分岐 (**最大 2 周**): high があれば該当 docs を修正して再実行。2 周しても残る high は人間に提示して判断を仰ぐ。high が無ければ (medium/low は反映するか判断してから) フェーズ 9 へ。subagent がエラーの場合は未検査のまま進まず、「再試行 / チェックなしで続行 / 中止」を AskUserQuestion で確認する。
+結果の分岐 (**最大 2 周**): high があれば該当 docs を修正して再実行。2 周しても残る high は人間に提示して判断を仰ぐ。high が無ければ (medium/low は反映するか判断してから) フェーズ 9 へ。subagent がエラーの場合は未検査のまま進まず、「再試行 / チェックなしで続行 / 中止」を {{@ask-user}} で確認する。
 
 ## フェーズ 9: issue ドラフト + ドラフトチェック
 
 `references/issue-template.md` を Read し、テンプレートに従って**親 <m> 件 + 子 <n> 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。親は USECASES.md の UC 1 件につき 1 件。例外 (基盤親・UC 統合親・クイックモードのフォールバック) は issue-template.md「親 issue テンプレート」の表に従う。再実行時 (issue への反映・別セッションからの再開) もドラフトは docs から再生成する — 前セッションの scratchpad は残っていない。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。依存は最小限にし、並行して着手できる形を優先する。
 
-全ドラフトが揃ったら、`general-purpose` subagent (**`model: "opus"` 明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合・相互の重複漏れ・UC 帰属はセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 6 項目を指示文に転記し、USECASES.md (あれば)・機能設計書と DESIGN.md のパスを渡して照合させる。出力形式はフェーズ 8 と同じ。
+全ドラフトが揃ったら、`{{@general-agent}}` subagent (**`model: "opus"` 明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合・相互の重複漏れ・UC 帰属はセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 6 項目を指示文に転記し、USECASES.md (あれば)・機能設計書と DESIGN.md のパスを渡して照合させる。出力形式はフェーズ 8 と同じ。
 
 分岐も同じ (**最大 2 周**): high は修正して再実行、2 周で残れば人間に提示、無ければフェーズ 10 へ。
 
@@ -180,12 +180,12 @@ docs が完成した時点で、書き手と別コンテキストの subagent �
 
 `references/issue-template.md` の「issue 作成手順」に従う。要点:
 
-1. **docs をコミットする**: docs/design/ 配下の成果物 (DESIGN.md / features/ ほか。ただし `docs/PENDING_REVIEW.html` は対象外 — dev-impl が管理する) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/rules/core/orchestration.md` に従う)。**/dev-impl は origin から切ったブランチで docs を読むため、実装開始前にこのコミットの push が必要** — 手順 4 の案内に含める
+1. **docs をコミットする**: docs/design/ 配下の成果物 (DESIGN.md / features/ ほか。ただし `docs/PENDING_REVIEW.html` は対象外 — dev-impl が管理する) の変更を Conventional Commit でコミットする (コミット実行の委譲は `{{@rules-root}}/core/orchestration.md` に従う)。**/dev-impl は origin から切ったブランチで docs を読むため、実装開始前にこのコミットの push が必要** — 手順 4 の案内に含める
 
 2. **作成前に人間の同意を取る** (GitHub への書き込みなので):
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [{
     question: "issue を作成してよいですか? (ドラフトチェック済み)",
     header: "issue 作成",
@@ -214,7 +214,7 @@ B: このセッションで続行 — このまま /dev-impl とタイプ
 修正したい issue があれば、指摘してください (docs を直してフェーズ 8 → 9 → 10 で issue に反映します)。
 ```
 
-**実装ループを Skill ツールで自動起動しない** — issue を人間が確認して GO を出すことが承認であり、`/dev-impl` はユーザーが起動する。
+**実装ループを {{@invoke-skill}}で自動起動しない** — issue を人間が確認して GO を出すことが承認であり、`/dev-impl` はユーザーが起動する。
 
 ## 完了条件
 
@@ -228,9 +228,9 @@ B: このセッションで続行 — このまま /dev-impl とタイプ
 
 設計・タスク分解で以下を参照する:
 
-- TDD ルール: `~/.claude/rules/core/tdd.md`
-- 設計原則: `~/.claude/rules/core/design.md`
-- テスト方針: `~/.claude/rules/core/testing.md`
+- TDD ルール: `{{@rules-root}}/core/tdd.md`
+- 設計原則: `{{@rules-root}}/core/design.md`
+- テスト方針: `{{@rules-root}}/core/testing.md`
 
 ## 関連スキル・エージェント
 

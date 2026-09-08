@@ -55,10 +55,10 @@ Read({ file_path: "docs/PROBLEM_DEFINITION.md" })
 **遷移条件**: フェーズ2へ
 
 **ファイルが存在しない場合**:
-AskUserQuestionで対象プロダクトを確認。
+{{@ask-user}}で対象プロダクトを確認。
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [
     {
       question: "どのプロダクト/機能のユーザーストーリーを作成しますか？",
@@ -79,7 +79,7 @@ AskUserQuestion({
 ストーリーの主語となるユーザータイプを洗い出す。
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [
     {
       question: "このプロダクトを使うユーザータイプは誰ですか？（複数可）",
@@ -114,7 +114,7 @@ So that [得られる価値/理由]
 - 「それができないと何が困りますか？」
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [
     {
       question: "[ユーザータイプ]として、何ができるようになりたいですか？\n\nフォーマット: [やりたいこと] → [得られる価値]",
@@ -171,7 +171,7 @@ Then [期待結果]
 ```
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [
     {
       question: "このストーリーが「完了」と言えるのはどんな時ですか？",
@@ -201,7 +201,7 @@ AskUserQuestion({
 | **Won't**  | 今回はやらない                 |
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [
     {
       question: "このストーリーの優先度は？",
@@ -309,7 +309,7 @@ Write({
 ```javascript
 Agent({
   description: "ユーザーストーリーレビュー",
-  subagent_type: "general-purpose",
+  subagent_type: "{{@general-agent}}",
   prompt: `
 以下のユーザーストーリードキュメントをレビューしてください。
 
@@ -356,10 +356,10 @@ Agent({
 
 ### 要ユーザ判断リストの処理（親）
 
-サブエージェントの報告に要ユーザ判断リストが含まれる場合、親は AskUserQuestion で指摘ごとの採用可否をユーザに確認する（multiSelect。指摘が 5 件以上ある場合は 4 件ずつ質問を分割する）:
+サブエージェントの報告に要ユーザ判断リストが含まれる場合、親は {{@ask-user}} で指摘ごとの採用可否をユーザに確認する（multiSelect。指摘が 5 件以上ある場合は 4 件ずつ質問を分割する）:
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [{
     question: "セルフレビューで以下の考慮漏れが指摘されました。USER_STORIES.md に反映するものを選んでください。",
     header: "考慮漏れ",

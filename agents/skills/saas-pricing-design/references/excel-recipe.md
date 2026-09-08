@@ -74,7 +74,7 @@ formula = f"={PLAN_REF}!B19*(12-{PLAN_REF}!B21)"
 `assets/verify_numbers.sh` を使う。Numbers で実際に開いてセルの計算値を読み取る:
 
 ```bash
-bash ~/.claude/skills/saas-pricing-design/assets/verify_numbers.sh \
+bash {{@skills-root}}/saas-pricing-design/assets/verify_numbers.sh \
   docs/料金プラン.xlsx "料金プラン:B50" "料金プラン:B55" "インフラ詳細:B22"
 ```
 

@@ -43,12 +43,12 @@ argument-hint: "[project-name] [プロダクト概要]"
 `pnpm` は `vp` が内部で呼ぶ (テンプレートの `packageManager` で pinning 済み)。直接叩かない。
 
 使う MCP: `chrome-devtools:*` (ログインフローの実機確認)。
-他スキルの資産: `~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh` (Step 6 の token 発行。無ければ手動発行にフォールバック)。
+他スキルの資産: `{{@skills-root}}/demo-site-builder/assets/cf-issue-deploy-token.sh` (Step 6 の token 発行。無ければ手動発行にフォールバック)。
 
 ## ワークフロー (8 ステップ)
 
 1. **プロジェクトの確認** — 名前 (kebab-case) と概要を確定。静的で足りるなら `demo-site-builder` へ振り分ける
-2. **ヒアリング** — **Stripe 決済と Cognito 認証の要否を `AskUserQuestion` で確認する (リポジトリ作成前に必ず行う)**
+2. **ヒアリング** — **Stripe 決済と Cognito 認証の要否を `{{@ask-user}}` で確認する (リポジトリ作成前に必ず行う)**
 3. **scaffold** — clone → rename → 依存インストール → **rename の後始末 4 箇所** → D1 作成
 4. **取捨適用** — Step 2 の回答に従って Stripe / 認証を削除する
 5. **ローカル環境検証** — moto 起動・`vp dev`・`/api/health` 疎通・ログイン確認・テスト チェック 4 コマンド
@@ -100,7 +100,7 @@ argument-hint: "[project-name] [プロダクト概要]"
 
 ## Step 2: ヒアリング (Stripe / 認証)
 
-**リポジトリを作る前に**、`AskUserQuestion` で 2 問まとめて確認する。ここでの回答が Step 4 の削除範囲・Step 5 の検証範囲・Step 8 の PRODUCT_SPEC.md の内容をすべて決める。
+**リポジトリを作る前に**、`{{@ask-user}}` で 2 問まとめて確認する。ここでの回答が Step 4 の削除範囲・Step 5 の検証範囲・Step 8 の PRODUCT_SPEC.md の内容をすべて決める。
 
 質問 1 — ヘッダー `Stripe`:
 
@@ -155,7 +155,7 @@ moto はパスワード署名を検証しない (誤ったパスワードでも�
 
 ## Step 6: デプロイ設定
 
-`AskUserQuestion` でタイミングを確認する — ヘッダー `デプロイ`:
+`{{@ask-user}}` でタイミングを確認する — ヘッダー `デプロイ`:
 
 > Cloudflare へのデプロイ設定 (GitHub Secrets) を今行いますか? 設定すると main への push のたびに deploy.yml がリモート D1 のマイグレーション適用と本番デプロイを実行します
 

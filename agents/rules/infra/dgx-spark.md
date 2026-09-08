@@ -784,6 +784,6 @@ CCSP_LAN_HOST=127.0.0.1 CCSP_EFFORT=high ccsp lan -p "1+1?"
 grep -E 'output_config|resp' /tmp/ccsp.log | tail -2
 ```
 
-**この手順は 1 回の Bash 呼び出しで流し切る** (または `run_in_background`)。Claude のハーネスは呼び出しごとにシェルが変わるので、`&` で起動したプロキシが次の呼び出しまで残る保証が無い。
+**この手順は 1 回の Bash 呼び出しで流し切る** (または `{{@background-run}}`)。Claude のハーネスは呼び出しごとにシェルが変わるので、`&` で起動したプロキシが次の呼び出しまで残る保証が無い。
 
 **使い終わったらプロキシを止める** (`pkill -f spark-proxy.py`)。**素の `ccsp` / `ocsp` は止め忘れても本物に届く** (プロキシは `127.0.0.1` にしか bind せず、既定の宛先は `spark-head.local`)。実害は 2 つで、`CCSP_EFFORT` / `CCSP_LAN_HOST` を export したシェルだけが中継を向き続けることと、野良プロセスとログが残り続けることである。**`ccsp off` はこの 2 つの変数を消さない**ので手で `unset` する。停止後は `curl -s http://spark-head.local:8888/v1/models` が配信名を返すことまで確かめる。

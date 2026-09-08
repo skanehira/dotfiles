@@ -16,7 +16,7 @@
 
 ## 原則
 
-TDD サイクル・コミット粒度 (Tidy First) は `~/.claude/rules/core/tdd.md`、テスト命名は `~/.claude/rules/core/references/test-naming.md` に従う。本ドキュメントはこのプロジェクト構成 (React SPA) 固有のレイヤ順序と具体例に絞る。
+TDD サイクル・コミット粒度 (Tidy First) は `{{@rules-root}}/core/tdd.md`、テスト命名は `{{@rules-root}}/core/references/test-naming.md` に従う。本ドキュメントはこのプロジェクト構成 (React SPA) 固有のレイヤ順序と具体例に絞る。
 
 ## Layer 1: ドメイン層（純粋関数）
 
@@ -187,7 +187,7 @@ it("calls onSubmit with trimmed email and password when valid", async () => {
 });
 ```
 
-**`vi.mock` は原則使わない**。依存は props 注入で済ます (~/.claude/rules/core/design.md の「外界 (IO) は必ず DI」参照)。
+**`vi.mock` は原則使わない**。依存は props 注入で済ます ({{@rules-root}}/core/design.md の「外界 (IO) は必ず DI」参照)。
 
 ## Layer 6: ルーティング + BottomNav
 

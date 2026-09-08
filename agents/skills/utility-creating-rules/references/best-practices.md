@@ -142,10 +142,10 @@ ln -s ~/company-standards/security.md .claude/rules/security.md
 
 ## ユーザーレベルルール
 
-`~/.claude/rules/`に個人用ルールを配置：
+`{{@rules-root}}/`に個人用ルールを配置：
 
 ```
-~/.claude/rules/
+{{@rules-root}}/
 ├── preferences.md    # 個人のコーディング好み
 └── workflows.md      # 好みのワークフロー
 ```

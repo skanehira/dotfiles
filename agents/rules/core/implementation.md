@@ -1,11 +1,11 @@
 # 実装手続きのルール
 
-CLAUDE.md「実装時」から遅延参照する詳細。設計原則は `~/.claude/rules/core/design.md`、TDD は `tdd.md`、テスト方針は `testing.md`、検証コマンドの規律は `verification.md` に分かれている (いずれも同ディレクトリ)。
+CLAUDE.md「実装時」から遅延参照する詳細。設計原則は `{{@rules-root}}/core/design.md`、TDD は `tdd.md`、テスト方針は `testing.md`、検証コマンドの規律は `verification.md` に分かれている (いずれも同ディレクトリ)。
 
 ## TDD とレビュー
 
-- TDD で実装する (→ `~/.claude/rules/core/tdd.md`)。RED→GREEN→REFACTOR の順序と「実装編集後の再テスト」は機械ゲートではなく自律遵守する。TDD を適用しない判断 (typo 修正・宣言的 config 変更など、観測可能な振る舞いを変えない編集) をした場合はその理由を出力に明示する
-- 実装が一段落したら**レビュー subagent で事後検証する**。スキル (dev-impl / dev-impl-quick) を使う場合はフロー内のレビューゲートに任せ、スキルを使わない実装 (plan mode・直接依頼) では自分で起動する:
+- TDD で実装する (→ `{{@rules-root}}/core/tdd.md`)。RED→GREEN→REFACTOR の順序と「実装編集後の再テスト」は機械ゲートではなく自律遵守する。TDD を適用しない判断 (typo 修正・宣言的 config 変更など、観測可能な振る舞いを変えない編集) をした場合はその理由を出力に明示する
+- 実装が一段落したら**レビュー subagent で事後検証する**。スキル (dev-impl / dev-impl-quick) を使う場合はフロー内のレビューゲートに任せ、スキルを使わない実装 ({{@plan-mode}}・直接依頼) では自分で起動する:
   - テスト差分がまとまっている (新規テストファイル or 20 行超) → `review-impl` subagent (`model: "opus"` 明示、`focus: tests`・`report_path` 指定) でテスト品質を検証し、high/medium findings を修正してからテストを再実行する
   - 複数観点で見たい差分 (機能追加・リファクタ) → `/workflow-review` で全項目レビュー (focus: all)
 
@@ -14,7 +14,7 @@ CLAUDE.md「実装時」から遅延参照する詳細。設計原則は `~/.cla
 - API は Clean Architecture + DDD で設計する
 - 最小実装を徹底する。頼まれていない機能・抽象化・柔軟性・不可能シナリオの error handling は追加しない
 - 仕様に明示されていない実装の細部 (デフォルト値・パス形式・ログフォーマット・機能の適用範囲)を選択した場合は、その選択と根拠を出力内に明示する。ユーザーが意図との乖離に気づける状態にする
-- 変更は外科的に行う (コード対象。ドキュメントは `~/.claude/rules/core/documentation.md` の全体整合優先が上書きする)。依頼にトレースできない改変・隣接コードの改善・依頼にトレースできない既存 dead code の削除はしない (dead code は報告に留める)。自分の変更で未使用になった import / 変数 / 関数のみ片付ける
+- 変更は外科的に行う (コード対象。ドキュメントは `{{@rules-root}}/core/documentation.md` の全体整合優先が上書きする)。依頼にトレースできない改変・隣接コードの改善・依頼にトレースできない既存 dead code の削除はしない (dead code は報告に留める)。自分の変更で未使用になった import / 変数 / 関数のみ片付ける
 - 既存資産 (他プロジェクトの設定ファイル等) を引用された場合は、それをベースに採用する。ゼロから組み立てない
 
 ## 動作検証

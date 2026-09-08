@@ -89,10 +89,10 @@ op item get "Cloudflare Token" --vault Personal --format json
 
 ### スクリプト実行（スキル配下のローカルスクリプト）
 
-スクリプトはこのスキルの `assets/cf-issue-deploy-token.sh` に同梱されている。`claude/install.sh` により `~/.claude/skills/demo-site-builder/` に symlink されるため、固定パスで参照可能：
+スクリプトはこのスキルの `assets/cf-issue-deploy-token.sh` に同梱されている。`claude/install.sh` により `{{@skills-root}}/demo-site-builder/` に symlink されるため、固定パスで参照可能：
 
 ```
-~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh
+{{@skills-root}}/demo-site-builder/assets/cf-issue-deploy-token.sh
 ```
 
 各プロジェクトでの実行：
@@ -101,10 +101,10 @@ op item get "Cloudflare Token" --vault Personal --format json
 cd <新プロジェクトのルート>
 
 # dry-run で事前検証
-bash ~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh --dry-run <project-name>
+bash {{@skills-root}}/demo-site-builder/assets/cf-issue-deploy-token.sh --dry-run <project-name>
 
 # 本番実行
-bash ~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh <project-name>
+bash {{@skills-root}}/demo-site-builder/assets/cf-issue-deploy-token.sh <project-name>
 ```
 
 スクリプトがやること：

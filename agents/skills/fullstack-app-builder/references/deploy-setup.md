@@ -37,17 +37,17 @@ rg 'repository.name' .github/workflows/deploy.yml   # 0 件であること
 `demo-site-builder` スキルの発行スクリプトを再利用する (同じ Cloudflare アカウント・同じ 1Password アイテムを使うため、スクリプトを二重管理しない):
 
 ```bash
-ls ~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh
+ls {{@skills-root}}/demo-site-builder/assets/cf-issue-deploy-token.sh
 ```
 
 存在すれば:
 
 ```bash
 # dry-run で事前検証
-bash ~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh --dry-run <project-name>
+bash {{@skills-root}}/demo-site-builder/assets/cf-issue-deploy-token.sh --dry-run <project-name>
 
 # 本番実行 (token 発行 + gh secret set まで行う)
-bash ~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh <project-name>
+bash {{@skills-root}}/demo-site-builder/assets/cf-issue-deploy-token.sh <project-name>
 ```
 
 スクリプトは 1Password から Master Token / Account ID を読み、`<project-name>-deploy` という子 token を発行して `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` を対象リポジトリに登録する。
