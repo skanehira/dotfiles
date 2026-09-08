@@ -22,25 +22,25 @@
     fi
   '';
 
-  # 設定は dotfiles repo への直接 symlink (mkOutOfStoreSymlink) で扱う
-  # → skills/rules/hooks/AGENTS.md の編集が drs 不要で即反映される (live edit)
-  # 通常の home.file.X.source = ./path だと /nix/store にコピーされ drs 必須になる
+  # ルール / スキル / subagent は harness.nix が生成して配る (ランタイムごとに語彙が
+  # 変わるため symlink では共有できない)。ここに残すのは生成を通さないものだけ。
   #
-  # 正本は `agents/` に置き、ランタイム固有の名前 (~/.claude/CLAUDE.md 等) はここで与える。
-  # Claude Code 固有の設定ファイルは agents/bindings/claude/ にまとめてある。
+  # 直接 symlink (mkOutOfStoreSymlink) にしているのは live edit のため。通常の
+  # home.file.X.source = ./path だと /nix/store にコピーされ drs 必須になる。
   home.file = {
+    # グローバル指示。3 者で中身が違い、overlay へ移すのは語彙の中立化と同じフェーズで行う
     ".claude/CLAUDE.md".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/AGENTS.md";
+    # Claude Code 固有の設定。他ランタイムは読まないので生成の対象外
     ".claude/settings.json".source =
       config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/claude/settings.json";
     ".claude/keybindings.json".source =
       config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/claude/keybindings.json";
-    ".claude/agents".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/subagents";
+    # hooks と scripts は散文ではなくコード。語彙の置換対象が無いので symlink のまま
     ".claude/hooks".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/hooks";
-    ".claude/rules".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/rules";
-    ".claude/skills".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/skills";
     # agent / skill から `~/.claude/scripts/<name>` の形で呼ぶ決定的スクリプト置き場。
     # 検査対象は dotfiles とは別のリポジトリなので、repo 相対では解決できない
     ".claude/scripts".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/scripts";
+    # utility-doc-reading が読み書きする。生成物にすると書き込みが毎回上書きされる
     ".claude/knowledge-profile.md".source =
       config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/knowledge-profile.md";
   };
