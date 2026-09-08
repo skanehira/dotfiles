@@ -15,7 +15,6 @@ local OCSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
 
 -- ツール固有の設定
 --   display     : 入力バッファ名・通知に出す表示名
---   base_args   : 起動時に必ず前置する CLI 引数
 --   shift_tab   : Shift+Tab として送るキー（herdr send-keys のキー名）
 --   newline     : 送信テキストの末尾に改行を付けるか
 --   argv_prefix : 起動 argv の固定前置（省略時は { ツール名 }）
@@ -23,8 +22,12 @@ local OCSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
 local TOOL_CONFIG = {
   claude = {
     display = "Claude",
-    base_args = "--allow-dangerously-skip-permissions",
     shift_tab = "alt+m",
+    -- --allow-dangerously-skip-permissions は bypassPermissions を Shift+Tab のサイクルに
+    -- 追加するだけで有効化はしない。settings.json の defaultMode (plan) のまま起動し、
+    -- プラン承認後に手動で落とせる。有効化まで行う --dangerously-skip-permissions は
+    -- plan mode を経由できない
+    argv_prefix = { "claude", "--allow-dangerously-skip-permissions" },
   },
   codex = {
     display = "Codex",
@@ -142,7 +145,7 @@ local function same_context(a, b)
 end
 
 -- 入力バッファを開く共通処理
--- @param tool_name string ツール名（"claude" または "codex"）
+-- @param tool_name string ツール名（TOOL_CONFIG のキー）
 -- @param args string|nil コマンド引数
 -- @param context table|nil コメントコンテキスト
 --   { file_path = string, scope = "range"|"file", start_line = number?, end_line = number? }
@@ -367,18 +370,7 @@ end
 -- context が無い場合の挙動:
 --   - カーソル行にスタック済みコメントがあれば、それを編集モードで開く
 --   - 無ければ即送信モード
---
--- base_args の --allow-dangerously-skip-permissions は bypassPermissions を
--- Shift+Tab のサイクルに追加するだけで有効化はしない。settings.json の
--- defaultMode (plan) のまま起動し、プラン承認後に手動で落とせる。
--- 有効化まで行う --dangerously-skip-permissions は plan mode を経由できない
 function M.open_claude(args, context)
-  local base_args = TOOL_CONFIG.claude.base_args
-  if args and args ~= "" then
-    args = base_args .. " " .. args
-  else
-    args = base_args
-  end
   open_input_buffer("claude", args, context or find_thread_context_at_cursor("claude"))
 end
 

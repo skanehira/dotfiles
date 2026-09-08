@@ -108,7 +108,7 @@ function M.pane_exists(pane_id)
 end
 
 -- 現在のタブ内で指定エージェントが動いているペインを検索
--- @param pattern string エージェント名（"claude" または "codex"）
+-- @param pattern string エージェント名（herdr が検出するラベル。"claude" / "codex" / "opencode"）
 -- @return string|nil ペインID、見つからない場合はnil
 function M.find_pane_by_command(pattern)
   local workspace_id = vim.env.HERDR_WORKSPACE_ID
