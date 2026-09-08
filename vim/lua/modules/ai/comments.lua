@@ -19,12 +19,8 @@ local store = {
   opencode = {},
 }
 
--- ツール別の extmark namespace
-local ns = {
-  claude = nil,
-  codex = nil,
-  opencode = nil,
-}
+-- ツール別の extmark namespace（setup() が TOOLS から機械的に作る）
+local ns = {}
 
 local TOOLS = { "claude", "codex", "opencode" }
 
@@ -359,8 +355,10 @@ end
 
 -- 初期化（namespace 確保、autocmd 登録、ハイライト定義）
 function M.setup()
-  ns.claude = vim.api.nvim_create_namespace("ai_comments_claude")
-  ns.codex = vim.api.nvim_create_namespace("ai_comments_codex")
+  -- namespace は TOOLS から機械的に確保する（ツールを足したときに確保漏れが出ないように）
+  for _, tool in ipairs(TOOLS) do
+    ns[tool] = vim.api.nvim_create_namespace("ai_comments_" .. tool)
+  end
   define_highlights()
 
   local group = vim.api.nvim_create_augroup("AICommentsRefresh", { clear = true })
