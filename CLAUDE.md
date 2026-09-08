@@ -49,7 +49,7 @@ nix run home-manager/master -- switch --flake ".#skanehira"
 
 aarch64 マシンは `.#skanehira` を `.#skanehira-aarch64` に置換する。Linux 専用 bootstrap script は用意していない (上記コマンドを手で叩く)。
 
-activation 中に `modules/home/codex.nix` が `sudo` で `/etc/codex/config.toml` を `codex/config.toml` へ symlink する (Home Manager standalone には `/etc` を宣言する option が無いため。`codex.nix` を import しない `-android` は対象外)。`sudo` が使えない環境では警告と手動コマンドが表示されるだけで activation は失敗しない。
+activation 中に `modules/home/codex.nix` が `sudo` で `/etc/codex/config.toml` を `agents/bindings/codex/config.toml` へ symlink する (Home Manager standalone には `/etc` を宣言する option が無いため。`codex.nix` を import しない `-android` は対象外)。`sudo` が使えない環境では警告と手動コマンドが表示されるだけで activation は失敗しない。
 
 `linuxUsers` に列挙したユーザーごとに 3 つの output が生える。用途で選ぶ。
 
@@ -148,16 +148,16 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `tmux.conf` — 編集即反映、`prefix + r` で reload。`drs` 不要
   - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
 - **agents/** — AI エージェント共通のハーネス正本（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
-  - `AGENTS.md` / `skills/` / `rules/` / `hooks/` / `scripts/` / `bindings/` / `knowledge-profile.md` — 編集即反映、`drs` 不要
-  - `subagents/` だけは例外。Claude Code へは symlink なので即反映だが、Codex と OpenCode へは書式変換を挟むので `drs` / `hms` が要る
+  - `AGENTS.md` / `rules/` / `skills/` / `subagents/` はランタイムごとにコンパイルして配るので、編集の反映に `drs` / `hms` (または生成器の手動実行) が要る
+  - `hooks/` / `scripts/` / `bindings/` / `knowledge-profile.md` は直 symlink なので編集即反映
   - 配布先と構成は「AI エージェントのハーネス (agents/)」節を参照
-- **codex/** — Codex 設定（`/etc/codex/config.toml` へ dotfiles 直接 symlink、live edit 可能）
-  - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる
-  - `config.toml` に hooks は書いていない。自作ゲート `fix-round-guard.ts` は Claude Code の Agent ツール入力に依存するため Codex へは移植していない。Codex へ hook を配るときの置き場とレイヤーごとの発火差は `codex/AGENTS.md`「hooks を追加するときの置き場」節にある
-  - `AGENTS.md` — `~/.codex/AGENTS.md` に symlink するグローバル Codex 指示
-  - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける。`[mcp_servers.*]` は両レイヤーに現れる。全マシン共通のサーバ (context7 / chrome-devtools) は `codex/config.toml` で配り、マシン固有のものは Codex が user レイヤーに書く
-  - 旧方式 (Home Manager が `~/.codex/config.toml` を生成) を使っていたマシンでは、`drs` / `hms` 後に 1 回だけ `~/.codex/config.toml` から `codex/config.toml` と重複するキーを手で削除する。残さないと `/etc` 側の値が遮蔽される
-  - 配布の確認: `readlink -f /etc/codex/config.toml` が dotfiles の `codex/config.toml` に解決すること
+- **agents/bindings/codex/** — Codex 固有の設定 (ハーネス本体は `agents/` 直下)
+  - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として dotfiles 直接 symlink され、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる (live edit 可能)
+  - `config.toml` に hooks は書いていない。自作ゲート `fix-round-guard.ts` は Claude Code の Agent ツール入力に依存するため Codex へは移植していない。Codex へ hook を配るときの置き場とレイヤーごとの発火差は `overlay/AGENTS.md` の「hooks を追加するときの置き場」節にある
+  - `overlay/AGENTS.md` — 共通の正本にマージして `~/.codex/AGENTS.md` を生成するための Codex 固有の節
+  - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける。`[mcp_servers.*]` は両レイヤーに現れる。全マシン共通のサーバ (context7 / chrome-devtools) は `config.toml` で配り、マシン固有のものは Codex が user レイヤーに書く
+  - 旧方式 (Home Manager が `~/.codex/config.toml` を生成) を使っていたマシンでは、`drs` / `hms` 後に 1 回だけ `~/.codex/config.toml` から重複するキーを手で削除する。残さないと `/etc` 側の値が遮蔽される
+  - 配布の確認: `readlink -f /etc/codex/config.toml` が dotfiles の `agents/bindings/codex/config.toml` に解決すること
   - **プラグインだけは宣言的に管理できない。** `config.toml` に `[marketplaces.*]` を書くと空ディレクトリを見に行って失敗し、`[plugins.*]` を書いても `not installed` のまま。`codex.nix` の activation が `codex plugin marketplace add` と `codex plugin add` を冪等に流す (対象は Claude 側と同じ 6 本: document-skills / frontend-design / ui-ux-pro-max / compact-plus / archify / slide-plugin)。Claude 形式の `.claude-plugin/marketplace.json` をそのまま読むので、リポジトリ側に Codex 用のマニフェストは要らない
 - **vim/** — Neovim 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `init.lua` / `lua/` / `after/` — 編集即反映、`drs` 不要
@@ -186,9 +186,9 @@ nix/
     ├── overlays.nix       ← nix-darwin 用 module (overlays-list.nix を nixpkgs.overlays に流す)
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
     ├── home/
-    │   ├── agent-skills.nix — agents/skills を ~/.agents/skills/<name> へ個別 symlink (Codex / OpenCode 共用。Android でも要るので codex.nix には置かない)
+    │   ├── harness.nix   — ハーネスを Claude Code / OpenCode 向けにコンパイルして配る + 旧方式が張った ~/.agents/skills の symlink を撤去 (Android でも要るので codex.nix には置かない)
     │   ├── claude.nix    — Claude Code (bootstrap install + agents/ を ~/.claude/* へ mkOutOfStoreSymlink)
-    │   ├── codex.nix     — Codex (`~/.codex/AGENTS.md` symlink + ~/.codex/agents/*.toml 生成。Linux のみ /etc/codex/config.toml を sudo で symlink)
+    │   ├── codex.nix     — Codex 向けハーネスの生成 (AGENTS.md / rules / skills / agents) + プラグイン導入。Linux のみ /etc/codex/config.toml を sudo で symlink
     │   ├── deno.nix      — bootstrap-install (~/.deno/bin/deno 不在時のみ公式 installer 実行)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── env.nix       — sessionVariables / sessionPath
@@ -199,7 +199,7 @@ nix/
     │   ├── karabiner.nix — goku で karabiner.edn → karabiner.json (mac only。home-darwin.nix からのみ import)
     │   ├── mac-app-util-icons.nix — .app の trampoline アイコン調整 (mac only)
     │   ├── neovim.nix    — vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
-    │   ├── opencode.nix  — OpenCode (opencode.json / tui.json / AGENTS.md を mkOutOfStoreSymlink + sync-subagents.ts で ~/.config/opencode/agents を生成)
+    │   ├── opencode.nix  — OpenCode (opencode.json / tui.json を mkOutOfStoreSymlink。ハーネスの生成は harness.nix)
     │   ├── packages.nix  — home.packages 群（言語ランタイム / LSP / CLI を 13 カテゴリで宣言、約 100 件。vite-plus / nvtop / libreoffice-bin / terminal-notifier / screen-capture-mcp-server / kanary は darwin only）
     │   ├── packages-android.nix — Android 用の明示リスト (19 エントリ。binary cache から取れる軽量なものだけ)
     │   ├── rustup.nix    — bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
@@ -208,7 +208,7 @@ nix/
     │   ├── wezterm.nix   — programs.wezterm (extraConfig は wezterm.lua を readFile)
     │   └── zsh.nix       — programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済) + shellAliases (drs/hms を OS 別 lib.optionalAttrs。hms の -c には configName が入る)
     └── darwin/
-        ├── codex.nix     — /etc/codex/config.toml を codex/config.toml へ symlink (environment.etc)
+        ├── codex.nix     — /etc/codex/config.toml を agents/bindings/codex/config.toml へ symlink (environment.etc)
         ├── homebrew.nix  — declarative brews / casks
         ├── sleepctl.nix  — 蓋閉じ監視デーモン (disablesleep 中に蓋を閉じたら pmset displaysleepnow を 1 回打つ)
         └── system.nix    — users, nix.settings, Touch ID, primaryUser
@@ -304,23 +304,67 @@ Android プロファイルだけは `pkgs.neovim` (nixpkgs-unstable の **stable
 
 ## AI エージェントのハーネス (agents/)
 
-プロンプト・スキル・ルール・hooks・subagent の正本は `agents/` に置き、Claude Code / Codex / OpenCode の 3 者へ配る (hooks だけは Claude Code のみ)。ランタイム固有の名前 (`~/.claude/CLAUDE.md` 等) は Nix module 側で与える。
+グローバル指示・ルール・スキル・subagent の正本は `agents/` に 1 セットだけ置き、**ランタイムごとにコンパイルして配る**。読み手は自分の語彙で書かれた完成品だけを読む。
+
+本文はランタイム中立の語彙 (`{{@ask-user}}` 等) で書き、`agents/vocabulary.json` が各ランタイムの実語へ展開する。語彙では吸収できないランタイム固有の記述は `agents/bindings/<runtime>/overlay/` に**節単位**で置き、見出しが一致する節を差し替える。
 
 ```
 agents/
-├── AGENTS.md            ← グローバル指示。~/.claude/CLAUDE.md と ~/.config/opencode/AGENTS.md へ symlink
-├── skills/              ← ~/.agents/skills/<name> へ個別 symlink (Codex と OpenCode が直読み)。Claude Code へは ~/.claude/skills をディレクトリごと symlink
+├── AGENTS.md            ← グローバル指示の base
 ├── rules/               ← core/ backend/ frontend/ infra/
+├── skills/              ← 28 本
+├── subagents/           ← 4 本 (Claude Code 形式が正本)
+├── vocabulary.json      ← 中立語彙 → 3 ランタイムの実語 (19 件)
 ├── hooks/               ← fix-round-guard.ts / herdr-agent-state.sh
-├── subagents/           ← Claude Code へは symlink、Codex と OpenCode へは変換して配る 4 本
-├── scripts/             ← agent / skill から ~/.claude/scripts/<name> の形で呼ぶ + statusLine + 配布用の変換スクリプト
-├── knowledge-profile.md ← ~/.claude/knowledge-profile.md へ symlink (utility-doc-reading が読み書きする)
-└── bindings/            ← ランタイム固有の設定ファイル
-    ├── claude/          ← settings.json / keybindings.json / settings.{deepseek,spark}.json (後 2 者は zsh/functions/claude-deepseek.zsh が --settings で読む)
-    └── opencode/        ← opencode.json / tui.json / AGENTS-opencode.md (OpenCode 固有の読み替え規約)
+├── scripts/             ← build-harness.ts (生成器) / subagent-format.ts / mutate-check.ts ほか
+├── knowledge-profile.md ← utility-doc-reading が読み書きする
+└── bindings/            ← ランタイム固有
+    ├── claude/          ← settings.json / keybindings.json / settings.{deepseek,spark}.json
+    ├── codex/           ← config.toml / overlay/
+    └── opencode/        ← opencode.json / tui.json / overlay/
 ```
 
-**Codex 向けだけは `codex/` に残してある。** `config.toml` は `/etc/codex/config.toml` の system レイヤーとして配るため `nix/modules/darwin/codex.nix` が絶対パスを直参照する。`codex/AGENTS.md` も Codex 専用の別正本で、`~/.codex/AGENTS.md` へはこちらが symlink される (Claude Code と OpenCode が受け取る `agents/AGENTS.md` とは中身が違う)。**グローバル指示だけは 3 者で 1 枚に統一できていない。**
+**Claude 向けの overlay は置かない。** base をそのまま出すことで「Claude 向け生成物 = 中立化前の base」が成立し、語彙置換が可逆であることを byte 比較で検証できる。
+
+### 配布先
+
+| 要素 | Claude Code | Codex | OpenCode |
+| --- | --- | --- | --- |
+| グローバル指示 | `~/.claude/CLAUDE.md` | `~/.codex/AGENTS.md` | `~/.config/opencode/AGENTS.md` |
+| ルール | `~/.claude/rules/` | `~/.agents/rules/codex/` | `~/.agents/rules/opencode/` |
+| スキル | `~/.claude/skills/` | `~/.codex/skills/` | `~/.config/opencode/skills/` |
+| subagent | `~/.claude/agents/` | `~/.codex/agents/*.toml` | `~/.config/opencode/agents/*.md` |
+
+**`~/.agents/skills/` は使わない。** Codex と OpenCode の両方がこのディレクトリを探索し、**どちらも探索を止める手段が無い** (OpenCode の `skills.paths` は追加専用、Codex の `skip_host_skill_discovery` は skill roots を変えない。いずれも実測)。ランタイム別の生成物を置けないので、他ツールが入れたスキルの領域として空けてある。
+
+OpenCode は `~/.claude/skills` も探索する。`nix/modules/home/env.nix` の `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` で切ってある。**この変数が効いていないと、同名スキルのどちらが採用されるかが実行ごとに変わる** (実測: 3 回の実行で採用元が 6 / 2 / 6 件と割れた)。`drs` / `hms` の後は**ターミナルを開き直す**。`hm-session-vars.sh` に再読込ガードがあり、既存のターミナルには新しい変数が入らない。
+
+### 生成器 (agents/scripts/build-harness.ts)
+
+`drs` / `hms` の activation が呼ぶ。手で流し直すこともできる (引数なしで実行すると使い方が出る)。
+
+処理は **overlay の節マージ → 語彙の置換**の順。逆順だと overlay の見出しキーをランタイム語彙で書くことになり、キーがランタイムごとに変わってしまう (見出しにプレースホルダを含むファイルが 4 本ある)。
+
+安全機構が 3 つある。
+
+- **出力先の検査**: symlink または正本配下に解決する出力先を拒否する。activation は旧 symlink の撤去 (`linkGeneration`) より前に走りうるため、素直に書くと生成物を旧 symlink 越しに `agents/` 自身へ書き込んで正本を壊す
+- **staging → rename**: 生成は出力先の隣で行い、閉包チェックを通ってから移す。途中で失敗しても配布先が半端な状態で残らない
+- **manifest による prune**: 撤去対象は `.harness-manifest.json` に載っているものだけ。配布先には他ツールが置いたスキルが同居するので、拡張子やマーカー行では選別できない
+
+未定義のプレースホルダが残っていると例外で止まる。deno が無ければ警告してスキップし activation は成功する (生成物は前回のまま残る)。
+
+### live edit の範囲
+
+**ルール・スキル・subagent・グローバル指示は生成物になったので、編集しても `drs` / `hms` (または生成器の手動実行) まで反映されない。**
+
+symlink のまま残しているのは次のものだけ。
+
+| 対象 | 理由 |
+| --- | --- |
+| `hooks/` `scripts/` | コードで語彙の置換対象が無い |
+| `bindings/claude/settings.json` `keybindings.json` | Claude 固有で他ランタイムは読まない |
+| `bindings/codex/config.toml` | `/etc/codex/config.toml` の system レイヤーとして配る |
+| `knowledge-profile.md` | `utility-doc-reading` が**書き込む**。生成物にすると毎回上書きされる |
 
 ### 開発ワークフローのスキル
 
@@ -345,59 +389,56 @@ deny する機械ゲートは 1 本で、ほかに herdr 連携用のスクリ�
 | `fix-round-guard.ts` | Claude Code の `settings.json` のみ (Agent ツール入力に依存するため Codex へは移植しない) | dev-impl の修正ラウンド上限 (2 周) を強制する |
 | `herdr-agent-state.sh` | Claude Code の `settings.json` の SessionStart (`~/.claude/hooks/` 経由) | herdr にセッション状態を渡す。herdr 本体が配布するファイルで mac の絶対パスが埋まっており、Linux では発火しない |
 
-Codex と OpenCode には hook が 1 本も配られていない (Codex は移植していないため、OpenCode はシェル hooks を持たないため)。Claude Code に残る `fix-round-guard` も検証するのは修正ラウンド数だけで、コミット subject を見るゲートはどのランタイムにも無い。したがって**コミット規約は 3 ランタイムとも自律遵守**である。Codex へ hook を追加するときの置き場は `codex/AGENTS.md`「hooks を追加するときの置き場」節にある。
+Codex と OpenCode には hook が 1 本も配られていない (Codex は移植していないため、OpenCode はシェル hooks を持たないため)。Claude Code に残る `fix-round-guard` も検証するのは修正ラウンド数だけで、コミット subject を見るゲートはどのランタイムにも無い。したがって**コミット規約は 3 ランタイムとも自律遵守**である。Codex へ hook を追加するときの置き場は Codex 向け生成物の「hooks を追加するときの置き場」節にある (正本は `agents/bindings/codex/overlay/AGENTS.md`)。
 
 `settings.json` の登録は全 14 件で、上表の 2 本以外は**外部ツール orca が書き込んだ 12 件**である (12 イベントに 1 件ずつ)。orca の分は `~/.orca/agent-hooks/claude-hook.sh` が無ければ空の `{}` を返すだけで、このマシンには `~/.orca` が存在しないので全件 no-op になっている。自作 hook を数えるときはこれらと区別する。
 
 ### subagents (agents/subagents/)
 
-正本は Claude Code 形式 (Markdown + frontmatter)。3 者で唯一**書式変換が避けられない**要素で、`agents/scripts/sync-subagents.ts` が activation 時に変換する。生成物は git 管理しない。変換は `deno.nix` の bootstrap 後に走る。deno が無ければ警告してスキップし activation は成功するので、生成物は古いまま残る (`~/.codex/agents` が空のときはまずこれを疑う)。逆に変換が失敗すると (frontmatter の `name` / `description` 欠落、本文に `'''` を含む) exit 1 で `drs` / `hms` ごと止まる。手で流し直すには `deno run --allow-read --allow-write agents/scripts/sync-subagents.ts agents/subagents codex ~/.codex/agents` (OpenCode 向けは `codex` を `opencode`、出力先を `~/.config/opencode/agents` に置換)。生成物の先頭には `# generated by agents/scripts/sync-subagents.ts` の 1 行が入り、正本から消えた subagent の撤去はこの行を持つファイルだけを対象にする。配布先は人が自分の agent を 置く場所でもあるため、拡張子だけで消すと手書きを巻き込む。
+正本は Claude Code 形式 (Markdown + frontmatter)。3 者で唯一**書式変換が避けられない**要素で、`agents/scripts/subagent-format.ts` の変換関数を `build-harness.ts` が語彙置換の後に呼ぶ (順序が逆だと TOML の中身に置換をかけることになる)。生成物は git 管理しない。
 
-| 配布先 | 形式 | 経路 |
-| --- | --- | --- |
-| `~/.claude/agents/` | 正本そのもの | `claude.nix` の symlink |
-| `~/.codex/agents/*.toml` | `name` / `description` / `developer_instructions` の 3 キー | `codex.nix` が `sync-subagents.ts ... codex` を実行 |
-| `~/.config/opencode/agents/*.md` | `description` + `mode: subagent` の frontmatter | `opencode.nix` が `sync-subagents.ts ... opencode` を実行 |
+| 配布先 | 形式 |
+| --- | --- |
+| `~/.claude/agents/*.md` | 正本と同じ形式 (語彙だけ展開) |
+| `~/.codex/agents/*.toml` | `name` / `description` / `developer_instructions` の 3 キー |
+| `~/.config/opencode/agents/*.md` | `description` + `mode: subagent` の frontmatter |
 
-subagent が 3 者に配られる一方、**hooks は Claude Code にしか無い**。Codex へは `fix-round-guard` が Agent ツール入力に依存するため移植しておらず、OpenCode はシェル hooks を持たず JS プラグイン API もコマンドに stdin を渡さないため deny する機械ゲートに使えない。Codex と OpenCode 上では修正ラウンド上限が自律遵守になる。
+**落とすキーが 3 つある。** `tools` は Codex に対応キーが無く、OpenCode は真偽値マップで意味が反転する。`model` は Codex では実モデル名が要り alias が使えないため、世代交代に追従できるよう生成物には書かない (固定するなら `agents/bindings/codex/config.toml` の `[agents] default_subagent_model` に 1 箇所だけ書く。現状は未設定で、Codex 側の subagent は親のモデルを継承する)。`context: fork` に相当する概念はどちらにも無い。
 
-**落とすキーが 3 つある。** `tools` は Codex に対応キーが無く、OpenCode は真偽値マップで意味が反転する。`model` は Codex では実モデル名が要り alias が使えないため、世代交代に追従できるよう生成物には書かない (固定するなら `codex/config.toml` の `[agents] default_subagent_model` に 1 箇所だけ書く。現状は未設定で、Codex 側の subagent は親のモデルを継承する)。`context: fork` に相当する概念はどちらにも無い。
-
-### ランタイム固有の読み替え規約
-
-共通の正本 (`agents/AGENTS.md`) とルールは Claude Code の語彙で書かれているので、他 2 者にはツール名の対応表を別に配る。どちらも「読み替えが要る記述は上記が全て」を走査コマンド付きで宣言し、規約に無い記述に出会ったら止まって指示を仰ぐ形にしてある。
-
-| ランタイム | 規約の置き場 | 配布経路 |
-| --- | --- | --- |
-| Codex | `codex/AGENTS.md` | `~/.codex/AGENTS.md` へ symlink (Codex はグローバル指示を 1 枚しか読まないので、共通の正本ではなくこちらが載る) |
-| OpenCode | `agents/bindings/opencode/AGENTS-opencode.md` | `~/.config/opencode/AGENTS-opencode.md` へ symlink し、`opencode.json` の `instructions` で追加読み込みする (AGENTS.md は 1 枚しか読まれないため) |
-
-### rules (agents/rules/)
-
-- `core/` — tdd.md / commit.md / design.md / testing.md / implementation.md / verification.md / orchestration.md ほか
-- `backend/` `frontend/` — 言語・フレームワーク別コーディング規約
-- `infra/dgx-spark.md` — 自宅の DGX Spark 2 台クラスタの環境リファレンス
-
-配布先は `~/.claude/rules` の 1 本だけ。Codex と OpenCode はグローバル指示の記述に従ってこの絶対パスを直接 Read する。
+変換が失敗すると (frontmatter の `name` / `description` 欠落、本文に `'''` を含む) exit 1 で `drs` / `hms` ごと止まる。
 
 ### 配布
 
-`drs` (mac) / `hms` (Linux) が `nix/modules/home/{agent-skills,claude,codex,opencode}.nix` を適用する。専用のインストールスクリプトは無い。Android (`home-android.nix`) は `codex.nix` を import しないので、Codex 向けの配布 (subagent の `.toml` と `/etc/codex/config.toml`) だけが行われない。
+`drs` (mac) / `hms` (Linux) が `nix/modules/home/{harness,claude,codex,opencode}.nix` を適用する。専用のインストールスクリプトは無い。`harness.nix` が Claude Code と OpenCode 向けを、`codex.nix` が Codex 向けを生成する。Android (`home-android.nix`) は `codex.nix` を import しないので Codex 向けだけが行われない。
 
-**live edit の範囲**: `~/.claude/*` へ直 symlink される `AGENTS.md` / `rules/` / `hooks/` / `scripts/` / `bindings/` / `knowledge-profile.md` は編集即反映。`subagents/` は Claude Code だけ即反映で、Codex と OpenCode 向けは変換を挟むので `drs` / `hms` が要る。`skills/` も中身の編集は即反映だが、**追加と削除は個別 symlink の張り直しが要る**。
-
-**skills の二重列挙**: OpenCode は `~/.agents/skills` と `~/.claude/skills` の両方を探索する。`nix/modules/home/env.nix` の `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` で Claude Code 互換経路を切って二重列挙を防いでいる (正本は `~/.agents/skills`)。この変数を外すと全スキルが 2 回出る。
-
-**同名衝突**: `~/.agents/skills/` は他ツール (vercel の skills CLI 等) が入れた実体と同居する。同名の実体があるスキルは `ln -sfn` が実体の *中* にリンクを作ってしまうため、警告だけ出してスキップする。手で退避してから `drs` / `hms` を再実行する。
+生成は `linkGeneration` と `bootstrapDeno` の後に走る。旧 symlink の撤去を待たないと正本を壊すためで、DAG の依存関係で保証している。
 
 **配布の確認**:
 
 ```bash
-readlink ~/.claude/skills                          # dotfiles の agents/skills を指すこと
-ls -l ~/.agents/skills | rg -c dotfiles            # スキル全数と一致すること
-ls ~/.codex/agents ~/.config/opencode/agents       # subagent 4 本の生成物があること
-readlink -f /etc/codex/config.toml                 # dotfiles の codex/config.toml に解決すること
+ls ~/.claude/skills ~/.codex/skills ~/.config/opencode/skills   # それぞれに生成物がある
+ls ~/.codex/agents ~/.config/opencode/agents                     # subagent 4 本の生成物がある
+rg -c '{{@' ~/.codex/AGENTS.md                                   # 0 件 (プレースホルダの残骸が無い)
+readlink -f /etc/codex/config.toml                               # agents/bindings/codex/config.toml に解決する
+echo $OPENCODE_DISABLE_CLAUDE_CODE_SKILLS                        # 1 (空ならターミナルを開き直す)
 ```
+
+### 生成物から symlink へ戻すとき
+
+`~/.claude/{CLAUDE.md,rules,skills,agents}` などが実ファイル化した後に、生成を使わない世代へ戻すと Home Manager の `checkLinkTargets` が `Existing file ... is in the way` で拒否する。戻すときは実ファイルを手で消してから適用する。
+
+```bash
+rm -rf ~/.claude/{CLAUDE.md,rules,skills,agents} \
+       ~/.codex/{AGENTS.md,skills,agents} \
+       ~/.config/opencode/{AGENTS.md,skills,agents} \
+       ~/.agents/rules
+drs   # または hms
+```
+
+### コンパイルでも解消しない非対称
+
+- **呼び出し例の引数の形**は Claude Code のスキーマのまま。ツール名は展開されるが、`request_user_input({ questions: [...] })` の引数構造までは翻訳していない。Codex と OpenCode のツールスキーマを実測する手段が無く、推測で書くと誤った例を配ることになるため。各ランタイム向けの生成物にその旨を明記してある
+- **rules の自動展開**は Claude Code 固有。`paths:` frontmatter による条件付きロードも Claude Code だけの機構で、Codex と OpenCode はグローバル指示から「Read せよ」と指示された分しかコンテキストに入らない。3 者で「同じルールが同じタイミングで効く」ことまでは保証していない
 
 ## Working with This Repository
 
