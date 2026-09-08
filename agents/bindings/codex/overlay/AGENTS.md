@@ -20,7 +20,7 @@
 | このグローバル指示 | `~/.codex/AGENTS.md` | `agents/AGENTS.md` + `agents/bindings/codex/overlay/AGENTS.md` | `drs` / `hms` が要る (生成物) |
 | スキル | `~/.codex/skills/<name>` (Codex の skill root `r0`) | `agents/skills/` | `drs` / `hms` が要る (生成物) |
 | subagent | `~/.codex/agents/*.toml` | `agents/subagents/*.md` を変換したもの | `drs` / `hms` が要る (生成物) |
-| ルール | `~/.claude/rules/` を絶対パスで直接 Read する | `agents/rules/` | `drs` / `hms` が要る (生成物) |
+| ルール | `~/.agents/rules/codex/` を絶対パスで直接 Read する | `agents/rules/` | `drs` / `hms` が要る (生成物) |
 | MCP | `/etc/codex/config.toml` の `[mcp_servers.*]` | `agents/bindings/codex/config.toml` | 即反映 (symlink)。全マシン共通のサーバだけを system レイヤーに置き、マシン固有のものは Codex 自身が `~/.codex/config.toml` (user レイヤー) に書く |
 
 **hooks はこの表に無い。** Codex には 1 本も配られていない (→「hooks は Codex には配られていない」節)。
@@ -47,22 +47,35 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 - **`model`**: 生成物に書かないので、subagent は**親のモデルを継承する**。固定したいときは `dotfiles/agents/bindings/codex/config.toml` に `[agents] default_subagent_model` を 1 箇所書く (現状は未設定)
 - **`context: fork`**: 相当概念が無い
 
-## Claude Code 由来の記述の読み替え
+## 読み替えが要らなくなったもの / まだ要るもの
 
-スキル・subagent・ルールの本文はまだ Claude Code 向けの語彙で書かれている。以下の記述が出てきたら Codex 上では次のように読み替える。
+ハーネスは配布時に語彙を Codex のものへ展開している。本文に出てくる
+`request_user_input` / `update_plan` / `spawn_agent` / `explorer` / `worker` や
+`~/.agents/rules/codex/...` は**すでに Codex の語彙**なので、読み替えずそのまま使う。
 
-- **`AskUserQuestion` ツール**: `request_user_input` ツールでユーザーに確認する。ただし**非対話実行 (`codex exec`) では使えない**ので、その場合は上記「エスカレーション」の自律モード規定に従い、前提と選択の根拠を出力に明示して前進する
-- **`Skill` ツールでの相互呼び出し**: 対応する Codex スキル (`$name`) を実行する。呼び出し先が `slide-plugin:*` / `document-skills:*` のような Claude 専用プラグインのスキルで Codex に存在しない場合は、その旨を伝えて代替手段を提案する
-- **`Agent` ツールでの subagent 起動**: `spawn_agent` に `~/.codex/agents/*.toml` の名前を指定して起動する。スキルが渡す `model` / `subagent_type` は生成物に表現手段が無く落ちるので、**親のモデルを継承する**。定義が無い名前 (`Explore` / `general-purpose` 等の Claude 組み込み) を指している場合は、組み込みの `explorer` / `worker` で代替するか、同一セッション内で逐次実行して**その旨を作業報告に明記する**
-- **`TodoWrite` / `TaskCreate` / `TaskUpdate` によるタスク管理**: `update_plan` ツールで置き換える。粒度と更新のタイミング (1 件ずつ着手 → 完了) は本文の指示に従う
-- **`WebSearch`**: Codex の web search をそのまま使う (`/etc/codex/config.toml` で `web_search = "live"` を設定済み)
-- **`WebFetch`**: 相当するツールが無い。`curl` で取得する
-- **`run_in_background` での Bash 起動**: Codex のバックグラウンド実行で置き換える。同期実行を指示している箇所 (`run_in_background: false`) は素直に同期で回す
-- **`plan mode`**: Codex の Plan mode で置き換える
-- **`chrome-devtools` の MCP ツール** (`mcp__chrome-devtools__*` / `chrome-devtools:*` の記法): 同じ MCP サーバが `dotfiles/agents/bindings/codex/config.toml` で配られているので、ツール名の綴りだけ Codex の記法に読み替えて使う
-- **`~/.claude/rules/...` / `~/.claude/scripts/...` への参照**: 同一マシン上のファイルなのでそのまま Read / 実行して参照する
-- **`~/.claude/agents/...` への参照**: Codex 側の実体は `~/.codex/agents/*.toml` である
-- **`allowed-tools` / `model` / `argument-hint` などの frontmatter**: `name` / `description` / `metadata.short-description` 以外は挙動に効かないものとして扱う。制約として書かれている内容は本文と同じ重みで自分で守る
+置換で吸収できないものだけが残る。
+
+- **呼び出し例の引数の形は Claude Code のもの**。ツール名は展開済みだが、
+  `request_user_input({ questions: [...] })` のような例に出てくる引数の構造は
+  Claude Code のスキーマのまま。**自分のツールのスキーマに合わせて読み替える**
+- **`request_user_input` は非対話実行 (`codex exec`) では使えない**。その場合は上記
+  「エスカレーション」の自律モード規定に従い、前提と選択の根拠を出力に明示して前進する
+- **`spawn_agent` に渡す `model` / `subagent_type`** は subagent の生成物に表現手段が
+  無く落ちるので、**親のモデルを継承する**。定義が無い名前を指している場合は組み込みの
+  `explorer` / `worker` で代替するか、同一セッション内で逐次実行して報告に明記する
+- **スキルの相互呼び出し**で `slide-plugin:*` / `document-skills:*` のような Claude 専用
+  プラグインのスキルが指定されている場合は、その旨を伝えて代替手段を提案する
+- **`chrome-devtools` の MCP ツール**: サーバ名は 3 者共通だがツール名の記法が違う
+  (`mcp__chrome-devtools__*` / `chrome-devtools:*` は Claude の記法)。綴りだけ Codex の
+  記法に読み替える。サーバ自体は `agents/bindings/codex/config.toml` で配られている
+- **`{{@scripts-root}}`** は 3 者で共有している。Claude Code 用のパスに見えても同一
+  マシン上のファイルなのでそのまま実行する
+- **`allowed-tools` / `model` / `argument-hint` などの frontmatter**: `name` /
+  `description` / `metadata.short-description` 以外は挙動に効かないものとして扱う。
+  制約として書かれている内容は本文と同じ重みで自分で守る
+- **`/model` コマンドと `Fable` / `Mythos` の tier 名**: Claude Code 固有。セッションモデルの切り替え手段と世代名は自分のランタイムのものに読み替える
+- **`ScheduleWakeup`**: Codex に相当機能が無い。バックグラウンドタスクの追跡は自分から
+  状態を取りに行く運用で代替する
 
 ここに無い Claude 固有の記述に出会ったら、勝手に読み替えず**その旨を報告して指示を仰ぐ**。
 
