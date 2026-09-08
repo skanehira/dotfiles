@@ -1,6 +1,6 @@
-# Claude Code のバックエンドを DeepSeek に切り替える (現在のシェルのみ)
+# Claude Code のバックエンドを DeepSeek に切り替えて起動する (現在のシェルのみ)
 #
-#   ccds      DeepSeek モードに切替 (1Password から API キーを取得)
+#   ccds      DeepSeek モードに切替えて claude を起動 (1Password から API キーを取得)
 #   ccds off  Anthropic に戻す
 #
 # alias と export はシェルプロセスローカルなので、他のシェルには影響しない。
@@ -30,7 +30,10 @@ ccds() {
   fi
 
   alias claude="claude --settings $settings"
-  echo "ccds: DeepSeek モード (このシェルのみ)。claude で起動、ccds off で解除"
+  echo "ccds: DeepSeek モード (このシェルのみ)。ccds off で解除"
+
+  # 接続先を整えたらそのまま起動する。alias は同じシェルで打ち直す用に残す
+  command claude --settings "$settings" "$@"
 }
 
 # Claude Code のバックエンドを DGX Spark 上のローカル vLLM に切り替える (現在のシェルのみ)
