@@ -1,7 +1,8 @@
 #:schema https://raw.githubusercontent.com/openai/codex/main/codex-rs/core/config.schema.json
 # Codex の共通設定。/etc/codex/config.toml (system レイヤー) として全クライアントに読まれる。
 # ~/.codex/config.toml (user レイヤー) は Codex 自身が書く可変状態 (project trust / [notice] / /model の選択 /
-# notify / [mcp_servers.*]) 用に明け渡すので、dotfiles では管理しない。user レイヤーの同名キーはこのファイルより優先される。
+# notify) 用に明け渡すので、dotfiles では管理しない。user レイヤーの同名キーはこのファイルより優先される。
+# [mcp_servers.*] は両レイヤーに現れる。全マシン共通のサーバはここで配り、マシン固有のものは user レイヤーに任せる。
 
 approval_policy = "never"
 sandbox_mode = "danger-full-access"

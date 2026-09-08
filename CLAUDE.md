@@ -156,7 +156,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `config.toml` の `[[hooks.PreToolUse]]` は `agents/hooks/commit-msg-guard.ts` を Codex 側でも起動する。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) なので、hook スクリプトを両ランタイムで共有できる。**system レイヤーに置いた hooks は信頼ゲートを通らず発火する**のに対し、`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**される (実測。承認を促すメッセージも出ない)。したがって dotfiles で配る hooks は必ず `codex/config.toml` に書く
   - hook の `command` はシェル経由で解釈されるため `$GHQ_ROOT` が展開できる。mac と Linux で dotfiles の絶対パスが違うので、パスは環境変数経由で書く
   - `AGENTS.md` — `~/.codex/AGENTS.md` に symlink するグローバル Codex 指示
-  - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[mcp_servers.*]` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける
+  - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける。`[mcp_servers.*]` は両レイヤーに現れる。全マシン共通のサーバ (context7 / chrome-devtools) は `codex/config.toml` で配り、マシン固有のものは Codex が user レイヤーに書く
   - 旧方式 (Home Manager が `~/.codex/config.toml` を生成) を使っていたマシンでは、`drs` / `hms` 後に 1 回だけ `~/.codex/config.toml` から `codex/config.toml` と重複するキーを手で削除する。残さないと `/etc` 側の値が遮蔽される
   - 配布の確認: `readlink -f /etc/codex/config.toml` が dotfiles の `codex/config.toml` に解決すること
 - **vim/** — Neovim 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
