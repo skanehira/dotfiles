@@ -1,16 +1,10 @@
 # Claude Code Hooks
 
-Custom hooks for Claude Code.
+deny する自作ゲートは `fix-round-guard.ts` の 1 本だけで、起動元は Claude Code の `../bindings/claude/settings.json` の `hooks` のみ。Agent ツールの入力に依存するため Codex へは移植しておらず、`../../codex/config.toml` に hooks は無い。OpenCode はシェル hooks を持たないので対象外。
 
-## Files
+ディレクトリにはこのほか `herdr-agent-state.sh` (SessionStart で herdr にセッション状態を渡す) がある。herdr 本体が配布するファイルで、自作ゲートではないので本書の対象外。
 
-- `fix-round-guard.ts` — 修正ラウンド上限ゲート (PreToolUse Agent)
-
-## Usage
-
-自作 hook はこの 1 本だけで、起動元は Claude Code の `../bindings/claude/settings.json` の `hooks` のみ。Agent ツールの入力に依存するため Codex へは移植しておらず、`codex/config.toml` に hooks は無い。OpenCode はシェル hooks を持たないので対象外。
-
-### Fix Round Guard Hook
+## fix-round-guard.ts
 
 dev-impl の修正ラウンド上限を機械検証する (PreToolUse Agent)。`skills/dev-impl/SKILL.md` 2.3 は「修正は最大 2 ラウンド (固定)」と規定しているが、オーケストレーター自身が「r3・規定超過」と書きながら 3 周目を起動した実測がある (セッション e6b5eb50: 22 issue 中 6 件が r3 以上に入り、規定超過分だけで 5.7h を消費)。指示文の規定は破られるので起動そのものを止める。
 
@@ -28,7 +22,7 @@ dev-impl の修正ラウンド上限を機械検証する (PreToolUse Agent)。`
 
 ## 機械ゲートを置いていない規律
 
-以下は hook で強制せず、`~/.claude/CLAUDE.md` と `../skills/README.md` の記述による自律遵守に委ねている。
+以下は hook で強制せず、`~/.claude/CLAUDE.md` / `../rules/core/` / `../skills/README.md` の記述による自律遵守に委ねている。
 
 - **コミット規約**: `../rules/core/commit.md` の `<emoji> <type>: <subject>` 形式。3 ランタイムとも自律遵守する
 - **実装系ルールの遅延参照**: 着手前に `../rules/core/` の必要なものを Read する。プロンプトを検知してリマインドする仕組みは持たない

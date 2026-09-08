@@ -18,7 +18,7 @@
 
     ./modules/home/agent-skills.nix
     ./modules/home/claude.nix
-    # agents/bindings/claude/settings.json の hook 2 本が `deno run` で起動するので、
+    # agents/bindings/claude/settings.json の hook 1 本 (fix-round-guard) が `deno run` で起動するので、
     # Claude Code を使う以上 deno は外せない (bootstrap は公式 installer を curl するだけ)
     ./modules/home/deno.nix
     ./modules/home/direnv.nix

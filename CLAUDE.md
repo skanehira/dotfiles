@@ -153,7 +153,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - 配布先と構成は「AI エージェントのハーネス (agents/)」節を参照
 - **codex/** — Codex 設定（`/etc/codex/config.toml` へ dotfiles 直接 symlink、live edit 可能）
   - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる
-  - `config.toml` に hooks は書いていない。ハーネスの自作ゲートは `fix-round-guard.ts` 1 本だけで、Claude Code の Agent ツール入力に依存するため Codex へは移植していない。将来 Codex へ hook を配るときは必ずこのファイル (system レイヤー) に書く。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) なのでスクリプトは共有でき、**system レイヤーに置いた hooks は信頼ゲートを通らず発火する**のに対し、`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**される (実測。承認を促すメッセージも出ない)。`command` はシェル経由で解釈されるので `$GHQ_ROOT` が展開でき、mac と Linux で絶対パスが違う問題は環境変数経由で書けば回避できる
+  - `config.toml` に hooks は書いていない。自作ゲート `fix-round-guard.ts` は Claude Code の Agent ツール入力に依存するため Codex へは移植していない。Codex へ hook を配るときの置き場とレイヤーごとの発火差は `codex/AGENTS.md`「hooks を追加するときの置き場」節にある
   - `AGENTS.md` — `~/.codex/AGENTS.md` に symlink するグローバル Codex 指示
   - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける。`[mcp_servers.*]` は両レイヤーに現れる。全マシン共通のサーバ (context7 / chrome-devtools) は `codex/config.toml` で配り、マシン固有のものは Codex が user レイヤーに書く
   - 旧方式 (Home Manager が `~/.codex/config.toml` を生成) を使っていたマシンでは、`drs` / `hms` 後に 1 回だけ `~/.codex/config.toml` から `codex/config.toml` と重複するキーを手で削除する。残さないと `/etc` 側の値が遮蔽される
@@ -345,9 +345,9 @@ deny する機械ゲートは 1 本で、ほかに herdr 連携用のスクリ�
 | `fix-round-guard.ts` | Claude Code の `settings.json` のみ (Agent ツール入力に依存するため Codex へは移植しない) | dev-impl の修正ラウンド上限 (2 周) を強制する |
 | `herdr-agent-state.sh` | Claude Code の `settings.json` の SessionStart (`~/.claude/hooks/` 経由) | herdr にセッション状態を渡す。herdr 本体が配布するファイルで mac の絶対パスが埋まっており、Linux では発火しない |
 
-Codex と OpenCode には hook が 1 本も配られていない (Codex は移植していないため、OpenCode はシェル hooks を持たないため)。したがって**コミット規約は 3 ランタイムとも自律遵守**で、機械検証は無い。Codex 側の登録先と承認の扱いは Directory Structure の `codex/` 項を参照。
+Codex と OpenCode には hook が 1 本も配られていない (Codex は移植していないため、OpenCode はシェル hooks を持たないため)。Claude Code に残る `fix-round-guard` も検証するのは修正ラウンド数だけで、コミット subject を見るゲートはどのランタイムにも無い。したがって**コミット規約は 3 ランタイムとも自律遵守**である。Codex へ hook を追加するときの置き場は `codex/AGENTS.md`「hooks を追加するときの置き場」節にある。
 
-`settings.json` にはこの表以外に**外部ツールが書き込んだ登録が 13 件ある**。内訳は herdr が SessionStart に 1 件、orca が 12 イベントに 1 件ずつ。orca の分は `~/.orca/agent-hooks/claude-hook.sh` が無ければ空の `{}` を返すだけで、このマシンには `~/.orca` が存在しないので全件 no-op になっている。自作 hook を数えるときはこれらと区別する。
+`settings.json` の登録は全 14 件で、上表の 2 本以外は**外部ツール orca が書き込んだ 12 件**である (12 イベントに 1 件ずつ)。orca の分は `~/.orca/agent-hooks/claude-hook.sh` が無ければ空の `{}` を返すだけで、このマシンには `~/.orca` が存在しないので全件 no-op になっている。自作 hook を数えるときはこれらと区別する。
 
 ### subagents (agents/subagents/)
 
@@ -359,7 +359,7 @@ Codex と OpenCode には hook が 1 本も配られていない (Codex は移�
 | `~/.codex/agents/*.toml` | `name` / `description` / `developer_instructions` の 3 キー | `codex.nix` が `sync-subagents.ts ... codex` を実行 |
 | `~/.config/opencode/agents/*.md` | `description` + `mode: subagent` の frontmatter | `opencode.nix` が `sync-subagents.ts ... opencode` を実行 |
 
-subagent が 3 者に配られる一方、**hooks は Claude Code と Codex の 2 者にしか無い**。OpenCode はシェル hooks を持たず、JS プラグイン API もコマンドに stdin を渡さないため deny する機械ゲートに使えない。OpenCode 上ではコミット規約と修正ラウンド上限が自律遵守になる。
+subagent が 3 者に配られる一方、**hooks は Claude Code にしか無い**。Codex へは `fix-round-guard` が Agent ツール入力に依存するため移植しておらず、OpenCode はシェル hooks を持たず JS プラグイン API もコマンドに stdin を渡さないため deny する機械ゲートに使えない。Codex と OpenCode 上では修正ラウンド上限が自律遵守になる。
 
 **落とすキーが 3 つある。** `tools` は Codex に対応キーが無く、OpenCode は真偽値マップで意味が反転する。`model` は Codex では実モデル名が要り alias が使えないため、世代交代に追従できるよう生成物には書かない (固定するなら `codex/config.toml` の `[agents] default_subagent_model` に 1 箇所だけ書く。現状は未設定で、Codex 側の subagent は親のモデルを継承する)。`context: fork` に相当する概念はどちらにも無い。
 
