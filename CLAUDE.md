@@ -304,7 +304,7 @@ Android プロファイルだけは `pkgs.neovim` (nixpkgs-unstable の **stable
 
 ## AI エージェントのハーネス (agents/)
 
-プロンプト・スキル・ルール・hooks・subagent の正本は `agents/` に置き、Claude Code / Codex / OpenCode の 3 者へ配る。ランタイム固有の名前 (`~/.claude/CLAUDE.md` 等) は Nix module 側で与える。
+プロンプト・スキル・ルール・hooks・subagent の正本は `agents/` に置き、Claude Code / Codex / OpenCode の 3 者へ配る (hooks だけは Claude Code のみ)。ランタイム固有の名前 (`~/.claude/CLAUDE.md` 等) は Nix module 側で与える。
 
 ```
 agents/
