@@ -28,8 +28,6 @@
   # 直接 symlink (mkOutOfStoreSymlink) にしているのは live edit のため。通常の
   # home.file.X.source = ./path だと /nix/store にコピーされ drs 必須になる。
   home.file = {
-    # グローバル指示。3 者で中身が違い、overlay へ移すのは語彙の中立化と同じフェーズで行う
-    ".claude/CLAUDE.md".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/AGENTS.md";
     # Claude Code 固有の設定。他ランタイムは読まないので生成の対象外
     ".claude/settings.json".source =
       config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/claude/settings.json";

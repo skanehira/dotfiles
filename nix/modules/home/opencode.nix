@@ -27,15 +27,4 @@
   home.file.".config/opencode/tui.json".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/tui.json";
 
-  # グローバル指示の正本を OpenCode にも配る。OpenCode は AGENTS.md を優先し、
-  # 無いときだけ ~/.claude/CLAUDE.md にフォールバックする。明示的に置いて経路を 1 本にする。
-  home.file.".config/opencode/AGENTS.md".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/AGENTS.md";
-
-  # OpenCode 固有の読み替え規約。共通の正本とルールは Claude Code 向けの語彙で
-  # 書かれているので、ツール名の対応と「hooks が動かない」ことをここで補う。
-  # AGENTS.md は 1 枚しか読まれないため、opencode.json の instructions で追加する。
-  home.file.".config/opencode/AGENTS-opencode.md".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/AGENTS-opencode.md";
-
 }
