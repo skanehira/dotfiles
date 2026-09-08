@@ -30,7 +30,7 @@
 | subagent | `~/.codex/agents/*.toml` | `dotfiles/agents/subagents/*.md` を変換したもの | **変更も追加も `drs` / `hms` が要る** (TOML の再生成) |
 | ルール | `~/.claude/rules/` を絶対パスで直接 Read する (Codex 側に複製は無い) | `dotfiles/agents/rules/` | 即反映 |
 | hooks | 登録は `/etc/codex/config.toml` の `[[hooks.PreToolUse]]`、スクリプト本体は `dotfiles/agents/hooks/` | 同左 | 即反映 (system レイヤーは信頼ゲートを通らない) |
-| MCP | `/etc/codex/config.toml` の `[mcp_servers.*]` | `dotfiles/codex/config.toml` | 即反映 |
+| MCP | `/etc/codex/config.toml` の `[mcp_servers.*]` | `dotfiles/codex/config.toml` | 即反映。全マシン共通のサーバだけを system レイヤーに置き、マシン固有のものは Codex 自身が `~/.codex/config.toml` (user レイヤー) に書く |
 
 配布されているか自分で確かめる:
 
@@ -62,13 +62,18 @@ readlink -f /etc/codex/config.toml     # dotfiles の codex/config.toml に解�
 - **`WebSearch`**: Codex の web search をそのまま使う (`/etc/codex/config.toml` で `web_search = "live"` を設定済み)
 - **`WebFetch`**: 相当するツールが無い。`curl` で取得する
 - **`run_in_background` での Bash 起動**: Codex のバックグラウンド実行で置き換える。同期実行を指示している箇所 (`run_in_background: false`) は素直に同期で回す
-- **`Workflow` ツール**: 相当機能が無い。並列オーケストレーションを指示している箇所は `spawn_agent` の並列起動で代替するか、逐次実行して**その旨を作業報告に明記する**
 - **`plan mode`**: Codex の Plan mode で置き換える
 - **`chrome-devtools` の MCP ツール** (`mcp__chrome-devtools__*` / `chrome-devtools:*` の記法): 同じ MCP サーバが `dotfiles/codex/config.toml` で配られているので、ツール名の綴りだけ Codex の記法に読み替えて使う
 - **`~/.claude/rules/...` / `~/.claude/agents/...` / `~/.claude/scripts/...` への参照**: 同一マシン上のファイルなのでそのまま Read / 実行して参照する
-- **`allowed-tools` / `model` / `argument-hint` などの frontmatter**: Codex は読まない (`name` / `description` / `metadata.short-description` の 3 キーだけを見る)。制約として書かれている内容は本文と同じ重みで自分で守る
+- **`allowed-tools` / `model` / `argument-hint` などの frontmatter**: `name` / `description` / `metadata.short-description` 以外は挙動に効かないものとして扱う。制約として書かれている内容は本文と同じ重みで自分で守る
 
-読み替えが要る記述は上記が全てである (2026-09 時点で `agents/skills/` `agents/subagents/` `agents/rules/` を走査した結果)。ここに無い Claude 固有の記述に出会ったら、勝手に読み替えず**その旨を報告して指示を仰ぐ**。
+読み替えが要る記述は上記が全てである。2026-09 時点で次のコマンドで走査した結果に基づく。
+
+```bash
+rg -o 'AskUserQuestion|TodoWrite|TaskCreate|TaskUpdate|WebFetch|WebSearch|run_in_background|plan mode|chrome-devtools:|~/\.claude/(rules|agents|scripts)|Skill ツール|Agent ツール' agents/skills agents/subagents agents/rules
+```
+
+ここに無い Claude 固有の記述に出会ったら、勝手に読み替えず**その旨を報告して指示を仰ぐ**。上のコマンドを流し直して規約を更新するのは人間の作業。
 
 ## hooks は Codex でも効く
 
