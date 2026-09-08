@@ -30,10 +30,10 @@ argument-hint: "[スキル名] [スキルの説明]"
 - `$ARGUMENTS`の最初の単語: スキル名
 - `$ARGUMENTS`の残りの部分: スキルの説明
 
-$ARGUMENTSが空の場合、AskUserQuestionツールを使用して以下を質問してください：
+$ARGUMENTSが空の場合、{{@ask-user}}ツールを使用して以下を質問してください：
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [
     {
       question: "作成するスキルの名前を入力してください。\n\n例：\n- pdf-converter\n- code-review\n- data-analyzer",
@@ -53,7 +53,7 @@ AskUserQuestion({
 スキル名取得後、説明が空の場合も質問してください：
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [
     {
       question: "スキルの説明を入力してください。何を行うスキルですか？\n\n例：\n- PDFファイルを画像に変換し、OCR処理を行う\n- コードレビューを自動化し、改善点を提案する\n- データを分析してレポートを生成する",
@@ -74,12 +74,12 @@ AskUserQuestion({
 
 ## [2/3] スキルの作成
 
-### TodoWriteでタスク管理
+### {{@todo-write}}でタスク管理
 
-TodoWriteツールを使用してタスクを作成：
+{{@todo-write}}ツールを使用してタスクを作成：
 
 ```javascript
-TodoWrite({
+{{@todo-write}}({
   todos: [
     {
       content: "skill-creatorでスキルを作成",
@@ -102,7 +102,7 @@ TodoWrite({
 
 ### skill-creatorの実行
 
-`example-skills:skill-creator` スキルを Skill ツールで実行する（引数に `[スキル名] [スキルの説明]` を渡す）。
+`example-skills:skill-creator` スキルを {{@invoke-skill}}で実行する（引数に `[スキル名] [スキルの説明]` を渡す）。
 
 **重要**: skill-creatorが対話的に質問してくる場合は、ユーザーから取得した情報を元に回答してください。
 
@@ -116,10 +116,10 @@ TodoWrite({
 
 ## [3/3] レビューと自動修正
 
-### TodoWrite更新
+### {{@todo-write}}更新
 
 ```javascript
-TodoWrite({
+{{@todo-write}}({
   todos: [
     {
       content: "skill-creatorでスキルを作成",
@@ -142,16 +142,16 @@ TodoWrite({
 
 ### reviewing-skillsの実行
 
-`utility-reviewing-skills` スキルを Skill ツールで実行する。
+`utility-reviewing-skills` スキルを {{@invoke-skill}}で実行する。
 
 ### レビュー結果の処理
 
 **問題がない場合**：
-1. TodoWriteですべてのタスクを完了にする
+1. {{@todo-write}}ですべてのタスクを完了にする
 2. 完了サマリーを表示して終了
 
 **問題がある場合**：
-1. TodoWriteを更新して自動修正フェーズに移行
+1. {{@todo-write}}を更新して自動修正フェーズに移行
 2. 指摘された問題を自動的に修正
 3. 再度reviewing-skillsを実行して確認
 4. 問題がなくなるまで繰り返す（最大3回）

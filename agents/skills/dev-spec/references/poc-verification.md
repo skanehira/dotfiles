@@ -37,7 +37,7 @@ docs/design/FEASIBILITY.md を Read し、`status=unresolved` の POC_STATUS 行
 Agent({
   description: "PoC: <id>",
   subagent_type: "tech-investigation",
-  model: "opus",   // 調査 fan-out は opus 明示 (~/.claude/rules/core/orchestration.md の割当表)。agent 側 frontmatter も opus だが、明示忘れで無音にセッションモデル継承へ落ちないよう二重に指定する
+  model: "opus",   // 調査 fan-out は opus 明示 ({{@rules-root}}/core/orchestration.md の割当表)。agent 側 frontmatter も opus だが、明示忘れで無音にセッションモデル継承へ落ちないよう二重に指定する
   prompt: `
 以下の PoC 計画を検証してください。
 
@@ -79,7 +79,7 @@ Agent({
 自動解決できなかった計画ごとに、**勝手に設計を曲げず**ユーザーに判断を仰ぐ:
 
 ```javascript
-AskUserQuestion({
+{{@ask-user}}({
   questions: [{
     question: "PoC「<id>」が自動解決できませんでした。\n\n理由: <verified だが confidence 0.6 / fallback_needed / agent 失敗 など>\n観測した事実: <要点>\n\nどうしますか?",
     header: "PoC 判断",

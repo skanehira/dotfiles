@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, TaskCreate, TaskUpdat
 
 # dev-impl-quick — 軽量実装ループ
 
-設計 docs (DESIGN.md / TODO.md 等) を前提にしない、依頼文をそのまま入力にできる薄い実装ループ。`dev-impl` が持つ承認ゲート・複数観点レビュー fan-out (quality / product-readiness / adversarial)・進捗ログ・HTML レポートは持たない。TDD の RED→GREEN→REFACTOR 順序はメインループが `~/.claude/rules/core/tdd.md` に従い自律遵守する。
+設計 docs (DESIGN.md / TODO.md 等) を前提にしない、依頼文をそのまま入力にできる薄い実装ループ。`dev-impl` が持つ承認ゲート・複数観点レビュー fan-out (quality / product-readiness / adversarial)・進捗ログ・HTML レポートは持たない。TDD の RED→GREEN→REFACTOR 順序はメインループが `{{@rules-root}}/core/tdd.md` に従い自律遵守する。
 
 順序を守っても「テストは通るが意味がない (トートロジー・実装詳細への依存)」は起きうる。これはメインループが自分で書いたテストを自己レビューしても見逃しやすいため、タスクごとに `review-impl` subagent (fresh context、`focus: tests`) を 1 観点だけ都度起動して検証する。
 
@@ -29,14 +29,14 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, TaskCreate, TaskUpdat
 
 ## ステップ
 
-1. **タスク分解と見える化**: 依頼をタスク単位に分解し `TaskCreate` でリスト化する。`~/.claude/rules/core/orchestration.md` のトリアージ (難易度・コンテキスト連続性・並列可能性) を 1 行で出力してから着手する
-2. **1 件ずつ実装**: `TaskUpdate` で in_progress にし、メインループ直営で TDD 実装する (RED→GREEN→REFACTOR の順序は自律遵守するため、着手前にセッション未読なら `~/.claude/rules/core/tdd.md` / `design.md` / `testing.md` を Read する)。TDD を適用しない判断 (typo 修正・宣言的 config 変更など) をした場合は理由を出力に明示する
+1. **タスク分解と見える化**: 依頼をタスク単位に分解し `{{@task-create}}` でリスト化する。`{{@rules-root}}/core/orchestration.md` のトリアージ (難易度・コンテキスト連続性・並列可能性) を 1 行で出力してから着手する
+2. **1 件ずつ実装**: `{{@task-update}}` で in_progress にし、メインループ直営で TDD 実装する (RED→GREEN→REFACTOR の順序は自律遵守するため、着手前にセッション未読なら `{{@rules-root}}/core/tdd.md` / `design.md` / `testing.md` を Read する)。TDD を適用しない判断 (typo 修正・宣言的 config 変更など) をした場合は理由を出力に明示する
 3. **テストゲート**: 関連テストを Bash で実行し exit code で green を確認する。テストの削除・skip・弱体化によるゲート通過は禁止 — やむを得ない場合は理由を明示してユーザーに判断を仰ぐ
-4. **review-impl (テスト品質レビュー)**: テスト green 後、`review-impl` subagent を `model: opus` 明示・Agent ツールで起動する。prompt には `repo_dir` / `base_sha` (タスク開始時の HEAD) / `focus: tests` / `report_path` (例: `/tmp/review-impl-<task>.json`。findings 本体はこのファイルに書かれ、最終メッセージはパスと件数だけを返す契約) を含める (入出力契約は `agents/subagents/review-impl.md` が正本)。high/medium の finding があればメインループで直接 self-fix し、ステップ 3 に戻る (この往復も次項の失敗カウントに含める)。finding が無ければ次へ
-5. **コミット**: review-impl 通過後、そのタスク単位で `~/.claude/rules/core/commit.md` 準拠のコミットを作成する (push はしない)
-6. **`TaskUpdate` で completed にして次のタスクへ**: 全タスク消化まで 1〜5 を繰り返す
+4. **review-impl (テスト品質レビュー)**: テスト green 後、`review-impl` subagent を `model: opus` 明示・{{@spawn-subagent}}で起動する。prompt には `repo_dir` / `base_sha` (タスク開始時の HEAD) / `focus: tests` / `report_path` (例: `/tmp/review-impl-<task>.json`。findings 本体はこのファイルに書かれ、最終メッセージはパスと件数だけを返す契約) を含める (入出力契約は `agents/subagents/review-impl.md` が正本)。high/medium の finding があればメインループで直接 self-fix し、ステップ 3 に戻る (この往復も次項の失敗カウントに含める)。finding が無ければ次へ
+5. **コミット**: review-impl 通過後、そのタスク単位で `{{@rules-root}}/core/commit.md` 準拠のコミットを作成する (push はしない)
+6. **`{{@task-update}}` で completed にして次のタスクへ**: 全タスク消化まで 1〜5 を繰り返す
 7. **停止条件**: 同一タスクでステップ 3〜4 の同一アプローチが 2 回失敗したら戦略を変える、3 回失敗したら詰まっている箇所を具体化してユーザーにエスカレーションする。破壊的・不可逆操作 (force push・削除・外部公開) は必ず停止して確認する
 
 ## 完了報告
 
-`~/.claude/rules/core/collaboration.md` の 4 点形式で報告する: 変更の要約 / 動作確認結果 (テスト件数・review-impl の finding 有無・実機確認) / 既知の残骸 (未対応・スコープ外) / 次にユーザがする決定。テスト品質以外も含めた全項目レビュー (focus: all) が必要そうであれば、末尾で `/workflow-review` の手動起動を案内する (自動では起動しない)。
+`{{@rules-root}}/core/collaboration.md` の 4 点形式で報告する: 変更の要約 / 動作確認結果 (テスト件数・review-impl の finding 有無・実機確認) / 既知の残骸 (未対応・スコープ外) / 次にユーザがする決定。テスト品質以外も含めた全項目レビュー (focus: all) が必要そうであれば、末尾で `/workflow-review` の手動起動を案内する (自動では起動しない)。

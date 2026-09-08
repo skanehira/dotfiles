@@ -11,7 +11,7 @@ paths:
 
 /utility-doc-audit のフォーマット適合チェックの正本。各項目は yes/no + 根拠箇所で判定できる形にしてある。
 
-節構成の正本は dev-spec スキルの `references/design-doc.md` (横断設計書 = docs/design/DESIGN.md) と `references/feature-doc.md` (機能設計書 = docs/design/features/)。本規範は独自フォーマットを定義せず、「dev-spec の issue 生成と /dev-impl に接続できる設計書」の要件をテンプレートに重ねて定義する。実装を伴わない検討文書（方針比較・アーキテクチャ調査等）は本型の対象外 — 種別をそれと明記し（例: `- 種別: 設計方針書`）、`~/.claude/rules/core/documentation.md` の汎用原則のみでよい。
+節構成の正本は dev-spec スキルの `references/design-doc.md` (横断設計書 = docs/design/DESIGN.md) と `references/feature-doc.md` (機能設計書 = docs/design/features/)。本規範は独自フォーマットを定義せず、「dev-spec の issue 生成と /dev-impl に接続できる設計書」の要件をテンプレートに重ねて定義する。実装を伴わない検討文書（方針比較・アーキテクチャ調査等）は本型の対象外 — 種別をそれと明記し（例: `- 種別: 設計方針書`）、`{{@rules-root}}/core/documentation.md` の汎用原則のみでよい。
 
 ## 成果物とパス（違反は major）
 

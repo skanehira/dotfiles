@@ -61,7 +61,7 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 
 | ファイル                                                                 | 用途                                                                                                                  |
 | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| [assets/cf-issue-deploy-token.sh](assets/cf-issue-deploy-token.sh)       | Cloudflare deploy token 発行スクリプト。`bash ~/.claude/skills/demo-site-builder/assets/cf-issue-deploy-token.sh <project-name>` で実行 |
+| [assets/cf-issue-deploy-token.sh](assets/cf-issue-deploy-token.sh)       | Cloudflare deploy token 発行スクリプト。`bash {{@skills-root}}/demo-site-builder/assets/cf-issue-deploy-token.sh <project-name>` で実行 |
 
 `wrangler.jsonc` と `.github/workflows/deploy.yml` は **テンプレ `skanehira/demo-site-template` 側に同梱**されているため、このスキルの assets には含めない。
 
@@ -70,13 +70,13 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 | スキル                                                | 役割                                              |
 | ----------------------------------------------------- | ------------------------------------------------- |
 | `frontend-design` / `frontend-design:frontend-design` | デザインコンセプト（色・フォント・ムード）の確立  |
-| `~/.claude/rules/core/tdd.md`                                   | TDD RED→GREEN→REFACTOR の厳格な運用 (メインループ直営) |
+| `{{@rules-root}}/core/tdd.md`                                   | TDD RED→GREEN→REFACTOR の厳格な運用 (メインループ直営) |
 | `fix-lsp-warnings` (agent)                            | 実装完了後の型警告・未使用変数の掃除              |
 | `chrome-devtools` MCP                                 | iPhone viewport エミュレート + 画面遷移確認       |
 
 ## Step 1: プロジェクト構想の合意
 
-実装前に `AskUserQuestion` で以下を確定する：
+実装前に `{{@ask-user}}` で以下を確定する：
 
 | 項目         | 選択肢例                                      |
 | ------------ | --------------------------------------------- |
@@ -103,7 +103,7 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 
 ## Step 4: デザイン方針
 
-**`frontend-design:frontend-design` スキルを必ず Skill ツールで起動する**（短縮形 `frontend-design` が使える環境ならそちらでも可。両方登録されていれば短縮形が優先）。引数には以下を含むデザイン依頼文を渡す：
+**`frontend-design:frontend-design` スキルを必ず {{@invoke-skill}}で起動する**（短縮形 `frontend-design` が使える環境ならそちらでも可。両方登録されていれば短縮形が優先）。引数には以下を含むデザイン依頼文を渡す：
 
 - プロジェクト名 / ターゲット（年齢層・属性）/ テイスト（親しみやすさ・モダン・信頼感 など）
 - スタック: React + Tailwind CSS v4 + TypeScript
@@ -130,12 +130,12 @@ Claude Code から使う MCP：`chrome-devtools:*`（実機確認）。
 
 ## Step 8-9: デプロイ
 
-**デプロイ前の必須ゲート**：ローカルで以下を完了したうえで `AskUserQuestion` による**ユーザ承認**を取得してから push / `wrangler deploy` を実行する。承認なしにデプロイしない。
+**デプロイ前の必須ゲート**：ローカルで以下を完了したうえで `{{@ask-user}}` による**ユーザ承認**を取得してから push / `wrangler deploy` を実行する。承認なしにデプロイしない。
 
 1. `vp test` / `vp check --no-lint --no-fmt` / `vp build` がすべてグリーン
 2. `vp dev` を起動し `chrome-devtools` MCP で Step 1 で合意した対応デバイスの viewport にて主要フローを動作確認（下記「viewport の選び方」参照）
 3. 確認結果（通ったフロー・スクリーンショット・console エラー有無）をユーザに提示
-4. "このままデプロイしてよいか" を `AskUserQuestion` で明示的に確認 → **承認後にのみ** Step 9 を実行
+4. "このままデプロイしてよいか" を `{{@ask-user}}` で明示的に確認 → **承認後にのみ** Step 9 を実行
 
 `references/deployment.md` の手順に従う。核となる判断（テンプレ側で既に定まっている）：
 

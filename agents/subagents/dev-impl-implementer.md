@@ -95,7 +95,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 }
 ```
 
-該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` を検収してから done と扱う。`self_review` は報告の直前に `~/.claude/rules/core/testing.md`「セルフレビューチェックリスト」を自分の書いたテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して修正ラウンドが 1 周増えるだけ)。
+該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` を検収してから done と扱う。`self_review` は報告の直前に `{{@rules-root}}/core/testing.md`「セルフレビューチェックリスト」を自分の書いたテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して修正ラウンドが 1 周増えるだけ)。
 
 ## 範囲外 (やらないこと)
 

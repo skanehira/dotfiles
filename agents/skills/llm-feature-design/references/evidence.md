@@ -669,7 +669,7 @@ Azure AI Content Safety:
 
 ### 取得できないページの回避策
 
-- **`openai.com/index/*`** は Cloudflare の JS チャレンジがあり、curl / WebFetch では **403**。実ブラウザ描画が必要。isolated context で開き直すと取れることがある
+- **`openai.com/index/*`** は Cloudflare の JS チャレンジがあり、curl / {{@web-fetch}} では **403**。実ブラウザ描画が必要。isolated context で開き直すと取れることがある
 - **`docs.cloud.google.com/*`** は JS レンダリングが必要で、サーバサイド fetch ではナビゲーションのみが返る
 - **Anthropic のドキュメント**は URL 末尾に `.md` を付けると raw markdown が取れる (Mintlify)
 

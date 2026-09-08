@@ -21,7 +21,7 @@ description: SaaS の料金プランをコスト構造から逆算して設計�
 | macOS + Numbers.app | Excel 数式の実機検証 (verify_numbers.sh) | 必須 (検証ステップ) |
 | python3 + openpyxl | Excel 生成テンプレートの実行 | 必須 |
 | uv | 補助の数式エンジン検証 (`uv run --with formulas`) | 任意 |
-| WebSearch / WebFetch | 他インフラ検討時・価格再裏取り時 | 条件付き |
+| {{@web-search}} / {{@web-fetch}} | 他インフラ検討時・価格再裏取り時 | 条件付き |
 
 ## ワークフロー (7 ステップ)
 
@@ -48,11 +48,11 @@ description: SaaS の料金プランをコスト構造から逆算して設計�
 | ファイル | 内容 | 使い方 |
 |---------|------|-------|
 | [assets/generate_pricing_template.py](./assets/generate_pricing_template.py) | 料金プラン Excel の生成テンプレ (2 シート構成・Numbers 互換ヘルパー込み) | 案件リポジトリの `scripts/` にコピーして `# TODO` 箇所を調整 |
-| [assets/verify_numbers.sh](./assets/verify_numbers.sh) | Numbers 実機でセル計算値を読み取る検証スクリプト | `bash ~/.claude/skills/saas-pricing-design/assets/verify_numbers.sh <xlsx> <シート:セル>...` |
+| [assets/verify_numbers.sh](./assets/verify_numbers.sh) | Numbers 実機でセル計算値を読み取る検証スクリプト | `bash {{@skills-root}}/saas-pricing-design/assets/verify_numbers.sh <xlsx> <シート:セル>...` |
 
 ## Step 1: ヒアリング
 
-AskUserQuestion で抽象 → 具体の順に確認する。最初から細部を聞かない。
+{{@ask-user}} で抽象 → 具体の順に確認する。最初から細部を聞かない。
 
 1. **ゴールと構造**: 誰が払うか (テナント構造。例: ホテル + 派遣会社)。単一テナントか、テナントが増えていくか
 2. **規模と季節性**: 現在のアクティブユーザー数 (平均/繁忙期、テナントあたり)、繁忙月数、将来の成長見込み
@@ -91,7 +91,7 @@ AskUserQuestion で抽象 → 具体の順に確認する。最初から細部�
 ## Step 6: 検証 (数式を修正したら毎回必ず実行)
 
 ```bash
-bash ~/.claude/skills/saas-pricing-design/assets/verify_numbers.sh \
+bash {{@skills-root}}/saas-pricing-design/assets/verify_numbers.sh \
   docs/料金プラン.xlsx \
   "料金プラン:B50" "料金プラン:B54" "料金プラン:B55" "インフラ詳細:B22"
 ```

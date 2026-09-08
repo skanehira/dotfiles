@@ -1,6 +1,6 @@
 # 設計共通ルール
 
-詳細なコード例が必要になったら `~/.claude/rules/core/references/design-examples.md` を Read する。
+詳細なコード例が必要になったら `{{@rules-root}}/core/references/design-examples.md` を Read する。
 
 ## SOLID
 
@@ -22,7 +22,7 @@
 
 - IO を内部で呼ぶカスタムフック (`useFetchUser` 等) は禁止。IO は props / context 経由で渡された関数を hook が呼び出す形にする。ステートだけの hook (`useToggle` 等) は OK
 - テストダブルの優先順位: **⓪ 本物 (最優先)** → ① DI + fake → ② スパイ (`vi.fn()` 等。型は `as` ではなく `satisfies` で固定する) → ③ モジュール差し替え・HTTP モック (`vi.mock` / MSW。**DI を無効化するため原則使わない**)。ボイラープレートは OpenAPI などからのコード自動生成で解決する
-  - **⓪ の判定**: その依存の本物がローカル・CI で動くなら本物を使う (ローカル DB・エミュレータ・組み込みストレージ)。in-memory の fake は一意性制約・トランザクションの原子性・クエリの意味論を再現できないため、fake で緑になっても本番の SQL は未検証のまま残る (`~/.claude/rules/core/testing.md`「可能な限り実際の実装を使う」の具体化)
+  - **⓪ の判定**: その依存の本物がローカル・CI で動くなら本物を使う (ローカル DB・エミュレータ・組み込みストレージ)。in-memory の fake は一意性制約・トランザクションの原子性・クエリの意味論を再現できないため、fake で緑になっても本番の SQL は未検証のまま残る (`{{@rules-root}}/core/testing.md`「可能な限り実際の実装を使う」の具体化)
   - **① と ② の分岐**: 前の呼び出しの結果を次の呼び出しが必要とするなら fake、状態を持たない 1 メソッドならスパイで足りる
 - トランザクション (DB コネクション / tx オブジェクト) も DI で渡す。Repository 内で暗黙に開始しない
 - 1 ユースケースの不変条件を守る複数書き込みは単一トランザクションで括る (Unit of Work)。境界は docs/design/DESIGN.md「データスキーマ」内の「トランザクション境界」の表に従う

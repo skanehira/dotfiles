@@ -71,8 +71,8 @@ rg -o '"(react|react-router|tailwindcss|hono|drizzle-orm|vite|typescript)": "([^
 - ローカル起動: `vp dev` → http://localhost:5173、`/api/health` が `{"status":"ok"}` を返す
 - [認証あり] ローカル認証: `docker compose up -d` → `vp run cognito:setup`。テストユーザーは `test@example.com` / `Passw0rd1!` (ローカル moto 専用の固定値)
 - [認証あり] moto の既知の制限により、SRP のパスワード検証と IdToken の `email` クレームはローカルでは正しく検証できない。**実 AWS Cognito でのパスワード検証込みの動作確認は PoC 対象 (POC_NEEDED 相当)**
-- [認証あり] **本番 Cognito は未構築**。`wrangler.jsonc` の `vars` (`COGNITO_*`) は空文字のプレースホルダなので、デプロイ済みでも本番ではログインできない。本番運用の前に terraform prod の適用が必要 (`~/.claude/skills/fullstack-app-builder/references/deploy-setup.md` 参照)
-- [Stripe あり] 決済の設計・実装に入る前に `~/.claude/skills/fullstack-app-builder/references/stripe.md` を Read すること (Workers 固有の Webhook 検証の制約があるため)
+- [認証あり] **本番 Cognito は未構築**。`wrangler.jsonc` の `vars` (`COGNITO_*`) は空文字のプレースホルダなので、デプロイ済みでも本番ではログインできない。本番運用の前に terraform prod の適用が必要 (`{{@skills-root}}/fullstack-app-builder/references/deploy-setup.md` 参照)
+- [Stripe あり] 決済の設計・実装に入る前に `{{@skills-root}}/fullstack-app-builder/references/stripe.md` を Read すること (Workers 固有の Webhook 検証の制約があるため)
 
 ## 実装時に従う規約
 

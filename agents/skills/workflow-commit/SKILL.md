@@ -8,7 +8,7 @@ model: haiku
 
 変更内容を分析し、関心事ごとに分割して Conventional Commit + Emoji 形式でコミットする。push はユーザが手動で行うため、このスキルは実行しない。
 
-詳細なルールは @rules/core/commit.md を参照。
+詳細なルールは {{@rules-import}}/core/commit.md を参照。
 
 ## 手順
 
@@ -50,7 +50,7 @@ EOF
 )"
 ```
 
-Conventional Commit type と emoji の対応表は @rules/core/commit.md を参照。
+Conventional Commit type と emoji の対応表は {{@rules-import}}/core/commit.md を参照。
 
 コミットしたら**その場で subject を照合する**。この経路は起草者と実行者が同一で外部の機械ゲートが無いため、照合を省くと形式違反がそのまま履歴に残る。
 

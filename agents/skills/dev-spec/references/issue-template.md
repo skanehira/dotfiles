@@ -141,7 +141,7 @@ gh issue list --repo "$REPO_SLUG" --state all --limit 200 --json number,title,st
 | タイトル一致・closed | 子は触らない。親は新しい子を紐付けるときだけ reopen する (下記「親の reopen」)。いずれも本文が現ドラフトと不一致ならその番号を最終報告に列挙する (完了済み issue に改訂が届かないことを人間が把握できるように) |
 | ドラフトのどの親ともタイトル一致しない既存 `tracking` issue で、子を持つもの (`<タスク名> トラッキング` 形式を除く) | **UC 見出しが改訂された可能性がある。** 勝手に貼り替えず、その親と子の一覧を提示して「どの新しい親へ貼り替えるか / 旧親のまま残すか」を人間に確認する (貼り替えないと、子は単一親制約で旧親に紐付いたままとなり、新親への紐付けが HTTP 422 になる)。`<タスク名> トラッキング` 形式は下記「旧構成 (run 全体で親 1 件) からの移行」が扱うので、この行の対象外 |
 
-本文比較はコマンド置換 (`$(...)`) を使わずファイルに落として `cmp` する (末尾改行の欠落を検出するため。`~/.claude/rules/core/verification.md`)。取得側の `sed 's/\r$//'` は CRLF 除去 (GitHub web UI で編集された本文対策)。`gh` の出力はファイル末尾に改行 1 つが付くため、ドラフト側もファイル末尾を改行 1 つで終える形で Write する (毎回不一致になるときはまず末尾改行の差を疑う)。`<ドラフトファイル>` は子なら `<scratchpad>/issue-<連番>.md`、親なら `<scratchpad>/parent-<識別子>.md`:
+本文比較はコマンド置換 (`$(...)`) を使わずファイルに落として `cmp` する (末尾改行の欠落を検出するため。`{{@rules-root}}/core/verification.md`)。取得側の `sed 's/\r$//'` は CRLF 除去 (GitHub web UI で編集された本文対策)。`gh` の出力はファイル末尾に改行 1 つが付くため、ドラフト側もファイル末尾を改行 1 つで終える形で Write する (毎回不一致になるときはまず末尾改行の差を疑う)。`<ドラフトファイル>` は子なら `<scratchpad>/issue-<連番>.md`、親なら `<scratchpad>/parent-<識別子>.md`:
 
 ```bash
 gh issue view "$ISSUE_NUM" --repo "$REPO_SLUG" --json body -q .body | sed 's/\r$//' > <scratchpad>/issue-current.md

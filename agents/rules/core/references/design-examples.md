@@ -7,7 +7,7 @@ paths:
 
 # 設計ルールの詳細例
 
-~/.claude/rules/core/design.md の原則に対応するコード例集。
+{{@rules-root}}/core/design.md の原則に対応するコード例集。
 
 ## 外界 DI
 

@@ -980,7 +980,7 @@ complexity is the minimum needed for the current task.
 Claudeは、より一般的なソリューションを犠牲にしてテストを合格させることに過度に集中したり、標準ツールを直接使用する代わりに複雑なリファクタリングにヘルパースクリプトなどの回避策を使用したりすることがあります。この動作を防ぎ、一般化できるソリューションを得るには：
 
 ```text Sample prompt wrap
-Please write a high-quality, general-purpose solution using the standard tools
+Please write a high-quality, {{@general-agent}} solution using the standard tools
 available. Do not create helper scripts or workarounds to accomplish the task more
 efficiently. Implement a solution that works correctly for all valid inputs, not just
 the test cases. Do not hard-code values or create solutions that only work for specific

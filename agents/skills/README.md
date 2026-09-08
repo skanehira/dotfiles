@@ -10,7 +10,7 @@
 |---|---|---|
 | **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → 人間が issue を確認 → `/dev-impl` | 設計ループ (要件〜PoC 検証〜DESIGN.md + docs/design/features/〜issue 生成) → 実装ループ (issue を依存順に 1 件ずつ自律実装)。issue はユースケース単位の親 (トラッキング) + その sub-issue の子で、親の進捗バーで UC ごとの進捗を俯瞰できる。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
 | **M: 1 機能・リファクタの一括委任 (docs 不要)** | `/dev-impl-quick` | 軽量実装ループ。タスク分解 → 直営 TDD → テストゲート → review-impl (focus: tests) → タスク単位コミット |
-| **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-impl` を自分で起動する |
+| **M: 単発の機能追加・リファクタ (対話しながら)** | {{@plan-mode}} → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-impl` を自分で起動する |
 | **S: バグ修正・typo** | 直接依頼 | スキル不要。`~/.claude/CLAUDE.md`「実装時」の rules を自分で Read して守る |
 
 横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-draft-pr` (PR 作成) / `/workflow-design-notes` (設計の壁打ち台帳 → dev-spec 互換 docs へ落とし込み)。
@@ -77,21 +77,21 @@ skills/
 
 ## モデル方針 (ループエンジニアリング)
 
-モデル割当の正は **`~/.claude/rules/core/orchestration.md`** (トリアージ手順・割当マトリクス・alias フォールバック規定)。ここではスキル側への適用だけを記す。原則: **実行器のモデル ≤ 検証器のモデル**。設計思想の全体像 (7 要素・三大失敗モード) は `~/.claude/rules/core/references/loop-engineering.md` を参照。
+モデル割当の正は **`{{@rules-root}}/core/orchestration.md`** (トリアージ手順・割当マトリクス・alias フォールバック規定)。ここではスキル側への適用だけを記す。原則: **実行器のモデル ≤ 検証器のモデル**。設計思想の全体像 (7 要素・三大失敗モード) は `{{@rules-root}}/core/references/loop-engineering.md` を参照。
 
 | 対象 | モデル | 理由 |
 |---|---|---|
 | dev-spec (設計ループ) | セッション継承 (最上位 tier 推奨) | 検証器が人間しかいないため、生成側を賢くする |
-| dev-spec フェーズ 8・9 のチェック subagent (general-purpose) | `model: opus` (呼び出し時明示) | 検証器は実行器より下げない |
+| dev-spec フェーズ 8・9 のチェック subagent ({{@general-agent}}) | `model: opus` (呼び出し時明示) | 検証器は実行器より下げない |
 | dev-impl / dev-impl-quick | `model: opus` (frontmatter) | 実装の質がそのまま成果物の質になるため実行器を下げない |
 | dev-impl-implementer subagent | `model: opus` (frontmatter + 呼び出し時明示) | 実行器 |
 | review-impl subagent (統合レビュワー) | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。**呼び出し時の明示を忘れないこと**。model 未指定は frontmatter ではなく親のセッションモデルを継承するため、frontmatter は防御にならない (機械ゲートは無いので自律遵守する) |
 | tech-investigation subagent (dev-spec フェーズ 5) | `model: opus` (frontmatter + 呼び出し時明示) | 「何をどこまで検証すれば行けると言えるか」を自分で設計する探索的な調査 |
-| コミット実行・巨大出力のテスト実行 | `model: haiku` (subagent) | 機械実行。`~/.claude/rules/core/orchestration.md`「委譲の判断」 |
+| コミット実行・巨大出力のテスト実行 | `model: haiku` (subagent) | 機械実行。`{{@rules-root}}/core/orchestration.md`「委譲の判断」 |
 
 モデル指定はすべて alias (`opus` / `sonnet` / `haiku`) で書く (固定 ID 禁止。世代交代への自動追従のため)。
 
-制約: skill frontmatter の `model` は**ユーザーが直接起動したターンだけ**有効 (Skill ツール経由では無視される、実測済み)。このため dev-spec → dev-impl の遷移は必ず人間が `/dev-impl` をタイプする。これは「人間が issue を確認してから実装に入る」ゲートを構造的に強制する仕掛けでもある。
+制約: skill frontmatter の `model` は**ユーザーが直接起動したターンだけ**有効 ({{@invoke-skill}}経由では無視される、実測済み)。このため dev-spec → dev-impl の遷移は必ず人間が `/dev-impl` をタイプする。これは「人間が issue を確認してから実装に入る」ゲートを構造的に強制する仕掛けでもある。
 
 ## skill と agent の責務分担
 
@@ -99,13 +99,13 @@ skills/
 
 |  | skill (`agents/skills/<name>/SKILL.md`) | agent (`agents/subagents/<name>.md`) |
 |---|---|---|
-| 用途 | ユーザー向けエントリポイント (`/<name>` で起動) | 内部 subagent (Agent ツールから起動) |
+| 用途 | ユーザー向けエントリポイント (`/<name>` で起動) | 内部 subagent ({{@spawn-subagent}}から起動) |
 | 役割 | 薄い orchestrator + 表示整形 + 確認ダイアログ | 実体ロジック、構造化 JSON 返却 |
 | コンテキスト | メインセッションと共有 | 別セッション (分離、トークン効率) |
 | 並列化 | 単発 | 同一メッセージ内の複数 Agent tool_use で並列起動可 |
 | hook 適用 | parent の Stop/PostToolUse/UserPromptSubmit | parent の hooks は継承されない |
 
-subagent への委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」と「fresh context の独立性 (実装者と別コンテキストのレビュー)」のために行う。逐次依存する修正・コミットは**メインループ直営** (`~/.claude/rules/core/orchestration.md`「委譲の判断」)。
+subagent への委譲は「並列化」と「親コンテキストの保護 (巨大出力の隔離)」と「fresh context の独立性 (実装者と別コンテキストのレビュー)」のために行う。逐次依存する修正・コミットは**メインループ直営** (`{{@rules-root}}/core/orchestration.md`「委譲の判断」)。
 
 **dev-impl の実装だけがこの原則の明示的な例外**で、issue 1 件ずつの逐次実装であっても `dev-impl-implementer` subagent に出す。issue が自己完結しているため親による文脈編纂が不要で、issue ごとに fresh context で始まることで長い run でもメインループのコンテキストが単調増加しない。前提は **implementer が葉である** (子 subagent を起動しない) こと — 葉性は `agents/subagents/dev-impl-implementer.md` の `tools` から `Agent` を除いて構造的に強制する (subagent には親の hooks が届かず、指示文では違反を検出できないため)。
 
@@ -124,7 +124,7 @@ git index を共有する操作 (コミット) は並列化できないので親
 | `tech-investigation` | `dev-spec` フェーズ 5 (PoC 検証、並列 fan-out) |
 | `dev-impl-implementer` | `dev-impl` Step 2.2 (`mode: implement`) / Step 2.3 (`mode: fix`)、いずれも model: opus 明示。`tools` に `Agent` を持たない葉 |
 | `review-impl` | `dev-impl` Step 2.3 (focus: all) / `dev-impl-quick` ステップ 4 (focus: tests) / `workflow-review` (focus: all)。いずれも model: opus 明示 |
-| `fix-lsp-warnings` | Agent ツールで直接起動 (Lua/Neovim の警告修正) |
+| `fix-lsp-warnings` | {{@spawn-subagent}}で直接起動 (Lua/Neovim の警告修正) |
 
 ## スキル一覧
 

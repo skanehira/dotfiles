@@ -28,7 +28,7 @@ useLayoutEffect(() => {
 ```
 
 判定手順:
-1. 採用したい API の公式ドキュメントを Read or WebFetch で開く
+1. 採用したい API の公式ドキュメントを Read or {{@web-fetch}} で開く
 2. 「Usage」「When to use」セクションで想定用途を確認
 3. 自分のケースが一致しなければ、より一般的な代替を選ぶ
 4. それでも特殊 API が必要なら、選択理由をコメントで明示
