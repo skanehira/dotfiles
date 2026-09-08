@@ -53,18 +53,19 @@ end
 -- （agent start は split と起動が原子的なため、シェル起動→タイプ→実行の遅延が発生しない）
 -- @param size_percent number 新規ペインのサイズ（%）
 -- @param argv table 実行するコマンドと引数のリスト（例: {"claude", "-r"}）
+-- @param name string|nil エージェント名（省略時は argv[1]）
 -- @return string|nil, string|nil 成功時は (ペインID, nil)、失敗時は (nil, エラーメッセージ)
-function M.create_pane(size_percent, argv)
+function M.create_pane(size_percent, argv, name)
   local tab_id = vim.env.HERDR_TAB_ID
   if not tab_id then
     return nil, "HERDR_TAB_ID is not set (not running inside a herdr pane)"
   end
 
-  -- agent name はグローバル一意が必要なため、コマンド名 + タブIDで構成する
-  local name = string.format("%s-%s", argv[1], tab_id:gsub(":", "-"))
+  -- agent name はグローバル一意が必要なため、エージェント名 + タブIDで構成する
+  local agent_name = string.format("%s-%s", name or argv[1], tab_id:gsub(":", "-"))
 
   local args = {
-    "herdr", "agent", "start", name,
+    "herdr", "agent", "start", agent_name,
     "--tab", tab_id,
     "--cwd", vim.fn.getcwd(),
     "--split", "right",

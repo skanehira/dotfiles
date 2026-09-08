@@ -1,4 +1,4 @@
--- AIツール（Claude/Codex）のherdr統合モジュール
+-- AIツール（Claude/Codex/OpenCode）のherdr統合モジュール
 -- 公開APIとコマンド登録を提供
 
 local herdr = require("modules.ai.herdr")
@@ -7,10 +7,27 @@ local comments = require("modules.ai.comments")
 
 local M = {}
 
--- 内部状態: ペインIDを保持
+-- ツール固有の設定
+--   display   : 入力バッファ名・通知に出す表示名
+--   base_args : 起動時に必ず前置する CLI 引数
+--   shift_tab : Shift+Tab として送るキー（herdr send-keys のキー名）
+--   newline   : 送信テキストの末尾に改行を付けるか
+local TOOL_CONFIG = {
+  claude = {
+    display = "Claude",
+    base_args = "--allow-dangerously-skip-permissions",
+    shift_tab = "alt+m",
+  },
+  codex = {
+    display = "Codex",
+    newline = true,
+    shift_tab = "shift+tab",
+  },
+}
+
+-- 内部状態: ツール名 → ペインID
 local state = {
-  claude_pane = nil,
-  codex_pane = nil,
+  panes = {},
 }
 
 -- ペインIDを検証し、存在しない場合はクリア
@@ -28,29 +45,37 @@ local function validate_pane(pane_id)
   return nil
 end
 
+-- 保持しているペインIDを検証して返す（無効なら状態から消す）
+-- @param tool_name string ツール名
+-- @return string|nil 有効なペインID、または nil
+local function get_pane(tool_name)
+  local pane_id = validate_pane(state.panes[tool_name])
+  if not pane_id then
+    state.panes[tool_name] = nil
+  end
+  return pane_id
+end
+
+-- ペインIDを保持する
+-- @param tool_name string ツール名
+-- @param pane_id string ペインID
+local function set_pane(tool_name, pane_id)
+  state.panes[tool_name] = pane_id
+end
+
 -- ペインを取得または作成
--- @param tool_name string ツール名（"claude" または "codex"）
+-- @param tool_name string ツール名（"claude" / "codex" / "opencode"）
 -- @param args string|nil コマンド引数（例: "-c" や "-r abc123"）
 -- @return string|nil ペインID、失敗時は nil
 local function get_or_create_pane(tool_name, args)
-  -- 状態からペインIDを取得
-  local pane_id
-  if tool_name == "claude" then
-    pane_id = validate_pane(state.claude_pane)
-  elseif tool_name == "codex" then
-    pane_id = validate_pane(state.codex_pane)
-  end
+  -- 保持しているペインIDを使う
+  local pane_id = get_pane(tool_name)
 
   -- メモリ上にない場合、現在のウィンドウ内でコマンド名で検索して復元
   if not pane_id then
     pane_id = herdr.find_pane_by_command(tool_name)
     if pane_id then
-      -- 状態を復元
-      if tool_name == "claude" then
-        state.claude_pane = pane_id
-      elseif tool_name == "codex" then
-        state.codex_pane = pane_id
-      end
+      set_pane(tool_name, pane_id)
     end
   end
 
@@ -74,19 +99,14 @@ local function get_or_create_pane(tool_name, args)
     return nil
   end
 
-  -- 状態を更新
-  if tool_name == "claude" then
-    state.claude_pane = pane_id
-  elseif tool_name == "codex" then
-    state.codex_pane = pane_id
-  end
+  set_pane(tool_name, pane_id)
 
   return pane_id
 end
 
 -- ツール名に応じて末尾改行を付与（Codex は改行が無いと送信されない）
 local function finalize_text(tool_name, text)
-  if tool_name == "codex" then
+  if TOOL_CONFIG[tool_name].newline then
     return text .. "\n"
   end
   return text
@@ -123,25 +143,8 @@ local function open_input_buffer(tool_name, args, context)
     return
   end
 
-  -- 最新のペインIDを取得する関数（存在しない場合は状態をクリアしてnilを返す）
-  local function get_current_pane_id()
-    local current_id
-    if tool_name == "claude" then
-      current_id = validate_pane(state.claude_pane)
-      if not current_id then
-        state.claude_pane = nil
-      end
-    elseif tool_name == "codex" then
-      current_id = validate_pane(state.codex_pane)
-      if not current_id then
-        state.codex_pane = nil
-      end
-    end
-    return current_id
-  end
-
   -- herdrペイン作成後、Neovimのリサイズが反映されてからfloatを作成
-  local buffer_name = string.format("[%s Input]", tool_name:gsub("^%l", string.upper))
+  local buffer_name = string.format("[%s Input]", TOOL_CONFIG[tool_name].display)
   vim.schedule(function()
     local buf_config = {
       name = buffer_name,
@@ -152,7 +155,7 @@ local function open_input_buffer(tool_name, args, context)
 
         -- コンテキストが無い（ノーマルモード起動 = 即送信モード）
         if not ctx then
-          local current_pane = get_current_pane_id()
+          local current_pane = get_pane(tool_name)
           if not current_pane then
             vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
             return
@@ -204,7 +207,7 @@ local function open_input_buffer(tool_name, args, context)
         if message == "" then
           return
         end
-        local current_pane = get_current_pane_id()
+        local current_pane = get_pane(tool_name)
         if not current_pane then
           vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
           return
@@ -221,7 +224,7 @@ local function open_input_buffer(tool_name, args, context)
         end
       end,
       on_interrupt = function()
-        local current_pane = get_current_pane_id()
+        local current_pane = get_pane(tool_name)
         if not current_pane then
           vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
           return
@@ -229,11 +232,7 @@ local function open_input_buffer(tool_name, args, context)
 
         local success, err = herdr.kill_pane(current_pane)
         if success then
-          if tool_name == "claude" then
-            state.claude_pane = nil
-          elseif tool_name == "codex" then
-            state.codex_pane = nil
-          end
+          state.panes[tool_name] = nil
           vim.notify(string.format("%sペインを終了しました", tool_name), vim.log.levels.INFO)
         else
           vim.notify(string.format("%sペインの終了に失敗しました:\n%s", tool_name, err or "不明なエラー"), vim.log.levels.ERROR)
@@ -247,7 +246,7 @@ local function open_input_buffer(tool_name, args, context)
       -- herdrのsend-keys shift+tabは常にlegacy ESC[Zを送るため、kitty keyboard protocolを
       -- 有効化したClaude Codeには届かない。claude/keybindings.jsonでalt+mにmode切替を
       -- バインドし、claudeへはそれを送る（codexは従来どおりshift+tab）
-      { cb = "on_send_shift_tab",     key = tool_name == "claude" and "alt+m" or "shift+tab", label = "Shift+Tab" },
+      { cb = "on_send_shift_tab",     key = TOOL_CONFIG[tool_name].shift_tab, label = "Shift+Tab" },
       { cb = "on_send_space",         key = "space",            label = "Space" },
       { cb = "on_send_ctrl_c",        key = "ctrl+c",           label = "C-c" },
       { cb = "on_send_escape",        key = "esc",              label = "Escape" },
@@ -262,7 +261,7 @@ local function open_input_buffer(tool_name, args, context)
     -- ループ変数の closure キャプチャを避けるため factory で生成
     local function make_send_keys_callback(key_name, label)
       return function()
-        local current_pane = get_current_pane_id()
+        local current_pane = get_pane(tool_name)
         if not current_pane then
           vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
           return
@@ -358,7 +357,7 @@ end
 -- defaultMode (plan) のまま起動し、プラン承認後に手動で落とせる。
 -- 有効化まで行う --dangerously-skip-permissions は plan mode を経由できない
 function M.open_claude(args, context)
-  local base_args = '--allow-dangerously-skip-permissions'
+  local base_args = TOOL_CONFIG.claude.base_args
   if args and args ~= "" then
     args = base_args .. " " .. args
   else
