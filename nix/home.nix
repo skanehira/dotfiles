@@ -15,7 +15,7 @@
     # CLI を一時実行できるようにする HM モジュール
     inputs.nix-index-database.homeModules.nix-index
 
-    ./modules/home/agent-skills.nix
+    ./modules/home/harness.nix
     ./modules/home/claude.nix
     ./modules/home/codex.nix
     ./modules/home/deno.nix

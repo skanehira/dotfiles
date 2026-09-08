@@ -9,6 +9,7 @@ import {
   substitute,
   type Vocabulary,
 } from "./build-harness.ts";
+import { GENERATED_MARKER } from "./sync-subagents.ts";
 
 /**
  * 実際の vocabulary.json に近い最小の語彙表。
@@ -487,7 +488,7 @@ async function withTrees(
 }
 
 const VOCAB_FIXTURE: Vocabulary = {
-  "ask-user": { claude: "AskUserQuestion", codex: "request_user_input" },
+  "ask-user": { claude: "AskUserQuestion", codex: "request_user_input", opencode: "question" },
 };
 
 Deno.test("buildTree_merges_the_overlay_section_then_substitutes_for_the_runtime", async () => {
@@ -692,4 +693,84 @@ Deno.test("buildFile_with_a_destination_inside_dotfiles_root_throws", async () =
       "出力先が正本の中を指しています",
     );
   });
+});
+
+// --------------------------------------------------- subagent の書式変換
+
+const SUBAGENT_MD = `---
+name: reviewer
+description: 差分を {{@ask-user}} 抜きで検査する
+tools: Read, Grep
+model: opus
+---
+
+# reviewer
+
+確認が要るときは {{@ask-user}} を使う。
+`;
+
+Deno.test("buildTree_with_the_codex_subagent_format_substitutes_then_emits_toml_named_by_the_frontmatter", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.writeTextFile(`${base}/any-filename.md`, SUBAGENT_MD);
+    const result = await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+      subagentFormat: "codex",
+    });
+    assertEquals(result.written, ["reviewer.toml"]);
+    assertEquals(
+      await Deno.readTextFile(`${out}/reviewer.toml`),
+      `${GENERATED_MARKER}
+name = "reviewer"
+description = "差分を request_user_input 抜きで検査する"
+developer_instructions = '''
+# reviewer
+
+確認が要るときは request_user_input を使う。
+'''
+`,
+    );
+  });
+});
+
+Deno.test("buildTree_with_the_opencode_subagent_format_emits_markdown_with_the_subagent_mode", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.writeTextFile(`${base}/any-filename.md`, SUBAGENT_MD);
+    const result = await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "opencode", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+      subagentFormat: "opencode",
+    });
+    assertEquals(result.written, ["reviewer.md"]);
+    assertEquals(
+      await Deno.readTextFile(`${out}/reviewer.md`),
+      `---
+${GENERATED_MARKER}
+description: 差分を question 抜きで検査する
+mode: subagent
+---
+
+# reviewer
+
+確認が要るときは question を使う。
+`,
+    );
+  });
+});
+
+Deno.test("mergeSections_with_text_before_the_first_overlay_heading_throws_instead_of_dropping_it", () => {
+  // overlay の前文はマージキーを持たないので黙って落ちる。F3 で overlay を書くときに
+  // 気づけないため例外にする。
+  assertThrows(
+    () => mergeSections("# t\n\n## あ\n\nbase。\n", "# 別の見出し\n\n落ちる前文。\n\n## あ\n\noverlay。\n"),
+    Error,
+    "overlay の最初の見出しより前に本文があります",
+  );
+});
+
+Deno.test("mergeSections_allows_blank_lines_before_the_first_overlay_heading", () => {
+  assertEquals(
+    mergeSections("# t\n\n## あ\n\nbase。\n", "\n\n## あ\n\noverlay。\n"),
+    "# t\n\n## あ\n\noverlay。\n",
+  );
 });

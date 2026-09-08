@@ -1,6 +1,5 @@
 {
   config,
-  lib,
   dotfilesRoot,
   ...
 }:
@@ -39,16 +38,4 @@
   home.file.".config/opencode/AGENTS-opencode.md".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/AGENTS-opencode.md";
 
-  # subagent は OpenCode 独自スキーマ (`mode: subagent` が要る) なので、正本
-  # agents/subagents/*.md から生成する。生成物は git 管理しない。
-  # deno を使うので bootstrapDeno の後に置く。
-  home.activation.syncOpencodeSubagents = lib.hm.dag.entryAfter [ "bootstrapDeno" ] ''
-    if [ -x "$HOME/.deno/bin/deno" ]; then
-      run "$HOME/.deno/bin/deno" run --allow-read --allow-write \
-        "${dotfilesRoot}/agents/scripts/sync-subagents.ts" \
-        "${dotfilesRoot}/agents/subagents" opencode "$HOME/.config/opencode/agents"
-    else
-      warnEcho "deno が無いので ~/.config/opencode/agents の生成をスキップした"
-    fi
-  '';
 }

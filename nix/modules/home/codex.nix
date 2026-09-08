@@ -14,7 +14,7 @@
   home.activation.linkCodexSystemConfig = lib.mkIf pkgs.stdenv.hostPlatform.isLinux (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       codex_system_config="/etc/codex/config.toml"
-      codex_config_src="${dotfilesRoot}/codex/config.toml"
+      codex_config_src="${dotfilesRoot}/agents/bindings/codex/config.toml"
 
       if [ "$(readlink "$codex_system_config" 2>/dev/null)" != "$codex_config_src" ]; then
         if command -v sudo >/dev/null 2>&1 \
@@ -29,17 +29,38 @@
     ''
   );
 
-  # subagent は書式変換が避けられない (Claude は Markdown + frontmatter、Codex は TOML)。
-  # 正本 agents/subagents/*.md から ~/.codex/agents/*.toml を生成する。生成物は
-  # git 管理せず、正本から消えた subagent の .toml はスクリプト側が撤去する。
-  # deno を使うので bootstrapDeno の後に置く。
-  home.activation.syncCodexSubagents = lib.hm.dag.entryAfter [ "bootstrapDeno" ] ''
-    if [ -x "$HOME/.deno/bin/deno" ]; then
-      run "$HOME/.deno/bin/deno" run --allow-read --allow-write \
-        "${dotfilesRoot}/agents/scripts/sync-subagents.ts" \
-        "${dotfilesRoot}/agents/subagents" codex "$HOME/.codex/agents"
+  # ハーネスを Codex の語彙でコンパイルして配る。subagent は書式変換も要る
+  # (Claude は Markdown + frontmatter、Codex は TOML)。生成物は git 管理しない。
+  #
+  # スキルの配布先を ~/.agents/skills から ~/.codex/skills (skill root r0) へ移したのは、
+  # ~/.agents/skills を OpenCode も探索し、どちらも探索を止める手段が無いため (実測:
+  # OpenCode の skills.paths は追加専用、Codex の skip_host_skill_discovery は roots を
+  # 変えない)。同じディレクトリにランタイム別の生成物は置けない。
+  #
+  # 旧 symlink の撤去 (linkGeneration) より後に走らせる。先に走ると生成物を旧 symlink
+  # 越しに正本へ書き込んでしまう (生成器側でも出力先を検査して例外にしている)。
+  home.activation.buildCodexHarness = lib.hm.dag.entryAfter [ "linkGeneration" "bootstrapDeno" ] ''
+    if [ ! -x "$HOME/.deno/bin/deno" ]; then
+      warnEcho "deno が無いので Codex 向けハーネスの生成をスキップした"
     else
-      warnEcho "deno が無いので ~/.codex/agents の生成をスキップした"
+      run "$HOME/.deno/bin/deno" run --allow-read --allow-write --allow-env \
+        "${dotfilesRoot}/agents/scripts/build-harness.ts" --runtime codex \
+        --dotfiles-root "${dotfilesRoot}" --vocabulary "${dotfilesRoot}/agents/vocabulary.json" \
+        --base "${dotfilesRoot}/agents/rules" \
+        --overlay "${dotfilesRoot}/agents/bindings/codex/overlay/rules" \
+        --out "$HOME/.agents/rules/codex"
+      run "$HOME/.deno/bin/deno" run --allow-read --allow-write --allow-env \
+        "${dotfilesRoot}/agents/scripts/build-harness.ts" --runtime codex \
+        --dotfiles-root "${dotfilesRoot}" --vocabulary "${dotfilesRoot}/agents/vocabulary.json" \
+        --base "${dotfilesRoot}/agents/skills" \
+        --overlay "${dotfilesRoot}/agents/bindings/codex/overlay/skills" \
+        --out "$HOME/.codex/skills"
+      run "$HOME/.deno/bin/deno" run --allow-read --allow-write --allow-env \
+        "${dotfilesRoot}/agents/scripts/build-harness.ts" --runtime codex \
+        --dotfiles-root "${dotfilesRoot}" --vocabulary "${dotfilesRoot}/agents/vocabulary.json" \
+        --base "${dotfilesRoot}/agents/subagents" \
+        --overlay "${dotfilesRoot}/agents/bindings/codex/overlay/subagents" \
+        --out "$HOME/.codex/agents" --subagent-format codex
     fi
   '';
 
@@ -88,6 +109,7 @@
   '';
 
   home.file = {
-    ".codex/AGENTS.md".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/codex/AGENTS.md";
+    ".codex/AGENTS.md".source =
+      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/codex/AGENTS.md";
   };
 }

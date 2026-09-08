@@ -13,6 +13,7 @@
 
 import { basename, dirname, join, relative, resolve } from "jsr:@std/path@1";
 import { walk } from "jsr:@std/fs@1/walk";
+import { parseSubagent, toCodexToml, toOpencodeMarkdown } from "./sync-subagents.ts";
 
 /** 語彙表。`{{@<name>}}` → ランタイム別の実語。vocabulary.json の形と一致させる */
 export type Vocabulary = Record<string, Record<string, string>>;
@@ -145,6 +146,15 @@ export function mergeSections(base: string, overlay: string): string {
   const overlayHeadings = scanHeadings(overlayLines);
   if (overlayHeadings.length === 0) return overlay;
 
+  // 最初の見出しより前の本文はマージキーを持たず、黙って捨てられてしまう。
+  // overlay を書く側が気づけないので例外にする。
+  const preamble = overlayLines.slice(0, overlayHeadings[0].line);
+  if (preamble.some((line) => line.trim() !== "")) {
+    throw new Error(
+      `overlay の最初の見出しより前に本文があります: ${preamble.find((l) => l.trim() !== "")}`,
+    );
+  }
+
   const byText = new Map(baseHeadings.map((h, k) => [h.text, k]));
   const replacements: Array<{ start: number; end: number; lines: string[] }> = [];
   const appended: string[] = [];
@@ -243,7 +253,14 @@ export type BuildOptions = {
   runtime: string;
   vocabulary: Vocabulary;
   dotfilesRoot: string;
+  /** subagent は書式変換が要る。指定するとランタイムのスキーマへ変換して出す */
+  subagentFormat?: "codex" | "opencode";
 };
+
+const SUBAGENT_RENDERERS = {
+  codex: { render: toCodexToml, extension: ".toml" },
+  opencode: { render: toOpencodeMarkdown, extension: ".md" },
+} as const;
 
 /**
  * base を 1 ランタイム分の完成品へ変換して outDir に配る。
@@ -278,10 +295,18 @@ export async function buildTree(
           // overlay が無いファイルは base のまま通す
         }
         const merged = mergeSections(await Deno.readTextFile(entry.path), overlay);
-        await Deno.writeTextFile(
-          destination,
-          substitute(merged, options.vocabulary, options.runtime),
-        );
+        const text = substitute(merged, options.vocabulary, options.runtime);
+
+        if (options.subagentFormat) {
+          // 語彙を当ててから書式変換する。逆順だと TOML の中身に置換をかけることになる
+          const { render, extension } = SUBAGENT_RENDERERS[options.subagentFormat];
+          const subagent = parseSubagent(text);
+          const renamed = `${subagent.frontmatter.name}${extension}`;
+          await Deno.writeTextFile(join(staging, renamed), render(subagent));
+          written.push(renamed);
+          continue;
+        }
+        await Deno.writeTextFile(destination, text);
       } else {
         // copyFile はパーミッションごと複製する。スキルの scripts/ には実行ビットを
         // 持つファイルがあり、テキストとして読み書きし直すと落ちる。
@@ -408,7 +433,8 @@ export async function loadVocabulary(path: string): Promise<Vocabulary> {
 
 const USAGE = `usage:
   build-harness.ts --runtime <name> --base <dir> --out <dir> \\
-      [--overlay <dir>] [--vocabulary <file>] [--dotfiles-root <dir>]
+      [--overlay <dir>] [--vocabulary <file>] [--dotfiles-root <dir>] \\
+      [--subagent-format codex|opencode]
   build-harness.ts --remove-dotfiles-links <dir> --dotfiles-root <dir>`;
 
 function parseArgs(args: string[]): Record<string, string> {
@@ -462,6 +488,7 @@ async function main(args: string[]): Promise<number> {
     runtime,
     vocabulary,
     dotfilesRoot,
+    subagentFormat: options["subagent-format"] as "codex" | "opencode" | undefined,
   });
   console.log(
     `${runtime}: ${result.written.length} 件を生成${
