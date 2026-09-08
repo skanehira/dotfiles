@@ -1,7 +1,11 @@
-import { assertEquals, assertThrows } from "jsr:@std/assert@1";
+import { assertEquals, assertRejects, assertThrows } from "jsr:@std/assert@1";
 import {
   assertSafeOutRoot,
+  buildFile,
+  buildTree,
   mergeSections,
+  planPrune,
+  removeDotfilesLinks,
   substitute,
   type Vocabulary,
 } from "./build-harness.ts";
@@ -449,4 +453,243 @@ Deno.test("assertSafeOutRoot_with_a_not_yet_created_directory_checks_its_parent"
   } finally {
     await Deno.remove(dotfiles, { recursive: true });
   }
+});
+
+// ------------------------------------------------------- planPrune / buildTree
+
+Deno.test("planPrune_returns_paths_in_the_previous_manifest_that_the_new_build_no_longer_writes", () => {
+  assertEquals(
+    planPrune(["a.md", "b/c.md", "d.sh"], ["a.md", "d.sh"]),
+    ["b/c.md"],
+  );
+});
+
+Deno.test("planPrune_with_nothing_dropped_returns_an_empty_list", () => {
+  assertEquals(planPrune(["a.md"], ["a.md", "new.md"]), []);
+});
+
+/** base / overlay / out の 3 つを用意して後片付けまで面倒を見る */
+async function withTrees(
+  fn: (t: { base: string; overlay: string; out: string; dotfiles: string }) => Promise<void>,
+) {
+  const dotfiles = await Deno.makeTempDir();
+  const base = `${dotfiles}/agents`;
+  const overlay = `${dotfiles}/overlay`;
+  const out = await Deno.makeTempDir();
+  await Deno.mkdir(base, { recursive: true });
+  await Deno.mkdir(overlay, { recursive: true });
+  try {
+    await fn({ base, overlay, out, dotfiles });
+  } finally {
+    await Deno.remove(dotfiles, { recursive: true });
+    await Deno.remove(out, { recursive: true });
+  }
+}
+
+const VOCAB_FIXTURE: Vocabulary = {
+  "ask-user": { claude: "AskUserQuestion", codex: "request_user_input" },
+};
+
+Deno.test("buildTree_merges_the_overlay_section_then_substitutes_for_the_runtime", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.writeTextFile(
+      `${base}/g.md`,
+      "# t\n\n## 確認\n\nbase は {{@ask-user}} を使う。\n\n## 残り\n\nそのまま。\n",
+    );
+    await Deno.writeTextFile(
+      `${overlay}/g.md`,
+      "## 確認\n\noverlay は {{@ask-user}} を使う。\n",
+    );
+    await buildTree({
+      baseDir: base,
+      overlayDir: overlay,
+      outDir: out,
+      runtime: "codex",
+      vocabulary: VOCAB_FIXTURE,
+      dotfilesRoot: dotfiles,
+    });
+    assertEquals(
+      await Deno.readTextFile(`${out}/g.md`),
+      "# t\n\n## 確認\n\noverlay は request_user_input を使う。\n\n## 残り\n\nそのまま。\n",
+    );
+  });
+});
+
+Deno.test("buildTree_copies_non_markdown_files_preserving_the_executable_bit", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.mkdir(`${base}/s/scripts`, { recursive: true });
+    await Deno.writeTextFile(`${base}/s/scripts/run.sh`, "#!/bin/sh\necho {{@ask-user}}\n");
+    await Deno.chmod(`${base}/s/scripts/run.sh`, 0o755);
+    await Deno.writeTextFile(`${base}/s/data.json`, '{"k":"{{@ask-user}}"}\n');
+    await buildTree({
+      baseDir: base,
+      overlayDir: overlay,
+      outDir: out,
+      runtime: "codex",
+      vocabulary: VOCAB_FIXTURE,
+      dotfilesRoot: dotfiles,
+    });
+    // .md 以外は置換もマージもせず素通し。実行ビットは保つ
+    assertEquals(await Deno.readTextFile(`${out}/s/scripts/run.sh`), "#!/bin/sh\necho {{@ask-user}}\n");
+    assertEquals((Deno.statSync(`${out}/s/scripts/run.sh`).mode! & 0o777), 0o755);
+    assertEquals((Deno.statSync(`${out}/s/data.json`).mode! & 0o777), 0o644);
+  });
+});
+
+Deno.test("buildTree_excludes_ds_store_from_the_output", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.writeTextFile(`${base}/a.md`, "# a\n");
+    await Deno.writeTextFile(`${base}/.DS_Store`, "junk");
+    await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+    });
+    assertEquals([...Deno.readDirSync(out)].map((e) => e.name).sort(), [".harness-manifest.json", "a.md"]);
+  });
+});
+
+Deno.test("buildTree_prunes_only_what_its_own_previous_manifest_listed_and_keeps_foreign_files", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.writeTextFile(`${base}/keep.md`, "# keep\n");
+    await Deno.writeTextFile(`${base}/gone.md`, "# gone\n");
+    await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+    });
+    // 他ツールが置いたファイル。manifest に無いので残すべき
+    await Deno.writeTextFile(`${out}/foreign.md`, "# foreign\n");
+    await Deno.remove(`${base}/gone.md`);
+
+    const result = await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+    });
+    assertEquals(result.pruned, ["gone.md"]);
+    assertEquals(
+      [...Deno.readDirSync(out)].map((e) => e.name).sort(),
+      [".harness-manifest.json", "foreign.md", "keep.md"],
+    );
+  });
+});
+
+Deno.test("buildTree_with_an_out_dir_inside_dotfiles_root_throws_before_writing_anything", async () => {
+  await withTrees(async ({ base, overlay, dotfiles }) => {
+    await Deno.writeTextFile(`${base}/a.md`, "# a\n");
+    const unsafe = `${dotfiles}/agents/skills`;
+    await assertRejects(
+      () =>
+        buildTree({
+          baseDir: base, overlayDir: overlay, outDir: unsafe,
+          runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+        }),
+      Error,
+      "出力先が正本の中を指しています",
+    );
+  });
+});
+
+Deno.test("buildTree_with_an_undefined_placeholder_throws_and_leaves_the_out_dir_untouched", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.writeTextFile(`${base}/a.md`, "# a\n\n{{@not-in-vocabulary}}\n");
+    await assertRejects(
+      () =>
+        buildTree({
+          baseDir: base, overlayDir: overlay, outDir: out,
+          runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+        }),
+      Error,
+      "語彙表に {{@not-in-vocabulary}} がありません",
+    );
+    // staging に書いてから rename するので、失敗時に出力先は空のまま
+    assertEquals([...Deno.readDirSync(out)].length, 0);
+  });
+});
+
+// ------------------------------------------------- removeDotfilesLinks
+
+Deno.test("removeDotfilesLinks_removes_only_symlinks_resolving_into_dotfiles_and_keeps_real_dirs", async () => {
+  const dotfiles = await Deno.makeTempDir();
+  const shared = await Deno.makeTempDir();
+  const elsewhere = await Deno.makeTempDir();
+  try {
+    await Deno.mkdir(`${dotfiles}/agents/skills/mine`, { recursive: true });
+    // 我々が張った symlink (撤去対象)
+    await Deno.symlink(`${dotfiles}/agents/skills/mine`, `${shared}/mine`);
+    // 他ツールが置いた実体 (残す)
+    await Deno.mkdir(`${shared}/foreign-real`);
+    // 他所を指す symlink (残す)
+    await Deno.symlink(elsewhere, `${shared}/foreign-link`);
+
+    assertEquals(await removeDotfilesLinks(shared, dotfiles), ["mine"]);
+    assertEquals(
+      [...Deno.readDirSync(shared)].map((e) => e.name).sort(),
+      ["foreign-link", "foreign-real"],
+    );
+  } finally {
+    for (const d of [dotfiles, shared, elsewhere]) await Deno.remove(d, { recursive: true });
+  }
+});
+
+Deno.test("removeDotfilesLinks_on_a_missing_directory_returns_an_empty_list", async () => {
+  const dotfiles = await Deno.makeTempDir();
+  try {
+    assertEquals(await removeDotfilesLinks(`${dotfiles}/never-created`, dotfiles), []);
+  } finally {
+    await Deno.remove(dotfiles, { recursive: true });
+  }
+});
+
+// ------------------------------------------------------------------ buildFile
+
+Deno.test("buildFile_merges_the_overlay_then_substitutes_and_writes_to_the_destination", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.writeTextFile(`${base}/AGENTS.md`, "# g\n\n## 確認\n\n{{@ask-user}} で聞く。\n");
+    await Deno.writeTextFile(`${overlay}/AGENTS.md`, "## 確認\n\n{{@ask-user}} を使う。\n");
+    await buildFile({
+      baseFile: `${base}/AGENTS.md`,
+      overlayFile: `${overlay}/AGENTS.md`,
+      outFile: `${out}/CLAUDE.md`,
+      runtime: "codex",
+      vocabulary: VOCAB_FIXTURE,
+      dotfilesRoot: dotfiles,
+    });
+    assertEquals(
+      await Deno.readTextFile(`${out}/CLAUDE.md`),
+      "# g\n\n## 確認\n\nrequest_user_input を使う。\n",
+    );
+  });
+});
+
+Deno.test("buildFile_without_an_overlay_writes_the_substituted_base", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.writeTextFile(`${base}/AGENTS.md`, "# g\n\n{{@ask-user}} で聞く。\n");
+    await buildFile({
+      baseFile: `${base}/AGENTS.md`,
+      overlayFile: `${overlay}/AGENTS.md`,
+      outFile: `${out}/CLAUDE.md`,
+      runtime: "claude",
+      vocabulary: VOCAB_FIXTURE,
+      dotfilesRoot: dotfiles,
+    });
+    assertEquals(await Deno.readTextFile(`${out}/CLAUDE.md`), "# g\n\nAskUserQuestion で聞く。\n");
+  });
+});
+
+Deno.test("buildFile_with_a_destination_inside_dotfiles_root_throws", async () => {
+  await withTrees(async ({ base, overlay, dotfiles }) => {
+    await Deno.writeTextFile(`${base}/AGENTS.md`, "# g\n");
+    await assertRejects(
+      () =>
+        buildFile({
+          baseFile: `${base}/AGENTS.md`,
+          overlayFile: `${overlay}/AGENTS.md`,
+          outFile: `${dotfiles}/agents/CLAUDE.md`,
+          runtime: "claude",
+          vocabulary: VOCAB_FIXTURE,
+          dotfilesRoot: dotfiles,
+        }),
+      Error,
+      "出力先が正本の中を指しています",
+    );
+  });
 });
