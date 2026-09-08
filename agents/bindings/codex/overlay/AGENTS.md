@@ -23,7 +23,7 @@
 | ルール | `~/.agents/rules/codex/` を絶対パスで直接 Read する | `agents/rules/` | `drs` / `hms` が要る (生成物) |
 | MCP | `/etc/codex/config.toml` の `[mcp_servers.*]` | `agents/bindings/codex/config.toml` | 即反映 (symlink)。全マシン共通のサーバだけを system レイヤーに置き、マシン固有のものは Codex 自身が `~/.codex/config.toml` (user レイヤー) に書く |
 
-**hooks はこの表に無い。** Codex には 1 本も配られていない (→「hooks は Codex には配られていない」節)。
+**hooks はこの表に無い。** このハーネスが自分で書いた hook は 1 本も配っていない (→「hooks は Codex には配られていない」節)。
 
 `~/.agents/skills/` は使わない。ここは他ツールが入れたスキルの領域で、Codex と OpenCode の
 両方が探索するためランタイム別の生成物を置けない。
@@ -81,7 +81,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 
 ## hooks は Codex には配られていない
 
-**Codex 側の hooks は 0 本である。** そもそもこのハーネスは機械ゲートを 1 本も持っていない (Claude Code 向けにも無い) ので、移植すべきものが無い。dev-impl 系のスキルを Codex で回すときは、修正ラウンド上限を自律遵守する。
+**このハーネスが自分で書いた hook は 0 本である。** そもそも機械ゲートを 1 本も持っていない (Claude Code 向けにも無い) ので、移植すべきものが無い。**ただし Codex 環境に hook が 1 件も無いという意味ではない。** `~/.codex/hooks.json` (user レイヤー) に herdr 連携の SessionStart hook が 1 件、`nix/modules/home/codex.nix` の activation が入れる compact-plus プラグイン由来が 7 件登録されている (承認状態は `~/.codex/config.toml` の `[hooks.state]` に残る)。いずれもこのハーネスが書いたゲートではない。dev-impl 系のスキルを Codex で回すときは、修正ラウンド上限を自律遵守する。
 
 ## hooks を追加するときの置き場
 

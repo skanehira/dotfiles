@@ -409,7 +409,9 @@ hook 以外の機械的な強制は 1 つだけ残っている。`agents/subagen
 
 `~/.claude/hooks` の symlink はこの 1 本のためだけにある。ディレクトリごと消すと herdr の SessionStart が絶対パスで参照できなくなる。
 
-**deny する自作ゲートは 3 ランタイムのどれにも配っていない。**Claude Code に配っている hook は上表の herdr 連携 1 本だけである。Codex は移植すべきものが無く、OpenCode はシェル hooks 自体を持たない (JS プラグイン API はコマンドに stdin を渡さず stdout も解釈しないため deny するゲートに使えない)。
+**deny する自作ゲートは 3 ランタイムのどれにも配っていない。**自分で書いた hook として Claude Code に配っているのは上表の herdr 連携 1 本だけである。Codex は移植すべきものが無く、OpenCode はシェル hooks 自体を持たない (JS プラグイン API はコマンドに stdin を渡さず stdout も解釈しないため deny するゲートに使えない)。
+
+**プラグイン由来の hook はこれとは別にある。** compact-plus が Claude Code に 7 件 (UserPromptSubmit / PreCompact / PostCompact / SessionStart)、Codex に 7 件を登録する (Claude 側は `agents/bindings/claude/settings.json` の `enabledPlugins`、Codex 側は `codex.nix` の activation が入れる)。どちらもコンパクション補助で deny するゲートではないが、「hook が 1 件も無い」わけではない。
 
 hook を追加したくなったときの置き場は次のとおり。
 
