@@ -1,4 +1,9 @@
-{ config, dotfilesRoot, ... }:
+{
+  config,
+  lib,
+  dotfilesRoot,
+  ...
+}:
 
 {
   # 設定は dotfiles repo への直接 symlink (mkOutOfStoreSymlink) で扱う。
@@ -27,4 +32,17 @@
   # 無いときだけ ~/.claude/CLAUDE.md にフォールバックする。明示的に置いて経路を 1 本にする。
   home.file.".config/opencode/AGENTS.md".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/AGENTS.md";
+
+  # subagent は OpenCode 独自スキーマ (`mode: subagent` が要る) なので、正本
+  # agents/subagents/*.md から生成する。生成物は git 管理しない。
+  # deno を使うので bootstrapDeno の後に置く。
+  home.activation.syncOpencodeSubagents = lib.hm.dag.entryAfter [ "bootstrapDeno" ] ''
+    if [ -x "$HOME/.deno/bin/deno" ]; then
+      run "$HOME/.deno/bin/deno" run --allow-read --allow-write \
+        "${dotfilesRoot}/agents/scripts/sync-subagents.ts" \
+        "${dotfilesRoot}/agents/subagents" opencode "$HOME/.config/opencode/agents"
+    else
+      warnEcho "deno が無いので ~/.config/opencode/agents の生成をスキップした"
+    fi
+  '';
 }

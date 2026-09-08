@@ -9,7 +9,7 @@ Custom hooks for Claude Code.
 
 ## Usage
 
-Hooks are configured in `../settings.json` and run automatically on the specified events.
+起動元はランタイムごとに違う。Claude Code は `../bindings/claude/settings.json` の `hooks`、Codex は `codex/config.toml` の `[[hooks.PreToolUse]]`。どちらも同じスクリプトを起動する (wire format が共通なため)。OpenCode はシェル hooks を持たないので対象外。
 
 ### Commit Message Guard Hook
 
