@@ -80,7 +80,7 @@ rg -o 'AskUserQuestion|TodoWrite|TaskCreate|TaskUpdate|WebFetch|WebSearch|run_in
 
 **Codex 側の hooks は 0 本である。** ハーネスの自作 hook は `fix-round-guard` (dev-impl の修正ラウンド上限) 1 本だけで、これは Claude Code の Agent ツール入力に依存するため移植していない。dev-impl 系のスキルを Codex で回すときは、ラウンド上限を自律遵守する。
 
-コミット規約 (`~/.claude/rules/core/commit.md` の `<emoji> <type>: <subject>` 形式) も機械ゲートが無いので、コミット前に自分で subject を照合する。`~/.claude/CLAUDE.md` が「採点者は外部にいる」として hooks を挙げている箇所は、Codex 上では成立しない。残る採点者はユーザー / レビュー subagent / プロジェクトの CI である。
+したがって Codex 上では、`~/.claude/CLAUDE.md` が採点者として挙げる 4 者のうち hooks が居ない。残るのはユーザー / レビュー subagent / プロジェクトの CI である。
 
 ## hooks を追加するときの置き場
 

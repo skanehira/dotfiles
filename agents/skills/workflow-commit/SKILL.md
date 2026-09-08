@@ -52,6 +52,14 @@ EOF
 
 Conventional Commit type と emoji の対応表は @rules/core/commit.md を参照。
 
+コミットしたら**その場で subject を照合する**。この経路は起草者と実行者が同一で外部の機械ゲートが無いため、照合を省くと形式違反がそのまま履歴に残る。
+
+```bash
+git log -1 --pretty=%s   # 出力を <emoji> <type>: <subject> の型と突き合わせる
+```
+
+型から外れていたら、push 前なので `git commit --amend` で直してから次の関心事へ進む。
+
 ### 4. サマリ出力
 
 ```
