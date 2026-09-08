@@ -147,7 +147,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 - **tmux/** — tmux 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `tmux.conf` — 編集即反映、`prefix + r` で reload。`drs` 不要
   - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
-- **agents/** — AI エージェント共通のハーネス正本（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
+- **agents/** — AI エージェント共通のハーネス正本（ランタイムごとにコンパイルして配る。一部だけ直接 symlink で live edit 可能）
   - `AGENTS.md` / `rules/` / `skills/` / `subagents/` はランタイムごとにコンパイルして配るので、編集の反映に `drs` / `hms` (または生成器の手動実行) が要る
   - `hooks/` / `scripts/` / `bindings/` / `knowledge-profile.md` は直 symlink なので編集即反映
   - 配布先と構成は「AI エージェントのハーネス (agents/)」節を参照
@@ -187,7 +187,7 @@ nix/
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
     ├── home/
     │   ├── harness.nix   — ハーネスを Claude Code / OpenCode 向けにコンパイルして配る + 旧方式が張った ~/.agents/skills の symlink を撤去 (Android でも要るので codex.nix には置かない)
-    │   ├── claude.nix    — Claude Code (bootstrap install + agents/ を ~/.claude/* へ mkOutOfStoreSymlink)
+    │   ├── claude.nix    — Claude Code (bootstrap install + Claude 固有の設定と hooks/scripts を symlink。ハーネスの生成は harness.nix)
     │   ├── codex.nix     — Codex 向けハーネスの生成 (AGENTS.md / rules / skills / agents) + プラグイン導入。Linux のみ /etc/codex/config.toml を sudo で symlink
     │   ├── deno.nix      — bootstrap-install (~/.deno/bin/deno 不在時のみ公式 installer 実行)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
@@ -306,7 +306,7 @@ Android プロファイルだけは `pkgs.neovim` (nixpkgs-unstable の **stable
 
 グローバル指示・ルール・スキル・subagent の正本は `agents/` に 1 セットだけ置き、**ランタイムごとにコンパイルして配る**。読み手は自分の語彙で書かれた完成品だけを読む。
 
-本文はランタイム中立の語彙 (`{{@ask-user}}` 等) で書き、`agents/vocabulary.json` が各ランタイムの実語へ展開する。語彙では吸収できないランタイム固有の記述は `agents/bindings/<runtime>/overlay/` に**節単位**で置き、見出しが一致する節を差し替える。
+本文はランタイム中立の語彙 (`{{@ask-user}}` 等) で書き、`agents/vocabulary.json` が各ランタイムの実語へ展開する。語彙では吸収できないランタイム固有の記述は `agents/bindings/<runtime>/overlay/` に**節単位**で置く。見出しが base と一致すればその節を配下ごと差し替え、**一致しなければ末尾に追加する**(削除はできない)。現行の overlay は 9 節すべてが追加側で、差し替えは 1 件も使っていない。一致させたい節は見出しを 1 バイトも変えない。
 
 ```
 agents/
@@ -341,7 +341,18 @@ OpenCode は `~/.claude/skills` も探索する。`nix/modules/home/env.nix` の
 
 ### 生成器 (agents/scripts/build-harness.ts)
 
-`drs` / `hms` の activation が呼ぶ。手で流し直すこともできる (引数なしで実行すると使い方が出る)。
+`drs` / `hms` の activation が呼ぶ。**全ランタイム分を流すには `drs` / `hms` を使う** (呼び出しは 12 回あり、`harness.nix` と `codex.nix` が持っている)。
+
+1 ランタイムの 1 要素だけを手で流し直すこともできる。ルールを 1 行直したときはこれが速い。
+
+```bash
+./agents/scripts/build-harness.ts --runtime claude --dotfiles-root "$PWD" \
+  --vocabulary agents/vocabulary.json \
+  --base agents/rules --overlay agents/bindings/claude/overlay/rules \
+  --out ~/.claude/rules
+```
+
+`--base` にファイルを渡すと単一ファイルモードになる (グローバル指示用)。引数なしで実行すると使い方が出る。
 
 処理は **overlay の節マージ → 語彙の置換**の順。逆順だと overlay の見出しキーをランタイム語彙で書くことになり、キーがランタイムごとに変わってしまう (見出しにプレースホルダを含むファイルが 4 本ある)。
 
@@ -364,6 +375,7 @@ symlink のまま残しているのは次のものだけ。
 | `hooks/` `scripts/` | コードで語彙の置換対象が無い |
 | `bindings/claude/settings.json` `keybindings.json` | Claude 固有で他ランタイムは読まない |
 | `bindings/codex/config.toml` | `/etc/codex/config.toml` の system レイヤーとして配る |
+| `bindings/opencode/opencode.json` `tui.json` | OpenCode 固有で他ランタイムは読まない |
 | `knowledge-profile.md` | `utility-doc-reading` が**書き込む**。生成物にすると毎回上書きされる |
 
 ### 開発ワークフローのスキル
@@ -418,7 +430,7 @@ Codex と OpenCode には hook が 1 本も配られていない (Codex は移�
 ```bash
 ls ~/.claude/skills ~/.codex/skills ~/.config/opencode/skills   # それぞれに生成物がある
 ls ~/.codex/agents ~/.config/opencode/agents                     # subagent 4 本の生成物がある
-rg -c '{{@' ~/.codex/AGENTS.md                                   # 0 件 (プレースホルダの残骸が無い)
+rg -F '{{@' ~/.codex/AGENTS.md || echo 'プレースホルダの残骸なし'  # -F が要る ({ は正規表現で構文エラー)
 readlink -f /etc/codex/config.toml                               # agents/bindings/codex/config.toml に解決する
 echo $OPENCODE_DISABLE_CLAUDE_CODE_SKILLS                        # 1 (空ならターミナルを開き直す)
 ```
@@ -426,6 +438,8 @@ echo $OPENCODE_DISABLE_CLAUDE_CODE_SKILLS                        # 1 (空なら�
 ### 生成物から symlink へ戻すとき
 
 `~/.claude/{CLAUDE.md,rules,skills,agents}` などが実ファイル化した後に、生成を使わない世代へ戻すと Home Manager の `checkLinkTargets` が `Existing file ... is in the way` で拒否する。戻すときは実ファイルを手で消してから適用する。
+
+**先に退避が要る。** `~/.codex/skills` と `~/.config/opencode/skills` には他ツールが入れたスキルが、`~/.claude/agents` には人が置いた subagent が同居しうる。生成物だけを消したいなら各ディレクトリの `.harness-manifest.json` に載っているパスを消す。下記は**同居物ごと消す**手順である。
 
 ```bash
 rm -rf ~/.claude/{CLAUDE.md,rules,skills,agents} \

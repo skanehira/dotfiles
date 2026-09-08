@@ -1,3 +1,5 @@
+#!/usr/bin/env -S deno run --allow-read --allow-write --allow-env
+
 /**
  * ハーネス正本 (agents/) をランタイムごとの完成品へコンパイルする。
  *
