@@ -24,9 +24,9 @@ readlink -f ~/.claude/rules                                    # dotfiles の ag
 
 ## hooks は OpenCode では動かない
 
-**`commit-msg-guard` と `fix-round-guard` は OpenCode では発火しない。** OpenCode はシェル hooks を持たず、JS プラグイン API しか無い。しかもそのプラグインはコマンドに stdin を渡さず stdout も解釈しないため、deny する機械ゲートとしては使えない。
+**`fix-round-guard` は OpenCode では発火しない。** OpenCode はシェル hooks を持たず、JS プラグイン API しか無い。しかもそのプラグインはコマンドに stdin を渡さず stdout も解釈しないため、deny する機械ゲートとしては使えない。
 
-したがってコミット規約 (`~/.claude/rules/core/commit.md`) と dev-impl の修正ラウンド上限は、**機械ゲート無しの自律遵守**になる。`~/.claude/CLAUDE.md` が「採点者は外部にいる」として hooks を挙げている箇所は、OpenCode 上では成立しない。コミット前に自分で形式を確認する。
+したがって dev-impl の修正ラウンド上限は**機械ゲート無しの自律遵守**になる。`~/.claude/CLAUDE.md` が「採点者は外部にいる」として hooks を挙げている箇所は、OpenCode 上では成立しない。コミット規約 (`~/.claude/rules/core/commit.md`) は 3 ランタイムとも機械ゲートを持たないので、コミット前に自分で形式を確認する。
 
 ## Claude Code 由来の記述の読み替え
 

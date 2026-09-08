@@ -153,8 +153,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - 配布先と構成は「AI エージェントのハーネス (agents/)」節を参照
 - **codex/** — Codex 設定（`/etc/codex/config.toml` へ dotfiles 直接 symlink、live edit 可能）
   - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる
-  - `config.toml` の `[[hooks.PreToolUse]]` は `agents/hooks/commit-msg-guard.ts` を Codex 側でも起動する。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) なので、hook スクリプトを両ランタイムで共有できる。**system レイヤーに置いた hooks は信頼ゲートを通らず発火する**のに対し、`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**される (実測。承認を促すメッセージも出ない)。したがって dotfiles で配る hooks は必ず `codex/config.toml` に書く
-  - hook の `command` はシェル経由で解釈されるため `$GHQ_ROOT` が展開できる。mac と Linux で dotfiles の絶対パスが違うので、パスは環境変数経由で書く
+  - `config.toml` に hooks は書いていない。ハーネスの自作ゲートは `fix-round-guard.ts` 1 本だけで、Claude Code の Agent ツール入力に依存するため Codex へは移植していない。将来 Codex へ hook を配るときは必ずこのファイル (system レイヤー) に書く。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) なのでスクリプトは共有でき、**system レイヤーに置いた hooks は信頼ゲートを通らず発火する**のに対し、`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**される (実測。承認を促すメッセージも出ない)。`command` はシェル経由で解釈されるので `$GHQ_ROOT` が展開でき、mac と Linux で絶対パスが違う問題は環境変数経由で書けば回避できる
   - `AGENTS.md` — `~/.codex/AGENTS.md` に symlink するグローバル Codex 指示
   - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける。`[mcp_servers.*]` は両レイヤーに現れる。全マシン共通のサーバ (context7 / chrome-devtools) は `codex/config.toml` で配り、マシン固有のものは Codex が user レイヤーに書く
   - 旧方式 (Home Manager が `~/.codex/config.toml` を生成) を使っていたマシンでは、`drs` / `hms` 後に 1 回だけ `~/.codex/config.toml` から `codex/config.toml` と重複するキーを手で削除する。残さないと `/etc` 側の値が遮蔽される
@@ -312,7 +311,7 @@ agents/
 ├── AGENTS.md            ← グローバル指示。~/.claude/CLAUDE.md と ~/.config/opencode/AGENTS.md へ symlink
 ├── skills/              ← ~/.agents/skills/<name> へ個別 symlink (Codex と OpenCode が直読み)。Claude Code へは ~/.claude/skills をディレクトリごと symlink
 ├── rules/               ← core/ backend/ frontend/ infra/
-├── hooks/               ← commit-msg-guard.ts / fix-round-guard.ts
+├── hooks/               ← fix-round-guard.ts / herdr-agent-state.sh
 ├── subagents/           ← Claude Code へは symlink、Codex と OpenCode へは変換して配る 4 本
 ├── scripts/             ← agent / skill から ~/.claude/scripts/<name> の形で呼ぶ + statusLine + 配布用の変換スクリプト
 ├── knowledge-profile.md ← ~/.claude/knowledge-profile.md へ symlink (utility-doc-reading が読み書きする)
@@ -337,17 +336,16 @@ agents/
 
 ### hooks (agents/hooks/)
 
-deny する機械ゲートは 2 本で、ほかに herdr 連携用のスクリプトが 1 本ある。詳細と「機械ゲートを置いていない規律」は `agents/hooks/README.md` にある。
+deny する機械ゲートは 1 本で、ほかに herdr 連携用のスクリプトが 1 本ある。詳細と「機械ゲートを置いていない規律」は `agents/hooks/README.md` にある。
 
-2 本のゲートは `settings.json` / `codex/config.toml` に書いた `$GHQ_ROOT` 経由の絶対パスを `deno run` で叩くので、`~/.claude/hooks` の symlink は経由しない (`GHQ_ROOT` は `nix/modules/home/env.nix` が `$HOME/dev` に設定する)。`~/.claude/hooks` が要るのは herdr の 1 本だけである。
+ゲートは `settings.json` に書いた `$GHQ_ROOT` 経由の絶対パスを `deno run` で叩くので、`~/.claude/hooks` の symlink は経由しない (`GHQ_ROOT` は `nix/modules/home/env.nix` が `$HOME/dev` に設定する)。`~/.claude/hooks` が要るのは herdr の 1 本だけである。
 
 | hook | 起動元 | 役割 |
 | --- | --- | --- |
-| `commit-msg-guard.ts` | Claude Code の `settings.json` と Codex の `codex/config.toml` | `git commit` の subject を Conventional Commit 形式で機械検証する |
 | `fix-round-guard.ts` | Claude Code の `settings.json` のみ (Agent ツール入力に依存するため Codex へは移植しない) | dev-impl の修正ラウンド上限 (2 周) を強制する |
 | `herdr-agent-state.sh` | Claude Code の `settings.json` の SessionStart (`~/.claude/hooks/` 経由) | herdr にセッション状態を渡す。herdr 本体が配布するファイルで mac の絶対パスが埋まっており、Linux では発火しない |
 
-OpenCode はシェル hooks を持たないので、どの hook も発火しない。Codex 側の登録先と承認の扱いは Directory Structure の `codex/` 項を参照。
+Codex と OpenCode には hook が 1 本も配られていない (Codex は移植していないため、OpenCode はシェル hooks を持たないため)。したがって**コミット規約は 3 ランタイムとも自律遵守**で、機械検証は無い。Codex 側の登録先と承認の扱いは Directory Structure の `codex/` 項を参照。
 
 `settings.json` にはこの表以外に**外部ツールが書き込んだ登録が 13 件ある**。内訳は herdr が SessionStart に 1 件、orca が 12 イベントに 1 件ずつ。orca の分は `~/.orca/agent-hooks/claude-hook.sh` が無ければ空の `{}` を返すだけで、このマシンには `~/.orca` が存在しないので全件 no-op になっている。自作 hook を数えるときはこれらと区別する。
 

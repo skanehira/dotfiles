@@ -39,15 +39,6 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "deno run --allow-env --allow-read $GHQ_ROOT/github.com/skanehira/dotfiles/agents/hooks/commit-msg-guard.ts"
-          }
-        ]
-      },
-      {
         "matcher": "Agent|Task",
         "hooks": [
           {

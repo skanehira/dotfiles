@@ -10,7 +10,7 @@
 
 ## Conventional Commit 形式
 
-subject は `<emoji> <type>: <subject>` 形式 (type: feat=✨ / fix=🐛 / docs=📝 / style=🎨 / refactor=♻️ / test=✅ / chore=🔧 / perf=⚡)。形式は `hooks/commit-msg-guard.ts` が PreToolUse で機械検証し、違反時は正しい形式を提示して deny する。
+subject は `<emoji> <type>: <subject>` 形式 (type: feat=✨ / fix=🐛 / docs=📝 / style=🎨 / refactor=♻️ / test=✅ / chore=🔧 / perf=⚡)。形式を検証する機械ゲートは無いので、コミット前に自分で subject を照合する。
 
 本文の末尾には以下を含める：
 

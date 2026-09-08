@@ -29,7 +29,7 @@
 | スキル | `~/.agents/skills/<name>` (Codex が直読みする user scope) | `dotfiles/agents/skills/` | 中身の編集は即反映。**追加と削除は `drs` / `hms` が要る** (個別 symlink の張り直し) |
 | subagent | `~/.codex/agents/*.toml` | `dotfiles/agents/subagents/*.md` を変換したもの | **変更も追加も `drs` / `hms` が要る** (TOML の再生成) |
 | ルール | `~/.claude/rules/` を絶対パスで直接 Read する (Codex 側に複製は無い) | `dotfiles/agents/rules/` | 即反映 |
-| hooks | 登録は `/etc/codex/config.toml` の `[[hooks.PreToolUse]]`、スクリプト本体は `dotfiles/agents/hooks/` | 同左 | 即反映 (system レイヤーは信頼ゲートを通らない) |
+| hooks | **配られていない** (`/etc/codex/config.toml` に `[[hooks.PreToolUse]]` は無い) | — | — |
 | MCP | `/etc/codex/config.toml` の `[mcp_servers.*]` | `dotfiles/codex/config.toml` | 即反映。全マシン共通のサーバだけを system レイヤーに置き、マシン固有のものは Codex 自身が `~/.codex/config.toml` (user レイヤー) に書く |
 
 配布されているか自分で確かめる:
@@ -75,10 +75,10 @@ rg -o 'AskUserQuestion|TodoWrite|TaskCreate|TaskUpdate|WebFetch|WebSearch|run_in
 
 ここに無い Claude 固有の記述に出会ったら、勝手に読み替えず**その旨を報告して指示を仰ぐ**。上のコマンドを流し直して規約を更新するのは人間の作業。
 
-## hooks は Codex でも効く
+## hooks は Codex には配られていない
 
-`commit-msg-guard` は Codex でも発火する。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) を採っており、同じスクリプトを両ランタイムで共有している。規約違反のコミットは実際に deny されるので、「Codex だから自分の判断で」という読み替えはしない。
+**Codex 側の hooks は 0 本である。** ハーネスの自作 hook は `fix-round-guard` (dev-impl の修正ラウンド上限) 1 本だけで、これは Claude Code の Agent ツール入力に依存するため移植していない。dev-impl 系のスキルを Codex で回すときは、ラウンド上限を自律遵守する。
 
-`fix-round-guard` (dev-impl の修正ラウンド上限) は Claude Code の Agent ツール入力に依存するため移植していない。dev-impl 系のスキルを Codex で回すときは、ラウンド上限を自律遵守する。
+コミット規約 (`~/.claude/rules/core/commit.md` の `<emoji> <type>: <subject>` 形式) も機械ゲートが無いので、コミット前に自分で subject を照合する。
 
-hooks を追加するときは必ず `dotfiles/codex/config.toml` に書く。`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**され、警告も出ない。system レイヤー (`/etc/codex/config.toml`) に置いたものは信頼ゲートを通らずに発火する。
+hooks を追加するときは必ず `dotfiles/codex/config.toml` に書く。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) を採るのでスクリプトは共有できる。`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**され、警告も出ない。system レイヤー (`/etc/codex/config.toml`) に置いたものは信頼ゲートを通らずに発火する。

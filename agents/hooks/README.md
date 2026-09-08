@@ -4,21 +4,11 @@ Custom hooks for Claude Code.
 
 ## Files
 
-- `commit-msg-guard.ts` — コミット規約ゲート (PreToolUse Bash)
 - `fix-round-guard.ts` — 修正ラウンド上限ゲート (PreToolUse Agent)
 
 ## Usage
 
-起動元はランタイムごとに違う。Claude Code は `../bindings/claude/settings.json` の `hooks`、Codex は `codex/config.toml` の `[[hooks.PreToolUse]]`。どちらも同じスクリプトを起動する (wire format が共通なため)。OpenCode はシェル hooks を持たないので対象外。
-
-### Commit Message Guard Hook
-
-`git commit` の subject 行を rules/core/commit.md の `<emoji> <type>: <subject>` 形式で機械検証する (PreToolUse Bash)。
-
-- 適用範囲: cwd が `$GHQ_ROOT/github.com/skanehira/` 配下の自リポジトリのみ (外部リポの別規約を誤 deny しない)
-- 検証不能なケース (`--amend` / `-F` / メッセージ抽出不能) は allow
-- 無効化: 環境変数 `COMMIT_GUARD=off`
-- テスト: `deno test agents/hooks/commit-msg-guard_test.ts`
+自作 hook はこの 1 本だけで、起動元は Claude Code の `../bindings/claude/settings.json` の `hooks` のみ。Agent ツールの入力に依存するため Codex へは移植しておらず、`codex/config.toml` に hooks は無い。OpenCode はシェル hooks を持たないので対象外。
 
 ### Fix Round Guard Hook
 
@@ -40,5 +30,6 @@ dev-impl の修正ラウンド上限を機械検証する (PreToolUse Agent)。`
 
 以下は hook で強制せず、`~/.claude/CLAUDE.md` と `../skills/README.md` の記述による自律遵守に委ねている。
 
+- **コミット規約**: `../rules/core/commit.md` の `<emoji> <type>: <subject>` 形式。3 ランタイムとも自律遵守する
 - **実装系ルールの遅延参照**: 着手前に `../rules/core/` の必要なものを Read する。プロンプトを検知してリマインドする仕組みは持たない
 - **subagent 起動時の `model` 明示**: Agent ツールの `model` は未指定だと agent 定義の frontmatter ではなく親のセッションモデルを継承する。呼び出し時に必ず明示する
