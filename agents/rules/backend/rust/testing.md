@@ -5,7 +5,7 @@ paths:
 
 # Rust テストルール
 
-共通のテスト原則は `common/testing.md` を参照。
+共通のテスト原則は `~/.claude/rules/core/testing.md` を参照。
 
 ## パラメータ化テスト
 

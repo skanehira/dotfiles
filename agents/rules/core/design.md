@@ -1,6 +1,6 @@
 # 設計共通ルール
 
-詳細なコード例が必要になったら `rules/core/references/design-examples.md` を Read する。
+詳細なコード例が必要になったら `~/.claude/rules/core/references/design-examples.md` を Read する。
 
 ## SOLID
 

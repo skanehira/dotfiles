@@ -9,7 +9,7 @@ paths:
 
 /utility-doc-audit のフォーマット適合チェックの正本。各項目は yes/no + 根拠箇所で判定できる形にしてある。
 
-調査の**進め方**は rules/core/investigation.md が正本。本ファイルはその**成果物（報告書）の型**を定める。
+調査の**進め方**は ~/.claude/rules/core/investigation.md が正本。本ファイルはその**成果物（報告書）の型**を定める。
 
 ## 構造（違反は major/minor で報告）
 
