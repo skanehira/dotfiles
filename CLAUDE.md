@@ -14,7 +14,8 @@ dotfiles リポジトリ。macOS は **Nix (nix-darwin + Home Manager)**、Linux
 
 ```bash
 # clone 先は ~/dev/github.com/skanehira/dotfiles 固定
-# (claude.nix / neovim.nix の mkOutOfStoreSymlink と darwin/codex.nix の environment.etc がこの path を直参照するため)
+# (nix/home-core.nix の dotfilesRoot がこの path を literal で持ち、各 module の
+#  mkOutOfStoreSymlink と darwin/codex.nix の environment.etc がそれを参照するため)
 mkdir -p ~/dev/github.com/skanehira
 cd ~/dev/github.com/skanehira
 git clone https://github.com/skanehira/dotfiles.git
@@ -24,7 +25,7 @@ cd dotfiles
 bash ./bootstrap.sh
 ```
 
-`bootstrap.sh` は (1) Nix 未導入時のみ公式 installer を実行し、(2) `nix/install.sh` 経由で `sudo nix run nix-darwin -- switch --flake .#skanehira` を回す。途中で Nix installer の y/n プロンプトと `sudo` (Touch ID / パスワード) が要求される。既存マシンでは Nix install を skip するので idempotent。
+`bootstrap.sh` は (1) Nix 未導入時のみ公式 installer を実行し、(2) `nix-daemon` の socket が無ければ `launchctl load` し、(3) `nix/install.sh` 経由で `sudo nix run nix-darwin -- switch --flake .#skanehira` を回す。途中で Nix installer の y/n プロンプトと `sudo` (Touch ID / パスワード) が要求される。既存マシンでは Nix install を skip するので idempotent。
 
 ### 初回セットアップ (Linux 新マシン、非 NixOS)
 
@@ -58,7 +59,7 @@ activation 中に `modules/home/codex.nix` が `sudo` で `/etc/codex/config.tom
 | `.#<user>-aarch64` | aarch64-linux | `home-linux.nix` | 同上の arm 版 |
 | `.#<user>-android` | aarch64-linux | `home-android.nix` | Android の Termux + proot-distro Debian |
 
-ログインユーザーが `skanehira` でないマシン (CI / 検証箱など) では、`flake.nix` の `linuxUsers` にそのユーザー名を足してから `.#<ユーザー名>` を指定する (例: ubuntu なら `.#ubuntu`)。`$USER` を動的に読む impure 方式は `nh` / `home-manager` が pure 評価で output を引くため `hms` 等で壊れる。よって pure に列挙する。
+ログインユーザーが `skanehira` でないマシン (CI / 検証箱など) では、`flake.nix` の `linuxUsers` にそのユーザー名を足してから `.#<ユーザー名>` を指定する (`ubuntu` は既に列挙済みなので `.#ubuntu` がそのまま使える)。`$USER` を動的に読む impure 方式は `nh` / `home-manager` が pure 評価で output を引くため `hms` 等で壊れる。よって pure に列挙する。
 
 ### 初回セットアップ (Android / Galaxy Z Fold 8 Ultra)
 
@@ -120,28 +121,29 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 ### Nix 管理（中核）
 
 - **nix/** — flake-based config（最も重要）
-  - `flake.nix` — inputs, outputs (`darwinConfigurations.skanehira` + `homeConfigurations.{skanehira,skanehira-aarch64,skanehira-android}`)
+  - `flake.nix` — inputs, outputs (`darwinConfigurations.skanehira` + `homeConfigurations` = `linuxUsers` × 3 プロファイル。現在は `skanehira` / `ubuntu` の 2 ユーザーで 6 output + `packages` + `formatter`)
   - `home-core.nix` — 全プロファイル共通の土台 (dotfilesRoot / stateVersion / programs.home-manager)。module の import は持たない
   - `home.nix` — フルセットのプロファイル (mac と通常 Linux が共有)
-  - `home-darwin.nix` — mac 用エントリ (home.nix + karabiner + `homeDirectory = /Users/...`)
+  - `home-darwin.nix` — mac 用エントリ (home.nix + mac 専用 3 module (karabiner / wezterm / mac-app-util-icons) + `homeDirectory = /Users/...`)
   - `home-linux.nix` — 通常 Linux 用エントリ (home.nix + `homeDirectory = /home/...`)
   - `home-android.nix` — Android (Termux + proot) 用エントリ (home-core.nix + 軽量 module のみ)
   - `darwin.nix` — nix-darwin imports のみ
   - `modules/home/` — Home Manager modules（CLI パッケージ、env、git、gh、zsh、fzf、direnv、tmux、wezterm、karabiner 等）
-  - `modules/darwin/` — nix-darwin modules（system、homebrew、codex）
+  - `modules/darwin/` — nix-darwin modules（system、homebrew、codex、sleepctl）
   - `modules/overlays.nix` — nix-darwin 用 overlays モジュール (overlays-list.nix を消費)
   - `modules/overlays-list.nix` — overlay の素のリスト (mac/Linux 両側で共有)
   - `install.sh` — mac bootstrap 用（一度限り）
+  - `pkgs/` — nixpkgs 未収録ツールの自前 derivation (tsp-server / gh-actions-language-server / kanary)
 
 ### Nix 補助
 
 - **zsh/** — `programs.zsh.initContent` から `builtins.readFile` で取り込まれる残置ファイル
   - `zshrc` — bindkey 群 + 関数 source loop
-  - `functions/{ghq-fzf,gss,tmuxpopup}.zsh` — カスタム zsh 関数
+  - `functions/*.zsh` — カスタム zsh 関数 7 本。`ghq-fzf` / `gss` / `tmuxpopup` の 3 本と、DGX Spark 系の `claude-deepseek` (`ccsp` / `ccds`) / `opencode-spark` (`ocsp`) / `spark-common` の 3 本、mac 専用の `sleepctl`
 - **karabiner/** — Karabiner-Elements 設定 (Goku DSL)
   - `karabiner.edn` — EDN で書いたルール、switch 時に goku が `~/.config/karabiner/karabiner.json` を生成
-- **wezterm/** — WezTerm 設定（`programs.wezterm.extraConfig` から `builtins.readFile` で取り込み）
-  - `wezterm.lua` — Lua の編集体験 (lua_ls) を保つため別ファイルとして残置
+- **wezterm/** — WezTerm 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
+  - `wezterm.lua` — `programs.wezterm.extraConfig` は使わず直接 symlink する。Lua の編集体験 (lua_ls) を保ち、`drs` 無しで反映するため
 - **tmux/** — tmux 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `tmux.conf` — 編集即反映、`prefix + r` で reload。`drs` 不要
   - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
@@ -160,6 +162,9 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 - **vim/** — Neovim 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
   - `init.lua` / `lua/` / `after/` — 編集即反映、`drs` 不要
   - `.luarc.json` — lua_ls の dotfiles 内 lua 編集用設定 (track 対象)
+- **herdr/** — herdr (コーディングエージェント用のターミナル多重化) の設定
+  - `config.toml` — `herdr.nix` が `~/.config/herdr/config.toml` へ mkOutOfStoreSymlink する
+- **リポジトリ直下** — `AGENTS.md` (このリポジトリで作業する agent 向けの repo スコープ指示。グローバル指示の正本 `agents/AGENTS.md` とは別物) / `bootstrap.sh` (mac 初回セットアップの入口) / `README.md` / `.github/workflows/nix-check.yml` (nix/** の push で flake check と fmt を回す CI)
 - **docs/** — Nix 設定だけでは伝わらない環境固有の手順書
   - `android-dev-setup.md` — Galaxy Z Fold 8 Ultra を Termux + proot-distro Debian で開発端末にする手順と制約
 
@@ -167,21 +172,23 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 
 ```
 nix/
-├── flake.nix              ← inputs + darwinConfigurations + homeConfigurations
+├── flake.nix              ← inputs + darwinConfigurations + homeConfigurations + packages + formatter
 ├── flake.lock
 ├── home-core.nix          ← 全プロファイル共通の土台 (module の imports は持たない)
 ├── home.nix               ← フルセット (home-core.nix + 全 module の imports)
-├── home-darwin.nix        ← home.nix + karabiner + homeDirectory=/Users/...
+├── home-darwin.nix        ← home.nix + karabiner / wezterm / mac-app-util-icons + homeDirectory=/Users/...
 ├── home-linux.nix         ← home.nix + homeDirectory=/home/...
 ├── home-android.nix       ← home-core.nix + 軽量 module + homeDirectory=/home/...
 ├── darwin.nix             ← imports modules/darwin/
 ├── install.sh             ← mac bootstrap
+├── pkgs/                  ← 自前 derivation (tsp-server / gh-actions-language-server / kanary)
 └── modules/
     ├── overlays.nix       ← nix-darwin 用 module (overlays-list.nix を nixpkgs.overlays に流す)
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
     ├── home/
+    │   ├── agent-skills.nix — agents/skills を ~/.agents/skills/<name> へ個別 symlink (Codex / OpenCode 共用。Android でも要るので codex.nix には置かない)
     │   ├── claude.nix    — Claude Code (bootstrap install + agents/ を ~/.claude/* へ mkOutOfStoreSymlink)
-    │   ├── codex.nix     — Codex (`~/.codex/AGENTS.md` symlink + agents/skills を ~/.agents/skills へ個別 symlink。Linux のみ /etc/codex/config.toml を sudo で symlink)
+    │   ├── codex.nix     — Codex (`~/.codex/AGENTS.md` symlink + ~/.codex/agents/*.toml 生成。Linux のみ /etc/codex/config.toml を sudo で symlink)
     │   ├── deno.nix      — bootstrap-install (~/.deno/bin/deno 不在時のみ公式 installer 実行)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── env.nix       — sessionVariables / sessionPath
@@ -193,7 +200,7 @@ nix/
     │   ├── mac-app-util-icons.nix — .app の trampoline アイコン調整 (mac only)
     │   ├── neovim.nix    — vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
     │   ├── opencode.nix  — OpenCode (opencode.json / tui.json / AGENTS.md を mkOutOfStoreSymlink + sync-subagents.ts で ~/.config/opencode/agents を生成)
-    │   ├── packages.nix  — home.packages 群（CLI 50+、nvtop / libreoffice-bin / terminal-notifier は darwin only）
+    │   ├── packages.nix  — home.packages 群（言語ランタイム / LSP / CLI を 13 カテゴリで宣言、約 100 件。vite-plus / nvtop / libreoffice-bin / terminal-notifier / screen-capture-mcp-server / kanary は darwin only）
     │   ├── packages-android.nix — Android 用の明示リスト (19 エントリ。binary cache から取れる軽量なものだけ)
     │   ├── rustup.nix    — bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
     │   ├── tmux.nix      — tmux/tmux.conf を mkOutOfStoreSymlink で live edit。plugins.conf のみ Nix 生成 (resurrect + themepack)
@@ -221,7 +228,7 @@ nix/
 
   計測条件: 2026-09-06、mac (aarch64-darwin) から `nix build --dry-run` を両者連続実行。Claude Code / Deno / Vite+ は activation 時に公式インストーラを走らせるので、この数値には含まれない。fetch 件数は実行マシンの nix store に既にある分を除いた値なので、まっさらな端末では増える。
 - **overlays の共有**: `modules/overlays-list.nix` が overlay の素のリストを export し、nix-darwin (`modules/overlays.nix` 経由) と HM standalone (`flake.nix` の `import nixpkgs` 経由) の両方から参照される。
-- **Homebrew**: GUI app (cask) と CLI のうち (a) cask の依存になるコア formula、(b) nixpkgs 未収録 (例: `aqua`) のみ管理 (mac only)。それ以外の CLI ツールは Nix 管理。`brews` には `ca-certificates` / `openssl@3` / `sqlite` を保険として明示宣言 (cask 依存リンクが切れた時の巻き添え削除を防止)。`onActivation.cleanup = "uninstall"` で宣言外は drs 時に自動撤去。
+- **Homebrew**: GUI app (cask) と CLI のうち (a) cask の依存になるコア formula、(b) nixpkgs 未収録 (例: `aqua`) のみ管理 (mac only)。それ以外の CLI ツールは Nix 管理。`brews` には `ca-certificates` / `openssl@3` を保険として (cask 依存リンクが切れた時の巻き添え削除を防止)、`aqua` を nixpkgs 未収録の CLI として明示宣言。`onActivation.cleanup = "uninstall"` で宣言外は drs 時に自動撤去。
 - **Touch ID for sudo**: `security.pam.services.sudo_local.touchIdAuth + reattach` で tmux 内含めて指紋認証 (mac only)。
 
 ## sudo の扱い（重要）
@@ -280,9 +287,9 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 
 ### Structure
 - `vim/lua/plugins/` — lazy.nvim プラグイン設定
-- `vim/lua/settings/` — 基本設定（options.lua, keymaps.lua, lsp.lua, autocmd.lua）
+- `vim/lua/settings/` — 基本設定（options.lua, keymaps.lua, lsp.lua, autocmd.lua, disable.lua）
 - `vim/lua/modules/` — カスタムモジュール（AI, markdown）
-- `vim/after/lsp/` — LSP 個別設定 (denols, rust_analyzer, lua_ls, nixd, version_ls, yamlls)
+- `vim/after/lsp/` — LSP 個別設定 (denols, rust_analyzer, lua_ls, nixd, tsgo, version_ls, yamlls)
 
 ### Key Paths
 - ghq リポジトリ: `$HOME/dev`
@@ -322,8 +329,9 @@ agents/
 ```
 
 詳細は `agents/skills/README.md` を参照 (タスク規模別の入口・モデル方針を含む)。主要スキル：
-- `/dev-spec` — 設計ループ (ユーザーストーリー → ... → PoC 検証 → DESIGN/DETAIL → TODO 生成 → 承認ゲート。手順は references/ に集約、クイックモード・部分実行可)
-- `/dev-impl` — 実装ループ (TODO 全フェーズを自律実装、`model: opus`。中小タスクはスキルを使わず plan mode / 直接依頼 + 直営 TDD)
+- `/dev-spec` — 設計ループ (ユーザーストーリー → ... → PoC 検証 → `docs/design/DESIGN.md` 1 枚 + `docs/design/features/` → GitHub issue をユースケース単位の親子 2 階層で生成 → 人間が確認)
+- `/dev-impl` — 実装ループ (`ready` ラベルの open issue を依存順に自律実装、`model: opus`)
+- `/dev-impl-quick` — 軽量実装ループ (docs 不要。依頼文をタスク分解して直営 TDD → review-impl → タスク単位コミット)
 - `/workflow-review` (レビュー) / `/workflow-commit` (コミット) / `/workflow-create-draft-pr` (Draft PR) / `/workflow-debate` (壁打ち)
 
 ### hooks (agents/hooks/)
@@ -338,9 +346,11 @@ deny する機械ゲートは 2 本で、ほかに herdr 連携用のスクリ�
 | `fix-round-guard.ts` | Claude Code の `settings.json` のみ (Agent ツール入力に依存するため Codex へは移植しない) | dev-impl の修正ラウンド上限 (2 周) を強制する |
 | `herdr-agent-state.sh` | Claude Code の `settings.json` の SessionStart (`~/.claude/hooks/` 経由) | herdr にセッション状態を渡す。herdr 本体が配布するファイルで mac の絶対パスが埋まっており、Linux では発火しない |
 
+OpenCode はシェル hooks を持たないので、どの hook も発火しない。Codex 側の登録先と承認の扱いは Directory Structure の `codex/` 項を参照。
+
 ### subagents (agents/subagents/)
 
-正本は Claude Code 形式 (Markdown + frontmatter)。3 者で唯一**書式変換が避けられない**要素で、`agents/scripts/sync-subagents.ts` が activation 時に変換する。生成物は git 管理しない。変換は `deno.nix` の bootstrap 後に走り、deno が無ければ警告して生成をスキップする (`~/.codex/agents` が空のときはまずこれを疑う)。生成物の先頭には `# generated by agents/scripts/sync-subagents.ts` の 1 行が入り、正本から消えた subagent の撤去はこの行を持つファイルだけを対象にする。配布先は人が自分の agent を 置く場所でもあるため、拡張子だけで消すと手書きを巻き込む。
+正本は Claude Code 形式 (Markdown + frontmatter)。3 者で唯一**書式変換が避けられない**要素で、`agents/scripts/sync-subagents.ts` が activation 時に変換する。生成物は git 管理しない。変換は `deno.nix` の bootstrap 後に走る。deno が無ければ警告してスキップし activation は成功するので、生成物は古いまま残る (`~/.codex/agents` が空のときはまずこれを疑う)。逆に変換が失敗すると (frontmatter の `name` / `description` 欠落、本文に `'''` を含む) exit 1 で `drs` / `hms` ごと止まる。手で流し直すには `deno run --allow-read --allow-write agents/scripts/sync-subagents.ts agents/subagents codex ~/.codex/agents` (OpenCode 向けは `codex` を `opencode`、出力先を `~/.config/opencode/agents` に置換)。生成物の先頭には `# generated by agents/scripts/sync-subagents.ts` の 1 行が入り、正本から消えた subagent の撤去はこの行を持つファイルだけを対象にする。配布先は人が自分の agent を 置く場所でもあるため、拡張子だけで消すと手書きを巻き込む。
 
 | 配布先 | 形式 | 経路 |
 | --- | --- | --- |
@@ -360,15 +370,31 @@ deny する機械ゲートは 2 本で、ほかに herdr 連携用のスクリ�
 
 ### 配布
 
-`drs` (mac) / `hms` (Linux) が `nix/modules/home/{claude,codex,opencode}.nix` を適用して symlink を張る。専用のインストールスクリプトは無い。
+`drs` (mac) / `hms` (Linux) が `nix/modules/home/{agent-skills,claude,codex,opencode}.nix` を適用する。専用のインストールスクリプトは無い。Android (`home-android.nix`) は `codex.nix` を import しないので、Codex 向けの配布 (subagent の `.toml` と `/etc/codex/config.toml`) だけが行われない。
+
+**live edit の範囲**: `~/.claude/*` へ直 symlink される `AGENTS.md` / `rules/` / `hooks/` / `scripts/` / `bindings/` / `knowledge-profile.md` は編集即反映。`subagents/` は Claude Code だけ即反映で、Codex と OpenCode 向けは変換を挟むので `drs` / `hms` が要る。`skills/` も中身の編集は即反映だが、**追加と削除は個別 symlink の張り直しが要る**。
+
+**skills の二重列挙**: OpenCode は `~/.agents/skills` と `~/.claude/skills` の両方を探索する。`nix/modules/home/env.nix` の `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` で Claude Code 互換経路を切って二重列挙を防いでいる (正本は `~/.agents/skills`)。この変数を外すと全スキルが 2 回出る。
+
+**同名衝突**: `~/.agents/skills/` は他ツール (vercel の skills CLI 等) が入れた実体と同居する。同名の実体があるスキルは `ln -sfn` が実体の *中* にリンクを作ってしまうため、警告だけ出してスキップする。手で退避してから `drs` / `hms` を再実行する。
+
+**配布の確認**:
+
+```bash
+readlink ~/.claude/skills                          # dotfiles の agents/skills を指すこと
+ls -l ~/.agents/skills | rg -c dotfiles            # スキル全数と一致すること
+ls ~/.codex/agents ~/.config/opencode/agents       # subagent 4 本の生成物があること
+readlink -f /etc/codex/config.toml                 # dotfiles の codex/config.toml に解決すること
+```
 
 ## Working with This Repository
 
 ### 既存設定の変更（Nix 管理側）
 
 1. `nix/modules/home/*.nix` または `nix/modules/darwin/*.nix` を編集
-2. `git add` で staging（flake は tracked file しか見ない）
-3. `drs` (mac) / `hms` (Linux) で適用（`nh` が darwin-rebuild / home-manager を起動。mac は Touch ID 経由の sudo）
+2. `nix fmt` で整形する（`nix/**` への push で CI が `nix fmt -- --ci` と `nix flake check --all-systems --no-build` を回すので、崩れたまま push すると master で fail する）
+3. `git add` で staging（flake は tracked file しか見ない）
+4. `drs` (mac) / `hms` (Linux) で適用（`nh` が darwin-rebuild / home-manager を起動。mac は Touch ID 経由の sudo）
 
 ### 新規ツール追加
 
