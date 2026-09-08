@@ -171,7 +171,7 @@ review JSON が無い・パース不能の場合も同様に 1 回再起動 → 
 findings の分岐:
 
 - **high / medium が 0 件** → 2.4 へ (low は完了コメントに「報告のみ」として記載)
-- **high / medium がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して修正させ、レビューを再実行する。**このループは最大 2 ラウンド (固定)**。2 ラウンド後に **high が残る → 2.6**。**medium だけが残る → `docs/PENDING_REVIEW.html` に追記して 2.4 へ進む** (下記「保留レビュー項目の記録」)。この上限は `~/.claude/hooks/fix-round-guard.ts` が機械検証しており、3 回目の `mode: fix` 起動は `findings_path` のラウンド番号から検知されて deny される (`findings_path` の命名規約を守っている限り、ラウンド数の管理は自制に頼らない)。**deny されたら 2.2 の「1 回だけ再起動」を適用しない** — 同条件では必ず再び deny される。deny メッセージが示すとおり、high が残っていれば 2.6、medium だけなら `docs/PENDING_REVIEW.html` に追記して 2.4 へ進む。人間が明示的に継続を指示した場合に限り `FIX_ROUND_GUARD=off` で解除できる
+- **high / medium がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して修正させ、レビューを再実行する。**このループは最大 2 ラウンド (固定)**。2 ラウンド後に **high が残る → 2.6**。**medium だけが残る → `docs/PENDING_REVIEW.html` に追記して 2.4 へ進む** (下記「保留レビュー項目の記録」)。この上限は `fix-round-guard` hook が機械検証しており、3 回目の `mode: fix` 起動は `findings_path` のラウンド番号から検知されて deny される (`findings_path` の命名規約を守っている限り、ラウンド数の管理は自制に頼らない)。**deny されたら 2.2 の「1 回だけ再起動」を適用しない** — 同条件では必ず再び deny される。deny メッセージが示すとおり、high が残っていれば 2.6、medium だけなら `docs/PENDING_REVIEW.html` に追記して 2.4 へ進む。人間が明示的に継続を指示した場合に限り `FIX_ROUND_GUARD=off` で解除できる
 - **`category: test-weakening` の finding** → implementer に直させず親が裁定する: 弱体化が事実なら該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要 — 2.4 の全体テストが検証する。ラウンド数にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む。
   **裁定した finding には、その review JSON の該当 finding へ `"adjudication": {"verdict": "false_positive|fixed_by_parent", "rationale": "<根拠の一文>"}` を足す。** この JSON は次ラウンドで `previous_findings_path` としてレビュワーに渡るため、印を付けないと裁定済みの指摘が「未解消」として再計上され、同じ指摘で駐車に落ちる (レビュワー側は `adjudication` の付いた finding を残存判定の対象外にする規約)
 

@@ -29,8 +29,9 @@
 | スキル | `~/.agents/skills/<name>` (Codex が直読みする user scope) | `dotfiles/agents/skills/` | 中身の編集は即反映。**追加と削除は `drs` / `hms` が要る** (個別 symlink の張り直し) |
 | subagent | `~/.codex/agents/*.toml` | `dotfiles/agents/subagents/*.md` を変換したもの | **変更も追加も `drs` / `hms` が要る** (TOML の再生成) |
 | ルール | `~/.claude/rules/` を絶対パスで直接 Read する (Codex 側に複製は無い) | `dotfiles/agents/rules/` | 即反映 |
-| hooks | **配られていない** (`/etc/codex/config.toml` に `[[hooks.PreToolUse]]` は無い) | — | — |
 | MCP | `/etc/codex/config.toml` の `[mcp_servers.*]` | `dotfiles/codex/config.toml` | 即反映。全マシン共通のサーバだけを system レイヤーに置き、マシン固有のものは Codex 自身が `~/.codex/config.toml` (user レイヤー) に書く |
+
+**hooks はこの表に無い。**Codex には 1 本も配られていない (→「hooks は Codex には配られていない」節)。
 
 配布されているか自分で確かめる:
 
@@ -79,6 +80,8 @@ rg -o 'AskUserQuestion|TodoWrite|TaskCreate|TaskUpdate|WebFetch|WebSearch|run_in
 
 **Codex 側の hooks は 0 本である。** ハーネスの自作 hook は `fix-round-guard` (dev-impl の修正ラウンド上限) 1 本だけで、これは Claude Code の Agent ツール入力に依存するため移植していない。dev-impl 系のスキルを Codex で回すときは、ラウンド上限を自律遵守する。
 
-コミット規約 (`~/.claude/rules/core/commit.md` の `<emoji> <type>: <subject>` 形式) も機械ゲートが無いので、コミット前に自分で subject を照合する。
+コミット規約 (`~/.claude/rules/core/commit.md` の `<emoji> <type>: <subject>` 形式) も機械ゲートが無いので、コミット前に自分で subject を照合する。`~/.claude/CLAUDE.md` が「採点者は外部にいる」として hooks を挙げている箇所は、Codex 上では成立しない。残る採点者はユーザー / レビュー subagent / プロジェクトの CI である。
 
-hooks を追加するときは必ず `dotfiles/codex/config.toml` に書く。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) を採るのでスクリプトは共有できる。`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**され、警告も出ない。system レイヤー (`/etc/codex/config.toml`) に置いたものは信頼ゲートを通らずに発火する。
+## hooks を追加するときの置き場
+
+必ず `dotfiles/codex/config.toml` に書く。Codex の hooks は Claude Code と同じ wire format (`tool_name` / `tool_input.command` / `hookSpecificOutput.permissionDecision`) を採るのでスクリプトは共有できる。`~/.codex/hooks.json` (user レイヤー) に置いたものは `/hooks` で承認するまで**無言でスキップ**され、警告も出ない。system レイヤー (`/etc/codex/config.toml`) に置いたものは信頼ゲートを通らずに発火する。`command` はシェル経由で解釈されるので `$GHQ_ROOT` が展開でき、mac と Linux で dotfiles の絶対パスが違う問題を環境変数経由で回避できる。

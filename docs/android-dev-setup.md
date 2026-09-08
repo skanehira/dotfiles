@@ -199,7 +199,7 @@ Phase 0 で入れた Claude Code と Vite+ は再インストールされない�
 
 - 言語ランタイム: nodejs / pnpm
 - エージェント: Claude Code (activation 時に公式インストーラを実行) / OpenCode (nixpkgs)
-- Deno: `agents/bindings/claude/settings.json` の hook 2 本が `deno run` で起動するので外せない。activation 時に公式インストーラを実行する
+- Deno: `agents/bindings/claude/settings.json` の hook 1 本 (`fix-round-guard.ts`) が `deno run` で起動するので外せない。activation 時に公式インストーラを実行する
 - フロントエンド: Vite+ (activation 時に公式インストーラを実行。nixpkgs 未収録で、overlay 版は aarch64-linux でビルドが落ちるため)
 - エディタと端末: neovim (nixpkgs の stable。nightly ではない) / tmux
 - 軽量 CLI: bat / fd / jq / lsd / ripgrep / tree
