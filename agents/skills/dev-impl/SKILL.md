@@ -57,7 +57,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 
 | 状態 (`gh pr list --repo "$REPO_SLUG" --head issue-<N>` と、`git fetch origin` 後の `git branch --list issue-<N>` / `git branch -r --list "origin/issue-<N>"`) | 再開位置 |
 | --- | --- |
-| PR が open | 2.4 の DoD 実行 → merge から (PR は再作成しない)。レビュー未実施が疑われる場合は 2.3 から |
+| PR が open | 2.4 手順 4 (merge と状態確認) から。検証は push 前に済んでいる前提なので繰り返さないが、PR 作成後に差分を足した形跡があれば手順 2 の検証を 1 巡してから merge する。レビュー未実施が疑われる場合は 2.3 から |
 | ブランチのみ残存 (ローカルまたは origin、PR なし) | ブランチへ switch し (origin のみに在る場合は `git switch issue-<N>` が追跡ブランチを作る)、`BASE_SHA=$(git merge-base origin/$DEFAULT HEAD)` で基準を復元して 2.2 から。implementer の prompt に「ブランチに前回の差分がある。既存差分を前提に続きから実装せよ」を 1 行追加する |
 | どちらも無い | 最初から (2.1 から) |
 
@@ -203,38 +203,47 @@ r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わ
 
 **`medium` / `category: e2e` の「対象動線未指定 (設計差し戻し)」だけは別立てで扱う。** これは実装ではなく設計側の欠落なので、保留リストに載せたうえで、2.5 の完了コメントに「設計差し戻しが必要な指摘」として独立の行で書き、Step 3 の最終報告にも載せる (保留リストに埋もれると設計へ差し戻る経路が消える)。
 
-### 2.4 コミット・PR・merge
+### 2.4 コミット・検証・PR・merge
 
 1. **コミット**: 変更を論理単位で Conventional Commit (`{{@rules-root}}/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針の表)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)
-2. **全体テスト**: プロジェクトのテストスイート全体と lint を実行し green を確認する (巨大出力になる場合は Haiku subagent に実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る)
-3. **PR**: `git push -u origin "issue-$N"` してから作成する (再開で PR が既にあればスキップ)。push が失敗したら (前 run の同名 remote ブランチ残骸等)、原因を確認して解消できなければ 2.6 へ:
+
+2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する (CI は使わない — 判定はこのローカル実行が兼ねる)。巨大出力になる場合は Haiku subagent に実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る。
+
+   **同じコマンドを二度走らせない。** issue の `## DoD` に並ぶコマンドが `docs/design/DESIGN.md`「開発・検証コマンド」の全体テスト・lint と同一なら、その分は重複なので 1 回だけ実行する (DoD 固有のコマンドだけを足す)。DESIGN.md が無い構成では同一性を判定できないので、重複排除せず両方実行する。
+
+   1 つでも失敗したら push も merge もしない → 2.6 へ (「テスト red / DoD 失敗」の駐車)。
+
+3. **PR**: `git push -u origin "issue-$N"` してから作成する (再開で PR が既にあればスキップ)。push が失敗したら (前 run の同名 remote ブランチ残骸等)、原因を確認して解消できなければ 2.6 へ。**`gh pr create` が返すのは URL なので、PR 番号を控える** (手順 4 の merge 確認に使う):
 
 ```bash
-gh pr create --repo "$REPO_SLUG" --title "<issue タイトル>" --body "$(cat <<'EOF'
+PR_URL=$(gh pr create --repo "$REPO_SLUG" --title "<issue タイトル>" --body "$(cat <<'EOF'
 Closes #<N>
 
 ## 変更の要約
 <implementer の summary>
 
 ## 検証
-- テスト: <全体テストの結果 (passed/failed 件数)>
+- テスト + lint + DoD: 手順 2 でローカル実行し全て green (<passed/failed 件数>)
 - レビュー: review-impl <ラウンド数> 周 (low <k> 件・保留 high <h> 件・保留 medium <m> 件は merge 後の issue コメントに記載。0 件ならその旨)
-- DoD: merge 前にローカルで全コマンドを実行し、green を確認してから merge する
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
-)"
+)")
+PR_NUM=$(printf '%s' "$PR_URL" | grep -o '[0-9]*$')
 ```
 
-4. **DoD のローカル実行 → merge**: issue の `## DoD` のコマンドを PR ブランチ上でそのまま実行し、**全て exit code 0 であることを確認してから** merge する (CI は使わない — 判定はこのローカル実行が兼ねる)。DoD が 1 つでも失敗したら merge しない → 2.6 へ:
+4. **merge**: 検証は手順 2 で済んでいるので、ここでは merge して**状態で成功を確認する**:
 
 ```bash
-gh pr merge --repo "$REPO_SLUG" --squash --delete-branch
+gh pr merge --repo "$REPO_SLUG" "$PR_NUM" --squash --delete-branch
+STATE=$(gh pr view --repo "$REPO_SLUG" "$PR_NUM" --json state -q .state)   # MERGED を期待
 ```
 
-**並列実行でも merge はここで 1 件ずつ直列に行う。** 同時に merge するとデフォルトブランチが競合し、残りの worktree がまとめて rebase 待ちになる。他の issue が実装・レビュー中でも、merge の順番待ちだけを直列化すればよい。merge した issue の worktree は 2.0 の手順で削除する。
+**`gh pr merge` の exit code だけで判定しない。** worktree 運用では merge 自体が成功しても、ローカルブランチが worktree にチェックアウトされているせいで `--delete-branch` が失敗し、コマンドが非ゼロを返しうる。**2.5 へ進む条件は `$STATE` が `MERGED`** (大文字。`gh ... view --json` は大文字を返す) であることとし、exit code は下の rebase 分岐を起こすかどうかの判断にだけ使う。
 
-merge がコンフリクトで失敗したら (駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合)、`git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで全体テストの green を確認してから** push し直す (先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない)。解消できなければ 2.6 へ。
+**並列実行でも merge はここで 1 件ずつ直列に行う。** 同時に merge するとデフォルトブランチが競合し、残りの worktree がまとめて rebase 待ちになる。他の issue が実装・レビュー中でも、merge の順番待ちだけを直列化すればよい。`MERGED` を確認したら merge した issue の worktree を 2.0 の手順で削除し、**並列実行の場合はそのあと `git -C "$REPO_DIR" branch -D "issue-$N"` でローカルブランチも消す** (worktree にチェックアウト中で `--delete-branch` が消せなかったぶん。残すと Step 1 の再開判定が「中断からの復帰」として誤発火し、次回の `worktree add -b issue-$N` も失敗する)。直列実行では `--delete-branch` がローカルも消しているので叩かない。
+
+**merge コマンドが非ゼロで、かつ `$STATE` が `MERGED` でない場合だけ**、コンフリクトを疑って復旧する (駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合)。`git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで手順 2 の検証をもう 1 巡回して green を確認してから** push し直す (先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない)。解消できなければ 2.6 へ。
 
 ### 2.5 完了処理
 
@@ -243,7 +252,7 @@ merge により `Closes #N` で issue は自動 close される (されていな
 ```
 実装完了 (dev-impl)
 - 変更: <summary と主要ファイル>
-- テスト: <2.4 の全体テストの件数>、DoD: green
+- テスト + lint + DoD: <2.4 手順 2 の 1 巡の結果 (件数)>、green
 - レビュー: <ラウンド数> 周 (low の報告: <あれば列挙、なければ「なし」>)
 - 保留 high (test-quality / code-quality): <各 1 行で `file:line` + summary。なければ「なし」>
 - 保留 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/pending-review/issue-<N>.html` に記録)
@@ -275,7 +284,7 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ### 2.6 エスカレーション (needs-human 駐車)
 
-解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / push・merge の解消不能) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
+解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / push の失敗と、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human

@@ -43,7 +43,7 @@
 │    review-impl 1 本 (テスト品質/設計準拠/コード品質/E2E      │
 │    + r2 では前ラウンド指摘の再発・転移も) →                    │
 │    high だけ fix (最大 1 ラウンド固定) →                       │
-│    commit → PR → DoD ローカル実行 green → merge → close        │
+│    commit → テスト+lint+DoD 1 巡 → PR → merge → close          │
 │  詰まったら needs-human + コメントで駐車して次の issue へ      │
 │  進捗は issue コメントのみ。保留 high と medium は             │
 │  issue 別のチェックリスト HTML に記録し、確認を促す            │
