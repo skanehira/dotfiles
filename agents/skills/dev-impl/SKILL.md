@@ -36,7 +36,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 - **docs が push 済みか確認する**: ローカルに `docs/design/DESIGN.md` があるのに `git log origin/$DEFAULT -1 -- docs/design/DESIGN.md docs/design/features/` が空なら、ブランチ基点 (origin) に設計 docs が無い。docs を含むコミットの push を人間に依頼して停止する (2.1 のブランチは origin から切るため、push されていないと implementer が docs を読めない)
 - `docs/design/DESIGN.md` が無い構成でも、issue が自己完結していれば続行してよい (issue の DoD に実行コマンドが揃っていることが条件)
 
-作業ログ用のディレクトリを作る: `SCRATCH=<scratchpad>/dev-impl-$(date +%Y%m%d-%H%M%S)` (report JSON の置き場。git 管理外)。保留レビュー項目のチェックリストは **`docs/PENDING_REVIEW.html`** に置く (リポジトリ内。issue のコミットに含めて merge されるため、別マシン・別セッション・後続 run にも引き継がれる。追記は 2.3、確認案内は Step 3)。
+作業ログ用のディレクトリを作る: `SCRATCH=<scratchpad>/dev-impl-$(date +%Y%m%d-%H%M%S)` (report JSON の置き場。git 管理外)。保留レビュー項目のチェックリストは **`docs/pending-review/issue-<N>.html`** に置く (リポジトリ内。issue 1 件につき 1 ファイル。issue のコミットに含めて merge されるため、別マシン・別セッション・後続 run にも引き継がれる。作成は 2.3、確認案内は Step 3)。
 
 ## Step 1: issue の収集と着手順
 
@@ -171,17 +171,17 @@ review JSON が無い・パース不能の場合も同様に 1 回再起動 → 
 findings の分岐:
 
 - **high / medium が 0 件** → 2.4 へ (low は完了コメントに「報告のみ」として記載)
-- **high / medium がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して修正させ、レビューを再実行する。**このループは最大 2 ラウンド (固定)**。2 ラウンド後に **high が残る → 2.6**。**medium だけが残る → `docs/PENDING_REVIEW.html` に追記して 2.4 へ進む** (下記「保留レビュー項目の記録」)。**この上限を強制する機械ゲートは無い。自律遵守する。** この規定は機械ゲートが無い状態で実際に破られる (セッション e6b5eb50 の実測: 22 issue 中 6 件が 3 周目以降に入り、規定超過分だけで 5.7h を消費した)。破らないための手立ては `findings_path` のラウンド番号を毎回自分で読むことだけである。**3 周目に入りたくなったら、それは「収束していない」という信号**なので、上の 2 分岐に従う (high が残っていれば 2.6、medium だけなら `docs/PENDING_REVIEW.html` に追記して 2.4)。3 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)
+- **high / medium がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して修正させ、レビューを再実行する。**このループは最大 2 ラウンド (固定)**。2 ラウンド後に **high が残る → 2.6**。**medium だけが残る → `docs/pending-review/issue-<N>.html` に書き出して 2.4 へ進む** (下記「保留レビュー項目の記録」)。**この上限を強制する機械ゲートは無い。自律遵守する。** この規定は機械ゲートが無い状態で実際に破られる (セッション e6b5eb50 の実測: 22 issue 中 6 件が 3 周目以降に入り、規定超過分だけで 5.7h を消費した)。破らないための手立ては `findings_path` のラウンド番号を毎回自分で読むことだけである。**3 周目に入りたくなったら、それは「収束していない」という信号**なので、上の 2 分岐に従う (high が残っていれば 2.6、medium だけなら `docs/pending-review/issue-<N>.html` に書き出して 2.4)。3 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)
 - **`category: test-weakening` の finding** → implementer に直させず親が裁定する: 弱体化が事実なら該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要 — 2.4 の全体テストが検証する。ラウンド数にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む。
   **裁定した finding には、その review JSON の該当 finding へ `"adjudication": {"verdict": "false_positive|fixed_by_parent", "rationale": "<根拠の一文>"}` を足す。** この JSON は次ラウンドで `previous_findings_path` としてレビュワーに渡るため、印を付けないと裁定済みの指摘が「未解消」として再計上され、同じ指摘で駐車に落ちる (レビュワー側は `adjudication` の付いた finding を残存判定の対象外にする規約)
 
 #### 保留レビュー項目の記録
 
-2 ラウンドで解消しなかった medium は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。`docs/PENDING_REVIEW.html` (無ければ作成) に issue ごとの節として追記する — 各 finding はチェックボックス付きの 1 項目で、severity / category / `file:line` / summary / evidence / fix_hint をまとめる。外部依存の無い自己完結の静的 HTML とし、全 issue が同じファイルに追記し続ける。issue ごとの節は issue 番号の見出しで分離し、rebase 等でこのファイルがコンフリクトしたら**両方の節を残す (union)** 解決にする。**追記分は 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
+修正対象にしなかった medium は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。`docs/pending-review/issue-<N>.html` を新規に書き出す — 各 finding はチェックボックス付きの 1 項目で、severity / category / `file:line` / summary / evidence / fix_hint をまとめる。外部依存の無い自己完結の静的 HTML とする。**issue 1 件につき 1 ファイルにする** — 全 issue が 1 枚のファイルへ追記する形だと、並列で走る issue が同じ位置に節を足して rebase のたびに必ず衝突する。ファイルを分ければ衝突は起きないので、union の衝突解決も要らない。**このファイルは 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
 
 ### 2.4 コミット・PR・merge
 
-1. **コミット**: 変更を論理単位で Conventional Commit (`{{@rules-root}}/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針の表)。implementer の `docs_updates` (乖離補正) と、2.3 で追記した `docs/PENDING_REVIEW.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)
+1. **コミット**: 変更を論理単位で Conventional Commit (`{{@rules-root}}/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針の表)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)
 2. **全体テスト**: プロジェクトのテストスイート全体と lint を実行し green を確認する (巨大出力になる場合は Haiku subagent に実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る)
 3. **PR**: `git push -u origin "issue-$N"` してから作成する (再開で PR が既にあればスキップ)。push が失敗したら (前 run の同名 remote ブランチ残骸等)、原因を確認して解消できなければ 2.6 へ:
 
@@ -221,7 +221,7 @@ merge により `Closes #N` で issue は自動 close される (されていな
 - 変更: <summary と主要ファイル>
 - テスト: <2.4 の全体テストの件数>、DoD: green
 - レビュー: <ラウンド数> 周 (low の報告: <あれば列挙、なければ「なし」>)
-- 未解消 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/PENDING_REVIEW.html` に記録)
+- 未解消 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/pending-review/issue-<N>.html` に記録)
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
 
@@ -253,12 +253,12 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human
-gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。未 merge の保留 medium があればその summary も列挙 (PENDING_REVIEW.html への追記が merge されていないため)。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置>"
+gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。未 merge の保留 medium があればその summary も列挙 (pending-review のファイルが merge されていないため)。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置>"
 ```
 
 ブランチと open PR は merge せず残す (人間が差分を確認でき、再開時に再利用できる)。**その issue に依存しない次の issue へ進む。**
 
-**run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する — このときも Step 3 の手順 2 (docs/PENDING_REVIEW.html の open と確認促し) を実行する (merge 済み issue の保留 medium を停止で失わない)。
+**run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する — このときも Step 3 の手順 2 (docs/pending-review/ の open と確認促し) を実行する (merge 済み issue の保留 medium を停止で失わない)。
 
 ## Step 3: 終了処理
 
@@ -283,7 +283,7 @@ done
 
 **この走査は `tracking` ラベルの open issue を repo 全件対象にする。** dev-spec 由来でない手作りの `tracking` issue がある repo では、close 前に対象一覧を提示して人間に確認する。
 
-2. デフォルトブランチへ戻って `git pull` し、`docs/PENDING_REVIEW.html` が存在すれば `open` で開いて (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、未解消 medium <n> 件のチェックが必要」とユーザーに確認を促す (過去 run の未消化分も累積している)。対応要と判断した項目は新しい issue にするか直接の修正依頼で対応し、確認が済んだ項目はユーザーがチェックリストから消す (手動編集または修正依頼。通常のコミットで反映)
+2. デフォルトブランチへ戻って `git pull` し、`docs/pending-review/` にファイルがあればその一覧と件数を出したうえで `open docs/pending-review/` でディレクトリを開き (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、保留 <h> 件・medium <m> 件のチェックが必要」とユーザーに確認を促す (過去 run の未消化分も累積している)。対応要と判断した項目は新しい issue にするか直接の修正依頼で対応し、確認が済んだ issue はファイルごと削除する (手動または修正依頼。通常のコミットで反映)
 3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
    - 実装した issue と PR の一覧
    - close した親 (tracking) issue と、open のまま残した親 (子が残っている / 子ゼロ / 判定不能の別に)
@@ -294,7 +294,7 @@ done
 
 ## エスカレーション回答後の再開
 
-人間が `needs-human` の issue に回答したら、**回答の内容を issue 本文 (該当節の書き換え) または参照 docs に反映してから**、ラベルを `ready` に戻して本スキルを再実行する — implementer は issue 本文と docs しか読まないため、コメントに書かれただけの回答は実装に届かない。docs 側を変えた場合は push も行う (Step 0 の確認に掛かる)。Step 1 の収集が駐車 issue を拾い直し、残置ブランチ・PR があれば続きから実装する。チェックリスト (`docs/PENDING_REVIEW.html`) はリポジトリで持ち回るため、再開 run・別マシンでも累積した保留 medium がそのまま引き継がれる。
+人間が `needs-human` の issue に回答したら、**回答の内容を issue 本文 (該当節の書き換え) または参照 docs に反映してから**、ラベルを `ready` に戻して本スキルを再実行する — implementer は issue 本文と docs しか読まないため、コメントに書かれただけの回答は実装に届かない。docs 側を変えた場合は push も行う (Step 0 の確認に掛かる)。Step 1 の収集が駐車 issue を拾い直し、残置ブランチ・PR があれば続きから実装する。チェックリスト (`docs/pending-review/`) はリポジトリで持ち回るため、再開 run・別マシンでも累積した保留 medium がそのまま引き継がれる。
 
 ## 参照ルール
 
