@@ -269,38 +269,41 @@ function readSkillRuntimes(markdown: string, skill: string): string[] | undefine
   const end = lines.findIndex((line, i) => i > 0 && line.trim() === "---");
   if (end === -1) return undefined;
 
+  // 契約: 読むのは `metadata:` ブロックの中のキー行に書かれた `runtimes` だけ。
+  // 値を持つキーの配下は「値の続き」なので、指示子 (`>-` / `|`) の有無に関わらず走査しない。
+  // ここを外すと、折り返した description の 1 行が `runtimes:` で始まっただけで、限定を
+  // 宣言していないスキルが生成全体を止める (dev-spec と fullstack-app-builder の
+  // description は実際に折り返しを持つ)。
   let raw: string | undefined;
   let inMetadata = false;
-  let inBlockScalar = false;
-  for (const line of lines.slice(1, end)) {
-    const topLevel = /^\S/.test(line);
-    // ブロックスカラー (`description: >-` 等) の値は散文なので走査しない。実在する
-    // dev-spec / fullstack-app-builder の description は折り返しで字下げ行を持ち、
-    // その 1 行が `runtimes:` で始まっただけで生成全体を止めてしまう
-    if (inBlockScalar && !topLevel) continue;
-    if (topLevel) inBlockScalar = /:\s*[|>][0-9+-]*\s*$/.test(line);
+  let valueIndent: number | null = null;
 
-    const metadata = line.match(/^metadata:(.*)$/);
-    if (metadata) {
-      // インラインマップ (`metadata: {runtimes: claude}`) は 1 行パーサでは読めない。
-      // 素通しすると宣言が黙って無視され、限定が効かないまま全ランタイムへ配られる
-      if (metadata[1].includes("runtimes")) {
-        throw new Error(
-          `${skill}/SKILL.md の metadata: はブロック形式で書く (インラインマップは読めない)`,
-        );
-      }
-      inMetadata = metadata[1].trim() === "";
-      continue;
+  for (const line of lines.slice(1, end)) {
+    if (line.trim() === "") continue;
+    const indent = line.length - line.trimStart().length;
+    if (valueIndent !== null && indent > valueIndent) continue;
+    valueIndent = null;
+
+    const key = line.match(/^(\s*)([^:\s]+):(.*)$/);
+    if (!key) continue;
+    const [, spaces, name, value] = key;
+    const depth = spaces.length;
+
+    if (depth === 0) inMetadata = name === "metadata";
+    if (value.trim() !== "") valueIndent = depth;
+
+    if (name === "metadata" && depth === 0 && value.includes("runtimes")) {
+      throw new Error(
+        `${skill}/SKILL.md の metadata: はブロック形式で書く (インラインマップは読めない)`,
+      );
     }
-    if (topLevel) inMetadata = false;
-    const declaration = line.match(/^\s*runtimes:(.*)$/);
-    if (!declaration) continue;
-    if (!inMetadata) {
+    if (name !== "runtimes") continue;
+    if (!inMetadata || depth === 0) {
       throw new Error(
         `${skill}/SKILL.md の runtimes は frontmatter の metadata: の直下に置く`,
       );
     }
-    raw = declaration[1];
+    raw = value;
     break;
   }
   if (raw === undefined) return undefined;

@@ -1031,6 +1031,23 @@ const RUNTIMES_INPUTS: Array<
     outcome: "配布",
   },
   { label: "大文字 Runtimes", frontmatter: "name: s\nmetadata:\n  Runtimes: claude\n", outcome: "配布" },
+  // 値を持つキーの配下は値であって宣言ではない。指示子 (>- や |) の有無で扱いを変えない
+  {
+    label: "指示子なしの折り返し",
+    frontmatter: "name: s\ndescription: 説明が長いので折り返す\n  runtimes: claude と書くと限定できる\n",
+    outcome: "配布",
+  },
+  {
+    label: "折り返しの中の空行",
+    frontmatter: "name: s\ndescription: 説明が長いので折り返す\n\n  runtimes: claude と書くと限定できる\n",
+    outcome: "配布",
+  },
+  {
+    label: "metadata 配下のブロックスカラー",
+    frontmatter: "name: s\nmetadata:\n  note: |\n    runtimes: claude と書く\n",
+    outcome: "配布",
+  },
+  { label: "metadata がマップでない", frontmatter: "name: s\nmetadata: 何か\n  runtimes: codex\n", outcome: "配布" },
   { label: "frontmatter 未終端", frontmatter: null as unknown as string, outcome: "配布" },
   { label: "他ランタイムのみ", frontmatter: "name: s\nmetadata:\n  runtimes: claude\n", outcome: "除外" },
   { label: "宣言が 2 行 (最初が勝つ)", frontmatter: "name: s\nmetadata:\n  runtimes: claude\n  runtimes: codex\n", outcome: "除外" },
@@ -1062,12 +1079,6 @@ const RUNTIMES_INPUTS: Array<
   {
     label: "トップレベル",
     frontmatter: "name: s\nruntimes: codex\n",
-    outcome: "例外",
-    message: "s/SKILL.md の runtimes は frontmatter の metadata: の直下に置く",
-  },
-  {
-    label: "metadata がマップでない",
-    frontmatter: "name: s\nmetadata: {license: MIT}\n  runtimes: codex\n",
     outcome: "例外",
     message: "s/SKILL.md の runtimes は frontmatter の metadata: の直下に置く",
   },
