@@ -51,7 +51,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 
 ## 手順 (mode: fix)
 
-1. `findings_path` の JSON を Read し、`severity` が `high` / `medium` の指摘**だけ**を直す
+1. `findings_path` の JSON を Read し、`severity` が `high` の指摘**だけ**を直す (`medium` / `low` は修正対象ではない — 親が保留リストに記録して先へ進める規約なので、直すとレビュー範囲を無駄に広げる)
 2. 指摘に無いリファクタ・機能追加・「ついでの改善」をしない (親が差分を再レビューするため、指摘外の差分はレビュー範囲を無駄に広げる)
 3. 修正のたびにテストを再実行し green を保つ
 4. `category: test-weakening` の finding は**自分で直さない**。実装を止めて `status: escalate`, `reason: test_weakening_suspected` で報告する (テストの弱体化を実装者自身に直させると骨抜きの温床になるため、裁定は親が行う)
@@ -95,7 +95,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 }
 ```
 
-該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` を検収してから done と扱う。`self_review` は報告の直前に `{{@rules-root}}/core/testing.md`「セルフレビューチェックリスト」を自分の書いたテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して修正ラウンドが 1 周増えるだけ)。
+該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` を検収してから done と扱う。`self_review` は報告の直前に `{{@rules-root}}/core/testing.md`「セルフレビューチェックリスト」を自分の書いたテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して確認レビューで残存と判定されるだけ)。
 
 ## 範囲外 (やらないこと)
 

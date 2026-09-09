@@ -20,9 +20,9 @@ import re
 import subprocess
 import sys
 
-# フェーズの並びは、実際に現れたラウンド数から組む。dev-impl の修正ラウンド上限は 3 だが、
-# 上限を守らせる機械ゲートは無く、実測で 4 周目に入った run がある。固定の一覧にすると
-# 超過分が図からも合計からも黙って消え、超過そのものが見えなくなる。
+# フェーズの並びは、実際に現れたラウンド数から組む。dev-impl のレビューは r1 と r2 の
+# 最大 2 回だが、上限を守らせる機械ゲートは無く、実測で r4 まで入った run がある。固定の
+# 一覧にすると超過分が図からも合計からも黙って消え、超過そのものが見えなくなる。
 def phase_order(max_round):
     keys = ["impl"]
     for k in range(1, max(max_round, 1) + 1):
@@ -330,7 +330,7 @@ def main():
     # 実際に現れた最大ラウンドで並びを決める。上限超過が図から消えないようにする。
     seen_rounds = [int(m.group(1)) for keys in phases.values() for k in keys
                    if (m := re.match(r"^(?:r|fix)(\d+)$", k))]
-    order = phase_order(max(seen_rounds) if seen_rounds else 3)
+    order = phase_order(max(seen_rounds) if seen_rounds else 2)
 
     issues = []
     for issue in sorted(phases, key=lambda x: int(x) if str(x).isdigit() else 0):
