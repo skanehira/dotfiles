@@ -3,6 +3,8 @@ name: utility-session-profile
 description: Claude Code の特定セッションのログから所要時間の内訳を集計し、図表つきの HTML レポートを作る。エージェント種別ごとの時間・並列度・ツール実行の重複・コンテキストの最大到達値を出し、dev-impl のセッションではフェーズ内訳・レビュー収束・issue 依存段のクリティカルパスも加える。「このセッションが何に時間を使ったか調べて」「セッションを分析してレポートにして」「dev-impl が遅い原因を知りたい」「セッションのプロファイルを取って」「実装ループのボトルネックを調べて」などで起動。単一の会話を要約するだけの用途、コードの性能プロファイリングは対象外。
 argument-hint: "[セッション ID (先頭数文字で可)。省略時は候補から選ぶ]"
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion, Artifact
+metadata:
+  runtimes: claude
 ---
 
 # セッションのプロファイル
