@@ -1,0 +1,794 @@
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+JP:wght@300;400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F7F5F4; --surface:#FEFDFC; --sunk:#F1EDEC;
+  --ink:#1A1719; --ink2:#5C5559; --ink3:#8B8287;
+  --line:#E3DEDC; --line2:#D2CBC9;
+  --impl:#3B6EA5; --review:#B02F55; --fix:#A8761F; --tail:#0A8A5C;
+  --kind5:#6B4FA8; --wait:#8B8287;
+  /* バー上の文字色。地の色に対してコントラストの高い側を実測で選んである。 */
+  --on-impl:#FEFDFC; --on-review:#FEFDFC; --on-fix:#1A1719;
+  --on-tail:#FEFDFC; --on-kind5:#FEFDFC; --on-wait:#1A1719;
+  --hi:#B02F55; --med:#A8761F; --low:#8B8287;
+  --grid:#E9E4E2;
+  --shadow:0 1px 2px rgba(26,23,25,.05), 0 8px 24px -16px rgba(26,23,25,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#191718; --surface:#201D1F; --sunk:#151314;
+    --ink:#F2EEEF; --ink2:#A79FA3; --ink3:#786F74;
+    --line:#322D30; --line2:#443D41;
+    --impl:#5B8FC7; --review:#D9587F; --fix:#B58829; --tail:#1E9E72;
+    --kind5:#9078D4; --wait:#7D747A;
+    --on-impl:#201D1F; --on-review:#201D1F; --on-fix:#201D1F;
+    --on-tail:#201D1F; --on-kind5:#201D1F; --on-wait:#F2EEEF;
+    --hi:#D9587F; --med:#B58829; --low:#786F74;
+    --grid:#282326;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#191718; --surface:#201D1F; --sunk:#151314;
+  --ink:#F2EEEF; --ink2:#A79FA3; --ink3:#786F74;
+  --line:#322D30; --line2:#443D41;
+  --impl:#5B8FC7; --review:#D9587F; --fix:#B58829; --tail:#1E9E72;
+  --kind5:#9078D4; --wait:#7D747A;
+  --on-impl:#201D1F; --on-review:#201D1F; --on-fix:#201D1F;
+  --on-tail:#201D1F; --on-kind5:#201D1F; --on-wait:#F2EEEF;
+  --hi:#D9587F; --med:#B58829; --low:#786F74;
+  --grid:#282326;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:'IBM Plex Sans JP', -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  font-weight:400; line-height:1.75; font-size:15px;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:'IBM Plex Mono','SFMono-Regular',Menlo,monospace; font-variant-numeric:tabular-nums}
+.wrap{max-width:1140px; margin:0 auto; padding:0 28px 96px}
+
+/* ---------- header ---------- */
+header{border-bottom:1px solid var(--line); margin-bottom:8px}
+.head-in{max-width:1140px; margin:0 auto; padding:52px 28px 34px;
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:32px; align-items:end}
+h1{margin:0; font-size:clamp(30px,4.4vw,46px); font-weight:600; letter-spacing:-.022em;
+   line-height:1.16; text-wrap:balance}
+h1 .sub{display:block; font-size:.42em; font-weight:400; color:var(--ink2);
+   letter-spacing:.02em; margin-top:12px; line-height:1.6}
+.stamp{font-size:11.5px; color:var(--ink3); text-align:right; letter-spacing:.04em; line-height:2}
+.stamp b{color:var(--ink2); font-weight:500}
+.live{display:inline-flex; align-items:center; gap:6px; color:var(--review); font-weight:500}
+.live::before{content:""; width:6px; height:6px; border-radius:50%; background:var(--review)}
+
+/* ---------- section ---------- */
+section{padding-top:60px}
+.sec-head{display:grid; grid-template-columns:52px minmax(0,1fr); gap:16px; align-items:baseline;
+  margin-bottom:20px}
+.sec-num{font-size:11.5px; font-weight:600; color:var(--ink3); letter-spacing:.13em; padding-top:5px}
+h2{margin:0; font-size:23px; font-weight:600; letter-spacing:-.012em; line-height:1.4; text-wrap:balance}
+.lead{grid-column:2; margin:10px 0 0; color:var(--ink2); max-width:62ch; font-size:14.5px}
+.body{margin-left:68px}
+@media(max-width:720px){
+  .sec-head{grid-template-columns:1fr; gap:4px}
+  .lead{grid-column:1}
+  .body{margin-left:0}
+  .head-in{grid-template-columns:1fr; gap:20px}
+  .stamp{text-align:left}
+}
+p{margin:0 0 14px; max-width:66ch}
+p:last-child{margin-bottom:0}
+strong{font-weight:600}
+code{font-family:'IBM Plex Mono',Menlo,monospace; font-size:.87em; background:var(--sunk);
+  padding:.12em .38em; border-radius:3px; color:var(--ink2)}
+
+/* ---------- verdict ---------- */
+.verdict{display:flex; flex-direction:column; gap:0; border-top:2px solid var(--ink);
+  border-bottom:1px solid var(--line)}
+.vrow{display:grid; grid-template-columns:26px minmax(0,1fr) auto; gap:20px; align-items:baseline;
+  padding:20px 0; border-bottom:1px solid var(--line)}
+.vrow:last-child{border-bottom:none}
+.vrow .n{font-size:11px; font-weight:600; color:var(--ink3); letter-spacing:.08em}
+.vrow .t{font-size:16.5px; font-weight:500; line-height:1.6; text-wrap:balance}
+.vrow .t em{font-style:normal; color:var(--review); font-weight:600}
+.vrow .f{font-size:12.5px; color:var(--ink2); text-align:right; white-space:nowrap; line-height:1.7}
+.vrow .f b{display:block; font-size:20px; font-weight:600; color:var(--ink); letter-spacing:-.01em}
+@media(max-width:720px){.vrow{grid-template-columns:26px minmax(0,1fr); }
+  .vrow .f{grid-column:2; text-align:left; margin-top:6px}
+  .vrow .f b{display:inline; font-size:16px; margin-right:8px}}
+
+/* ---------- stats ---------- */
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:1px;
+  background:var(--line); border:1px solid var(--line); margin:26px 0 0}
+.stat{background:var(--surface); padding:16px 18px}
+.stat .k{font-size:10.5px; color:var(--ink3); letter-spacing:.09em; font-weight:500}
+.stat .v{font-size:25px; font-weight:600; letter-spacing:-.02em; margin-top:5px; line-height:1.2}
+.stat .v .u{font-size:12.5px; font-weight:400; color:var(--ink2); margin-left:3px; letter-spacing:0}
+.stat .d{font-size:11.5px; color:var(--ink2); margin-top:3px; line-height:1.5}
+
+/* ---------- figure ---------- */
+figure{margin:0}
+.fig{background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow)}
+.fig-head{padding:15px 18px 0}
+.fig-title{font-size:14px; font-weight:600; letter-spacing:-.005em}
+.fig-note{font-size:12px; color:var(--ink2); margin-top:4px; line-height:1.6}
+.fig-body{padding:12px 18px 16px; overflow-x:auto}
+figcaption{font-size:12px; color:var(--ink3); margin-top:9px; line-height:1.65; max-width:76ch}
+
+/* legend */
+.legend{display:flex; flex-wrap:wrap; gap:6px 16px; padding:11px 18px 0; font-size:11.5px;
+  color:var(--ink2)}
+.legend span{display:inline-flex; align-items:center; gap:6px; white-space:nowrap}
+.legend i{width:11px; height:11px; border-radius:2px; display:inline-block; flex:none}
+
+/* ---------- table ---------- */
+.tbl-wrap{overflow-x:auto; border:1px solid var(--line); background:var(--surface);
+  box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; font-size:13px}
+th,td{padding:9px 13px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top}
+thead th{font-size:10.5px; letter-spacing:.07em; color:var(--ink3); font-weight:600;
+  background:var(--sunk); white-space:nowrap; border-bottom:1px solid var(--line2)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.total td{border-top:1px solid var(--line2); font-weight:600; background:var(--sunk)}
+td.num,th.num{text-align:right; font-family:'IBM Plex Mono',Menlo,monospace;
+  font-variant-numeric:tabular-nums; white-space:nowrap}
+.chip{display:inline-block; padding:1px 7px; border-radius:9px; font-size:11px; font-weight:600;
+  font-family:'IBM Plex Mono',Menlo,monospace; line-height:1.7}
+.chip.h{background:color-mix(in srgb, var(--hi) 15%, transparent); color:var(--hi)}
+.chip.m{background:color-mix(in srgb, var(--med) 17%, transparent); color:var(--med)}
+.chip.l{background:var(--sunk); color:var(--ink3)}
+.chip.z{color:var(--ink3); opacity:.4}
+.bar-cell{position:relative; min-width:112px}
+.bar-cell .bg{position:absolute; left:13px; top:50%; transform:translateY(-50%);
+  height:8px; border-radius:0 2px 2px 0}
+.bar-cell span{position:relative}
+
+/* ---------- ladder (dependency levels) ---------- */
+.ladder{display:flex; flex-direction:column; gap:0; border:1px solid var(--line);
+  background:var(--surface); box-shadow:var(--shadow)}
+.rung{display:grid; grid-template-columns:44px minmax(0,1fr) 92px; gap:14px; align-items:center;
+  padding:9px 16px; border-bottom:1px solid var(--line)}
+.rung:last-child{border-bottom:none}
+.rung.pending{background:var(--sunk)}
+.rung .lv{font-size:11px; font-weight:600; color:var(--ink3); letter-spacing:.06em}
+.rung .nodes{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+.node{font-family:'IBM Plex Mono',Menlo,monospace; font-size:12px; font-weight:500;
+  padding:3px 9px; border-radius:3px; border:1px solid var(--line2); color:var(--ink2)}
+.node.done{background:color-mix(in srgb, var(--tail) 13%, transparent);
+  border-color:color-mix(in srgb, var(--tail) 32%, transparent); color:var(--ink)}
+.node.wip{background:color-mix(in srgb, var(--review) 13%, transparent);
+  border-color:color-mix(in srgb, var(--review) 34%, transparent); color:var(--ink)}
+.rung .cost{font-family:'IBM Plex Mono',Menlo,monospace; font-size:12px; color:var(--ink2);
+  text-align:right; font-variant-numeric:tabular-nums}
+.rung .cost.est{color:var(--ink3)}
+
+/* ---------- callout ---------- */
+.note{border-left:2px solid var(--line2); padding:2px 0 2px 18px; margin:22px 0;
+  color:var(--ink2); font-size:13.5px; max-width:68ch}
+.note b{color:var(--ink); font-weight:600}
+.warn{border-left-color:var(--review)}
+
+/* ---------- incident list ---------- */
+.inc{display:flex; flex-direction:column; gap:1px; background:var(--line);
+  border:1px solid var(--line); box-shadow:var(--shadow)}
+.inc-row{background:var(--surface); padding:14px 17px;
+  display:grid; grid-template-columns:74px minmax(0,1fr) auto; gap:16px; align-items:baseline}
+.inc-row .when{font-family:'IBM Plex Mono',Menlo,monospace; font-size:11.5px; color:var(--ink3)}
+.inc-row .what{font-size:13.5px; line-height:1.65}
+.inc-row .what b{font-weight:600}
+.inc-row .cost{font-family:'IBM Plex Mono',Menlo,monospace; font-size:12px; color:var(--review);
+  white-space:nowrap; font-weight:500}
+@media(max-width:720px){.inc-row{grid-template-columns:1fr; gap:5px}}
+
+/* ---------- fix list ---------- */
+.fixes{display:flex; flex-direction:column; gap:14px; margin-top:4px}
+.fixcard{background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow);
+  display:grid; grid-template-columns:minmax(0,1fr) 168px}
+.fixcard > .main{padding:15px 18px}
+.fixcard > .side{padding:15px 18px; border-left:1px solid var(--line); background:var(--sunk)}
+.fixcard h3{margin:0 0 7px; font-size:14.5px; font-weight:600; line-height:1.5; text-wrap:balance}
+.fixcard p{font-size:13px; color:var(--ink2); margin:0; max-width:60ch}
+.fixcard .where{margin-top:9px; font-size:11.5px; color:var(--ink3);
+  font-family:'IBM Plex Mono',Menlo,monospace; word-break:break-all; line-height:1.7}
+.fixcard .gain{font-size:10.5px; color:var(--ink3); letter-spacing:.08em; font-weight:500}
+.fixcard .gain-v{font-size:19px; font-weight:600; letter-spacing:-.015em; margin-top:3px;
+  font-family:'IBM Plex Mono',Menlo,monospace; line-height:1.3}
+.fixcard .gain-d{font-size:11.5px; color:var(--ink2); margin-top:4px; line-height:1.55}
+.rank{display:inline-block; font-family:'IBM Plex Mono',Menlo,monospace; font-size:11px;
+  font-weight:600; color:var(--ink3); letter-spacing:.06em; margin-bottom:6px}
+@media(max-width:720px){.fixcard{grid-template-columns:1fr}
+  .fixcard > .side{border-left:none; border-top:1px solid var(--line)}}
+
+/* ---------- tooltip ---------- */
+#tip{position:fixed; pointer-events:none; z-index:50; background:var(--surface);
+  border:1px solid var(--line2); box-shadow:var(--shadow); padding:8px 11px; font-size:12px;
+  line-height:1.6; max-width:280px; opacity:0; transition:opacity .09s; border-radius:2px}
+#tip.on{opacity:1}
+#tip .tt{font-weight:600; margin-bottom:2px}
+#tip .tv{font-family:'IBM Plex Mono',Menlo,monospace; color:var(--ink2)}
+
+svg{display:block}
+svg text{font-family:'IBM Plex Mono','SFMono-Regular',Menlo,monospace;
+  font-variant-numeric:tabular-nums}
+.hit{cursor:default}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+:focus-visible{outline:2px solid var(--impl); outline-offset:2px}
+footer{margin-top:72px; padding-top:22px; border-top:1px solid var(--line);
+  font-size:12px; color:var(--ink3); line-height:1.8}
+</style>
+
+<header>
+  <div class="head-in">
+    <h1 id="h-title">—
+      <span class="sub" id="h-sub">—</span>
+    </h1>
+    <div class="stamp mono">
+      <span class="live" id="h-live" hidden>実行中に採取</span>
+      <span id="h-live-pad" hidden><br></span>
+      snapshot <b id="h-snap">—</b><br>
+      window <b id="h-window">—</b>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="wrap"></div>
+
+<div id="tip"><div class="tt"></div><div class="tv"></div></div>
+
+<script type="application/json" id="d-data">__DATA__</script>
+<script type="application/json" id="d-ext">__EXT__</script>
+<script type="application/json" id="d-narrative">__NARRATIVE__</script>
+<script>
+const D = JSON.parse(document.getElementById('d-data').textContent);
+const E = JSON.parse(document.getElementById('d-ext').textContent);   // 層 B。無ければ null
+const N = JSON.parse(document.getElementById('d-narrative').textContent);
+
+/* ---------- 基本 ---------- */
+const NS = 'http://www.w3.org/2000/svg';
+const el = (t, a = {}, kids = []) => {
+  const n = document.createElementNS(NS, t);
+  for (const k in a) if (a[k] !== null && a[k] !== undefined) n.setAttribute(k, a[k]);
+  // 数値を渡しても落ちないようにする。appendChild は Node 以外を受け取らない。
+  for (const c of [].concat(kids)) n.appendChild(c instanceof Node ? c : document.createTextNode(String(c)));
+  return n;
+};
+const fmt = n => (Math.round(n * 10) / 10).toLocaleString('ja-JP');
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const START = Date.parse(D.start);
+const clock = min => {
+  const d = new Date(START + min * 60000);
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+};
+
+/* フェーズ色。実装=藍 / レビュー=ローズ / 修正=琥珀 / テスト・コミット=緑 / 待ち=灰。
+   色は活動の種類だけを表し、ラウンド番号はバーのラベルが持つ。濃淡でラウンドを表すと
+   彩度が落ちて dataviz の検証を通らないため。この 5 色は両テーマで全項目 PASS。 */
+const PHASE_COLOR = {impl: 'var(--impl)', r1: 'var(--review)', r2: 'var(--review)',
+  r3: 'var(--review)', fix1: 'var(--fix)', fix2: 'var(--fix)', fix3: 'var(--fix)',
+  tail: 'var(--tail)', wait: 'var(--wait)'};
+const PHASE_LABEL = (E && E.phase_labels) || {};
+/* バー上の文字色。地の色ごとに --on-* を用意してあるので、色から機械的に引く。
+   ラウンド単位で決めると配色を変えたときに取り残される。 */
+const inkOn = colorVar => colorVar.replace('var(--', 'var(--on-');
+
+/* エージェント種別の色。層 B が無いときのガントと、種別ごとの棒で使う。
+   この 5 色は dataviz の validator を両テーマで通してある。ただし light の緑↔琥珀は
+   CVD の ΔE が 6.5 で、バーの直接ラベルがあることを前提に合法になっている。
+   ラベルを消すとこの対が区別できなくなるので、消すなら色から選び直す。 */
+const KIND_COLOR = ['var(--impl)', 'var(--review)', 'var(--fix)', 'var(--tail)', 'var(--kind5)'];
+const KIND_OTHER = 'var(--wait)';
+const kindColors = {};
+/* 色は時間の長い種別から順に配る。アルファベット順で配ると、たまたま名前が前にある
+   短命な種別が色を取り、主役の種別が「その他」に落ちる。枠を超えた分は畳む。 */
+const kindsByTime = Object.keys(D.agent_totals || {})
+  .sort((a, b) => (D.agent_totals[b].wall_min || 0) - (D.agent_totals[a].wall_min || 0));
+kindsByTime.forEach((k, i) => { kindColors[k] = i < KIND_COLOR.length ? KIND_COLOR[i] : KIND_OTHER; });
+const kindFolded = kindsByTime.slice(KIND_COLOR.length);
+
+const CMD_LABEL = {e2e: 'E2E', mutation: '変異検証', test: 'テスト', check: '型チェック・lint・整形',
+  build: 'ビルド', vcs: 'git / gh', search: '検索', read: 'ファイル読み', edit: 'ファイル編集', other: 'その他'};
+
+/* ---------- tooltip ---------- */
+const tip = document.getElementById('tip');
+function bindTip(node, title, value) {
+  node.classList.add('hit');
+  const move = e => {
+    const r = tip.getBoundingClientRect();
+    let x = e.clientX + 14, y = e.clientY + 16;
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 16;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  };
+  node.addEventListener('pointerenter', e => {
+    tip.querySelector('.tt').textContent = title;
+    tip.querySelector('.tv').textContent = value;
+    tip.classList.add('on'); move(e);
+  });
+  node.addEventListener('pointermove', move);
+  node.addEventListener('pointerleave', () => tip.classList.remove('on'));
+}
+
+/* ---------- ヘッダ ---------- */
+document.title = N.title || 'セッションのプロファイル';
+document.getElementById('h-title').firstChild.textContent = N.title || 'セッションのプロファイル';
+document.getElementById('h-sub').textContent = N.subtitle || '';
+document.getElementById('h-snap').textContent = N.snapshot_label || D.snapshot.slice(0, 16).replace('T', ' ');
+document.getElementById('h-window').textContent =
+  clock(0) + '–' + clock(D.elapsed_min) + '  (' + fmt(D.elapsed_min / 60) + 'h)';
+if (N.running) {
+  document.getElementById('h-live').hidden = false;
+  document.getElementById('h-live-pad').hidden = false;
+}
+
+/* ---------- セクションの組み立て ---------- */
+const wrap = document.getElementById('wrap');
+let sectionNo = 0;
+function section(key, title, builder) {
+  const info = (N.sections || {})[key];
+  if (!info) return;                       // narrative に無い節は描かない = 縮退の宣言
+  const sec = document.createElement('section');
+  const num = String(sectionNo++).padStart(2, '0');
+  sec.innerHTML = `<div class="sec-head"><div class="sec-num mono">${num}</div>
+      <h2>${esc(info.heading || title)}</h2>
+      ${info.lead ? `<p class="lead">${info.lead}</p>` : ''}</div>
+    <div class="body"></div>`;
+  wrap.appendChild(sec);
+  builder(sec.querySelector('.body'), info);
+  if (info.caption) {
+    const cap = document.createElement('figcaption');
+    cap.innerHTML = info.caption;
+    sec.querySelector('.body').appendChild(cap);
+  }
+}
+function figure(host, title, note, legend) {
+  const fig = document.createElement('figure');
+  fig.className = 'fig';
+  fig.innerHTML = `<div class="fig-head"><div class="fig-title">${esc(title)}</div>
+      ${note ? `<div class="fig-note">${note}</div>` : ''}</div>
+    ${legend ? `<div class="legend">${legend}</div>` : ''}
+    <div class="fig-body"></div>`;
+  host.appendChild(fig);
+  return fig.querySelector('.fig-body');
+}
+
+/* ---------- 00 結論 ---------- */
+section('verdict', '結論', host => {
+  if ((N.verdicts || []).length) {
+    const box = document.createElement('div');
+    box.className = 'verdict';
+    box.innerHTML = N.verdicts.map(v => `
+      <div class="vrow"><div class="n mono">${esc(v.label || '')}</div>
+        <div class="t">${v.text || ''}</div>
+        <div class="f mono"><b>${esc(v.figure || '')}</b>${v.figure_note || ''}</div></div>`).join('');
+    host.appendChild(box);
+  }
+  const tiles = N.tiles || defaultTiles();
+  const box = document.createElement('div');
+  box.className = 'stats';
+  box.innerHTML = tiles.map(t => `
+    <div class="stat"><div class="k mono">${esc(t.k)}</div>
+      <div class="v mono">${esc(t.v)}<span class="u">${esc(t.u || '')}</span></div>
+      <div class="d">${t.d || ''}</div></div>`).join('');
+  host.appendChild(box);
+});
+
+function defaultTiles() {
+  const tiles = [
+    {k: '経過', v: fmt(D.elapsed_min / 60), u: '時間', d: clock(0) + ' 開始'},
+    {k: 'メインの turn', v: D.main.turns.toLocaleString('ja-JP'), u: '', d: 'モデル待ち ' + fmt(D.main.model_min) + ' 分'},
+    {k: 'コンテキスト', v: fmt(D.main.ctx_max / 10000), u: '万 tok', d: '最大到達値'},
+  ];
+  if (D.agent_n) {
+    tiles.splice(1, 0, {k: 'AGENT', v: D.agent_n, u: '本',
+      d: '作業時間の総和 ' + fmt(D.work_min / 60) + ' 時間'});
+    tiles.push({k: '平均の同時実行', v: fmt(D.concurrency.avg), u: '本',
+      d: (D.concurrency.hist['0'] || 0) + ' 分は 0 本'});
+  }
+  return tiles;
+}
+
+/* ---------- 01 タイムライン ---------- */
+section('timeline', '時間の流れ', (host, info) => {
+  const rows = E && E.issues && E.issues.length
+    ? E.issues.map(i => ({label: '#' + i.issue, bars: i.bars, done: i.done, colorOf: b => PHASE_COLOR[b.k],
+        nameOf: b => PHASE_LABEL[b.k] || b.k}))
+    : agentRows();
+  if (!rows.length) return;
+  const legend = E && E.issues && E.issues.length
+    ? (() => { const fam = (E && E.phase_families) || {}, seen = [];
+        (E.phase_order || []).forEach(k => { const n = fam[k] || PHASE_LABEL[k] || k;
+          if (!seen.some(x => x.n === n)) seen.push({n, k}); });
+        return seen.map(x => `<span><i style="background:${PHASE_COLOR[x.k]}"></i>${esc(x.n)}</span>`).join(''); })()
+    : kindsByTime.slice(0, KIND_COLOR.length)
+        .map(k => `<span><i style="background:${kindColors[k]}"></i>${esc(k)}</span>`).join('')
+      + (kindFolded.length
+          ? `<span><i style="background:${KIND_OTHER}"></i>その他 ${kindFolded.length} 種</span>` : '');
+  const body = figure(host, info.fig_title || 'タイムライン', info.fig_note || '', legend);
+  body.appendChild(drawGantt(rows));
+});
+
+function agentRows() {
+  // 層 B が無いときは、エージェント 1 本を 1 行にして種別で塗る。
+  if (!D.agents || !D.agents.length) return [];
+  return D.agents.map(a => ({
+    label: a.name.length > 20 ? a.name.slice(0, 19) + '…' : a.name,
+    bars: [{k: a.kind, x: (Date.parse(a.start) - START) / 60000, w: a.wall_s / 60}],
+    done: true, colorOf: b => kindColors[b.k] || 'var(--impl)', nameOf: b => b.k,
+  }));
+}
+
+function drawGantt(rows) {
+  // 行ラベルの幅は中身から決める。issue 番号 (#104) とエージェント名 (review-112-r2) で
+  // 必要な幅が倍ほど違い、固定値にするとどちらかが切れる。
+  const labelChars = Math.max(...rows.map(r => r.label.length), 4);
+  const W = 900, LEFT = Math.min(150, 18 + labelChars * 6.2), RIGHT = 14,
+    RH = rows.length > 20 ? 15 : 26, GAP = rows.length > 20 ? 3 : 5, TOP = 22;
+  const plotW = W - LEFT - RIGHT;
+  const span = D.elapsed_min;
+  const x = m => LEFT + (m / span) * plotW;
+  const hasConc = (D.concurrency.series || []).length > 1;
+  const CH = hasConc ? 60 : 0, gapC = hasConc ? 18 : 0;
+  const H = TOP + rows.length * (RH + GAP) + gapC + CH + (hasConc ? 26 : 6);
+  const svg = el('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', height: H,
+    role: 'img', 'aria-label': '時間軸に並べた作業の帯'});
+
+  const step = span > 480 ? 60 : 30;
+  for (let m = 0; m <= span; m += step) {
+    svg.appendChild(el('line', {x1: x(m), x2: x(m), y1: TOP - 8,
+      y2: TOP + rows.length * (RH + GAP) + gapC + CH, stroke: 'var(--grid)', 'stroke-width': 1}));
+    svg.appendChild(el('text', {x: x(m), y: TOP - 13, 'font-size': 10,
+      fill: 'var(--ink3)', 'text-anchor': 'middle'}, clock(m)));
+  }
+
+  rows.forEach((r, i) => {
+    const y = TOP + i * (RH + GAP);
+    svg.appendChild(el('text', {x: LEFT - 10, y: y + RH / 2 + 4, 'font-size': RH > 20 ? 11.5 : 9.5,
+      fill: 'var(--ink2)', 'text-anchor': 'end', 'font-weight': 500}, r.label));
+    r.bars.forEach(b => {
+      const bw = Math.max(2, (b.w / span) * plotW - 1.5);
+      const g = el('g');
+      g.appendChild(el('rect', {x: x(b.x), y: y + (RH > 20 ? 4 : 2), width: bw,
+        height: RH - (RH > 20 ? 8 : 4), fill: r.colorOf(b), rx: 2}));
+      if (bw > 24 && RH > 20) g.appendChild(el('text', {x: x(b.x) + bw / 2, y: y + RH / 2 + 3.5,
+        'font-size': 9.5, fill: inkOn(r.colorOf(b)),
+        'text-anchor': 'middle', 'font-weight': 600}, fmt(b.m ?? b.w)));
+      bindTip(g, `${r.label} · ${r.nameOf(b)}`,
+        (b.m != null && Math.abs(b.m - b.w) >= 0.5
+          ? `${fmt(b.m)} 分 (占有 ${fmt(b.w)} 分)` : `${fmt(b.w)} 分`) + ` · ${clock(b.x)} 開始`);
+      svg.appendChild(g);
+    });
+    if (!r.done && r.bars.length) {
+      const last = r.bars[r.bars.length - 1];
+      svg.appendChild(el('text', {x: x(last.x + last.w) + 7, y: y + RH / 2 + 4, 'font-size': 10,
+        fill: 'var(--review)', 'font-weight': 600}, '進行中'));
+    }
+  });
+
+  if (hasConc) {
+    const base = TOP + rows.length * (RH + GAP) + gapC + CH;
+    const pts = D.concurrency.series.map(p => ({x: (Date.parse(p.t) - START) / 60000, n: p.n}));
+    const maxN = Math.max(1, ...pts.map(p => p.n));
+    const cy = n => base - (n / maxN) * CH;
+    let path = `M ${x(pts[0].x)} ${base}`;
+    pts.forEach((p, i) => {
+      path += ` L ${x(p.x)} ${cy(p.n)}`;
+      if (pts[i + 1]) path += ` L ${x(pts[i + 1].x)} ${cy(p.n)}`;
+    });
+    path += ` L ${x(pts[pts.length - 1].x)} ${base} Z`;
+    svg.appendChild(el('path', {d: path, fill: 'var(--impl)', 'fill-opacity': .17,
+      stroke: 'var(--impl)', 'stroke-width': 1.4, 'stroke-opacity': .85}));
+    for (let n = 1; n <= maxN; n++) {
+      svg.appendChild(el('line', {x1: LEFT, x2: W - RIGHT, y1: cy(n), y2: cy(n),
+        stroke: 'var(--grid)', 'stroke-width': .5, 'stroke-dasharray': '2 3'}));
+      svg.appendChild(el('text', {x: LEFT - 10, y: cy(n) + 3.5, 'font-size': 9.5,
+        fill: 'var(--ink3)', 'text-anchor': 'end'}, n));
+    }
+    svg.appendChild(el('text', {x: LEFT - 10, y: base + 15, 'font-size': 9.5,
+      fill: 'var(--ink3)', 'text-anchor': 'end'}, 0));
+    svg.appendChild(el('text', {x: LEFT, y: base + 22, 'font-size': 10, fill: 'var(--ink2)'},
+      `同時に動いていたエージェントの本数 (平均 ${fmt(D.concurrency.avg)}、うち ${D.concurrency.hist['0'] || 0} 分は 0 本)`));
+  }
+  return svg;
+}
+
+/* ---------- 02 依存段 ---------- */
+section('critical', '依存の段数', (host, info) => {
+  if (!E || !E.critical || !E.critical.length) return;
+  const legend = document.createElement('div');
+  legend.className = 'legend';
+  legend.style.padding = '0 0 11px';
+  legend.innerHTML = `
+    <span><i style="background:color-mix(in srgb, var(--tail) 45%, transparent)"></i>完了</span>
+    <span><i style="background:color-mix(in srgb, var(--review) 45%, transparent)"></i>進行中</span>
+    <span><i style="background:var(--sunk); border:1px solid var(--line2)"></i>未着手</span>`;
+  host.appendChild(legend);
+  const box = document.createElement('div');
+  box.className = 'ladder';
+  box.innerHTML = E.critical.map(c => {
+    const nodes = c.issues.map(n => {
+      const m = (E.issue_meta || {})[String(n)] || {};
+      const cls = m.state === 'CLOSED' ? 'done' : (m.labels || []).includes('in-progress') ? 'wip' : '';
+      return `<span class="node ${cls}">#${n}</span>`;
+    }).join('');
+    const cost = c.max_cycle > 0
+      ? `<div class="cost">${fmt(c.max_cycle)} 分</div>`
+      : `<div class="cost est">実測なし</div>`;
+    return `<div class="rung ${c.max_cycle > 0 ? '' : 'pending'}">
+      <div class="lv mono">L${c.level}</div><div class="nodes">${nodes}</div>${cost}</div>`;
+  }).join('');
+  host.appendChild(box);
+  if (info.note) {
+    const note = document.createElement('div');
+    note.className = 'note warn';
+    note.innerHTML = info.note;
+    host.appendChild(note);
+  }
+});
+
+/* ---------- 03 時間の内訳 ---------- */
+section('breakdown', '時間はどこへ消えたか', (host, info) => {
+  if (E && E.phase_totals && Object.keys(E.phase_totals).length) {
+    const body = figure(host, info.fig_title || 'フェーズ別の合計時間', info.fig_note || '');
+    body.appendChild(drawPhaseBar());
+    const spacer = document.createElement('div');
+    spacer.style.height = '26px';
+    host.appendChild(spacer);
+  }
+  if (Object.keys(D.agent_totals || {}).length) {
+    const legend = `<span><i style="background:var(--impl)"></i>モデル応答待ち</span>
+      <span><i style="background:var(--fix)"></i>コマンド実行</span>`;
+    const body = figure(host, 'エージェント種別ごとの待ち時間の性質',
+      `モデルが考えていた時間と、コマンドが走っていた時間の分解。${D.agent_n} 本の合計。`, legend);
+    body.appendChild(drawAgentBar());
+  } else {
+    const body = figure(host, 'メインループのツール実行時間', 'コマンドの種類ごとに、結果が返るまでの合計。');
+    body.appendChild(drawMainTools());
+  }
+});
+
+function drawPhaseBar() {
+  const keys = (E.phase_order || []).filter(k => E.phase_totals[k]);
+  const total = keys.reduce((s, k) => s + E.phase_totals[k], 0);
+  const W = 900, H = 128, BH = 46, TOPY = 34;
+  const svg = el('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', height: H,
+    role: 'img', 'aria-label': 'フェーズ別の合計時間の積み上げ'});
+  let cx = 0;
+  keys.forEach(k => {
+    const w = (E.phase_totals[k] / total) * W;
+    const ink = inkOn(PHASE_COLOR[k] || 'var(--impl)');
+    const g = el('g');
+    g.appendChild(el('rect', {x: cx + 1, y: TOPY, width: Math.max(1, w - 2), height: BH,
+      fill: PHASE_COLOR[k], rx: 2}));
+    if (w > 46) {
+      g.appendChild(el('text', {x: cx + w / 2, y: TOPY + 21, 'font-size': 12, fill: ink,
+        'text-anchor': 'middle', 'font-weight': 600}, fmt(E.phase_totals[k])));
+      g.appendChild(el('text', {x: cx + w / 2, y: TOPY + 35, 'font-size': 9.5, fill: ink,
+        'text-anchor': 'middle', 'fill-opacity': .8}, Math.round(E.phase_totals[k] / total * 100) + '%'));
+    }
+    bindTip(g, PHASE_LABEL[k] || k,
+      `${fmt(E.phase_totals[k])} 分 · 全体の ${Math.round(E.phase_totals[k] / total * 100)}%`);
+    svg.appendChild(g);
+    svg.appendChild(el('text', {x: Math.min(Math.max(cx + w / 2, 24), W - 24), y: TOPY - 9,
+      'font-size': 10.5, fill: 'var(--ink2)', 'text-anchor': 'middle'}, PHASE_LABEL[k] || k));
+    cx += w;
+  });
+  // 2 周目以降 (r2 以降) をまとめて示す。レビューを 1 周に減らしたときの効き目がここ。
+  const lateKeys = keys.filter(k => /^(r|fix)[2-9]$/.test(k));
+  if (lateKeys.length) {
+    const before = keys.slice(0, keys.indexOf(lateKeys[0])).reduce((s, k) => s + E.phase_totals[k], 0);
+    const lateSum = lateKeys.reduce((s, k) => s + E.phase_totals[k], 0);
+    const bx1 = (before / total) * W, bx2 = ((before + lateSum) / total) * W;
+    const by = TOPY + BH + 13;
+    svg.appendChild(el('path', {d: `M ${bx1} ${by} L ${bx1} ${by + 5} L ${bx2} ${by + 5} L ${bx2} ${by}`,
+      fill: 'none', stroke: 'var(--line2)', 'stroke-width': 1}));
+    svg.appendChild(el('text', {x: (bx1 + bx2) / 2, y: by + 20, 'font-size': 10.5,
+      fill: 'var(--ink2)', 'text-anchor': 'middle'},
+      `2 周目以降 ${fmt(lateSum)} 分 — 全体の ${Math.round(lateSum / total * 100)}%`));
+  }
+  return svg;
+}
+
+function drawAgentBar() {
+  const rows = Object.entries(D.agent_totals).map(([k, v]) => ({k, ...v}))
+    .sort((a, b) => b.wall_min - a.wall_min);
+  const max = Math.max(...rows.map(r => r.wall_min));
+  const W = 900, LEFT = 118, RIGHT = 100, RH = 30, GAP = 6, TOP = 6;
+  const plotW = W - LEFT - RIGHT;
+  const H = TOP + rows.length * (RH + GAP) + 4;
+  const svg = el('svg', {viewBox: `0 0 ${W} ${H}`, width: '100%', height: H,
+    role: 'img', 'aria-label': 'エージェント種別ごとのモデル待ちとコマンド実行の時間'});
+  rows.forEach((r, i) => {
+    const y = TOP + i * (RH + GAP);
+    svg.appendChild(el('text', {x: LEFT - 10, y: y + RH / 2 + 4, 'font-size': 11,
+      fill: 'var(--ink2)', 'text-anchor': 'end'}, r.k));
+    const wm = (r.model_min / max) * plotW, wt = (r.tool_min / max) * plotW;
+    const g1 = el('g'), g2 = el('g');
+    g1.appendChild(el('rect', {x: LEFT, y: y + 3, width: Math.max(1, wm - 1), height: RH - 6,
+      fill: 'var(--impl)', rx: 2}));
+    g2.appendChild(el('rect', {x: LEFT + wm + 1, y: y + 3, width: Math.max(1, wt - 1), height: RH - 6,
+      fill: 'var(--fix)', rx: 2}));
+    bindTip(g1, r.k + ' · モデル応答待ち', `${fmt(r.model_min)} 分 (${Math.round(r.model_min / r.wall_min * 100)}%)`);
+    bindTip(g2, r.k + ' · コマンド実行', `${fmt(r.tool_min)} 分 (${Math.round(r.tool_min / r.wall_min * 100)}%)`);
+    svg.appendChild(g1); svg.appendChild(g2);
+    if (wm > 34) svg.appendChild(el('text', {x: LEFT + wm / 2, y: y + RH / 2 + 4, 'font-size': 10.5,
+      fill: 'var(--surface)', 'text-anchor': 'middle', 'font-weight': 600}, fmt(r.model_min)));
+    if (wt > 34) svg.appendChild(el('text', {x: LEFT + wm + wt / 2, y: y + RH / 2 + 4, 'font-size': 10.5,
+      fill: 'var(--surface)', 'text-anchor': 'middle', 'font-weight': 600}, fmt(r.tool_min)));
+    svg.appendChild(el('text', {x: W - RIGHT + 10, y: y + RH / 2 + 4, 'font-size': 11,
+      fill: 'var(--ink2)'}, `${fmt(r.wall_min)} 分 · ${r.n} 本`));
+  });
+  return svg;
+}
+
+function drawMainTools() {
+  const rows = Object.entries(D.main.tool_seconds_by_cat)
+    .map(([k, v]) => ({k, min: v / 60, n: D.main.tool_calls_by_cat[k] || 0}))
+    .sort((a, b) => b.min - a.min);
+  const max = Math.max(...rows.map(r => r.min), 1);
+  const W = 900, LEFT = 140, RIGHT = 110, RH = 26, GAP = 6, TOP = 6;
+  const plotW = W - LEFT - RIGHT;
+  const svg = el('svg', {viewBox: `0 0 ${W} ${TOP + rows.length * (RH + GAP) + 4}`, width: '100%',
+    height: TOP + rows.length * (RH + GAP) + 4, role: 'img', 'aria-label': 'ツール種別ごとの実行時間'});
+  rows.forEach((r, i) => {
+    const y = TOP + i * (RH + GAP);
+    svg.appendChild(el('text', {x: LEFT - 10, y: y + RH / 2 + 4, 'font-size': 11,
+      fill: 'var(--ink2)', 'text-anchor': 'end'}, CMD_LABEL[r.k] || r.k));
+    const w = (r.min / max) * plotW;
+    const g = el('g');
+    g.appendChild(el('rect', {x: LEFT, y: y + 3, width: Math.max(1, w), height: RH - 6,
+      fill: 'var(--impl)', rx: 2}));
+    bindTip(g, CMD_LABEL[r.k] || r.k, `${fmt(r.min)} 分 · ${r.n} 回`);
+    svg.appendChild(g);
+    svg.appendChild(el('text', {x: W - RIGHT + 10, y: y + RH / 2 + 4, 'font-size': 11,
+      fill: 'var(--ink2)'}, `${fmt(r.min)} 分 · ${r.n} 回`));
+  });
+  return svg;
+}
+
+/* ---------- 04 レビューの収束 ---------- */
+section('review', 'レビューの収束', (host, info) => {
+  if (!E || !E.rounds || !E.rounds.length) return;
+  const byIssue = {};
+  E.rounds.forEach(r => { (byIssue[r.issue] = byIssue[r.issue] || {})[r.round] = r; });
+  const maxRound = Math.max(...E.rounds.map(r => r.round));
+  const cell = r => {
+    if (!r) return '<td class="num"><span class="chip z">—</span></td>';
+    const parts = [];
+    if (r.high) parts.push(`<span class="chip h">${r.high}</span>`);
+    if (r.medium) parts.push(`<span class="chip m">${r.medium}</span>`);
+    if (r.low) parts.push(`<span class="chip l">${r.low}</span>`);
+    return `<td class="num">${parts.join(' ') || '<span class="chip z">0</span>'}</td>`;
+  };
+  const fixCell = (issue, k) => {
+    const entry = (E.issues || []).find(x => String(x.issue) === String(issue));
+    const v = entry && entry.phases[`fix${k}`];
+    return `<td class="num" style="color:var(--ink3)">${v ? fmt(v) : '—'}</td>`;
+  };
+  const cycles = (E.issues || []).map(i => i.cycle_min || 0);
+  const maxCycle = Math.max(...cycles, 1);
+  const head = ['issue'];
+  for (let k = 1; k <= maxRound; k++) { head.push('r' + k); if (k < maxRound) head.push('fix' + k); }
+  head.push('再指摘', 'サイクル');
+  const rows = Object.keys(byIssue).sort((a, b) => a - b).map(issue => {
+    const rs = byIssue[issue];
+    const entry = (E.issues || []).find(x => String(x.issue) === String(issue)) || {};
+    let cells = '';
+    for (let k = 1; k <= maxRound; k++) { cells += cell(rs[k]); if (k < maxRound) cells += fixCell(issue, k); }
+    let repeat = 0, later = 0;
+    for (let k = 2; k <= maxRound; k++) {
+      if (!rs[k]) continue;
+      repeat += rs[k].repeat_files || 0;
+      later += rs[k].high + rs[k].medium + rs[k].low;
+    }
+    const cyc = entry.cycle_min;
+    return `<tr><td class="mono" style="font-weight:500">#${issue}</td>${cells}
+      <td class="num" style="color:${repeat ? 'var(--med)' : 'var(--ink3)'}">${later ? repeat + '/' + later : '—'}</td>
+      <td class="num bar-cell">
+        <div class="bg" style="width:${cyc ? (cyc / maxCycle) * 88 : 0}px; background:color-mix(in srgb, var(--impl) 22%, transparent)"></div>
+        <span>${cyc ? fmt(cyc) : '進行中'}</span></td></tr>`;
+  }).join('');
+  const box = document.createElement('div');
+  box.className = 'tbl-wrap';
+  box.innerHTML = `<table><thead><tr>${head.map((h, i) =>
+    `<th${i ? ' class="num"' : ''}>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+  host.appendChild(box);
+
+  if (info.note) {
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.innerHTML = info.note;
+    host.appendChild(note);
+  }
+  if ((E.late_high || []).length) {
+    const body = figure(host, `2 周目以降が新たに見つけた high は ${E.late_high.length} 件`,
+      info.late_note || '');
+    body.style.paddingTop = '4px';
+    body.innerHTML = `<table style="font-size:12.5px"><tbody>${E.late_high.map(f => `
+      <tr><td class="mono" style="white-space:nowrap; font-weight:500">#${f.issue} r${f.round}</td>
+        <td class="mono" style="color:var(--ink3); font-size:11px; word-break:break-all">${esc(f.file)}</td>
+        <td style="color:var(--ink2)">${esc(f.summary)}</td></tr>`).join('')}</tbody></table>`;
+  }
+});
+
+/* ---------- 05 実行コスト ---------- */
+section('cost', '繰り返し走ったコマンド', (host, info) => {
+  const KIND = {main: 'メイン'};
+  const rows = (D.commands || []).filter(c => !['read', 'edit', 'other', 'search'].includes(c.cat));
+  if (rows.length) {
+    const box = document.createElement('div');
+    box.className = 'tbl-wrap';
+    box.innerHTML = `<table><thead><tr><th>コマンド種別</th><th class="num">回数</th>
+      <th>内訳 (エージェント種別)</th></tr></thead><tbody>${rows.map(c => `
+      <tr><td>${CMD_LABEL[c.cat] || c.cat}</td>
+        <td class="num" style="font-weight:600">${c.total}</td>
+        <td style="color:var(--ink2); font-size:12px">${Object.entries(c.by_kind)
+          .map(([k, n]) => `${esc(KIND[k] || k)} ${n}`).join(' · ')}</td></tr>`).join('')}</tbody></table>`;
+    host.appendChild(box);
+  }
+  if (info.note) {
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.innerHTML = info.note;
+    host.appendChild(note);
+  }
+  if ((D.longest_calls || []).length) {
+    const box = document.createElement('div');
+    box.className = 'tbl-wrap';
+    box.style.marginTop = '22px';
+    box.innerHTML = `<table><thead><tr><th>最も長かったコマンド</th><th>実行元</th>
+      <th class="num">秒</th></tr></thead><tbody>${D.longest_calls.map(l => `
+      <tr><td class="mono" style="font-size:11px; color:var(--ink2); word-break:break-all; max-width:520px">${
+        l.cmd ? esc(l.cmd.slice(0, 118)) : `<span style="color:var(--ink3)">${esc(l.tool)} (コマンド以外の呼び出し)</span>`}</td>
+        <td class="mono" style="font-size:11.5px; white-space:nowrap">${esc(l.agent)}</td>
+        <td class="num" style="font-weight:600">${Math.round(l.sec)}</td></tr>`).join('')}</tbody></table>`;
+    host.appendChild(box);
+  }
+});
+
+/* ---------- 06 インシデント ---------- */
+section('incidents', '取りこぼしと事故', host => {
+  if (!(N.incidents || []).length) return;
+  const box = document.createElement('div');
+  box.className = 'inc';
+  box.innerHTML = N.incidents.map(i => `
+    <div class="inc-row"><div class="when">${esc(i.when || '')}</div>
+      <div class="what">${i.what || ''}</div>
+      <div class="cost">${esc(i.cost || '')}</div></div>`).join('');
+  host.appendChild(box);
+});
+
+/* ---------- 07 最適化案 ---------- */
+section('optimize', '最適化案', host => {
+  if (!(N.fixes || []).length) return;
+  const box = document.createElement('div');
+  box.className = 'fixes';
+  box.innerHTML = N.fixes.map(f => `
+    <div class="fixcard">
+      <div class="main">
+        <div class="rank">${esc(f.rank || '')}</div>
+        <h3>${esc(f.title || '')}</h3><p>${f.body || ''}</p>
+        ${f.where ? `<div class="where">${esc(f.where)}</div>` : ''}
+      </div>
+      <div class="side">
+        <div class="gain mono">短縮の見込み</div>
+        <div class="gain-v">${esc(f.gain || '')}</div>
+        <div class="gain-d">${f.gain_note || ''}</div>
+      </div>
+    </div>`).join('');
+  host.appendChild(box);
+});
+
+/* ---------- footer ---------- */
+const footer = document.createElement('footer');
+footer.innerHTML = `<div class="mono">session ${esc(D.session)}${D.project ? ' · ' + esc(D.project) : ''}</div>
+  ${N.limits || ''}`;
+wrap.appendChild(footer);
+</script>
