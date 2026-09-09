@@ -13,7 +13,7 @@
 | **L: 新規プロダクト・大きい機能** | `/dev-spec` (`cli`/`webapp` 指定可) → 人間が issue を確認 → `/dev-impl` | 設計ループ (要件〜PoC 検証〜DESIGN.md + docs/design/features/〜issue 生成) → 実装ループ (issue を依存順に 1 件ずつ自律実装)。issue はユースケース単位の親 (トラッキング) + その sub-issue の子で、親の進捗バーで UC ごとの進捗を俯瞰できる。Cloudflare フルスタック (D1 + Hono) の新規立ち上げは先に `/fullstack-app-builder` で scaffold + 環境構築してから `/dev-spec` に入る |
 | **M: 1 機能・リファクタの一括委任 (docs 不要)** | `/dev-impl-quick` | 軽量実装ループ。タスク分解 → 直営 TDD → テストゲート → review-impl (focus: tests) → タスク単位コミット |
 | **M: 単発の機能追加・リファクタ (対話しながら)** | {{@plan-mode}} → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-impl` を自分で起動する |
-| **S: バグ修正・typo** | 直接依頼 | スキル不要。`~/.claude/CLAUDE.md`「実装時」の rules を自分で Read して守る |
+| **S: バグ修正・typo** | 直接依頼 | スキル不要。グローバル指示 ({{@instructions-file}}) の「実装時」の rules を自分で Read して守る |
 
 横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-draft-pr` (PR 作成) / `/workflow-design-notes` (設計の壁打ち台帳 → dev-spec 互換 docs へ落とし込み)。
 
@@ -71,7 +71,7 @@ skills/
 └── README.md
 ```
 
-> **命名規則**: Claude Code はディレクトリ名をスキル識別子として使用するため、フラット構造。
+> **命名規則**: Claude Code がディレクトリ名をスキル識別子として使うので、その制約に合わせてフラット構造にする。
 >
 > - `dev-*` — 開発フローの 2 大ループ (設計 / 実装) + 軽量実装ループ
 > - `workflow-*` — 横断ユーティリティ (レビュー / コミット / PR / 壁打ち)
@@ -79,16 +79,16 @@ skills/
 
 ## 配布先の限定
 
-ここに置いたスキルは既定で 3 ランタイムすべてに配られる。1 つのランタイムでしか動かないスキル (そのランタイムのログや設定を直接読むものなど) は `SKILL.md` の frontmatter で配布先を宣言する。現在の該当は `utility-session-profile` の 1 本。
+dotfiles の `agents/skills/` に置いたスキルは既定で 3 ランタイムすべてに配られる。1 つのランタイムでしか動かないスキル (そのランタイムのログや設定を直接読むものなど) は `SKILL.md` の frontmatter で配布先を宣言する。現在の該当は `utility-session-profile` の 1 本。
 
 ```yaml
 metadata:
   runtimes: claude
 ```
 
-値はカンマ区切りのランタイム名で、取りうるのは `claude` / `codex` / `opencode` の 3 つ。書かなければ全ランタイムへ配られる。宣言の追加・削除は生成物に効くので、反映には `drs` / `hms` (または生成器の手動実行) が要る。
+書かなければ全ランタイムへ配られる。宣言は生成物に効くので、反映には `drs` / `hms` が要る。後から限定した場合、配布済みのコピーが消えるのは**宣言から外れたランタイムそれぞれの生成が走ったとき**なので、1 ランタイムだけ手で流し直しても足りない。
 
-`metadata` の下に置く理由・書式の制約・typo を例外で止める仕組み・配布先からの撤去 (prune) は、dotfiles リポジトリ (skanehira/dotfiles) 直下の `CLAUDE.md` の「スキルの配布先の限定 (metadata.runtimes)」節が正本。
+値の書式・書き方の制約・`metadata` の下に置く理由・typo を例外で止める仕組み・配布先からの撤去 (prune) は、dotfiles リポジトリ直下の `CLAUDE.md` (`~/dev/github.com/skanehira/dotfiles/CLAUDE.md`) の「スキルの配布先の限定 (metadata.runtimes)」節が正本。
 
 ## モデル方針 (ループエンジニアリング)
 
@@ -183,6 +183,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [utility-reviewing-skills](./utility-reviewing-skills/) | スキルをベストプラクティスに基づいてレビュー |
 | [utility-doc-reading](./utility-doc-reading/) | 知識プロファイルを参照しながらドキュメント読解を支援 |
 | [utility-doc-audit](./utility-doc-audit/) | ドキュメントの整合性・フォーマット適合を fresh context の fan-out で監査 |
+| [utility-session-profile](./utility-session-profile/) | Claude Code のセッションログから所要時間の内訳を集計し HTML レポートを作る (`metadata.runtimes` で Claude Code 限定) |
 | [utility-pdf-compress](./utility-pdf-compress/) | PDF のロスレス圧縮 |
 | [utility-cf-deploy-token](./utility-cf-deploy-token/) | 1Password のマスタートークンから Cloudflare のデプロイ用トークン (Workers Scripts + D1) を発行し、GitHub Actions の secrets に登録 |
 | [transcribing-meeting-minutes](./transcribing-meeting-minutes/) | 会議録音をローカル文字起こしし、時刻根拠付きの議事録を作成 |

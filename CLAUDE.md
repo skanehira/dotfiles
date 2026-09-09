@@ -333,7 +333,7 @@ agents/
 | --- | --- | --- | --- |
 | グローバル指示 | `~/.claude/CLAUDE.md` | `~/.codex/AGENTS.md` | `~/.config/opencode/AGENTS.md` |
 | ルール | `~/.claude/rules/` | `~/.agents/rules/codex/` | `~/.agents/rules/opencode/` |
-| スキル (既定。`metadata.runtimes` で限定可) | `~/.claude/skills/` | `~/.codex/skills/` | `~/.config/opencode/skills/` |
+| スキル (既定。`metadata.runtimes` で限定可。→「スキルの配布先の限定 (metadata.runtimes)」節) | `~/.claude/skills/` | `~/.codex/skills/` | `~/.config/opencode/skills/` |
 | subagent | `~/.claude/agents/` | `~/.codex/agents/*.toml` | `~/.config/opencode/agents/*.md` |
 
 **`~/.agents/skills/` は使わない。** Codex と OpenCode の両方がこのディレクトリを探索し、**どちらも探索を止める手段が無い** (OpenCode の `skills.paths` は追加専用、Codex の `skip_host_skill_discovery` は skill roots を変えない。いずれも実測)。ランタイム別の生成物を置けないので、他ツールが入れたスキルの領域として空けてある。
@@ -362,7 +362,7 @@ OpenCode は `~/.claude/skills` も探索する。`nix/modules/home/env.nix` の
 - **出力先の検査**: symlink または正本配下に解決する出力先を拒否する。activation は旧 symlink の撤去 (`linkGeneration`) より前に走りうるため、素直に書くと生成物を旧 symlink 越しに `agents/` 自身へ書き込んで正本を壊す
 - **出力先の中の旧 symlink の撤去**: 書き込みの前に、出力ディレクトリ直下の「正本配下に解決する symlink」を撤去する。出力先の検査はルートしか見ないので、旧方式が張った `~/.codex/skills/<name>` のような個別リンクが 1 段残っていると `mkdir -p` と `rename` がそれを辿り、生成物を正本へ書き戻す (実測: リンクを残したまま生成すると `agents/skills/<name>/SKILL.md` がランタイム語彙版で上書きされる)。dotfiles 外を指す symlink には触れない
 - **staging → rename**: 生成は出力先の隣で行い、閉包チェックを通ってから移す。途中で失敗しても配布先が半端な状態で残らない
-- **manifest による prune**: 撤去対象は各出力ディレクトリ直下の `.harness-manifest.json` に載っているものだけ。配布先には他ツールが置いたスキルが同居するので、拡張子やマーカー行では選別できない。裏を返すと、manifest に載っていないものは配布をやめても残る
+- **manifest による prune**: 撤去対象は各出力ディレクトリ直下の `.harness-manifest.json` に載っているものだけ (出力先からの相対パスを `paths` 配列で持つ)。配布先には他ツールが置いたスキルが同居するので、拡張子やマーカー行では選別できない。裏を返すと、manifest に載っていないものは配布をやめても残る
 - **空になった親の掃除**: prune でディレクトリが空になったら、出力ディレクトリの手前まで遡って空の親も消す (空の殻が残ると `ls` でスキルが配られているように見える)。他ツールのファイルが 1 つでも残っているディレクトリは空にならないので消えない
 
 未定義のプレースホルダが残っていると例外で止まる。deno が無ければ警告してスキップし activation は成功する (生成物は前回のまま残る)。
@@ -387,7 +387,8 @@ metadata:
 ```
 
 - **値の書式**: カンマ区切りのランタイム名。取りうるのは `claude` / `codex` / `opencode` の 3 つで、複数書くなら `claude, codex` の形にする。この 3 つは `agents/vocabulary.json` の各エントリが持つランタイム側のキー (トップレベルのキーは `ask-user` などの中立語彙 19 件のほう) から引いている
-- **書き方の制約**: 生成器は YAML パーサを持たず、`metadata:` を単独行で書いたときのその直下 1 行だけを読む。リスト形式 (`- claude`)・インラインマップ (`metadata: {runtimes: claude}`)・空値 (`runtimes:`)・トップレベルや `metadata` 以外のキーの配下に置いたものは、いずれも**例外で止める**。読めない書き方を素通しすると限定が黙って効かなくなり、空値を「ランタイム 0 個」と解釈すると全ランタイムから外れて prune が配布済みのスキルを消すため、解釈できないものはすべて落とす
+- **書き方の制約**: 生成器は YAML パーサを持たず、`metadata:` を単独行で書いたときのそのブロックの中の最初の `runtimes:` 行だけを読む。リスト形式 (`- claude`)・インラインマップ (`metadata: {runtimes: claude}`)・空値 (`runtimes:`)・トップレベルや `metadata` 以外のキーの配下に置いたものは、いずれも**例外で止める**。読めない書き方を素通しすると限定が黙って効かなくなり、空値を「ランタイム 0 個」と解釈すると全ランタイムから外れて prune が配布済みのスキルを消すため、解釈できないものはすべて落とす
+- **値の中は見ない**: 値を持つキーの配下は「値の続き」として読み飛ばす。折り返した `description` の継続行が `runtimes:` で始まっても宣言とは見なさない (`dev-spec` と `fullstack-app-builder` の `description` は実際に折り返しを持つ)。ここを見てしまうと、限定を宣言していないスキルが生成全体を止める
 - **`metadata` の下に置く理由**: `metadata` は「自前ツールが SKILL.md から読む自由な map で、Claude Code は中身に作用しない」と公式ドキュメント (https://code.claude.com/docs/en/skills.md) が定義した唯一の置き場である。トップレベルに未知キーを置いたときの Claude Code の挙動は公式に明記が無く、Agent Skills spec 経由のパッケージング (claude.ai へのアップロード) では `metadata` 以外の未知キーがハードエラーになる
 - **適用の単位**: 除外は**ディレクトリ単位**で効く。スキル配下の `references/` や `scripts/` だけが配布先に取り残されることはない
 - **判定の入口**: 「`--base` 直下のディレクトリが `SKILL.md` を持つか」で決まるので、rules と subagents のツリーには何も起きない
@@ -487,7 +488,8 @@ ls ~/.claude/skills/.harness-manifest.json ~/.codex/skills/.harness-manifest.jso
 ls ~/.codex/agents ~/.config/opencode/agents                     # subagent 4 本の生成物がある
 # 配布先を限定したスキルが宣言どおりか (claude は 1 以上、codex / opencode は 0)
 for m in ~/.claude ~/.codex ~/.config/opencode; do
-  jq -r '.paths[]' "$m/skills/.harness-manifest.json" | grep -c '^utility-session-profile/'
+  printf '%s: ' "$m"
+  jq -r '.paths[]' "$m/skills/.harness-manifest.json" | grep -c '^utility-session-profile/' || :
 done
 rg -F '{{@' ~/.codex/AGENTS.md || echo 'プレースホルダの残骸なし'  # -F が要る ({ は正規表現で構文エラー)
 readlink -f /etc/codex/config.toml                               # agents/bindings/codex/config.toml に解決する
