@@ -248,6 +248,128 @@ async function readManifest(outDir: string): Promise<string[]> {
   }
 }
 
+/**
+ * SKILL.md の frontmatter から `metadata.runtimes` を読む。宣言が無ければ undefined。
+ *
+ * 独自キーをトップレベルに置かず `metadata` の下に置くのは、そこが「自前ツールが読む
+ * 自由な map で Claude Code は中身に作用しない」と公式に定義された唯一の場所だからである
+ * (トップレベルの未知キーは Claude Code での挙動が未定義で、Agent Skills spec 経由の
+ * パッケージングではハードエラーになる)。
+ *
+ * YAML パーサは入れず、読むのは `metadata:` 直下の 1 行だけ。そのぶん**解釈できない
+ * 書き方はすべて例外に倒す (fail-closed)**。読めないものを「宣言なし = 全ランタイムへ配布」に
+ * 倒すと限定が黙って効かなくなり、空値を「ランタイム 0 個 = 全除外」に倒すと prune が
+ * 配布済みのスキルを黙って消す。`runtimes:` と `runtimes: ` は行末スペース 1 バイトしか
+ * 違わないのに、この 2 つは正反対の事故になる。
+ */
+function readSkillRuntimes(markdown: string, skill: string): string[] | undefined {
+  // CRLF で書かれた SKILL.md でも同じに読む (改行だけの違いで限定が効かなくなるため)
+  const lines = markdown.split(/\r?\n/);
+  if (lines[0]?.trim() !== "---") return undefined;
+  const end = lines.findIndex((line, i) => i > 0 && line.trim() === "---");
+  if (end === -1) return undefined;
+
+  let raw: string | undefined;
+  let inMetadata = false;
+  let inBlockScalar = false;
+  for (const line of lines.slice(1, end)) {
+    const topLevel = /^\S/.test(line);
+    // ブロックスカラー (`description: >-` 等) の値は散文なので走査しない。実在する
+    // dev-spec / fullstack-app-builder の description は折り返しで字下げ行を持ち、
+    // その 1 行が `runtimes:` で始まっただけで生成全体を止めてしまう
+    if (inBlockScalar && !topLevel) continue;
+    if (topLevel) inBlockScalar = /:\s*[|>][0-9+-]*\s*$/.test(line);
+
+    const metadata = line.match(/^metadata:(.*)$/);
+    if (metadata) {
+      // インラインマップ (`metadata: {runtimes: claude}`) は 1 行パーサでは読めない。
+      // 素通しすると宣言が黙って無視され、限定が効かないまま全ランタイムへ配られる
+      if (metadata[1].includes("runtimes")) {
+        throw new Error(
+          `${skill}/SKILL.md の metadata: はブロック形式で書く (インラインマップは読めない)`,
+        );
+      }
+      inMetadata = metadata[1].trim() === "";
+      continue;
+    }
+    if (topLevel) inMetadata = false;
+    const declaration = line.match(/^\s*runtimes:(.*)$/);
+    if (!declaration) continue;
+    if (!inMetadata) {
+      throw new Error(
+        `${skill}/SKILL.md の runtimes は frontmatter の metadata: の直下に置く`,
+      );
+    }
+    raw = declaration[1];
+    break;
+  }
+  if (raw === undefined) return undefined;
+
+  const runtimes = raw.split(",").map((name) => name.trim()).filter((name) => name !== "");
+  if (runtimes.length === 0) {
+    throw new Error(
+      `${skill}/SKILL.md の runtimes に値がありません (カンマ区切りで 1 つ以上のランタイム名を書く。リスト形式は読めない)`,
+    );
+  }
+  return runtimes;
+}
+
+/**
+ * このランタイムへ配らないスキルのディレクトリ名を集める。
+ *
+ * 除外は SKILL.md 単位ではなくディレクトリ単位で効かせる。references/ や scripts/ だけが
+ * 配布先に残ると、スキル本体の無い断片が他ランタイムに散らばるため。
+ *
+ * ランタイム名は語彙表 (`vocabulary.json` の各エントリが持つランタイム側のキー) で検証する。
+ * typo (`claud`) を黙って通すと全ランタイムから外れ、次の生成で manifest の prune が
+ * 配布済みのスキルを消してしまう。語彙表が空のとき (CLI を `--vocabulary` 無しで叩いたとき)
+ * は既知の名前を引けないので、検証を飛ばさず例外にする。
+ */
+async function excludedSkillDirs(
+  baseDir: string,
+  runtime: string,
+  vocabulary: Vocabulary,
+): Promise<Set<string>> {
+  const known = new Set(Object.values(vocabulary).flatMap((entry) => Object.keys(entry)));
+  const excluded = new Set<string>();
+
+  let entries: Deno.DirEntry[];
+  try {
+    entries = [...Deno.readDirSync(baseDir)];
+  } catch {
+    return excluded;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory) continue;
+
+    let markdown: string;
+    try {
+      markdown = await Deno.readTextFile(join(baseDir, entry.name, "SKILL.md"));
+    } catch {
+      // SKILL.md を持たないディレクトリは限定の対象外 (rules / subagents のツリー)
+      continue;
+    }
+
+    const runtimes = readSkillRuntimes(markdown, entry.name);
+    if (!runtimes) continue;
+    if (known.size === 0) {
+      throw new Error(
+        `${entry.name}/SKILL.md の runtimes を検証できません (--vocabulary を渡す)`,
+      );
+    }
+    for (const name of runtimes) {
+      if (!known.has(name)) {
+        throw new Error(
+          `${entry.name}/SKILL.md の runtimes に不明なランタイム '${name}' があります`,
+        );
+      }
+    }
+    if (!runtimes.includes(runtime)) excluded.add(entry.name);
+  }
+  return excluded;
+}
+
 export type BuildOptions = {
   baseDir: string;
   overlayDir: string;
@@ -279,12 +401,24 @@ export async function buildTree(
 ): Promise<{ written: string[]; pruned: string[] }> {
   assertSafeOutRoot(options.outDir, options.dotfilesRoot);
 
+  // staging を作る前に解決する。不明なランタイム名で落ちたとき配布先を触らないため
+  const excluded = await excludedSkillDirs(
+    options.baseDir,
+    options.runtime,
+    options.vocabulary,
+  );
+
   const staging = `${options.outDir}.harness-staging-${crypto.randomUUID().slice(0, 8)}`;
   try {
+    // 1 件も書かないビルド (全件が配布先の限定で外れた場合) でも manifest は書くので、
+    // walk の中の mkdir に頼らず先に作る
+    await Deno.mkdir(staging, { recursive: true });
+
     const written: string[] = [];
     for await (const entry of walk(options.baseDir, { includeDirs: false })) {
       const rel = relative(options.baseDir, entry.path);
       if (basename(rel) === ".DS_Store") continue;
+      if (excluded.has(rel.split("/")[0])) continue;
 
       const destination = join(staging, rel);
       await Deno.mkdir(dirname(destination), { recursive: true });

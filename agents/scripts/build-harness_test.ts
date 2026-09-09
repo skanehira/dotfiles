@@ -1,5 +1,6 @@
 import { assertEquals, assertRejects, assertThrows } from "jsr:@std/assert@1";
 import {
+  MANIFEST_NAME,
   assertSafeOutRoot,
   buildFile,
   buildTree,
@@ -846,4 +847,279 @@ Deno.test("mergeSections_allows_blank_lines_before_the_first_overlay_heading", (
     mergeSections("# t\n\n## あ\n\nbase。\n", "\n\n## あ\n\noverlay。\n"),
     "# t\n\n## あ\n\noverlay。\n",
   );
+});
+
+// ------------------------------------------- metadata.runtimes による配布先の限定
+
+/** SKILL.md の最小形。`metadata.runtimes` は省略できる */
+function skillMarkdown(name: string, runtimes?: string): string {
+  const metadata = runtimes === undefined ? "" : `metadata:\n  runtimes: ${runtimes}\n`;
+  return `---\nname: ${name}\ndescription: ${name} の説明。\n${metadata}---\n\n# ${name}\n\n確認は {{@ask-user}} で行う。\n`;
+}
+
+/** 配布先の台帳に載っているパス一覧 */
+function manifestPaths(outDir: string): string[] {
+  return JSON.parse(Deno.readTextFileSync(`${outDir}/${MANIFEST_NAME}`)).paths;
+}
+
+Deno.test("buildTree_omits_the_whole_directory_of_a_skill_whose_runtimes_excludes_the_runtime", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.mkdir(`${base}/claude-only/references`, { recursive: true });
+    await Deno.writeTextFile(`${base}/claude-only/SKILL.md`, skillMarkdown("claude-only", "claude"));
+    // SKILL.md 以外も出さない (references / scripts ごと落とす)
+    await Deno.writeTextFile(`${base}/claude-only/references/log.md`, "# log\n");
+    await Deno.mkdir(`${base}/everywhere`, { recursive: true });
+    await Deno.writeTextFile(`${base}/everywhere/SKILL.md`, skillMarkdown("everywhere"));
+
+    const result = await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+    });
+
+    assertEquals(result.written, ["everywhere/SKILL.md"]);
+    assertEquals(manifestPaths(out), ["everywhere/SKILL.md"]);
+    assertEquals(
+      [...Deno.readDirSync(out)].map((e) => e.name).sort(),
+      [".harness-manifest.json", "everywhere"],
+    );
+  });
+});
+
+Deno.test("buildTree_distributes_a_skill_whose_runtimes_lists_the_runtime_among_several", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.mkdir(`${base}/two-runtimes`, { recursive: true });
+    await Deno.writeTextFile(
+      `${base}/two-runtimes/SKILL.md`,
+      skillMarkdown("two-runtimes", "claude, codex"),
+    );
+
+    const result = await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+    });
+
+    assertEquals(result.written, ["two-runtimes/SKILL.md"]);
+    assertEquals(
+      await Deno.readTextFile(`${out}/two-runtimes/SKILL.md`),
+      "---\nname: two-runtimes\ndescription: two-runtimes の説明。\nmetadata:\n  runtimes: claude, codex\n---\n\n# two-runtimes\n\n確認は request_user_input で行う。\n",
+    );
+  });
+});
+
+Deno.test("buildTree_with_a_runtime_name_absent_from_the_vocabulary_throws_naming_it_and_writes_nothing", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.mkdir(`${base}/typo`, { recursive: true });
+    // typo を黙って通すと全ランタイムから外れ、次の生成で prune が配布済みのものを消す
+    await Deno.writeTextFile(`${base}/typo/SKILL.md`, skillMarkdown("typo", "claud"));
+
+    await assertRejects(
+      () =>
+        buildTree({
+          baseDir: base, overlayDir: overlay, outDir: out,
+          runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+        }),
+      Error,
+      "typo/SKILL.md の runtimes に不明なランタイム 'claud' があります",
+    );
+    assertEquals([...Deno.readDirSync(out)].map((e) => e.name), []);
+  });
+});
+
+Deno.test("buildTree_prunes_a_distributed_skill_that_later_gains_a_runtimes_excluding_the_runtime", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.mkdir(`${base}/later-limited`, { recursive: true });
+    await Deno.writeTextFile(`${base}/later-limited/SKILL.md`, skillMarkdown("later-limited"));
+    await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+    });
+
+    // 配布済みのスキルを後から Claude 専用にする
+    await Deno.writeTextFile(
+      `${base}/later-limited/SKILL.md`,
+      skillMarkdown("later-limited", "claude"),
+    );
+    const result = await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+    });
+
+    assertEquals(result.pruned, ["later-limited/SKILL.md"]);
+    assertEquals(manifestPaths(out), []);
+  });
+});
+
+Deno.test("buildTree_without_a_vocabulary_refuses_to_read_metadata_runtimes_instead_of_skipping_the_check", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    // 語彙表が空だと既知のランタイム名を引けない。検証を飛ばすと typo が無音で通り、
+    // 全ランタイムから外れたスキルを次の生成で prune が消す
+    await Deno.mkdir(`${base}/plain`, { recursive: true });
+    await Deno.writeTextFile(
+      `${base}/plain/SKILL.md`,
+      "---\nname: plain\nmetadata:\n  runtimes: codex\n---\n\n# plain\n",
+    );
+
+    await assertRejects(
+      () =>
+        buildTree({
+          baseDir: base, overlayDir: overlay, outDir: out,
+          runtime: "codex", vocabulary: {}, dotfilesRoot: dotfiles,
+        }),
+      Error,
+      "plain/SKILL.md の runtimes を検証できません",
+    );
+  });
+});
+
+/**
+ * `metadata.runtimes` として実際に書かれうる入力を、配布 / 除外 / 例外のどれになるか全件 pin する。
+ *
+ * ここを空けておくと、行末スペース 1 バイトの違い (`runtimes:` と `runtimes: `) が
+ * 「全配布」と「全除外」という正反対の結果になり、後者では prune が配布済みのスキルを
+ * 黙って消す。曖昧な書き方はすべて例外に倒す (fail-closed)。
+ */
+const RUNTIMES_INPUTS: Array<
+  { label: string; frontmatter: string; outcome: "配布" | "除外" } | {
+    label: string;
+    frontmatter: string;
+    outcome: "例外";
+    /** 書き手が SKILL.md をどう直すかの唯一の手掛かりなので、診断も入力ごとに固定する */
+    message: string;
+  }
+> = [
+  { label: "宣言なし", frontmatter: "name: s\n", outcome: "配布" },
+  { label: "自ランタイムのみ", frontmatter: "name: s\nmetadata:\n  runtimes: codex\n", outcome: "配布" },
+  { label: "自ランタイムを含む複数", frontmatter: "name: s\nmetadata:\n  runtimes: claude, codex\n", outcome: "配布" },
+  { label: "タブ字下げ", frontmatter: "name: s\nmetadata:\n\truntimes: codex\n", outcome: "配布" },
+  { label: "末尾カンマ", frontmatter: "name: s\nmetadata:\n  runtimes: codex,\n", outcome: "配布" },
+  { label: "metadata に他キー混在", frontmatter: "name: s\nmetadata:\n  license: MIT\n  runtimes: codex\n", outcome: "配布" },
+  // 実在の書式 (dev-spec / fullstack-app-builder の description は >- の折り返し)。
+  // 値の中の 1 行が runtimes: で始まっても、限定の宣言ではないので触ってはいけない
+  {
+    label: "ブロックスカラーの折り返し",
+    frontmatter: "name: s\ndescription: >-\n  設計ループ。\n  runtimes: claude と書くと Claude だけに配られる。\n",
+    outcome: "配布",
+  },
+  { label: "大文字 Runtimes", frontmatter: "name: s\nmetadata:\n  Runtimes: claude\n", outcome: "配布" },
+  { label: "frontmatter 未終端", frontmatter: null as unknown as string, outcome: "配布" },
+  { label: "他ランタイムのみ", frontmatter: "name: s\nmetadata:\n  runtimes: claude\n", outcome: "除外" },
+  { label: "宣言が 2 行 (最初が勝つ)", frontmatter: "name: s\nmetadata:\n  runtimes: claude\n  runtimes: codex\n", outcome: "除外" },
+  { label: "metadata の二段入れ子", frontmatter: "name: s\nmetadata:\n  catalog:\n    runtimes: claude\n", outcome: "除外" },
+  {
+    label: "値なし",
+    frontmatter: "name: s\nmetadata:\n  runtimes:\n",
+    outcome: "例外",
+    message: "s/SKILL.md の runtimes に値がありません",
+  },
+  {
+    label: "行末スペースのみ",
+    frontmatter: "name: s\nmetadata:\n  runtimes: \n",
+    outcome: "例外",
+    message: "s/SKILL.md の runtimes に値がありません",
+  },
+  {
+    label: "カンマのみ",
+    frontmatter: "name: s\nmetadata:\n  runtimes: ,\n",
+    outcome: "例外",
+    message: "s/SKILL.md の runtimes に値がありません",
+  },
+  {
+    label: "リスト形式",
+    frontmatter: "name: s\nmetadata:\n  runtimes:\n    - codex\n",
+    outcome: "例外",
+    message: "s/SKILL.md の runtimes に値がありません",
+  },
+  {
+    label: "トップレベル",
+    frontmatter: "name: s\nruntimes: codex\n",
+    outcome: "例外",
+    message: "s/SKILL.md の runtimes は frontmatter の metadata: の直下に置く",
+  },
+  {
+    label: "metadata がマップでない",
+    frontmatter: "name: s\nmetadata: {license: MIT}\n  runtimes: codex\n",
+    outcome: "例外",
+    message: "s/SKILL.md の runtimes は frontmatter の metadata: の直下に置く",
+  },
+  {
+    label: "metadata 以外の配下",
+    frontmatter: "name: s\nother:\n  runtimes: codex\n",
+    outcome: "例外",
+    message: "s/SKILL.md の runtimes は frontmatter の metadata: の直下に置く",
+  },
+  {
+    label: "metadata ブロックの後の別キー配下",
+    frontmatter: "name: s\nmetadata:\n  license: MIT\nother:\n  runtimes: codex\n",
+    outcome: "例外",
+    message: "s/SKILL.md の runtimes は frontmatter の metadata: の直下に置く",
+  },
+  {
+    label: "インラインマップ",
+    frontmatter: "name: s\nmetadata: {runtimes: codex}\n",
+    outcome: "例外",
+    message: "s/SKILL.md の metadata: はブロック形式で書く",
+  },
+  {
+    label: "フロー形式",
+    frontmatter: "name: s\nmetadata:\n  runtimes: [claude, codex]\n",
+    outcome: "例外",
+    message: "s/SKILL.md の runtimes に不明なランタイム '[claude' があります",
+  },
+  {
+    label: "引用符つき",
+    frontmatter: 'name: s\nmetadata:\n  runtimes: "codex"\n',
+    outcome: "例外",
+    message: `s/SKILL.md の runtimes に不明なランタイム '"codex"' があります`,
+  },
+  {
+    label: "行末コメント",
+    frontmatter: "name: s\nmetadata:\n  runtimes: codex # codex だけ\n",
+    outcome: "例外",
+    message: "s/SKILL.md の runtimes に不明なランタイム 'codex # codex だけ' があります",
+  },
+];
+
+Deno.test("buildTree_pins_every_way_metadata_runtimes_can_be_written_to_distribute_or_exclude_or_throw", async () => {
+  for (const input of RUNTIMES_INPUTS) {
+    await withTrees(async ({ base, overlay, out, dotfiles }) => {
+      await Deno.mkdir(`${base}/s`, { recursive: true });
+      // frontmatter が null の行は「終端の --- が無い SKILL.md」を表す
+      const markdown = input.frontmatter === null
+        ? "---\nname: s\nmetadata:\n  runtimes: claude\n\n# s\n"
+        : `---\n${input.frontmatter}---\n\n# s\n`;
+      await Deno.writeTextFile(`${base}/s/SKILL.md`, markdown);
+      const build = () =>
+        buildTree({
+          baseDir: base, overlayDir: overlay, outDir: out,
+          runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+        });
+
+      if (input.outcome === "例外") {
+        await assertRejects(build, Error, input.message, `${input.label} の診断が違う`);
+        assertEquals([...Deno.readDirSync(out)].map((e) => e.name), [], `${input.label} は何も書かないべき`);
+        return;
+      }
+      const result = await build();
+      assertEquals(
+        result.written,
+        input.outcome === "配布" ? ["s/SKILL.md"] : [],
+        `${input.label} は ${input.outcome} されるべき`,
+      );
+    });
+  }
+});
+
+Deno.test("buildTree_reads_metadata_runtimes_from_a_file_with_crlf_line_endings", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.mkdir(`${base}/crlf`, { recursive: true });
+    await Deno.writeTextFile(
+      `${base}/crlf/SKILL.md`,
+      "---\r\nname: crlf\r\nmetadata:\r\n  runtimes: claude\r\n---\r\n\r\n# crlf\r\n",
+    );
+    const result = await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+    });
+    assertEquals(result.written, []);
+  });
 });
