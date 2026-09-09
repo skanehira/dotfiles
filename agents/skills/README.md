@@ -1,6 +1,8 @@
-# Claude Code Skills
+# エージェントスキル
 
-プロダクト開発を支援する Claude Code スキル集。
+- 種別: プロジェクト運用ガイド
+
+プロダクト開発を支援するスキル集。Claude Code / Codex / OpenCode の 3 ランタイムへ配られる。
 
 ## タスク規模別の入口 (まずここを見る)
 
@@ -74,6 +76,19 @@ skills/
 > - `dev-*` — 開発フローの 2 大ループ (設計 / 実装) + 軽量実装ループ
 > - `workflow-*` — 横断ユーティリティ (レビュー / コミット / PR / 壁打ち)
 > - `utility-*` — 単発のユーティリティ
+
+## 配布先の限定
+
+ここに置いたスキルは既定で 3 ランタイムすべてに配られる。1 つのランタイムでしか動かないスキル (そのランタイムのログや設定を直接読むものなど) は `SKILL.md` の frontmatter で配布先を宣言する。現在の該当は `utility-session-profile` の 1 本。
+
+```yaml
+metadata:
+  runtimes: claude
+```
+
+値はカンマ区切りのランタイム名で、取りうるのは `claude` / `codex` / `opencode` の 3 つ。書かなければ全ランタイムへ配られる。宣言の追加・削除は生成物に効くので、反映には `drs` / `hms` (または生成器の手動実行) が要る。
+
+`metadata` の下に置く理由・書式の制約・typo を例外で止める仕組み・配布先からの撤去 (prune) は、dotfiles リポジトリ (skanehira/dotfiles) 直下の `CLAUDE.md` の「スキルの配布先の限定 (metadata.runtimes)」節が正本。
 
 ## モデル方針 (ループエンジニアリング)
 
