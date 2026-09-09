@@ -370,6 +370,30 @@ async function excludedSkillDirs(
   return excluded;
 }
 
+/**
+ * prune で空になったディレクトリを outDir まで遡って撤去する。
+ *
+ * ファイルだけ消すと空の殻が配布先に残り、`ls` で見たときスキルが配られているように見える
+ * (実測: 配布先を限定した直後の `~/.codex/skills/utility-session-profile` が該当)。
+ * 他ツールのファイルが 1 つでも残っているディレクトリは空にならないので消えない。
+ */
+async function removeEmptyParents(relativeDir: string, outDir: string): Promise<void> {
+  let current = relativeDir;
+  while (current !== "." && current !== "" && current !== "/") {
+    const path = join(outDir, current);
+    let empty: boolean;
+    try {
+      empty = [...Deno.readDirSync(path)].length === 0;
+    } catch {
+      // 同じディレクトリの複数ファイルが prune されたとき、2 件目では既に消えている
+      return;
+    }
+    if (!empty) return;
+    await Deno.remove(path);
+    current = dirname(current);
+  }
+}
+
 export type BuildOptions = {
   baseDir: string;
   overlayDir: string;
@@ -479,6 +503,7 @@ export async function buildTree(
       } catch {
         // 既に人が消していても失敗にしない
       }
+      await removeEmptyParents(dirname(rel), options.outDir);
     }
     return { written, pruned };
   } finally {

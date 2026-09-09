@@ -971,6 +971,36 @@ Deno.test("buildTree_without_a_vocabulary_refuses_to_read_metadata_runtimes_inst
   });
 });
 
+Deno.test("buildTree_removes_a_directory_left_empty_by_pruning_and_keeps_one_still_holding_a_foreign_file", async () => {
+  await withTrees(async ({ base, overlay, out, dotfiles }) => {
+    await Deno.mkdir(`${base}/gone/deep`, { recursive: true });
+    await Deno.writeTextFile(`${base}/gone/deep/a.md`, "# a\n");
+    await Deno.mkdir(`${base}/shared`, { recursive: true });
+    await Deno.writeTextFile(`${base}/shared/b.md`, "# b\n");
+    await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+    });
+
+    await Deno.remove(`${base}/gone`, { recursive: true });
+    await Deno.remove(`${base}/shared/b.md`);
+    // 他ツールが置いたファイルが残っているディレクトリは空にならないので消さない
+    await Deno.writeTextFile(`${out}/shared/foreign.md`, "# foreign\n");
+
+    await buildTree({
+      baseDir: base, overlayDir: overlay, outDir: out,
+      runtime: "codex", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
+    });
+
+    // gone/ は deep/ ごと消える。空の殻が残ると配布したように見える
+    assertEquals(
+      [...Deno.readDirSync(out)].map((e) => e.name).sort(),
+      [".harness-manifest.json", "shared"],
+    );
+    assertEquals([...Deno.readDirSync(`${out}/shared`)].map((e) => e.name), ["foreign.md"]);
+  });
+});
+
 /**
  * `metadata.runtimes` として実際に書かれうる入力を、配布 / 除外 / 例外のどれになるか全件 pin する。
  *
