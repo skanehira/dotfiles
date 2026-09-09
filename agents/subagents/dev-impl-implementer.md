@@ -51,7 +51,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 
 ## 手順 (mode: fix)
 
-1. `findings_path` の JSON を Read し、`severity` が `high` の指摘**だけ**を直す (`medium` / `low` は修正対象ではない — 親が保留リストに記録して先へ進める規約なので、直すとレビュー範囲を無駄に広げる)
+1. `findings_path` の JSON を Read し、`severity` が `high` の指摘**だけ**を直す (`medium` / `low` は修正対象ではない — 親が保留リストに記録して先へ進める規約なので、直すとレビュー範囲を無駄に広げる)。**`adjudication` キーを持つ finding は対象外** (親が誤検出と裁定済み、または親が直接直したもの)
 2. 指摘に無いリファクタ・機能追加・「ついでの改善」をしない (親が差分を再レビューするため、指摘外の差分はレビュー範囲を無駄に広げる)
 3. 修正のたびにテストを再実行し green を保つ
 4. `category: test-weakening` の finding は**自分で直さない**。実装を止めて `status: escalate`, `reason: test_weakening_suspected` で報告する (テストの弱体化を実装者自身に直させると骨抜きの温床になるため、裁定は親が行う)
