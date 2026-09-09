@@ -57,7 +57,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 
 | 状態 (`gh pr list --repo "$REPO_SLUG" --head issue-<N>` と、`git fetch origin` 後の `git branch --list issue-<N>` / `git branch -r --list "origin/issue-<N>"`) | 再開位置 |
 | --- | --- |
-| PR が open | 2.4 手順 4 (merge と状態確認) から。検証は push 前に済んでいる前提なので繰り返さないが、PR 作成後に差分を足した形跡があれば手順 2 の検証を 1 巡してから merge する。レビュー未実施が疑われる場合は 2.3 から |
+| PR が open | 2.4 手順 4 (merge と状態確認) から。手順 4 の先頭が `PR_NUM` を引き直すので番号の復元は要らないが、**並列実行では worktree を作り直して `$WORK_DIR` を再設定してから入る** (rebase 分岐が使う)。検証は push 前に済んでいる前提なので繰り返さないが、`gh pr view --json headRefOid` と `git -C "$WORK_DIR" rev-parse HEAD` が一致しなければ PR 作成後に差分が足されているので、手順 2 の検証を 1 巡してから merge する。レビュー未実施が疑われる場合は 2.3 から |
 | ブランチのみ残存 (ローカルまたは origin、PR なし) | ブランチへ switch し (origin のみに在る場合は `git switch issue-<N>` が追跡ブランチを作る)、`BASE_SHA=$(git merge-base origin/$DEFAULT HEAD)` で基準を復元して 2.2 から。implementer の prompt に「ブランチに前回の差分がある。既存差分を前提に続きから実装せよ」を 1 行追加する |
 | どちらも無い | 最初から (2.1 から) |
 
@@ -132,7 +132,7 @@ report_path: <SCRATCH>/impl-<N>.json`
 })
 ```
 
-**検収**: report JSON を読み、`status: done` は `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true` を満たすときだけ done と扱う (満たさない報告は失敗ブリーフとして `mode: fix` で差し戻す)。**この差し戻しは 2.3 の fix ラウンドに数えない** — 実装の検収であって、レビュー指摘の修正ではない。
+**検収**: report JSON を読み、`status: done` は `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true` を満たすときだけ done と扱う (満たさない報告は**同じ `mode: implement` で 1 回だけ再起動する**。prompt に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」を足す。`mode: fix` は使わない — `findings_path` の JSON から high を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる)。**この再起動は 2.3 の fix ラウンドに数えない** — 実装の検収であって、レビュー指摘の修正ではない。**2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)。
 
 分岐:
 
@@ -175,17 +175,19 @@ review JSON が無い・パース不能の場合も同様に 1 回再起動 → 
 r1 の findings による分岐:
 
 - **high が 0 件** → 2.4 へ。medium は保留リストに記録し (下記「保留レビュー項目の記録」)、low は完了コメントに「報告のみ」として記載する
-- **high がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して **high だけ**を直させ、r2 を回す。**fix はこの 1 回だけ (固定)**
+- **high がある** → **先に `category: test-weakening` の finding を下記の裁定で処理し** (implementer に渡すと `test_weakening_suspected` で escalate が返り、2.2 の分岐で 2.6 へ落ちて裁定経路が迂回される)、残った high について implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して **high だけ**を直させ、r2 を回す。**fix はこの 1 回だけ (固定)**。裁定の結果 high が 0 件になったら fix を起動せず 2.4 へ進む
 
-r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わない) は、その high の `category` で分岐する。**契約・証跡・検証器が壊れているものだけを駐車し、成果物の内部品質は記録して先へ進む**:
+**r2 に high が無ければ 2.4 へ進む** (medium は保留リストに記録する)。r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わない) は、その high の `category` で分岐する。**契約・証跡・検証器が壊れているものだけを駐車し、成果物の内部品質は記録して先へ進む**:
 
 | `category` | 動作 |
 | --- | --- |
 | `spec-compliance` | 2.6 で駐車。契約が壊れたまま merge すると、後続 issue がその契約に依存して誤った土台の上に積み上がる |
 | `e2e` | 2.6 で駐車。E2E の不在・失敗は「画面が動く証跡が無い」ことを意味する |
-| `test-weakening` | 下記の裁定を先に行い、**裁定できないときだけ** 2.6 で駐車する |
+| `test-weakening` | 下記の裁定を先に行い、**裁定できないときだけ** 2.6 で駐車する (裁定して直せたら 2.4 へ。再レビューはしない) |
 | `test-quality` | 保留リストに記録して 2.4 へ。実装は契約を満たしており、テストが検証していないだけなので後から独立に直せる |
 | `code-quality` | 保留リストに記録して 2.4 へ。動作は正しく、DI 違反や命名は後から直せる |
+
+**駐車 category と保留 category が混在したら、issue 全体を 2.6 へ駐車する** (保留 category のぶんは駐車コメントに列挙する。壊れた契約を抱えた issue を merge しないことが優先する)。
 
 `test-quality` の high を保留して merge するのは、no-op に置き換えても通るテスト (`{{@rules-root}}/core/testing.md` のリトマス試験 B に落ちるもの) を抱えたまま先へ進むことを意味する。**これは意図した受容**なので、保留リストと完了コメントでは high を medium と分けて先に出し、ユーザーが気付ける状態にする。
 
@@ -197,23 +199,25 @@ r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わ
 
 #### 保留レビュー項目の記録
 
-修正対象にしなかった medium と、r2 で残った `test-quality` / `code-quality` の high は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。`docs/pending-review/issue-<N>.html` を新規に書き出す — 各 finding はチェックボックス付きの 1 項目で、severity / category / `file:line` / summary / evidence / fix_hint をまとめる。**high は medium より前に置く。** 外部依存の無い自己完結の静的 HTML とする。**issue 1 件につき 1 ファイルにする** — 全 issue が 1 枚のファイルへ追記する形だと、並列で走る issue が同じ位置に節を足して rebase のたびに必ず衝突する。ファイルを分ければ衝突は起きないので、union の衝突解決も要らない。**このファイルは 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
+修正対象にしなかった medium と、r2 で残った `test-quality` / `code-quality` の high は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。**保留対象が 1 件以上あるときだけ** `docs/pending-review/issue-<N>.html` を新規に書き出す (0 件なら作らない — 空ファイルが積まれると Step 3 の件数がノイズを数える)。各 finding はチェックボックス付きの 1 項目で、severity / category / `file:line` / summary / evidence / fix_hint をまとめる。**high は medium より前に置く。** 各項目の要素に `data-severity="high|medium"` と `data-category="<category>"` を持たせる — Step 3 が `rg -c 'data-severity="high"' docs/pending-review/` で件数を数え、過去 run のファイルも同じ形で数えられるようにするため。 外部依存の無い自己完結の静的 HTML とする。**issue 1 件につき 1 ファイルにする** — 全 issue が 1 枚のファイルへ追記する形だと、並列で走る issue が同じ位置に節を足して rebase のたびに必ず衝突する。ファイルを分ければ衝突は起きないので、union の衝突解決も要らない。**このファイルは 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
 
-**書き出すのは最終ラウンドの findings だけ** (r1 で通過したなら r1、r2 まで回したなら r2)。検査項目 5 は high しか追わないので、r2 は medium を fresh context で新規に出し直す。r1 の medium を足すと同じ指摘が二重に載る。
+**r2 まで回した issue では、r1 と r2 の medium を `file:line` + summary で重複排除した和を書き出す。** r2 が r1 と同じ medium を出し直すとは限らないので (検査項目 5 は high しか追わず、族の走査も high 候補を先に処理して打ち切りうる)、r2 のぶんだけを書くと r1 の medium が黙って落ちる。逆に単純な和では同じ指摘が二重に載るので、重複排除する。r1 で通過した issue は r1 の medium だけになる。
 
-**`medium` / `category: e2e` の「対象動線未指定 (設計差し戻し)」だけは別立てで扱う。** これは実装ではなく設計側の欠落なので、保留リストに載せたうえで、2.5 の完了コメントに「設計差し戻しが必要な指摘」として独立の行で書き、Step 3 の最終報告にも載せる (保留リストに埋もれると設計へ差し戻る経路が消える)。
+**`medium` / `category: e2e` で、summary が `対象動線未指定 (設計差し戻し):` で始まる finding だけは別立てで扱う** (この書式は review-impl 側で固定してある)。 これは実装ではなく設計側の欠落なので、保留リストに載せたうえで、2.5 の完了コメントに「設計差し戻しが必要な指摘」として独立の行で書き、Step 3 の最終報告にも載せる (保留リストに埋もれると設計へ差し戻る経路が消える)。
 
 ### 2.4 コミット・検証・PR・merge
 
-1. **コミット**: 変更を論理単位で Conventional Commit (`{{@rules-root}}/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針の表)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)
+1. **コミット**: 変更を論理単位で Conventional Commit (`{{@rules-root}}/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針の表)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
 
-2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する (CI は使わない — 判定はこのローカル実行が兼ねる)。巨大出力になる場合は Haiku subagent に実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る。
+   コミットが手順 2 の検証より前に来るのは、検証対象を「積み終えた差分」に固定するためである。`{{@rules-root}}/core/commit.md` のコミット条件 (全テスト green) は、implementer の `test_result` / `dod_result` が exit 0 であること (2.2 の検収で確認済み) を根拠に満たす。**手順 2 が red だった場合、このコミットは merge されない駐車ブランチ上の記録として扱う** (2.6 の WIP 退避と同じ例外)。
 
-   **同じコマンドを二度走らせない。** issue の `## DoD` に並ぶコマンドが `docs/design/DESIGN.md`「開発・検証コマンド」の全体テスト・lint と同一なら、その分は重複なので 1 回だけ実行する (DoD 固有のコマンドだけを足す)。DESIGN.md が無い構成では同一性を判定できないので、重複排除せず両方実行する。
+2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する (CI は使わない — 判定はこのローカル実行が兼ねる)。**実行は `$WORK_DIR` で行う** (並列実行では worktree の中。Haiku subagent に委譲する場合は `cd <WORK_DIR> && ...` の形でコマンドを渡さないと別の作業ツリーを検証することになる)。巨大出力になる場合は実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る。
+
+   **同じコマンドを二度走らせない。** issue の `## DoD` に並ぶコマンドが `docs/design/DESIGN.md`「開発・検証コマンド」の全体テスト・lint と重複する場合は 1 回だけ実行する。**重複と見なすのは前後の空白を除いた文字列が完全一致するときだけ**で、包含関係 (`deno test src/export/` と `deno test`)・オプション違い・言い換えは重複と見なさず両方実行する (部分集合を「同じ」と読むと DoD の検証をしないまま green を宣言できる)。DESIGN.md が無い構成と、DESIGN.md はあるが「開発・検証コマンド」節が無い構成では、同一性を判定できないので重複排除せず両方実行する。
 
    1 つでも失敗したら push も merge もしない → 2.6 へ (「テスト red / DoD 失敗」の駐車)。
 
-3. **PR**: `git push -u origin "issue-$N"` してから作成する (再開で PR が既にあればスキップ)。push が失敗したら (前 run の同名 remote ブランチ残骸等)、原因を確認して解消できなければ 2.6 へ。**`gh pr create` が返すのは URL なので、PR 番号を控える** (手順 4 の merge 確認に使う):
+3. **PR**: **push は毎回行う** (`git -C "$WORK_DIR" push -u origin "issue-$N"`)。再開でスキップしてよいのは `gh pr create` だけで、push を飛ばすと再開後に足した差分が PR に載らないまま merge される。push が失敗したら (前 run の同名 remote ブランチ残骸等)、原因を確認して解消できなければ 2.6 へ:
 
 ```bash
 PR_URL=$(gh pr create --repo "$REPO_SLUG" --title "<issue タイトル>" --body "$(cat <<'EOF'
@@ -229,21 +233,41 @@ Closes #<N>
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
 )")
-PR_NUM=$(printf '%s' "$PR_URL" | grep -o '[0-9]*$')
 ```
 
-4. **merge**: 検証は手順 2 で済んでいるので、ここでは merge して**状態で成功を確認する**:
+4. **merge**: 検証は手順 2 で済んでいるので、ここでは merge して**状態で成功を確認する**。**まず PR 番号を引き直す**。`gh pr create` の戻り値は同じ Bash 呼び出しの中でしか生きておらず、再開経路 (Step 1 の再開表) では手順 3 自体を通っていないためである:
 
 ```bash
+PR_NUM=$(gh pr list --repo "$REPO_SLUG" --head "issue-$N" --json number -q '.[0].number')
+[ -n "$PR_NUM" ] || exit 1        # 空なら 2.6 へ (下記)
 gh pr merge --repo "$REPO_SLUG" "$PR_NUM" --squash --delete-branch
+MERGE_RC=$?   # 次のコマンドで $? が上書きされる前に捕まえる
 STATE=$(gh pr view --repo "$REPO_SLUG" "$PR_NUM" --json state -q .state)   # MERGED を期待
 ```
 
-**`gh pr merge` の exit code だけで判定しない。** worktree 運用では merge 自体が成功しても、ローカルブランチが worktree にチェックアウトされているせいで `--delete-branch` が失敗し、コマンドが非ゼロを返しうる。**2.5 へ進む条件は `$STATE` が `MERGED`** (大文字。`gh ... view --json` は大文字を返す) であることとし、exit code は下の rebase 分岐を起こすかどうかの判断にだけ使う。
+**`PR_NUM` が空のまま先へ進んではならない。** `gh pr merge --repo X "" --squash` は位置引数が空だと**カレントブランチの PR にフォールバックする**ので、別の issue のブランチに居ると無関係な PR を merge しうる。引けなければ 2.6 へ。
 
-**並列実行でも merge はここで 1 件ずつ直列に行う。** 同時に merge するとデフォルトブランチが競合し、残りの worktree がまとめて rebase 待ちになる。他の issue が実装・レビュー中でも、merge の順番待ちだけを直列化すればよい。`MERGED` を確認したら merge した issue の worktree を 2.0 の手順で削除し、**並列実行の場合はそのあと `git -C "$REPO_DIR" branch -D "issue-$N"` でローカルブランチも消す** (worktree にチェックアウト中で `--delete-branch` が消せなかったぶん。残すと Step 1 の再開判定が「中断からの復帰」として誤発火し、次回の `worktree add -b issue-$N` も失敗する)。直列実行では `--delete-branch` がローカルも消しているので叩かない。
+**`gh pr merge` の exit code だけで判定しない。** `--delete-branch` の副作用は gh のバージョンと引数によって変わり (下記)、成功しても非ゼロを返す構成がありうる。**2.5 へ進む条件は `$STATE` が `MERGED`** (大文字。`gh ... view --json` は大文字を返す) であることとし、exit code (`$MERGE_RC`) は下の rebase 分岐を起こすかどうかの判断にだけ使う。
 
-**merge コマンドが非ゼロで、かつ `$STATE` が `MERGED` でない場合だけ**、コンフリクトを疑って復旧する (駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合)。`git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで手順 2 の検証をもう 1 巡回して green を確認してから** push し直す (先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない)。解消できなければ 2.6 へ。
+| `$MERGE_RC` | `$STATE` | 動作 |
+| --- | --- | --- |
+| 任意 | `MERGED` | 2.5 へ |
+| 非ゼロ | `MERGED` 以外 | 下記の rebase 復旧を試みる |
+| 0 | `MERGED` 以外 (`OPEN` / 空) | `gh pr view` を 1 回だけ再試行する。それでも `MERGED` にならなければ 2.6 へ (branch protection・マージキュー・API の遅延など、rebase では解けない原因が疑われる) |
+
+**並列実行でも merge はここで 1 件ずつ直列に行う。** 同時に merge するとデフォルトブランチが競合し、残りの worktree がまとめて rebase 待ちになる。他の issue が実装・レビュー中でも、merge の順番待ちだけを直列化すればよい。
+
+`MERGED` を確認したら後片付けをする。**ローカルブランチは直列・並列のどちらでも自分で消す**:
+
+```bash
+git -C "$REPO_DIR" worktree remove "$WT"        # 並列実行のみ。branch -D より先に行う
+git -C "$REPO_DIR" switch "$DEFAULT"            # 直列実行のみ。チェックアウト中のブランチは消せない
+git -C "$REPO_DIR" branch -D "issue-$N"
+```
+
+**`gh pr merge --repo <slug> --delete-branch` はリモートのブランチしか消さない** (実測: gh 2.97.0 は `--repo` が指定されるとローカル削除の経路を丸ごと無効化する)。残したままにすると Step 1 の再開判定が「中断からの復帰」として誤発火し、次回の `worktree add -b issue-$N` も失敗する。`branch -D` が失敗したら (worktree が残っている・チェックアウト中)、その原因を解消して 1 回だけ再試行し、それでも消えなければ**駐車はせず** (merge は済んでいる) 最終報告に残存ブランチとして列挙する。
+
+**`$MERGE_RC` が非ゼロで、かつ `$STATE` が `MERGED` でない場合**は、コンフリクトを疑って復旧する (駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合)。`git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで手順 2 の検証をもう 1 巡回して green を確認してから** `git -C "$WORK_DIR" push --force-with-lease origin "issue-$N"` で押し直す (rebase 後は履歴が書き変わっており、素の push は non-fast-forward で必ず拒否される)。先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない。解消できなければ 2.6 へ。
 
 ### 2.5 完了処理
 
@@ -252,8 +276,8 @@ merge により `Closes #N` で issue は自動 close される (されていな
 ```
 実装完了 (dev-impl)
 - 変更: <summary と主要ファイル>
-- テスト + lint + DoD: <2.4 手順 2 の 1 巡の結果 (件数)>、green
-- レビュー: <ラウンド数> 周 (low の報告: <あれば列挙、なければ「なし」>)
+- テスト + lint + DoD: <2.4 手順 2 で最後に実行した巡の結果 (件数)>、green
+- レビュー: <ラウンド数> 周 (最終ラウンドの low の報告: <あれば列挙、なければ「なし」>)
 - 保留 high (test-quality / code-quality): <各 1 行で `file:line` + summary。なければ「なし」>
 - 保留 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/pending-review/issue-<N>.html` に記録)
 - 設計差し戻しが必要な指摘: <`medium` / `category: e2e` の「対象動線未指定」。各 1 行。なければ「なし」>
@@ -288,7 +312,7 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human
-gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。未 merge の保留 high / medium があればその summary も列挙 (pending-review のファイルが merge されていないため)。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置>"
+gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。未 merge の保留 high / medium と、設計差し戻しが必要な指摘があればその summary も列挙 (pending-review のファイルが merge されていないため)。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置>"
 ```
 
 ブランチと open PR は merge せず残す (人間が差分を確認でき、再開時に再利用できる)。**その issue に依存しない次の issue へ進む。**
@@ -318,7 +342,7 @@ done
 
 **この走査は `tracking` ラベルの open issue を repo 全件対象にする。** dev-spec 由来でない手作りの `tracking` issue がある repo では、close 前に対象一覧を提示して人間に確認する。
 
-2. デフォルトブランチへ戻って `git pull` し、`docs/pending-review/` にファイルがあればその一覧と件数を出したうえで `open docs/pending-review/` でディレクトリを開き (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、保留 <h> 件・medium <m> 件のチェックが必要」とユーザーに確認を促す (過去 run の未消化分も累積している)。対応要と判断した項目は新しい issue にするか直接の修正依頼で対応し、確認が済んだ issue はファイルごと削除する (手動または修正依頼。通常のコミットで反映)
+2. デフォルトブランチへ戻って `git pull` し、`docs/pending-review/` にファイルがあれば一覧と件数を出す。件数は `rg -c 'data-severity="high"' docs/pending-review/` と同 `medium` で数える (2.3 が全項目にこの属性を付けている)。あわせて `data-category="e2e"` かつ medium の項目を拾い、設計差し戻しが必要な指摘として最終報告に列挙する。`open docs/pending-review/` でディレクトリを開き (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、保留 high <h> 件・保留 medium <m> 件のチェックが必要」とユーザーに確認を促す (過去 run の未消化分も累積している)。対応要と判断した項目は新しい issue にするか直接の修正依頼で対応し、確認が済んだ issue はファイルごと削除する (手動または修正依頼。通常のコミットで反映)
 3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
    - 実装した issue と PR の一覧
    - close した親 (tracking) issue と、open のまま残した親 (子が残っている / 子ゼロ / 判定不能の別に)

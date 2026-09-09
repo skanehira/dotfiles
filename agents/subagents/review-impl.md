@@ -56,7 +56,7 @@ model: opus
 
 `docs/design/DESIGN.md` のスタンプが `webapp` で、差分が画面の振る舞いに触れる場合:
 
-- 対象機能の golden path Playwright E2E が存在するか (`docs/design/features/` の「テスト方針」が指定する動線)。無ければ `high`。**「テスト方針」に E2E 対象動線の指定自体が無い場合は、E2E 不在を high にせず `medium` / `category: e2e` の「対象動線未指定 (設計差し戻し)」として報告する** (implementer は書く対象を決められないため、実装ではなく設計側の欠落)
+- 対象機能の golden path Playwright E2E が存在するか (`docs/design/features/` の「テスト方針」が指定する動線)。無ければ `high`。**「テスト方針」に E2E 対象動線の指定自体が無い場合は、E2E 不在を high にせず `medium` / `category: e2e` で報告し、summary を `対象動線未指定 (設計差し戻し): ` で始める** (呼び出し側がこの書式で設計差し戻しを識別して別立てにする) (implementer は書く対象を決められないため、実装ではなく設計側の欠落)
 - 存在すれば実行し、exit code で判定する。**失敗は `severity: high` / `category: e2e` の finding として記録する** (`checked.e2e` だけに書くと修正ループに入らない)
 - 実行に dev server 等が要る場合は `docs/design/DESIGN.md`「開発・検証コマンド」に従い**自分でバックグラウンド起動し、検査後に停止する**。ブラウザの逐次操作 (chrome-devtools) は行わない
 
@@ -64,7 +64,7 @@ model: opus
 
 前ラウンドの findings JSON を Read し、**各指摘が「閉じたか」ではなく「同じ壊れ方が残っていないか」で判定する**。修正が指摘箇所だけを塞いで同型の穴を残す、あるいは修正自体が新しい欠陥を作るのが、確認レビューで high が残る主因である (実測: セッション e6b5eb50 では r2 でも high が 7 件出ており、うち複数は「r1 の high を塞ぐ機構自身が同じ壊れ方を作った」ものだった)。
 
-**対象は前ラウンドの `severity` が `high` の finding だけ**。`medium` / `low` は残存判定しない — 呼び出し側が修正対象にしていない指摘を「残存」と数えると、直していないものが毎回そのまま `residual` に載り、件数が「修正が効かなかった量」を表さなくなる (medium は改めて 1〜4 の通常検査で拾えばよい)。親が `adjudication` を追記した finding も対象外 — 誤検出として裁定済み、または親が直接直したものなので、再度数えると同じ指摘で駐車を招く。
+**対象は前ラウンドの finding のうち、呼び出し側が修正対象にした severity のものだけ** (既定は `high` — dev-impl は high しか直させない。high/medium を直す呼び出し側から渡された場合は medium も対象にする)。修正対象でない severity を残存判定しない — 直していない指摘を「残存」と数えると、毎回そのまま `residual` に載り、件数が「修正が効かなかった量」を表さなくなる (対象外の severity は改めて 1〜4 の通常検査で拾えばよい)。親が `adjudication` を追記した finding も対象外 — 誤検出として裁定済み、または親が直接直したものなので、再度数えると同じ指摘で駐車を招く。
 
 各指摘について次を確かめる:
 
