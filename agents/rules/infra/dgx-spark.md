@@ -9,12 +9,12 @@ paths:
 
 - 種別: 環境リファレンス
 - 対象読者: 別セッション・別マシンで作業する Claude
-- 最終確認: 2026-09-09 (ccds の起動挙動と、監査で挙がった記述の実機突合)
+- 最終確認: 2026-09-09 (Qwen レシピを `0b62e12` へ更新して再起動。ccds の起動挙動と、監査で挙がった記述の実機突合)
 - 他の節の確認日: 2026-09-06 (一部は 2026-09-09 に再確認)。「実測値」節の性能値のみ 2026-09-05。表ごとに計測日を書いてある
 
 自宅に NVIDIA DGX Spark (GB10) が 2 台あり、vLLM の TP=2 (tensor parallel、2 台に重みを分割する並列方式) でローカル LLM を常時サービングしている。Mac の Claude Code (`ccsp`) / OpenCode (`ocsp`) の 2 つからバックエンドとして使える。
 
-**レシピは 2 系統ある。** DeepSeek 系 (Vision-Exp) と Qwen 系 (Qwen3.8-Flash-Next) で、ポート 8888 と GPU を共有するため**同時には 1 つしか配信できない**。2026-09-06 時点の配信は Qwen3.8-Flash-Next である。系統ごとにスクリプト名・コンテナ名・設定ファイル名が違うので、作業前にどちらが動いているかを確かめる (`ssh -n spark-head 'docker ps --filter name=vllm'`)。
+**レシピは 2 系統ある。** DeepSeek 系 (Vision-Exp) と Qwen 系 (Qwen3.8-Flash-Next) で、ポート 8888 と GPU を共有するため**同時には 1 つしか配信できない**。2026-09-09 時点の配信は Qwen3.8-Flash-Next である。系統ごとにスクリプト名・コンテナ名・設定ファイル名が違うので、作業前にどちらが動いているかを確かめる (`ssh -n spark-head 'docker ps --filter name=vllm'`)。
 
 **dotfiles リポジトリの所在は `~/dev/github.com/skanehira/dotfiles` である。** 本書でリポジトリ相対で書くパスはすべてここを基点とする。**本書の表で「—」は該当なしを意味する。**
 
@@ -66,6 +66,7 @@ paths:
 | `stop` / `start` | 本書で使う DeepSeek 系スクリプト (`stop-deepseek-v4-flash-dspark.sh` / `start-deepseek-v4-flash-dspark.sh`) の略記。**Qwen 系の `stop.sh` / `start.sh` とは別物** | 「起動と停止」 | 上流 | 人 |
 | `.env` | Qwen レシピの設定 1 枚。DeepSeek 系の `.env.dspark` とは別物 | head の `~/Qwen3.8-Flash-Next-Dual-DGX-Sparks/.env` | 人 (`.env.sample` から複製) | Qwen レシピのスクリプト |
 | `vllm-fn` | Qwen レシピのコンテナ名。**head と worker で同名** | Qwen レシピの `start.sh` | `start.sh` | `docker` |
+| `resolve_snapshot.py` / `check-weights.sh` / `verify-weights.py` | Qwen レシピ**限定**の重み検証ツール 3 種。1 つ目はシャードの完全性だけを見る起動前の門、2 つ目は両ノードを見る入口、3 つ目は 1 ノードを HF の manifest と照合する本体 (2 つ目が各ノードで呼ぶ)。**`utility-spark-model-fetch` 同梱の `verify_shards.py` とは別実装で、配布中はスキル側、起動前はレシピ側を使う** | 「重みの検証」 | 上流 (`git clone`) | `start.sh` (1 つ目) / `check-weights.sh` (3 つ目) / 人 |
 | `~/spark-bench` | 計測ハーネス一式 (主に `bench.py` / `snap.py` / `pc_probe.py` / `results/`)。**dotfiles 管理外で再作成手段が無い** | head の `~/spark-bench/` | 人 | 人 / Claude |
 | `utility-spark-model-fetch` | 新しい重みを head で 1 回落として worker へ rsync するスキル。`scripts/verify_shards.py` を同梱する (head 上の同名ファイルは配布済みコピーで、正本はこちら) | `agents/skills/utility-spark-model-fetch/SKILL.md` | dotfiles | Claude |
 | sparkDash | 監視・SSH 操作・Wake-on-LAN を持つ Web UI。**認証が無い** | head の `~/sparkDash/` | 上流 (`git clone`) | 人 (ブラウザ) |
@@ -232,18 +233,18 @@ op read 'op://Personal/DGX Spark vLLM API Key/credential' | ssh spark-head 'cat 
 
 ### メモリの使われ方
 
-GB10 は CPU と GPU が同じ物理メモリを共有する統合メモリ構成である。**`GPU_MEMORY_UTILIZATION_TEXT=0.835` は通常の GPU なら VRAM の 83.5% を指すが、ここではシステムメモリ全体の 83.5% を意味する。** 起動直後から 100 GiB 超が vLLM に確保されて `free` の残りが数 GiB になる (DeepSeek 系で 6〜8 GiB、Qwen 系の head は 1〜4 GiB) が、これは設定どおりの先取りであって、リークでも不足でもない。
+GB10 は CPU と GPU が同じ物理メモリを共有する統合メモリ構成である。**`GPU_MEMORY_UTILIZATION_TEXT=0.835` は通常の GPU なら VRAM の 83.5% を指すが、ここではシステムメモリ全体の 83.5% を意味する。** 起動直後から 100 GiB 超が vLLM に確保されて `free` の残りが数 GiB になる (DeepSeek 系で 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB) が、これは設定どおりの先取りであって、リークでも不足でもない。
 
-**値は配信中の系統で変わる。** 左が DeepSeek 系 (Vision-Exp) 配信時、右が Qwen 系配信時である (性能以外は 2026-09-06 の実測。`MemAvailable` 行のみ 2026-09-09 の再計測を併記)。
+**値は配信中の系統で変わる。** 左が DeepSeek 系 (Vision-Exp) 配信時、右が Qwen 系配信時である (DeepSeek 系の列は 2026-09-06 の実測、Qwen 系の列は 2026-09-09 の再起動後に無負荷で採った値。`MemAvailable` の Qwen 列だけは 2026-09-06 の高負荷時からの幅で書いてある)。
 
 | 項目 | DeepSeek 系 head / worker | Qwen 系 head / worker |
 | --- | --- | --- |
 | 物理メモリ合計 | 121.7 / 121.7 GiB | 121.7 / 121.7 GiB |
-| vLLM の確保 | 101.4 / 101.4 GiB | 104.8 / 104.8 GiB |
-| `MemAvailable` | 6.1 / 7.5 GiB | 1〜4 GiB (高負荷時 2 GiB 未満) / 5.6〜6.5 GiB |
-| swap 使用 | 3.9 / 2.9 GiB | 4.9 / 4.2 GiB |
+| vLLM の確保 | 101.4 / 101.4 GiB | 100.7 / 100.8 GiB |
+| `MemAvailable` | 6.1 / 7.5 GiB | 1.3〜5.7 / 5.6〜10.1 GiB |
+| swap 使用 | 3.9 / 2.9 GiB | 5.0 / 4.1 GiB |
 
-DeepSeek 系では期待値 121.7 × 0.835 = 101.6 GiB と実測 101.4 GiB が一致する。head の残りが worker より少ないのは、head だけがデスクトップセッション・sparkDash・tailscaled を抱えているためである。**Qwen 配信中は head の空きが 1〜4 GiB を動き、負荷が高いと 2 GiB を切る (2026-09-06 実測 1.3〜1.7 GiB / 2026-09-09 実測 4.0 GiB)。これも先取りであって不足ではない。メモリを空けたくなったらプロセスを探す前にこの値を疑う。**
+どちらの系統も期待値 121.7 × 0.835 = 101.6 GiB の近傍に収まる (DeepSeek 系 101.4 GiB / Qwen 系 100.7 GiB)。head の残りが worker より少ないのは、head だけがデスクトップセッション・sparkDash・tailscaled を抱えているためである。**Qwen 配信中の head の空きは負荷と稼働時間で 1.3〜5.7 GiB を動く** (2026-09-06 の高負荷時 1.3〜1.7 GiB / 2026-09-09 の再起動直後 5.7 GiB)。**これも先取りであって不足ではない。メモリを空けたくなったらプロセスを探す前にこの値を疑う。**
 
 ## 起動と停止
 
@@ -309,17 +310,17 @@ ssh -n spark-head "docker exec sparkDash node -e \"console.log(JSON.parse(requir
 
 ### Qwen3.8-Flash-Next (別系統のレシピ)
 
-**DeepSeek 系とは別リポジトリ・別イメージ・別スクリプト名である。** 混同すると停止スクリプトが効かない。2026-09-06 に配置・起動・`ccsp` / `ocsp` からの疎通まで確認した (`ocsp` は `drs` 未適用のため検証用の `HOME` に設定を置いて確認した)。
+**DeepSeek 系とは別リポジトリ・別イメージ・別スクリプト名である。** 混同すると停止スクリプトが効かない。2026-09-06 に配置・起動・`ccsp` / `ocsp` からの疎通まで確認した (`ocsp` は `drs` 未適用のため検証用の `HOME` に設定を置いて確認した)。2026-09-09 の更新後に起動の 3 段判定と reasoning effort の語彙を取り直しており、クライアント 2 つからの疎通はそのとき再確認していない。
 
 **この構成には認証が無い。** 下の「認証」を先に読む。
 
-値の出所はレシピの `.env` である (「レシピ」「重み」「画像入力」「既定の reasoning」「コンテナ名」の 5 行と、「コンテナイメージ」の Id・サイズを除く)。
+値の出所はレシピの `.env` である (「レシピ」「重み」「画像入力」「既定の reasoning」「コンテナ名」「`.env` に**書いていない**上流キー」の 6 行と、「コンテナイメージ」の Id・サイズを除く。最後の 1 行だけは定義上 `.env` に無い値なので、出所は `.env.sample` と上流の CHANGELOG である)。
 
 | 項目 | 値 |
 | --- | --- |
-| レシピ | head の `~/Qwen3.8-Flash-Next-Dual-DGX-Sparks` @ `c2325b2` |
-| チェックポイント (`MODEL_ID`) | `nvidia/Qwen3.8-Flash-Next-NVFP4`。**revision を固定するキーは `.env` に無い**。`start.sh` がキャッシュの snapshot ディレクトリ名から実行時に解決する (現在は `fab0aecb760cec45227f6656abcaafa11abca87a` の 1 つだけ) |
-| 重み | 124 GiB / safetensors 11 本 (`du -sh` の実測。レシピの `.env` のコメントは 133G と書いているが実測と食い違う)。**両ノードに配置済み** |
+| レシピ | head の `~/Qwen3.8-Flash-Next-Dual-DGX-Sparks` @ `0b62e12` |
+| チェックポイント (`MODEL_ID`) | `nvidia/Qwen3.8-Flash-Next-NVFP4`。**revision を固定するキーは `.env` に無い**。`files/resolve_snapshot.py` が `refs/main` の指す snapshot を優先し、`model.safetensors.index.json` が名指すシャードが全て揃っていることを起動前に検査する (`refs/main` が不完全なら他の完全な snapshot を探し、それも無ければ `start.sh` が止まる)。当方の `refs/main` は `fab0aecb760cec45227f6656abcaafa11abca87a` で、snapshot もこれ 1 つだけ (検証手段と revision が動く条件は → 「重みの検証」) |
+| 重み | 124 GiB / safetensors 11 本 (`du -sh` の実測)。レシピの `.env` のコメントの 133G は 10 進 GB での表記で、実測と食い違わない (HF の manifest は 132.7 GB、vLLM の起動ログは 123.57 GiB と出る)。**両ノードに配置済み** |
 | API 上のモデル名 (`SERVED_MODEL_NAME`) | `qwen3.8-flash-next` |
 | 画像入力 | 使える (2026-09-06 に実測。8x8 の赤い PNG を data URL で渡して「赤」と回答) |
 | コンテキスト上限 (`MAX_MODEL_LEN`) | サーバ 524,288 トークン / Claude Code からは 491,520 (`ccsp` が出力用の余白 32,768 を引く)。**ネイティブは 262,144 で、`YARN_ENABLE=true` + `YARN_FACTOR=2.0` で伸ばしている** |
@@ -332,7 +333,8 @@ ssh -n spark-head "docker exec sparkDash node -e \"console.log(JSON.parse(requir
 | コンテナ名 | `vllm-fn` (head と worker で同名。`start.sh` が付ける) |
 | 追加の vLLM 引数 (`EXTRA_VLLM_ARGS`) | 未設定 (`.env` でコメントアウトされている)。認証を付けるならここに `--api-key <値>` を書く |
 | 起動前の GPU ガード (`REQUIRE_IDLE_GPU`) | `true` (上流既定のまま。取りうる値: `true` / `false`)。どちらかのノードで GPU を掴むプロセスがあれば起動を拒否する |
-| 上流既定からの差分 | 5 キー。**サイト固有が 2 つ**: `IFACE` = `enp1s0f1np1` / `IB_HCA` = `=rocep1s0f1` (先頭の `=` は「完全一致で 1 デバイスだけ」を意味する上流の記法で、typo ではない)。**常用長に合わせたものが 3 つ**: `MAX_MODEL_LEN` 262144 → 524288 / `YARN_ENABLE` false → true / `YARN_FACTOR` 4.0 → 2.0 (理由は下の「YaRN」)。`HEAD_IP` / `WORKER_IP` は配布既定のまま実機と一致するので変更していない (実値は「依拠する外部事実」の確認コマンドで引く) |
+| 上流既定からの差分 | **値を変えた**キーが 5 つ (下の「書いていない上流キー」2 つは別勘定)。**サイト固有が 2 つ**: `IFACE` = `enp1s0f1np1` / `IB_HCA` = `=rocep1s0f1` (先頭の `=` は「完全一致で 1 デバイスだけ」を意味する上流の記法で、typo ではない)。**常用長に合わせたものが 3 つ**: `MAX_MODEL_LEN` 262144 → 524288 / `YARN_ENABLE` false → true / `YARN_FACTOR` 4.0 → 2.0 (理由は下の「YaRN」)。`HEAD_IP` / `WORKER_IP` は配布既定のまま実機と一致するので変更していない (実値は「依拠する外部事実」の確認コマンドで引く) |
+| `.env` に**書いていない**上流キー | 2 つ。どちらも未設定が現行動作なので `.env` に足していない (値の出所はこの行だけ `.env.sample` と上流の CHANGELOG)。**`ABLIT`** (未設定 = 0。1 は値の切り替えではなく**別チェックポイントへの乗り換え**で、`drowzeys/keys-Qwen3.8-Flash-Next-NVFP4-dual-ablit-house-qsa-L3-47` を full snapshot で取り直す。HF 上での規約同意と `HF_TOKEN` (`.env` に書くか環境変数で渡す。この 2 キーだけは環境が `.env` に優先する) に加えて、124 GiB 級の取得と worker への配布が要る → `utility-spark-model-fetch`)。**`MAMBA_SSM_CACHE_DTYPE`** (未設定 = チェックポイントの float32。`bfloat16` にすると再帰状態の dtype が半分になる。**上流の「集約 decode スループット +8.5%」は単 Spark TP=1 での計測で、この 2 ノード TP=2 では未計測**と上流自身が書いている)。採用は `.env` に 1 行足して停止 → 起動、戻すのは行を消して同じ再起動 (13〜14 分止まる → 「既知の制約」5)。**`.env.sample` 側の既定は `ABLIT=0` / `MAMBA_SSM_CACHE_DTYPE=bfloat16` なので、`.env` を作り直すと後者が黙って有効になる** |
 
 #### reasoning effort の語彙
 
@@ -373,23 +375,26 @@ cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && ./start-deepseek-v4-flash-dspark.s
 
 **先に相手系統を停止する。** ポート 8888 を共有するうえ、`REQUIRE_IDLE_GPU=true` がどちらかのノードで GPU を掴むプロセスを見つけた時点で起動を拒否する。停止前に稼働中リクエストが 0 であることを確認する (「既知の制約」5)。**停止スクリプトを取り違えると相手系統のコンテナは消えないので、「止めたつもり」で次の起動が拒否される。**
 
-**`--launch` を使う。** 引数なしの `./start.sh` は HuggingFace からのダウンロードと worker への rsync から始める。どちらも完了済みなので `--launch` が両方を飛ばす。
+**`--launch` を使う。** 引数なしの `./start.sh` は HuggingFace からのダウンロードと worker への rsync から始める。どちらも完了済みなので `--launch` が両方を飛ばす。**`--launch` でも head 側のシャード完全性の検査は必ず通り、欠落があればコンテナを作らずに止まる** (→「重みの検証」)。
 
 **cold start は約 11 分である** (上流計測、2026-09-05 時点の README: NCCL 約 40 秒、重みロード 458 秒、engine init 92 秒、graph capture 約 7 秒)。DeepSeek 系の約 6 分より長い。20 分を過ぎても上がらなければ両ノードで `docker logs vllm-fn` を見る (worker は「worker に入る」節の入れ子 ssh)。
 
-**実測値 (2026-09-06 の初回起動)。** 上流 README が載せている数字は別のチェックポイントで採ったものなので一致しない。
+**起動の実測値。** 上流 README が載せている数字は別のチェックポイントで採ったものなので一致しない。列は 2 回の起動で、右が最新である。括弧内はそのときのレシピの commit。
 
-| 項目 | 実測 |
-| --- | --- |
-| 重みロード (本体) | head 423 秒 / worker 463 秒 (11 シャード) |
-| 重みロード (MTP ドラフタ) | head 75 秒 / worker 52 秒 |
-| engine init (profile + KV 確保 + warmup) | 163 秒 |
-| CUDA graph capture | 16 秒 (head 0.39 GiB / worker 0.77 GiB) |
-| コンテナ起動から `/health` 200 まで | 823 秒 (13.7 分) |
-| KV キャッシュ | head 35.35 GiB / worker 33.42 GiB、合計 3,809,995 トークン |
-| 同時実行できる 262,144 トークンの文脈 | 14.53 本 (KV キャッシュのトークン数 ÷ 262,144) |
+| 項目 | 2026-09-06 (`c2325b2`) | 2026-09-09 (`0b62e12`) |
+| --- | --- | --- |
+| 重みロード (本体) | head 423 秒 / worker 463 秒 (11 シャード) | head 452 秒 (11 シャード。tqdm の経過表示 `[07:32]` から。同じログの `Loading weights took` 行は 455.41 秒。worker の内訳は未取得) |
+| 重みロード (MTP ドラフタ) | head 75 秒 / worker 52 秒 | head 84 秒 (worker の内訳は未取得) |
+| モデルロード合計 (`Model loading took`) | 未取得 | head 578 秒 / worker 491 秒 (各ノードが確保した 64.55 GiB を含む。本体 + ドラフタの内訳とは待機分だけずれる) |
+| engine init (profile + KV 確保 + warmup) | 163 秒 | 122 秒 |
+| CUDA graph capture | 16 秒 (head 0.39 GiB / worker 0.77 GiB) | 14 秒 (head 0.24 GiB / worker 0.30 GiB) |
+| コンテナ起動から `/health` 200 まで | 823 秒 (13.7 分) | 794 秒 (13.2 分) |
+| KV キャッシュ | head 35.35 GiB / worker 33.42 GiB、合計 3,809,995 トークン | head 35.55 GiB / worker 33.2 GiB、合計 4,214,141 トークン |
+| 同時実行できる 524,288 トークンの文脈 | 7.27 本 (トークン数 ÷ 524,288 で算出) | 8.04 本 (vLLM が起動ログに出す値) |
 
-上流 README の「約 11 分」より 2〜3 分長い。**判定にはこの実測値 (約 14 分) を使う。**
+上流 README の「約 11 分」より 2〜3 分長い。**判定にはこの実測値 (約 13〜14 分) を使う。**
+
+**KV のバイト数はほぼ同じなのにトークン数が 10.6% 増えている** (68.77 GiB で 3,809,995 → 68.75 GiB で 4,214,141)。`.env` も vLLM の起動引数も同一 (`GPU_MEMORY_UTILIZATION` 0.835 / `MAX_MODEL_LEN` 524,288 / `MAX_NUM_SEQS` 8 / `MAX_NUM_BATCHED_TOKENS` 8,192 / `KV_CACHE_DTYPE` fp8 / MTP 3 トークン) なので、当方の設定変更によるものではない。**原因は特定していない** — 上流のパッチによる KV レイアウトの変化か、hybrid のブロック配置が起動ごとに動くだけかを切り分けていない。**プールのトークン数は固定値として扱わない。**
 
 **起動できたかは 3 段で判定する。**
 
@@ -407,6 +412,62 @@ curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: appli
 ```
 
 Qwen レシピには DeepSeek 系の `smoke-…sh` に相当するスクリプトが無いので、3 段目はクライアントから叩いて代用する。
+
+#### レシピを更新する
+
+上流の更新を取り込む順路である。**`.env` は追跡外なので `git pull` では消えない。**
+
+```bash
+ssh spark-head
+cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks
+git fetch -q && git log --oneline HEAD..origin/main    # 先行分を読む
+git pull --ff-only
+diff <(grep -E '^[A-Za-z0-9_]+=' .env.sample | sort) <(grep -E '^[A-Za-z0-9_]+=' .env | sort)
+```
+
+最後の `diff` は**上流にキーが増えていないか**を見るために打つ (出力に IP を含む行があるので証跡として貼らない)。増えていたら「Qwen3.8-Flash-Next」の表の「`.env` に**書いていない**上流キー」行を更新する。そのうえで停止 → 起動する (→「切り替えと起動」)。
+
+**更新後は次の 4 点で悪化していないことを確かめる。** 起動の 3 段判定は起動の可否しか見ないので足りない。2 と 3 は**停止する前に取っておき**、起動後の値と突き合わせる。
+
+1. 起動の 3 段判定 (`/health` → `/v1/models` → 実際の生成)
+2. `/v1/models` の `id` と `max_model_len` が更新前と一致すること。**`created` と `permission` は起動のたびに変わるので全文比較に使わない** (常に不一致になり検出器として働かない)
+3. reasoning effort の語彙が変わっていないこと (→「reasoning effort の語彙」。**2 経路とも打つ**)
+4. `docker inspect vllm-fn --format '{{.HostConfig.RestartPolicy.Name}}'` が `no` のままであること
+
+**KV プールのトークン数は起動ごとに動くので不合格の根拠にしない** (→「実測値」)。
+
+戻すときは `git checkout <旧 sha>` してから停止 → 起動する (detached HEAD になるので復帰は `git checkout main`)。重み・イメージ・`.env` のいずれも変わらないので戻せる。
+
+#### 重みの検証
+
+`0b62e12` のレシピは重みの検証手段を 3 つ持つ (新規に入ったのは 1 つ目と 3 つ目で、2 つ目は既存スクリプトの拡張)。**いずれも Qwen レシピ限定である** (DeepSeek 系には無い)。パスはレシピディレクトリからの相対で、実行も同ディレクトリで行う。
+
+- `python3 files/resolve_snapshot.py <hub の repo ディレクトリ>` — `model.safetensors.index.json` が名指すシャードが揃っているかだけを見る。`refs/main` の指す snapshot が完全ならそれを、そうでなければ最も新しい完全な snapshot を、それも無ければ `refs/main` を返す。exit 0 = 完全 / 1 = 欠落あり / 2 = snapshot が無い。**`start.sh` が起動前に必ず通す門はこれで、完全でなければ起動せずに止まる**
+- `./check-weights.sh` — **両ノード**を見る入口。引数なしは presence と size (124 GiB / 11 シャード) だけを数秒で見て exit 0 を返し、manifest を取りに行かない。**配信中に打てるのはここまで。** `--dry-run` は manifest を取って presence と size を照合する (hashing と worker への scp はしない)。`--verify` は worker へ検証器と manifest を scp したうえで全シャードの SHA-256 を照合するため、両ノードで 124 GiB ずつ読む。**`--verify` は停止中に打つ**
+- `python3 verify-weights.py` — **1 ノード分**を HF の manifest と照合する本体 (`check-weights.sh` が各ノードで呼ぶのもこれ)。`--repo <ID>` で対象、`--revision <sha>` で照合先のリビジョン、`--manifest <ファイル>` で保存済み manifest (HF へ問い合わせない)、`--dry-run` は presence と size だけで内容ハッシュを飛ばす。exit 0 = 全一致 / 1 = 問題あり / 2 = manifest かディレクトリを解決できない
+
+**manifest と照合するモードは revision を指定しないと当環境では必ず失敗するが、腐敗ではない。** 引数なしの `./check-weights.sh` は manifest を取りに行かず、両ノードの presence と size (124 GiB / 11 シャード) だけを見て exit 0 で通る。失敗するのは manifest を取る `--dry-run` と `--verify` である (2026-09-09 実測)。manifest を HF の `@main` から取るのに対し、キャッシュは取得当時の revision (`fab0aecb760cec45227f6656abcaafa11abca87a`。以下 `fab0aecb` と略す) に固定されているためである。HF 側の `main` は `fc694b54` へ進んでおり、2 つの revision で中身が違う `config.json` と `README.md` の 2 件だけが size 不一致として出る (リポジトリ全 25 ファイルのうち、safetensors 11 本を含む 23 件は一致する。2026-09-09 実測)。
+
+head だけを見るなら revision を指定して打つ。
+
+```bash
+ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && python3 verify-weights.py \
+  --repo nvidia/Qwen3.8-Flash-Next-NVFP4 \
+  --revision fab0aecb760cec45227f6656abcaafa11abca87a --dry-run'
+# 25/25 一致で exit 0 (2026-09-09 実測)。--dry-run なので size まで。内容ハッシュまで見るなら外す
+```
+
+**両ノードを見るときは manifest を先に固定する。** `check-weights.sh` は `--revision` を受けないので、revision を固定した manifest を作って渡す (スクリプトのヘッダに書かれた順路。**当方では未実行**)。
+
+```bash
+ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && \
+  python3 verify-weights.py --repo nvidia/Qwen3.8-Flash-Next-NVFP4 \
+    --revision fab0aecb760cec45227f6656abcaafa11abca87a \
+    --save-manifest /tmp/qwen-manifest.json --fetch-only && \
+  ./check-weights.sh --manifest /tmp/qwen-manifest.json'
+```
+
+**新しい revision へ上げるかは別の判断である。** `fc694b54` の `config.json` は MTP の routed experts を `FP8_PB_WO` と名乗り、`hf_quant_config.json` 側の `FP8_BLOCK_SCALES` と食い違う。`0b62e12` の `start.sh` はこれを別名として受理するようになったが、**当方の `fab0aecb` は両方とも `FP8_BLOCK_SCALES` なので、この修正は当環境では効いていない** (2026-09-09 実測)。**欠落を埋めるつもりで revision を指定せずに再取得すると `refs/main` が `fc694b54` へ動き、次の起動から配信 revision が黙って変わる。**
 
 #### YaRN
 
@@ -426,7 +487,7 @@ Qwen レシピには DeepSeek 系の `smoke-…sh` に相当するスクリプ�
 
 **このキットでの YaRN は検証されていない。** 上流の CHANGELOG によれば、2026-09-05 まで `--hf-overrides` の出力先が誤っていて YaRN は無効 (silent no-op) だった。それ以前の「1M で動いた」報告はすべてスケーリングなしの rope で 1M を流していたものである。修正後に品質を測った報告は上流にもコミュニティにも無い。**長文脈の回答を信用する前に自分で確かめる。**
 
-**262,144 に戻すなら YaRN も切る。** `start.sh` は `MAX_MODEL_LEN` が 262,144 以下のとき `YARN_ENABLE` を強制的に false にする (`start.sh:121-123`)。ネイティブ以下では rope スケーリングは品質を落とすだけだからである。
+**262,144 に戻すなら YaRN も切る。** `start.sh` は `MAX_MODEL_LEN` が 262,144 以下のとき `YARN_ENABLE` を強制的に false にする (`0b62e12` では `start.sh:153-156`。**この行番号は上流の更新でずれるので、`grep -n 262144 start.sh` で引き直す**)。ネイティブ以下では rope スケーリングは品質を落とすだけだからである。
 
 #### 認証
 
@@ -625,6 +686,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | 応答しない | 下の待ち行列コマンド | コンテナは生きていて過負荷。同時リクエスト上限 (DeepSeek 系 6 / Qwen 系 8) を超えた分が待つので、待ち行列が 0 でなければ過負荷 |
 | コンテナが無い | 両ノードで `docker ps --filter name=vllm` (DeepSeek 系・Qwen 系の両方を拾う) | 停止スクリプトで止めたまま。起動し直す |
 | 起動に失敗する | `./logs-deepseek-v4-flash-dspark.sh` (Qwen 系は `docker logs vllm-fn`) | DeepSeek 系の `no usable RoCEv2 GID` は RoCE 2 本目の IP か MTU (Qwen 系は `IB_HCA` が 1 本なのでこの形では出ない)。Qwen 系は相手系統が GPU を掴んだままだと `REQUIRE_IDLE_GPU` で拒否される |
+| Qwen 系がコンテナを作らずに `Checkpoint snapshot is incomplete` で止まる | `python3 files/resolve_snapshot.py <hub の repo ディレクトリ>` の exit code (0 以外) | シャードの欠落。`0b62e12` から `start.sh` が起動前に検査するようになった (→「重みの検証」)。**コンテナが 1 つも作られないので `docker logs vllm-fn` は空振りする。`start.sh` の標準出力を見る。** 復旧は `./download.sh` での再取得だが、**revision を指定しないと配信 revision が動く** |
 | `model not found` が出る | `curl .../v1/models` で配信名を見る | セッション起動後にサーバ側で切り替えた。`ccsp` / `ocsp` は起動時のモデル名を送り続けるので起動し直す |
 | `ocsp` が「`<名前>` は配信されていません」で止まる | メッセージが出す配信中の一覧 | 要求した短縮名と実際の配信モデルが違う。これは異常ではなく配信前検査が効いた状態。**この文言を出すのは `ocsp` だけ** |
 | `ccsp` / `ocsp` が「取得できません」で止まる | `ccsp status` / `ocsp status` でサーバの生死を見る。メッセージが出す URL も見る | **`ccsp` はこの 1 文言に 2 つの原因を束ねている。** 要求したモデルが配信されていない場合と、サーバに届かない場合の両方。メッセージが続けて出す「配信中: …」が空なら後者。認証を復活させた場合も 401 でこうなる (→「API キーの流れ」)。**接続先を誤った側に強制した場合 (出先で `lan`、自宅で `ts`) もプローブを飛ばしてここに落ちる** |
@@ -633,8 +695,8 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | `Unexpected reasoning effort <値>` の 400 | 送っている effort の値 (`CCSP_EFFORT` / `opencode.json`) | **両方の経路で出る。** 検査はチャットテンプレートにあり、`/v1/messages` も `/v1/chat/completions` も同じテンプレートを通る (→「reasoning effort の語彙」)。Qwen で使えるのは `low` / `medium` / `xhigh` の 3 つ。**Qwen 配信中は既定の設定で踏まない** (`_ccsp_effort` と `opencode.json` が `xhigh` を持つ)。踏むのは (1) `CCSP_EFFORT` に語彙外の値を入れたとき (2) `_ccsp_effort` / `opencode.json` に登録していないモデルを配信したとき (既定の `high` が飛ぶ) (3) **DeepSeek 系に切り替えた最初の 1 回** (両クライアントが送る `high` はレシピの語彙に合わせただけで未実測) |
 | `Input should be 'low', 'medium', ...` の 400 | 送っている effort の値 | `ccsp` の経路 (`/v1/messages`) に `none` を渡した。スキーマが `none` を持たないため、テンプレートより手前で弾かれる。**`ocsp` の経路では `none` が通る**という非対称がある (→「reasoning effort の語彙」) |
 | OpenCode がモデルを拒否する | `agents/bindings/opencode/opencode.json` の `provider.spark.models` | 宣言の無いモデル名は OpenCode 側が受け付けない |
-| 起動待ちが長すぎる | head は `docker logs <コンテナ名>`、worker は「worker に入る」節のコマンドで同じものを打つ | 正常な所要は DeepSeek 系が約 6 分、Qwen 系が約 14 分 (実測)。DeepSeek 系は 10 分、Qwen 系は 20 分を超えたら worker 側だけ落ちていることがあるので両ランクを見る |
-| 起動直後から空きメモリが少ない | `free -h` | 正常。`GPU_MEMORY_UTILIZATION_TEXT=0.835` の先取り。**残る量は系統と負荷で変わる** (DeepSeek 系 6〜8 GiB、Qwen 系の head は 1〜4 GiB。2026-09-09 実測は 4.0 GiB。→「メモリの使われ方」) |
+| 起動待ちが長すぎる | head は `docker logs <コンテナ名>`、worker は「worker に入る」節のコマンドで同じものを打つ | 正常な所要は DeepSeek 系が約 6 分、Qwen 系が約 13〜14 分 (実測)。DeepSeek 系は 10 分、Qwen 系は 20 分を超えたら worker 側だけ落ちていることがあるので両ランクを見る |
+| 起動直後から空きメモリが少ない | `free -h` | 正常。`GPU_MEMORY_UTILIZATION_TEXT=0.835` の先取り。**残る量は系統と負荷で変わる** (DeepSeek 系 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB。→「メモリの使われ方」) |
 | `hi` と打っただけで network retry | `ccsp status` で LAN 到達を確認 | mDNS の IPv6 フォールバック。`NODE_OPTIONS` に `--dns-result-order=ipv4first` が入っているか見る |
 | 応答後に 200 秒以上返らない | `settings.spark.json` の `enabledPlugins` | `security-guidance` の Stop hook (→「遅いと感じたときに疑う順序」1) |
 | 全体的に遅い | 「遅いと感じたときに疑う順序」を上から | クライアント側が大半 |
@@ -685,7 +747,9 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 | サービングの設定値 | `ssh -n spark-head 'cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && ./validate-dspark-config.sh \| head -20'` (絞らないと解決値の後に vLLM コマンド全文が数 KB 続く) |
 | 上流の先行コミット | `ssh -n spark-head 'cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && git fetch -q && git rev-list --count HEAD..origin/main && git log --oneline HEAD..origin/main'` |
 | 全モデルの重み | `ssh -n spark-head 'du -sh ~/.cache/huggingface/hub/models--*'` (DeepSeek 系と Qwen 系の両方を拾う) |
-| Qwen レシピの commit | `ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && git log --oneline -1'` |
+| Qwen レシピの commit | `ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && git log --oneline -1'`。上流の先行分は同じディレクトリで `git fetch -q && git log --oneline HEAD..origin/main` |
+| HF 側の `main` が動いていないか | `curl -s https://huggingface.co/api/models/nvidia/Qwen3.8-Flash-Next-NVFP4 \| python3 -c 'import json,sys;print(json.load(sys.stdin)["sha"])'`。**`fab0aecb` 以外を返すならキャッシュより先に進んでいる** (2026-09-09 時点は `fc694b54`。意味は → 「重みの検証」) |
+| Qwen 系の重みが完全か | `ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && python3 files/resolve_snapshot.py ~/.cache/huggingface/hub/models--nvidia--Qwen3.8-Flash-Next-NVFP4; echo $?'` (0 で合格)。**陽性対照は存在しないディレクトリを渡して 2 が返ること。** head 1 ノードを manifest と突き合わせるなら「重みの検証」節の `verify-weights.py --revision`、両ノードなら同節の `--save-manifest` + `check-weights.sh --manifest` を使う (revision を省くと HF の `main` と比べて必ず 2 件不一致になる)。2026-09-09 実測 |
 | 両ノードのイメージ | `ssh -n spark-head 'docker images --format "{{.Repository}}:{{.Tag}} {{.ID}} {{.Size}}"'` (worker は「worker に入る」節経由で同じもの) |
 | worker 側の同じ確認 | 「worker に入る」節のコマンドの `<worker で実行するコマンド>` に上記を入れる |
 | 稼働中のモデル名と上限 | `curl http://spark-head.local:8888/v1/models` |
@@ -698,7 +762,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 | `ocsp` の接続先上書きが効くか | Mac 側で `OPENCODE_CONFIG_CONTENT='{"provider":{"spark":{"options":{"baseURL":"http://example.invalid:9/v1"}}}}' opencode debug config`。**`provider.spark.options.baseURL` がその値になり、`opencode.json` に宣言した全モデルと `npm` が残っていれば合格** (ディープマージの確認)。**陰性対照として環境変数を外した同じコマンドを打ち、`spark-head.local` が返ることも見る** (2026-09-07 に opencode 1.18.18 で実測) |
 | 上書きが `options` の兄弟キーを消さないか | 認証を戻す前に確かめる。`opencode.json` を写した検証用の `HOME` を作って `provider.spark.options.apiKey` に目印の文字列を入れ、`HOME=<検証用> OPENCODE_CONFIG_CONTENT='…baseURL のみ…' opencode debug config` を打つ。**`baseURL` が差し替わったうえで `apiKey` の目印が残っていれば合格** (2026-09-07 に実測。マージは `options` の中まで再帰する) |
 | OpenCode の設定が live edit か | Mac 側で `readlink -f ~/.config/opencode/opencode.json`。**dotfiles 配下を返せば live、`/nix/store/…` で終われば store コピー。** **`-f` を落とすと判定が壊れる**: `mkOutOfStoreSymlink` は `~/.config/…` → `…-home-manager-files/…` → dotfiles の 2 段になるので、単 hop の `readlink` は live でも `/nix/store/…` を返し、常に「`drs` 待ち」と誤判定する (2026-09-06 に実測。この行は live) |
-| zsh 関数が配布済みか | Mac 側で `diff -q "$(readlink -f ~/.config/zsh/functions/claude-deepseek.zsh)" zsh/functions/claude-deepseek.zsh` (dotfiles で実行)。**こちらは store の実コピーなので `readlink -f` も常に `/nix/store/…` を返す。** パスではなく内容を比べる。差があれば `drs` 待ち (2026-09-09 時点は差あり。中身は `ccds` の起動処理) |
+| zsh 関数が配布済みか | Mac 側で `diff -q "$(readlink -f ~/.config/zsh/functions/claude-deepseek.zsh)" zsh/functions/claude-deepseek.zsh` (dotfiles で実行)。**こちらは store の実コピーなので `readlink -f` も常に `/nix/store/…` を返す。** パスではなく内容を比べる。差があれば `drs` 待ち |
 | 2 つのクライアントの疎通 | Mac 側で `ccsp status` / `ocsp status`。**`drs` を当てて新しいシェルを開くまで関数は `command not found` になる** (配布済みかは上の `diff -q` の行で判る)。**Claude の Bash ツールのシェルスナップショットには `_spark_*` ヘルパーが入らないため、そこから打つと `command not found` と「に届かない」の誤判定になる (2026-09-09 実測)。切り分けは `curl -fs -o /dev/null http://spark-head.local:8888/health` で行う** |
 | 配信中のモデルが受ける reasoning effort と既定値 | **経路ごとに 2 本打つ** (語彙が違う → 「reasoning effort の語彙」)。`ocsp` 側は `curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: application/json' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"reasoning_effort":"high","max_tokens":1}'`、`ccsp` 側は `curl -s http://spark-head.local:8888/v1/messages -H 'Content-Type: application/json' -H 'anthropic-version: 2023-06-01' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"max_tokens":1,"output_config":{"effort":"high"}}'`。**`high` を投げて 400 のエラー本文を読むのが陽性対照** (対応値と既定値を列挙する)。**陰性対照として受理される値 (`xhigh`) でも打ち、200 が返ることを確かめる** (常に 400 を返す壊れた検出でないことの確認)。**Qwen 配信中に全値で実測済み。DeepSeek 系は未確認** |
 | 2 つのクライアントが実際に送る effort | **設定値**は Mac 側で `python3 -c "import json;print({k:v.get('options') for k,v in json.load(open('$HOME/.config/opencode/opencode.json'))['provider']['spark']['models'].items()})"` (`ocsp` が読むのはこの実体。dotfiles 側を読むと、まだ `drs` を当てていない世代では送っていない値を報告してしまう。どちらを指しているかは上の `readlink` の行で判る) と `ccsp` の起動時の 1 行。**送信値そのものを見るには記録プロキシを挟む** (下の手順 4)。**`ccsp` 側は `drs` と新しいシェルを経ないと新実装が動かない**ので、`grep -c _ccsp_effort ~/.config/zsh/functions/claude-deepseek.zsh` が 0 を返す間は effort を送らない |
@@ -715,7 +779,9 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 # WORKER_HOST / WORKER_VLLM_HOST_IP) が混じる。証跡として貼らない。
 ssh -n spark-head 'cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && diff <(grep -E "^[A-Za-z0-9_]+=" .env.dspark.example | sort) <(grep -E "^[A-Za-z0-9_]+=" .env.dspark | sort)'
 
-# 2. Qwen の .env と配布既定の差分
+# 2. Qwen の .env と配布既定の差分。行の差は 6 か所出るが、うち IB_GID_INDEX は
+# 値が両側とも 3 で末尾コメントだけが違う (表の「5 キー」は値が違うものの数)。
+# 「書いていない上流キー」2 つは .env.sample 側にしか無い行として出る。
 ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && diff <(grep -E "^[A-Za-z0-9_]+=" .env.sample | sort) <(grep -E "^[A-Za-z0-9_]+=" .env | sort)'
 
 # 3. frontmatter を持たず毎ターン展開される rules (dotfiles で実行)
