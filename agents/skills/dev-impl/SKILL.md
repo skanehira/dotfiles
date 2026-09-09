@@ -1,6 +1,6 @@
 ---
 name: dev-impl
-description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー → 修正 ≤2 ラウンド → PR → DoD ローカル実行 → merge → close」で自律実装するオーケストレーター。前提を満たすプロジェクトでは同じ依存レベルの issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
+description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー → 修正 ≤1 ラウンド (high のみ) → 検証 → PR → merge → close」で自律実装するオーケストレーター。前提を満たすプロジェクトでは同じ依存レベルの issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
 argument-hint: "[issue 番号の絞り込み、省略時は ready 全件]"
 model: opus
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
@@ -132,7 +132,7 @@ report_path: <SCRATCH>/impl-<N>.json`
 })
 ```
 
-**検収**: report JSON を読み、`status: done` は `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true` を満たすときだけ done と扱う (満たさない報告は失敗ブリーフとして `mode: fix` で差し戻す)。
+**検収**: report JSON を読み、`status: done` は `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true` を満たすときだけ done と扱う (満たさない報告は失敗ブリーフとして `mode: fix` で差し戻す)。**この差し戻しは 2.3 の fix ラウンドに数えない** — 実装の検収であって、レビュー指摘の修正ではない。
 
 分岐:
 
@@ -140,7 +140,7 @@ report_path: <SCRATCH>/impl-<N>.json`
 - `escalate` / `failed` (`contract_break` / `spec_insufficient` / `tests_failing`。`test_weakening_suspected` は fix 時のみ発生) → 2.6 へ (report の summary にある試行記録を issue コメントに使う)
 - **subagent がエラー、または report JSON が無い・パース不能** → 同条件で 1 回だけ再起動する。再失敗なら 2.6 へ
 
-### 2.3 レビュー (review-impl subagent、修正 ≤ 2 ラウンド)
+### 2.3 レビュー (review-impl subagent、修正 ≤ 1 ラウンド)
 
 ```javascript
 Agent({
@@ -151,14 +151,14 @@ Agent({
 base_sha: <BASE_SHA>       // 2.1 で控えた値
 issue_number: <N>
 focus: all
-previous_findings_path: <SCRATCH>/review-<N>-r<前ラウンド>.json   // r2 以降のみ。初回は行ごと省く
+previous_findings_path: <SCRATCH>/review-<N>-r1.json   // r2 のみ。初回は行ごと省く
 report_path: <SCRATCH>/review-<N>-r<ラウンド>.json`
 })
 ```
 
-**レビューと修正の回数はこう数える。初回レビューを r1 とし、レビューのたびに 1 ずつ増やす** (この採番が `findings_path` のファイル名に出るので、あとから何周したかを人も自分も数えられる。r0 から始めると 1 周ぶん過少に数えることになる)。レビューは r1 (実装直後) / r2 (fix 1 回目の後) / r3 (fix 2 回目の後) の最大 3 回、`mode: fix` は r1 と r2 の findings に対する最大 2 回。「最大 2 ラウンド」が数えているのは **fix の回数**であって review の回数ではない。`previous_findings_path` は r2 と r3 の 2 回渡ることになる。
+**レビューと修正の回数はこう数える。初回レビューを r1 とし、レビューのたびに 1 ずつ増やす** (この採番が `findings_path` のファイル名に出るので、あとから何周したかを人も自分も数えられる。r0 から始めると 1 周ぶん過少に数えることになる)。レビューは r1 (実装直後) と r2 (fix の後の確認) の**最大 2 回**、`mode: fix` は r1 の findings に対する**最大 1 回**。`previous_findings_path` は r2 の 1 回だけ渡る。
 
-`previous_findings_path` を渡すと、レビュワーは「前ラウンドの指摘が閉じたか」に加えて「同じ壊れ方が別の箇所へ転移していないか」を検査する (review-impl の検査項目 5)。渡さないと fresh context のレビュワーは前ラウンドの存在を知らないため、修正が作った同型の穴を次の周まで見逃す。**再開 run で前 run の review JSON が SCRATCH に無い場合は渡さない** (SCRATCH は run ごとに新規作成されるため)。その場合は項目 5 が働かないことを完了コメントに記す。
+`previous_findings_path` を渡すと、レビュワーは「前ラウンドの指摘が閉じたか」に加えて「同じ壊れ方が別の箇所へ転移していないか」を検査する (review-impl の検査項目 5)。渡さないと fresh context のレビュワーは前ラウンドの存在を知らないため、修正が作った同型の穴を見逃す。**再開 run で前 run の review JSON が SCRATCH に無い場合は渡さない** (SCRATCH は run ごとに新規作成されるため)。その場合は項目 5 が働かないことを完了コメントに記す。
 
 **`checked` の検収**: findings の件数を見る前に `checked` を確認する。次のいずれかなら検査が成立していないので、指示を明確化して 1 回再実行し、再発なら 2.6 へ (「何も検出できない検証の実行は検証ではない」):
 
@@ -166,18 +166,42 @@ report_path: <SCRATCH>/review-<N>-r<ラウンド>.json`
 - UI に触れる差分なのに `e2e` が理由の無い `skipped`
 - `previous_findings_path` を渡したのに `previous_findings` が `none` (検査項目 5 の未実施) または `unreadable(...)` (パスの渡し間違い — この場合はパスを直して再実行する)
 
-review JSON が無い・パース不能の場合も同様に 1 回再起動 → 再失敗で 2.6。**検収の失敗による再実行は同じ `report_path` を上書きする** (r 番号を進めない。r 番号は fix ラウンドの判定と `previous_findings_path` の選択に使われるので、実際には行われていない fix を 1 回数えてしまう)。
+review JSON が無い・パース不能の場合も同様に 1 回再起動 → 再失敗で 2.6。**検収の失敗による再実行は同じ `report_path` を上書きする** (r 番号を進めない。r 番号は fix 済みか否かの判定と `previous_findings_path` の選択に使われるので、実際には行われていない fix を数えてしまう)。
 
-findings の分岐:
+#### 修正対象は high だけ
 
-- **high / medium が 0 件** → 2.4 へ (low は完了コメントに「報告のみ」として記載)
-- **high / medium がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して修正させ、レビューを再実行する。**このループは最大 2 ラウンド (固定)**。2 ラウンド後に **high が残る → 2.6**。**medium だけが残る → `docs/pending-review/issue-<N>.html` に書き出して 2.4 へ進む** (下記「保留レビュー項目の記録」)。**この上限を強制する機械ゲートは無い。自律遵守する。** この規定は機械ゲートが無い状態で実際に破られる (セッション e6b5eb50 の実測: 22 issue 中 6 件が 3 周目以降に入り、規定超過分だけで 5.7h を消費した)。破らないための手立ては `findings_path` のラウンド番号を毎回自分で読むことだけである。**3 周目に入りたくなったら、それは「収束していない」という信号**なので、上の 2 分岐に従う (high が残っていれば 2.6、medium だけなら `docs/pending-review/issue-<N>.html` に書き出して 2.4)。3 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)
-- **`category: test-weakening` の finding** → implementer に直させず親が裁定する: 弱体化が事実なら該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要 — 2.4 の全体テストが検証する。ラウンド数にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む。
-  **裁定した finding には、その review JSON の該当 finding へ `"adjudication": {"verdict": "false_positive|fixed_by_parent", "rationale": "<根拠の一文>"}` を足す。** この JSON は次ラウンドで `previous_findings_path` としてレビュワーに渡るため、印を付けないと裁定済みの指摘が「未解消」として再計上され、同じ指摘で駐車に落ちる (レビュワー側は `adjudication` の付いた finding を残存判定の対象外にする規約)
+**medium はどのラウンドでも修正対象にしない。** merge を止めるのは high だけと決め、medium は保留リストに記録して先へ進む。実測 (セッション 82fc5ce1) では findings 128 件のうち medium が 76 件で high は 13 件しかなく、medium を修正ループに入れている限りラウンドは減らない。同じ run で r2 / r3 が新たに見つけた high 4 件は、すべて r1 の時点で既に high があった issue のものだった — 「r1 で high が 0 件なら直接 merge へ」で取り逃す high はこの run では 0 件である。
+
+r1 の findings による分岐:
+
+- **high が 0 件** → 2.4 へ。medium は保留リストに記録し (下記「保留レビュー項目の記録」)、low は完了コメントに「報告のみ」として記載する
+- **high がある** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して **high だけ**を直させ、r2 を回す。**fix はこの 1 回だけ (固定)**
+
+r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わない) は、その high の `category` で分岐する。**契約・証跡・検証器が壊れているものだけを駐車し、成果物の内部品質は記録して先へ進む**:
+
+| `category` | 動作 |
+| --- | --- |
+| `spec-compliance` | 2.6 で駐車。契約が壊れたまま merge すると、後続 issue がその契約に依存して誤った土台の上に積み上がる |
+| `e2e` | 2.6 で駐車。E2E の不在・失敗は「画面が動く証跡が無い」ことを意味する |
+| `test-weakening` | 下記の裁定を先に行い、**裁定できないときだけ** 2.6 で駐車する |
+| `test-quality` | 保留リストに記録して 2.4 へ。実装は契約を満たしており、テストが検証していないだけなので後から独立に直せる |
+| `code-quality` | 保留リストに記録して 2.4 へ。動作は正しく、DI 違反や命名は後から直せる |
+
+`test-quality` の high を保留して merge するのは、no-op に置き換えても通るテスト (`{{@rules-root}}/core/testing.md` のリトマス試験 B に落ちるもの) を抱えたまま先へ進むことを意味する。**これは意図した受容**なので、保留リストと完了コメントでは high を medium と分けて先に出し、ユーザーが気付ける状態にする。
+
+**3 周目に入りたくなったら、それは「収束していない」という信号**なので、上の表に従う。**この上限を強制する機械ゲートは無い。自律遵守する。** 上限は機械ゲートが無い状態で実際に破られる (セッション e6b5eb50 の実測: 22 issue 中 6 件が 3 周目以降に入り、規定超過分だけで 5.7h を消費した)。破らないための手立ては `findings_path` のラウンド番号を毎回自分で読むことだけである。3 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)。
+
+**`category: test-weakening` の finding** は、ラウンドを問わず implementer に直させず親が裁定する: 弱体化が事実なら該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要 — 2.4 の検証が確かめる。ラウンド数にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む。**基準時点の強度に戻すとテストが red になる場合は裁定不能**で、実装が元の契約を満たしていないということなので 2.6 へ駐車する。
+
+**裁定した finding には、その review JSON の該当 finding へ `"adjudication": {"verdict": "false_positive|fixed_by_parent", "rationale": "<根拠の一文>"}` を足す。** r1 の JSON は r2 で `previous_findings_path` としてレビュワーに渡るため、印を付けないと裁定済みの指摘が「未解消」として再計上され、同じ指摘で駐車に落ちる (レビュワー側は `adjudication` の付いた finding を残存判定の対象外にする規約)。
 
 #### 保留レビュー項目の記録
 
-修正対象にしなかった medium は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。`docs/pending-review/issue-<N>.html` を新規に書き出す — 各 finding はチェックボックス付きの 1 項目で、severity / category / `file:line` / summary / evidence / fix_hint をまとめる。外部依存の無い自己完結の静的 HTML とする。**issue 1 件につき 1 ファイルにする** — 全 issue が 1 枚のファイルへ追記する形だと、並列で走る issue が同じ位置に節を足して rebase のたびに必ず衝突する。ファイルを分ければ衝突は起きないので、union の衝突解決も要らない。**このファイルは 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
+修正対象にしなかった medium と、r2 で残った `test-quality` / `code-quality` の high は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。`docs/pending-review/issue-<N>.html` を新規に書き出す — 各 finding はチェックボックス付きの 1 項目で、severity / category / `file:line` / summary / evidence / fix_hint をまとめる。**high は medium より前に置く。** 外部依存の無い自己完結の静的 HTML とする。**issue 1 件につき 1 ファイルにする** — 全 issue が 1 枚のファイルへ追記する形だと、並列で走る issue が同じ位置に節を足して rebase のたびに必ず衝突する。ファイルを分ければ衝突は起きないので、union の衝突解決も要らない。**このファイルは 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
+
+**書き出すのは最終ラウンドの findings だけ** (r1 で通過したなら r1、r2 まで回したなら r2)。検査項目 5 は high しか追わないので、r2 は medium を fresh context で新規に出し直す。r1 の medium を足すと同じ指摘が二重に載る。
+
+**`medium` / `category: e2e` の「対象動線未指定 (設計差し戻し)」だけは別立てで扱う。** これは実装ではなく設計側の欠落なので、保留リストに載せたうえで、2.5 の完了コメントに「設計差し戻しが必要な指摘」として独立の行で書き、Step 3 の最終報告にも載せる (保留リストに埋もれると設計へ差し戻る経路が消える)。
 
 ### 2.4 コミット・PR・merge
 
@@ -194,7 +218,7 @@ Closes #<N>
 
 ## 検証
 - テスト: <全体テストの結果 (passed/failed 件数)>
-- レビュー: review-impl <ラウンド数> 周、high 0 件 (low <k> 件・未解消 medium <m> 件は merge 後の issue コメントに記載。medium 0 件ならその旨)
+- レビュー: review-impl <ラウンド数> 周 (low <k> 件・保留 high <h> 件・保留 medium <m> 件は merge 後の issue コメントに記載。0 件ならその旨)
 - DoD: merge 前にローカルで全コマンドを実行し、green を確認してから merge する
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
@@ -221,7 +245,9 @@ merge により `Closes #N` で issue は自動 close される (されていな
 - 変更: <summary と主要ファイル>
 - テスト: <2.4 の全体テストの件数>、DoD: green
 - レビュー: <ラウンド数> 周 (low の報告: <あれば列挙、なければ「なし」>)
-- 未解消 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/pending-review/issue-<N>.html` に記録)
+- 保留 high (test-quality / code-quality): <各 1 行で `file:line` + summary。なければ「なし」>
+- 保留 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/pending-review/issue-<N>.html` に記録)
+- 設計差し戻しが必要な指摘: <`medium` / `category: e2e` の「対象動線未指定」。各 1 行。なければ「なし」>
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
 
@@ -249,16 +275,16 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ### 2.6 エスカレーション (needs-human 駐車)
 
-解消できない issue (2 ラウンド後の high 残存 / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / push・merge の解消不能) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
+解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / push・merge の解消不能) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human
-gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。未 merge の保留 medium があればその summary も列挙 (pending-review のファイルが merge されていないため)。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置>"
+gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。未 merge の保留 high / medium があればその summary も列挙 (pending-review のファイルが merge されていないため)。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置>"
 ```
 
 ブランチと open PR は merge せず残す (人間が差分を確認でき、再開時に再利用できる)。**その issue に依存しない次の issue へ進む。**
 
-**run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する — このときも Step 3 の手順 2 (docs/pending-review/ の open と確認促し) を実行する (merge 済み issue の保留 medium を停止で失わない)。
+**run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する — このときも Step 3 の手順 2 (docs/pending-review/ の open と確認促し) を実行する (merge 済み issue の保留項目を停止で失わない)。
 
 ## Step 3: 終了処理
 
@@ -288,13 +314,13 @@ done
    - 実装した issue と PR の一覧
    - close した親 (tracking) issue と、open のまま残した親 (子が残っている / 子ゼロ / 判定不能の別に)
    - 2.5 で親 close を判定できなかった子 issue の番号 (親に紐付いていない 404 の子と、API 失敗の子を分けて)
-   - 保留レビュー項目 (未解消 medium) の件数とチェックリストのパス
+   - 保留レビュー項目 (保留 high・medium) の件数とチェックリストのパス、および設計差し戻しが必要な指摘
    - `needs-human` で駐車した issue と、人間がすべき決定
    - 実装中の設計判断・docs 更新の要約
 
 ## エスカレーション回答後の再開
 
-人間が `needs-human` の issue に回答したら、**回答の内容を issue 本文 (該当節の書き換え) または参照 docs に反映してから**、ラベルを `ready` に戻して本スキルを再実行する — implementer は issue 本文と docs しか読まないため、コメントに書かれただけの回答は実装に届かない。docs 側を変えた場合は push も行う (Step 0 の確認に掛かる)。Step 1 の収集が駐車 issue を拾い直し、残置ブランチ・PR があれば続きから実装する。チェックリスト (`docs/pending-review/`) はリポジトリで持ち回るため、再開 run・別マシンでも累積した保留 medium がそのまま引き継がれる。
+人間が `needs-human` の issue に回答したら、**回答の内容を issue 本文 (該当節の書き換え) または参照 docs に反映してから**、ラベルを `ready` に戻して本スキルを再実行する — implementer は issue 本文と docs しか読まないため、コメントに書かれただけの回答は実装に届かない。docs 側を変えた場合は push も行う (Step 0 の確認に掛かる)。Step 1 の収集が駐車 issue を拾い直し、残置ブランチ・PR があれば続きから実装する。チェックリスト (`docs/pending-review/`) はリポジトリで持ち回るため、再開 run・別マシンでも累積した保留項目がそのまま引き継がれる。
 
 ## 参照ルール
 
@@ -305,4 +331,4 @@ done
 
 - **dev-spec**: 上流の設計ループ。issue の生成元
 - **dev-impl-implementer** (subagent): 実装の葉。issue と docs を直読する
-- **review-impl** (subagent): 統合レビュワー (テスト品質 / 設計準拠 / コード品質 / E2E。2 周目以降は前ラウンド指摘の再発・転移)
+- **review-impl** (subagent): 統合レビュワー (テスト品質 / 設計準拠 / コード品質 / E2E。r2 では前ラウンド指摘の再発・転移も)
