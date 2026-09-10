@@ -46,8 +46,9 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
    - **REFACTOR**: green のときだけ。重複排除と命名
    - `## 非スコープ` に書かれたことには触れない
 2. **UI に触れる issue** (docs/design/DESIGN.md のスタンプが `webapp` で、画面の振る舞いを変える場合) は、機能設計書「テスト方針」が指定する golden path の **Playwright E2E** を書く (資産として残す。golden path のみ — E2E を増やしすぎない)
-3. `## DoD` のコマンドと、変更範囲のテスト・lint を実行し、exit code 0 を確認する (自己申告ではなく実行結果で判定)
-4. 報告する (下記「報告」)
+3. **UI に触れる issue で、プロジェクトが視覚テストを持つ場合** (`package.json` に `test:visual` 相当があり `*.visual.test.tsx` が存在する) は、該当画面の視覚テストを追加/更新して実行し、**生成された png を `Read` で自分で見る**。E2E とは役割が違う — E2E は振る舞い、視覚テストは見た目を受け持つ。**幅を変えて撮る** (崩れは幅に依存することが多く、1 つの幅だけでは見逃す)
+4. `## DoD` のコマンドと、変更範囲のテスト・lint を実行し、exit code 0 を確認する (自己申告ではなく実行結果で判定)
+5. 報告する (下記「報告」)
 
 ## 手順 (mode: fix)
 
@@ -91,11 +92,12 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
   "dod_result": { "command": "...", "exit_code": 0 },
   "docs_updates": [{ "file": "...", "what": "...", "why": "..." }],
   "design_decisions": [{ "decision": "...", "rationale": "..." }],
-  "self_review": { "checklist_applied": true, "tests_revised": 0, "notes": "" }
+  "self_review": { "checklist_applied": true, "tests_revised": 0, "notes": "" },
+  "ui_evidence": { "screenshots": ["<生成された png の絶対パス>"], "widths": [0], "note": "UI に触れない場合は screenshots を空配列にし note に理由" }
 }
 ```
 
-該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` を検収してから done と扱う。`self_review` は報告の直前に `{{@rules-root}}/core/testing.md`「セルフレビューチェックリスト」を自分の書いたテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して確認レビューで残存と判定されるだけ)。
+該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` を検収してから done と扱う。**UI に触れる issue では `ui_evidence.screenshots` も検収対象**で、親がその画像を実際に開いて見る (テストの exit code は見た目を守らないため)。`self_review` は報告の直前に `{{@rules-root}}/core/testing.md`「セルフレビューチェックリスト」を自分の書いたテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して確認レビューで残存と判定されるだけ)。
 
 ## 範囲外 (やらないこと)
 
