@@ -9,8 +9,8 @@ paths:
 
 - 種別: 環境リファレンス
 - 対象読者: 別セッション・別マシンで作業する Claude
-- 最終確認: 2026-09-09 (Qwen レシピを `0b62e12` へ更新して再起動。ccds の起動挙動と、監査で挙がった記述の実機突合)
-- 他の節の確認日: 2026-09-06 (一部は 2026-09-09 に再確認)。「実測値」節の性能値のみ 2026-09-05。表ごとに計測日を書いてある
+- 最終確認: 2026-09-10 (CPU の構成を実測し、X925 のクロック上限を両ノードに永続化した)
+- 他の節の確認日: 2026-09-06 (一部は 2026-09-09 / 2026-09-10 に再確認)。「実測値」節の性能値のみ 2026-09-05。日付は表のセルか本文に書いてある
 
 自宅に NVIDIA DGX Spark (GB10) が 2 台あり、vLLM の TP=2 (tensor parallel、2 台に重みを分割する並列方式) でローカル LLM を常時サービングしている。Mac の Claude Code (`ccsp`) / OpenCode (`ocsp`) の 2 つからバックエンドとして使える。
 
@@ -31,7 +31,7 @@ paths:
 | RoCE | RDMA over Converged Ethernet。QSFP ポート上でノード間の NCCL 集団通信を運ぶ | `.env.dspark` の `NCCL_IB_HCA` | NetworkManager の接続 `roce` / `roce2` | vLLM (NCCL) |
 | NCCL | NVIDIA Collective Communications Library。TP=2 のランク間通信を担う | 本表 | — | vLLM |
 | DSpark | チェックポイント内蔵の投機デコード。draft 用の別モデルを持たない | vLLM の CLI フラグ `--speculative-config` | レシピの compose | vLLM |
-| MTP | multi-token prediction。DSpark が 1 ステップで出す draft トークン数 (`MTP_NUM_TOKENS`) | `.env.dspark` | 人 | vLLM |
+| MTP | multi-token prediction。1 ステップで出す draft トークン数。**キー名が系統で違う** (DeepSeek 系 = `.env.dspark` の `MTP_NUM_TOKENS` / Qwen 系 = `.env` の `MTP_NUM_SPECULATIVE_TOKENS`) | 各系統の設定ファイル | 人 | vLLM |
 | `nvfp4_ds_mla` | MLA (multi-head latent attention) の KV キャッシュを 4bit で保持する形式 | vLLM の CLI フラグ `--kv-cache-dtype` | レシピの compose | vLLM |
 | TTFT | time to first token。送信から最初のトークンが返るまでの時間。ほぼ prefill の所要時間 | 本表 | `~/spark-bench/bench.py` | 「L1」表 |
 | 受理率 | 投機デコードが出した draft トークンのうち採用された割合。decode 速度をほぼ決める | 本表 | vLLM の `/metrics` | 「L2 / L3」表・「遅いと感じたときに疑う順序」4 |
@@ -59,6 +59,7 @@ paths:
 | `OPENCODE_CONFIG_CONTENT` | OpenCode がインライン JSON として読む環境変数。既存の設定に `options` の中まで再帰的にディープマージされる。`ocsp` はこれで `baseURL` の 1 キーだけを起動ごとに差し替える (前置代入なのでシェルには残らない) | `_ocsp_config_override` (中身) と `ocsp` の起動 2 か所 (変数名)。いずれも `zsh/functions/opencode-spark.zsh` | `ocsp` | `opencode` 本体 |
 | `_ocsp_resolve` | `opencode.json` の値に書いた `{file:~/…}` / `{env:…}` を解くヘルパー。認証を戻したときの `apiKey` を平文で置かずに済ませる (opencode 本体も同じ記法を解くので、`ocsp` の配信前検査と本体の双方に同じ値が届く) | `zsh/functions/opencode-spark.zsh` | dotfiles | `ocsp` |
 | `/tmp/spark.key` | vLLM の Bearer トークンを平文で置いた作業ファイル。**head にだけ要る。`bench.py` 専用で、無認証の現在は中身が使われない。再起動で消える** | head の `/tmp/spark.key` | 人 (1Password から書き出す) | `bench.py` |
+| `nv-gpu-clock-limit.service` / `nv-cpu-clock-limit.service` | 両ノードに手で置いた systemd unit 2 本。前者は GPU の SM クロックを 2,200 MHz にロックし、後者は X925 の `scaling_max_freq` を下げる (**後者はハードウェアのクロック上限を変えていない** → 「既知の制約」5)。dotfiles に控えが無い | 「既知の制約」4・5 (後者は unit 全文も) | 人 | systemd |
 | `drs` | dotfiles の Nix 設定を Mac に適用する zsh alias | `nix/modules/home/zsh.nix` | dotfiles | 人 |
 | `.env.dspark` | DeepSeek 系レシピの設定を集約した 1 枚。git 管理外 (`.gitignore` 済み) | head の `~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark/` | 人 (`.env.dspark.example` から複製) | 起動・停止・検証スクリプト |
 | `PROJECT_NAME` | `docker compose` のプロジェクト名。コンテナ名 `deepseek-v4-flash-vllm-dspark-1` の接頭辞になる | 起動スクリプトの既定値 (`.env.dspark` のキーではない) | 起動スクリプト | `docker compose` |
@@ -82,6 +83,7 @@ paths:
 | 項目 | 値 |
 | --- | --- |
 | GPU | NVIDIA GB10 (CPU と共有する統合メモリ 128 GB。カタログ値で、`/proc/meminfo` は 121.7 GiB を返す) |
+| CPU | 20 コアの big.LITTLE 構成。性能コア Cortex-X925 ×10 (cpu5-9・cpu15-19、`cpuinfo_max_freq` が返す素の上限 3,900 MHz)、効率コア Cortex-A725 ×10 (cpu0-4・cpu10-14、上限 2,808 MHz)。cpufreq は 1 コア 1 policy で、driver は `cppc_cpufreq`、governor は全コア `performance`。**X925 の `scaling_max_freq` は 2,808 MHz に下げてあるが、これはハードウェアのクロック上限を変えていない** (→ 「既知の制約」5)。2026-09-10 に両ノードで実測。確認コマンドは「依拠する外部事実」 |
 | OS | Ubuntu 24.04.4 LTS / aarch64 |
 | カーネル | `6.17.0-1032-nvidia` |
 | ドライバ | `580.173.02` |
@@ -274,7 +276,7 @@ cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark
 
 | キー | 値の意味 | 既定 | 現在 | 採用根拠 | 効果 |
 | --- | --- | --- | --- | --- | --- |
-| `DSPARK_MAX_INFLIGHT_PREFILLS` | 同時に走らせる prefill の件数 | 1 | 2 | 上流の A/B (`docs/CLAUDE/ab-results-2026-09-03.md`) | **上流計測値**: 4 並列時の TTFT のばらつきが 11.9 秒 → 7.7 秒、単一利用時の初動が 4.9 秒 → 7.2 秒に悪化、集約スループットは有意差なし。自環境では未計測 |
+| `DSPARK_MAX_INFLIGHT_PREFILLS` | 同時に走らせる prefill の件数 | 1 | 2 | 上流の A/B (head の `~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark/docs/CLAUDE/ab-results-2026-09-03.md`) | **上流計測値**: 4 並列時の TTFT のばらつきが 11.9 秒 → 7.7 秒、単一利用時の初動が 4.9 秒 → 7.2 秒に悪化、集約スループットは有意差なし。自環境では未計測 |
 | `DSPARK_ENABLE_SP_INDEXER` | 0 = 無効 / 1 = 有効 | 0 | 1 | 上流の最終構成に追従 | 自環境では未計測 |
 | `DSPARK_ENABLE_DEEPGEMM_SM121_ALIAS` | 0 = 無効 / 1 = 有効 | 0 | 1 | 上流の最終構成に追従 | 自環境では未計測 |
 
@@ -306,7 +308,7 @@ ssh -n spark-head "docker exec sparkDash node -e \"const f='/app/config/sparks.j
 ssh -n spark-head "docker exec sparkDash node -e \"console.log(JSON.parse(require('fs').readFileSync('/app/config/sparks.json')).sparks.map(s=>s.role+':'+s.workerLabel).join(' '))\""
 ```
 
-クライアント側 (`ccsp` / `ocsp`) の設定変更は要らない。**いずれも `/v1/models` を見て配信中のモデルを採る。** ただし効くのは次に起動する分からで、稼働中のセッションは起動時のモデル名を送り続けるので起動し直す (「既知の制約」5 の退避手順)。
+クライアント側 (`ccsp` / `ocsp`) の設定変更は要らない。**いずれも `/v1/models` を見て配信中のモデルを採る。** ただし効くのは次に起動する分からで、稼働中のセッションは起動時のモデル名を送り続けるので起動し直す (「既知の制約」7 の退避手順)。
 
 ### Qwen3.8-Flash-Next (別系統のレシピ)
 
@@ -334,7 +336,7 @@ ssh -n spark-head "docker exec sparkDash node -e \"console.log(JSON.parse(requir
 | 追加の vLLM 引数 (`EXTRA_VLLM_ARGS`) | 未設定 (`.env` でコメントアウトされている)。認証を付けるならここに `--api-key <値>` を書く |
 | 起動前の GPU ガード (`REQUIRE_IDLE_GPU`) | `true` (上流既定のまま。取りうる値: `true` / `false`)。どちらかのノードで GPU を掴むプロセスがあれば起動を拒否する |
 | 上流既定からの差分 | **値を変えた**キーが 5 つ (下の「書いていない上流キー」2 つは別勘定)。**サイト固有が 2 つ**: `IFACE` = `enp1s0f1np1` / `IB_HCA` = `=rocep1s0f1` (先頭の `=` は「完全一致で 1 デバイスだけ」を意味する上流の記法で、typo ではない)。**常用長に合わせたものが 3 つ**: `MAX_MODEL_LEN` 262144 → 524288 / `YARN_ENABLE` false → true / `YARN_FACTOR` 4.0 → 2.0 (理由は下の「YaRN」)。`HEAD_IP` / `WORKER_IP` は配布既定のまま実機と一致するので変更していない (実値は「依拠する外部事実」の確認コマンドで引く) |
-| `.env` に**書いていない**上流キー | 2 つ。どちらも未設定が現行動作なので `.env` に足していない (値の出所はこの行だけ `.env.sample` と上流の CHANGELOG)。**`ABLIT`** (未設定 = 0。1 は値の切り替えではなく**別チェックポイントへの乗り換え**で、`drowzeys/keys-Qwen3.8-Flash-Next-NVFP4-dual-ablit-house-qsa-L3-47` を full snapshot で取り直す。HF 上での規約同意と `HF_TOKEN` (`.env` に書くか環境変数で渡す。この 2 キーだけは環境が `.env` に優先する) に加えて、124 GiB 級の取得と worker への配布が要る → `utility-spark-model-fetch`)。**`MAMBA_SSM_CACHE_DTYPE`** (未設定 = チェックポイントの float32。`bfloat16` にすると再帰状態の dtype が半分になる。**上流の「集約 decode スループット +8.5%」は単 Spark TP=1 での計測で、この 2 ノード TP=2 では未計測**と上流自身が書いている)。採用は `.env` に 1 行足して停止 → 起動、戻すのは行を消して同じ再起動 (13〜14 分止まる → 「既知の制約」5)。**`.env.sample` 側の既定は `ABLIT=0` / `MAMBA_SSM_CACHE_DTYPE=bfloat16` なので、`.env` を作り直すと後者が黙って有効になる** |
+| `.env` に**書いていない**上流キー | 2 つ。どちらも未設定が現行動作なので `.env` に足していない (値の出所はこの行だけ `.env.sample` と上流の CHANGELOG)。**`ABLIT`** (未設定 = 0。1 は値の切り替えではなく**別チェックポイントへの乗り換え**で、`drowzeys/keys-Qwen3.8-Flash-Next-NVFP4-dual-ablit-house-qsa-L3-47` を full snapshot で取り直す。HF 上での規約同意と `HF_TOKEN` (`.env` に書くか環境変数で渡す。この 2 キーだけは環境が `.env` に優先する) に加えて、124 GiB 級の取得と worker への配布が要る → `utility-spark-model-fetch`)。**`MAMBA_SSM_CACHE_DTYPE`** (未設定 = チェックポイントの float32。`bfloat16` にすると再帰状態の dtype が半分になる。**上流の「集約 decode スループット +8.5%」は単 Spark TP=1 での計測で、この 2 ノード TP=2 では未計測**と上流自身が書いている)。採用は `.env` に 1 行足して停止 → 起動、戻すのは行を消して同じ再起動 (13〜14 分止まる → 「既知の制約」7)。**`.env.sample` 側の既定は `ABLIT=0` / `MAMBA_SSM_CACHE_DTYPE=bfloat16` なので、`.env` を作り直すと後者が黙って有効になる** |
 
 #### reasoning effort の語彙
 
@@ -373,7 +375,7 @@ cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && ./stop.sh
 cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && ./start-deepseek-v4-flash-dspark.sh
 ```
 
-**先に相手系統を停止する。** ポート 8888 を共有するうえ、`REQUIRE_IDLE_GPU=true` がどちらかのノードで GPU を掴むプロセスを見つけた時点で起動を拒否する。停止前に稼働中リクエストが 0 であることを確認する (「既知の制約」5)。**停止スクリプトを取り違えると相手系統のコンテナは消えないので、「止めたつもり」で次の起動が拒否される。**
+**先に相手系統を停止する。** ポート 8888 を共有するうえ、`REQUIRE_IDLE_GPU=true` がどちらかのノードで GPU を掴むプロセスを見つけた時点で起動を拒否する。停止前に稼働中リクエストが 0 であることを確認する (「既知の制約」7)。**停止スクリプトを取り違えると相手系統のコンテナは消えないので、「止めたつもり」で次の起動が拒否される。**
 
 **`--launch` を使う。** 引数なしの `./start.sh` は HuggingFace からのダウンロードと worker への rsync から始める。どちらも完了済みなので `--launch` が両方を飛ばす。**`--launch` でも head 側のシャード完全性の検査は必ず通り、欠落があればコンテナを作らずに止まる** (→「重みの検証」)。
 
@@ -434,7 +436,7 @@ diff <(grep -E '^[A-Za-z0-9_]+=' .env.sample | sort) <(grep -E '^[A-Za-z0-9_]+='
 3. reasoning effort の語彙が変わっていないこと (→「reasoning effort の語彙」。**2 経路とも打つ**)
 4. `docker inspect vllm-fn --format '{{.HostConfig.RestartPolicy.Name}}'` が `no` のままであること
 
-**KV プールのトークン数は起動ごとに動くので不合格の根拠にしない** (→「実測値」)。
+**KV プールのトークン数は起動ごとに動くので不合格の根拠にしない** (→「切り替えと起動」)。
 
 戻すときは `git checkout <旧 sha>` してから停止 → 起動する (detached HEAD になるので復帰は `git checkout main`)。重み・イメージ・`.env` のいずれも変わらないので戻せる。
 
@@ -604,6 +606,8 @@ ocsp -- --help             # 解釈を打ち切り (-- 自体を消費して) �
 
 数値は条件が変わると簡単に 25% 動くので、表ごとに条件を書いてある。**閾値だけを覚えて条件を変えて測ると誤診する。**
 
+**この節の値はすべて GPU クロック制限 (2,200 MHz) が有効な状態で採ってある。X925 の `scaling_max_freq` を下げたのは 2026-09-10 なので、それより前の日付の表はその前の値である** (前後で単一ストリームの所要時間に差が出ないことは確かめてあるが、この節の並列条件では取り直していない → 「既知の制約」4・5)。
+
 ### L1: サーバ単体 (2026-09-05)
 
 `~/spark-bench/bench.py` でサーバを直叩きした値である。条件はプロンプト 6,000 トークン、`max_tokens` 256、`chat_template_kwargs={"thinking": true, "reasoning_effort": "low"}` (サーバ既定の `DEFAULT_THINKING=low` と同じ)、指示は「上記は無視して、TypeScript の関数を 1 つ書いてください。説明は不要でコードだけ返してください。」`c` は `--concurrency`。中央値と (最小〜最大)。
@@ -661,7 +665,7 @@ ssh -n spark-head 'python3 ~/spark-bench/bench.py --model deepseek-v4-flash-visi
 2. **グローバル設定の prefill** — `agents/rules/core/*.md` の 10 ファイルと `core/references/loop-engineering.md` は frontmatter を持たないため毎ターン展開される (合計 48,826 バイト / 22,907 文字、2026-09-09 実測)。`backend/**` や `frontend/**` は `paths:` で対象言語に絞られ、`core/references/` の他の 7 ファイルは `__read-on-demand-only__` で除外されているのに、この 11 本だけ素通しになっている。**これは dotfiles 側の設計課題であって Spark の問題ではない**
 3. **prefix cache のヒット率** — 機構自体は正常に動く (同一プロンプトを 2 回送れば 2 回目にヒットが立つ)。実負荷のヒット率はクライアントがプレフィックスをどれだけ安定させるかで決まる。**L2 / L3 の実測レンジは 0.66〜0.90 で、0.5 を切ったらクライアント側の変動を疑う**
 4. **投機デコードの受理率** — decode 速度をほぼ決める。**L2 / L3 の実測レンジは 0.43〜0.69 で、0.4 を切ったら疑う。** この値は生成させる内容で動く (構造化された出力で高く、散文で低い)
-5. **サーバ本体** — ここまで潰してから L1 のベンチを上のフラグで回す
+5. **サーバ本体** — ここまで潰してから L1 のベンチを上のフラグで回す。**GPU クロックは 2,200 MHz に制限してあり、X925 の `scaling_max_freq` も下げてある** (→ 「既知の制約」4・5)。どちらも外しても速度はほぼ変わらないと実測済みなので、ここを最初に疑わない。切り分けのために外すなら、**外して測って戻すところまでを 1 セットで行う** (戻し忘れると温度だけが上がった状態が残り、サーバ側に履歴が無いので誰も気づけない → 制約 6)
 
 3 と 4 の計算は `/metrics` から行う。**キー名は完全一致で拾う。** `prefix_cache` には `vllm:external_prefix_cache_*` が、`spec_decode_num_.*_total` には `vllm:spec_decode_num_accepted_tokens_per_pos_total` が別に存在し、緩い grep は別系列を合算して値を過大に出す。
 
@@ -686,7 +690,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | 応答しない | 下の待ち行列コマンド | コンテナは生きていて過負荷。同時リクエスト上限 (DeepSeek 系 6 / Qwen 系 8) を超えた分が待つので、待ち行列が 0 でなければ過負荷 |
 | コンテナが無い | 両ノードで `docker ps --filter name=vllm` (DeepSeek 系・Qwen 系の両方を拾う) | 停止スクリプトで止めたまま。起動し直す |
 | 起動に失敗する | `./logs-deepseek-v4-flash-dspark.sh` (Qwen 系は `docker logs vllm-fn`) | DeepSeek 系の `no usable RoCEv2 GID` は RoCE 2 本目の IP か MTU (Qwen 系は `IB_HCA` が 1 本なのでこの形では出ない)。Qwen 系は相手系統が GPU を掴んだままだと `REQUIRE_IDLE_GPU` で拒否される |
-| Qwen 系がコンテナを作らずに `Checkpoint snapshot is incomplete` で止まる | `python3 files/resolve_snapshot.py <hub の repo ディレクトリ>` の exit code (0 以外) | シャードの欠落。`0b62e12` から `start.sh` が起動前に検査するようになった (→「重みの検証」)。**コンテナが 1 つも作られないので `docker logs vllm-fn` は空振りする。`start.sh` の標準出力を見る。** 復旧は `./download.sh` での再取得だが、**revision を指定しないと配信 revision が動く** |
+| Qwen 系がコンテナを作らずに `Checkpoint snapshot is incomplete` で止まる | `python3 files/resolve_snapshot.py <hub の repo ディレクトリ>` の exit code (0 以外) | シャードの欠落。`0b62e12` から `start.sh` が起動前に検査するようになった (→「重みの検証」)。**コンテナが 1 つも作られないので `docker logs vllm-fn` は空振りする。`start.sh` の標準出力を見る。** 復旧は Qwen レシピ同梱の `./download.sh` (HuggingFace から重みを取り直すスクリプト。`--launch` を付けない素の `./start.sh` が内部で呼ぶのと同じもの) での再取得だが、**revision を指定しないと配信 revision が動く** |
 | `model not found` が出る | `curl .../v1/models` で配信名を見る | セッション起動後にサーバ側で切り替えた。`ccsp` / `ocsp` は起動時のモデル名を送り続けるので起動し直す |
 | `ocsp` が「`<名前>` は配信されていません」で止まる | メッセージが出す配信中の一覧 | 要求した短縮名と実際の配信モデルが違う。これは異常ではなく配信前検査が効いた状態。**この文言を出すのは `ocsp` だけ** |
 | `ccsp` / `ocsp` が「取得できません」で止まる | `ccsp status` / `ocsp status` でサーバの生死を見る。メッセージが出す URL も見る | **`ccsp` はこの 1 文言に 2 つの原因を束ねている。** 要求したモデルが配信されていない場合と、サーバに届かない場合の両方。メッセージが続けて出す「配信中: …」が空なら後者。認証を復活させた場合も 401 でこうなる (→「API キーの流れ」)。**接続先を誤った側に強制した場合 (出先で `lan`、自宅で `ts`) もプローブを飛ばしてここに落ちる** |
@@ -696,6 +700,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | `Input should be 'low', 'medium', ...` の 400 | 送っている effort の値 | `ccsp` の経路 (`/v1/messages`) に `none` を渡した。スキーマが `none` を持たないため、テンプレートより手前で弾かれる。**`ocsp` の経路では `none` が通る**という非対称がある (→「reasoning effort の語彙」) |
 | OpenCode がモデルを拒否する | `agents/bindings/opencode/opencode.json` の `provider.spark.models` | 宣言の無いモデル名は OpenCode 側が受け付けない |
 | 起動待ちが長すぎる | head は `docker logs <コンテナ名>`、worker は「worker に入る」節のコマンドで同じものを打つ | 正常な所要は DeepSeek 系が約 6 分、Qwen 系が約 13〜14 分 (実測)。DeepSeek 系は 10 分、Qwen 系は 20 分を超えたら worker 側だけ落ちていることがあるので両ランクを見る |
+| 推論中に CPU が熱い・ファンがうるさい | 「依拠する外部事実」の温度の行と、同節のコードブロック 5 | 正常。vLLM のスレッドが GPU / NCCL の完了をビジーポーリングで待ち、100% の使用率で回る (→ 「既知の制約」5)。計算しているわけではないので、`nvidia-smi` の GPU 使用率が高いこととは独立に CPU 側センサーが上がる。X925 の `scaling_max_freq` を下げる対処は既に入れてあり (制約 5)、それでも高いなら室温か吸気を疑う |
 | 起動直後から空きメモリが少ない | `free -h` | 正常。`GPU_MEMORY_UTILIZATION_TEXT=0.835` の先取り。**残る量は系統と負荷で変わる** (DeepSeek 系 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB。→「メモリの使われ方」) |
 | `hi` と打っただけで network retry | `ccsp status` で LAN 到達を確認 | mDNS の IPv6 フォールバック。`NODE_OPTIONS` に `--dns-result-order=ipv4first` が入っているか見る |
 | 応答後に 200 秒以上返らない | `settings.spark.json` の `enabledPlugins` | `security-guidance` の Stop hook (→「遅いと感じたときに疑う順序」1) |
@@ -719,20 +724,39 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 - **`.env.dspark.bak` のような控え** — `.gitignore` が拾わずキーごと公開リポジトリに載る
 - **公開リポジトリ内のファイルへの IP 直書き** — 本書・`zsh/functions/*.zsh`・`agents/bindings/opencode/opencode.json` のいずれにも書かない。IP は `CCSP_LAN_HOST` (シェル変数) で渡す。**`ccsp` と `ocsp` の両方がこの変数を見る**ので、`opencode.json` を編集する必要は無い
 - **公開リポジトリ内のファイルへの API キー直書き** — 認証を戻すときも `opencode.json` に平文で置かない。`{file:~/…}` か `{env:…}` で外部へ逃がす (`_ocsp_resolve` と opencode 本体の両方が解く → 「API キーの流れ」)
+- **クロック制限の 2 unit** (`nv-gpu-clock-limit.service` / `nv-cpu-clock-limit.service`) — 切り分けで一時的に外すのは構わないが、外したままにしない。サーバ側に温度の履歴が無いので戻し忘れに誰も気づけない (→ 「既知の制約」4・5・6)
 - **sparkDash のポート 5555** — 認証が無いので信頼できないネットワークへ出さない
 - **ポート 8888** — 系統を問わず無認証なので外に出さない (→「API キーの流れ」)
 - **0731 の残置物** — head の `~/dspark-0731` (detached `70a7cc4` の git worktree、4.4 MB) と両ノードの重み 156 GiB ずつ。**使わないが消さない。** ディスクは 3.0 TB 空いていて消す動機が無く、再取得は HuggingFace から約 5.5 時間かかる
 
 ## 既知の制約
 
-1. **Spark には passwordless sudo が無い。** `/etc/sudoers.d/` は README のみである。`nvidia-smi --lock-gpu-clocks` や systemd の操作など sudo が要る作業は Claude からは実行できないので、コマンドを提示して人間に実行してもらう (パスワードは `skanehira` の Ubuntu ログインパスワードで、本書には保管しない)。Mac の Touch ID による sudo は Linux ノードには効かない。**コンテナ内で root が必要な作業は `docker run --entrypoint` で代替できる** (重みの所有権修正など)
+1. **Spark には passwordless sudo が無い。** `/etc/sudoers.d/` は README のみである。`nvidia-smi --lock-gpu-clocks`・`scaling_max_freq` への書き込み・systemd の操作など sudo が要る作業は Claude からは実行できないので、コマンドを提示して人間に実行してもらう (パスワードは `skanehira` の Ubuntu ログインパスワードで、本書には保管しない)。Mac の Touch ID による sudo は Linux ノードには効かない。**コンテナ内で root が必要な作業は `docker run --entrypoint` で代替できる** (重みの所有権修正など)
 2. **worker への直接 ssh は `known_hosts` の登録が前提である。** 未登録のマシンでは Claude から入れないので「worker に入る」節の head 経由を使う
 3. **worker は Tailscale に参加していない** (`tailscaled` が未インストール)。出先から worker を見るには head を経由する
-4. **GPU クロックを 2200 MHz に制限している。** 両ノードの `/etc/systemd/system/nv-gpu-clock-limit.service` (手で配置した unit、enabled + active) が起動時に `nvidia-smi --lock-gpu-clocks=0,2200` を実行する。2026-09-05 の計測 (n=5、L1 とは別条件で結果ファイルは残っていない) では、解除しても decode +1.3% / 最悪 TTFT 約 +2% しか上がらず温度が 7 °C 以上上がった (制限あり 52〜58 °C / 制限なし 60〜65 °C) ので、制限は維持する
-5. **停止と再起動はユーザーの作業を止める。** 打つ前に `curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_running\{'` で稼働中リクエストの有無を確認し、Mac 側では先に `claude` を終了して `ccsp off` で退避する (`ocsp` は環境変数を残さないので退避操作が要らない)
-6. **vLLM の自動復帰は系統で違う。** DeepSeek 系コンテナの restart policy は `unless-stopped` だが、**Qwen 系 `vllm-fn` は両ノードとも `no` なので、ノードを再起動すると上がってこない** (2026-09-06 実測)。手で `./start.sh --launch` を打ち直す。sparkDash は `always`、`docker` と (head の) `tailscaled` は enabled、RoCE は NetworkManager の autoconnect である。どちらの系統も停止スクリプトで止めた後はコンテナ自体が消えるので再起動しても復帰しない。**cold boot での復帰は未確認なので、電源断の後は `docker ps` で確かめる**
-7. **`~/spark-bench` は再作成手段が無い。** dotfiles にも上流にも無い手書きのハーネスなので、head を作り直すと失われる
-8. **2 系統の vLLM は同時に起動できない。** ポート 8888 と GPU を共有し、Qwen 側は `REQUIRE_IDLE_GPU=true` が明示的に拒否する。切り替えは必ず「相手を停止 → 起動」の順で行う
+4. **GPU クロックを 2,200 MHz に制限している。** 両ノードの `/etc/systemd/system/nv-gpu-clock-limit.service` (手で配置した unit、enabled + active) が起動時に `nvidia-smi --lock-gpu-clocks=0,2200` を実行する。2026-09-05 の計測 (n=5、L1 とは別条件で結果ファイルは残っていない) では、解除しても decode +1.3% / 最悪 TTFT 約 +2% しか上がらず温度が 7 °C 以上上がった (制限あり 52〜58 °C / 制限なし 60〜65 °C) ので、制限は維持する
+5. **X925 の `scaling_max_freq` を 2,808 MHz に下げてある。unit 名に反して、これはハードウェアのクロック上限を変えていない。** 両ノードの `/etc/systemd/system/nv-cpu-clock-limit.service` (手で配置した unit、`Type=oneshot` + `RemainAfterExit=yes`、enabled + active) が起動時に cpu5-9・cpu15-19 の `scaling_max_freq` へ `2808000` (kHz = 2,808 MHz。sysfs の周波数はすべて kHz) を書く。**dotfiles に控えが無いので下に全文を載せる** (制約 9 の `~/spark-bench` と同じく再作成手段が無い資産である)。**効いていないもの (実測)**: 書き込みは受理されるが CPPC のレジスタに伝播しない。`max_perf` は cpu5 が 3900000、cpu19 が 4004000 のままで、負荷中に X925 のコアが走るとその実効クロック (`cpuinfo_avg_freq`) は 3,886,695〜3,898,425 に達する。**`scaling_cur_freq` は `cppc_cpufreq` では要求値のエコーなので実効値と読んではいけない** (busy な A725 は要求値と実効値が一致するのに busy な X925 だけ 1.1 GHz 乖離する。この非対称がエコーであることの対照になる)。**実際に起きていること (実測)**: 書き込みの前後で **vLLM の busy スレッドの載り先が X925 から A725 へ移った**。前は cpu15 が 70%・cpu18 が 78% と X925 が主だったのに対し、後は cpu0〜cpu4 のうち 3 本が 91〜100% で回る。**X925 が使われなくなったわけではない** — 連続負荷中に 8 回サンプルしたうち 1 回は cpu19 が 92% で busy になり、そのときの実効クロックは 3,882,785 だった。**どういう条件で X925 に載るかは特定していない。****理由は「`scaling_max_freq` を下げたことでスケジューラの capacity の見立てが変わり X925 を選ばなくなった」と読んでいるが、確認していない (推測)。** **推論中に CPU が熱くなるのは計算しているからではない。** vLLM のスレッド 3 本 (`VLLM::EngineCore` / `VLLM::Worker_TP` / `VLLM::Worker`) が 100% の使用率で回り続け、その間クロックが最大に張り付く。**実測から言えるのはここまでで、「ビジーポーリングで待っている」は推測である** — 同じ区間で GPU が 93% 動いており、スレッドが自発的にブロックする回数が 1 ステップあたり 2〜5 回しかないことから、CPU 時間の大半は実処理ではなく完了待ちのスピンだと読んでいる。スタックは追っていないので、待ち先が CUDA の同期か NCCL かは未確認である (1 decode ステップ 63 ms のうち GPU 使用率は 93%、スレッドが自発的にブロックするのは 1 ステップあたり 2〜5 回。取得手段は「依拠する外部事実」の該当行)。**需要に追従する governor (`schedutil` / `ondemand` / `conservative`) に変えても効かない。** スピンするスレッドは使用率 100% に見えるので、どれも最大クロックを選ぶ。**唯一の例外は `powersave` で、これは最小クロックに固定するため温度は下がるが、直列処理まで 338 MHz に落ちるので速度への影響が別物になる。本書では試していない (未検証)。****2026-09-10 の計測 (Qwen3.8-Flash-Next 配信中、単一ストリーム・800 トークン、GPU 制限は両方の条件で有効、n = 制限前 3 / 制限後 2、結果ファイルは残していない) では速度低下は無く** (制限前 26.06〜26.80 秒 / 制限後 24.55〜26.02 秒)。**2 群のレンジはわずかに重ならず、制限後の方が速い。これは説明できていない** (n が 3 と 2 と少ない、prefix cache の状態が揃っていない、直前の熱状態が違う、のいずれもありうる)。**言えるのは「遅くなってはいない」までで、「速くなった」とは読まない。** 温度は **TS0P が 62.0 → 47.7〜49.5 °C、TSOC が 62.5 → 52.5〜53.6 °C に下がった** (センサー名は下の制約 6 とその読み方を参照)。**速度が変わらないことは効果の判別に使えない** — 設定が効いていなくても速度は変わらないので、両方の仮説と整合してしまう。判別材料は温度と busy コアの載り先だけである。**並列時 (Qwen は最大 8 リクエスト) は未計測である。****この設定は目的 (温度を下げる) を達しているが、意図した機構では動いていない。** 素直にクロックを縛りたいなら CPPC の `max_perf` を動かす手段を別に探す必要がある。解除は両ノードで `sudo systemctl disable --now nv-cpu-clock-limit.service` (`ExecStop` が `cpuinfo_max_freq` の値を `scaling_max_freq` へ書き戻す)、戻すのは `sudo systemctl enable --now nv-cpu-clock-limit.service`。worker には「worker に入る」節のコマンドで同じものを打つ (sudo が要るので実行は人間)
+
+   ```ini
+   [Unit]
+   Description=Limit Cortex-X925 max clock to 2808 MHz (CPU thermal headroom during vLLM inference)
+   ConditionPathExists=/sys/devices/system/cpu/cpu19/cpufreq/scaling_max_freq
+
+   [Service]
+   Type=oneshot
+   RemainAfterExit=yes
+   ExecStart=/bin/sh -c 'for c in 5 6 7 8 9 15 16 17 18 19; do echo 2808000 > /sys/devices/system/cpu/cpu$c/cpufreq/scaling_max_freq; done'
+   ExecStop=/bin/sh -c 'for c in 5 6 7 8 9 15 16 17 18 19; do cat /sys/devices/system/cpu/cpu$c/cpufreq/cpuinfo_max_freq > /sys/devices/system/cpu/cpu$c/cpufreq/scaling_max_freq; done'
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+6. **温度センサーは ACPI の 7 つで、履歴はどこにも残っていない。** `/sys/class/thermal/thermal_zone{0..6}/temp` がミリ °C を返す。名前は起動ログ (`journalctl -b -q -o cat | grep 'Thermal Zone \['`) が登録順に出す。zone0 = `TSOC` (SoC 全体) / zone1 = `TS0E` / zone2 = `TS0P` / zone3 = `TS1E` / zone4 = `TS1P` / zone5 = `TGPU` / zone6 = `TUNC`。**`TS<n>E` / `TS<n>P` が効率コアと性能コアに対応するという読み方は本書の推測で、NVIDIA の公表資料では裏を取っていない** (X925 の制限で `TS0P` が 14.3 °C 下がった実測とは整合する)。トリップ点は全 zone とも 104.8 °C、`policy` は `step_wise` である。`TSOC` の 3 文字目は英字の O、`TS0P` / `TS0E` の 3 文字目は数字のゼロで、grep するとき紛らわしい。**サーバ側に残る履歴は無い。** sparkDash は CPU 温度も採るが (head の `~/sparkDash/server/collectors/SystemCollector.js` が hwmon の `acpitz` と thermal zone を読む)、履歴はブラウザのメモリ (`~/sparkDash/src/hooks/metricsStore.ts` の `HISTORY_MAX` = 1,800 サンプル。このリポジトリの `docker-compose.override.yml` が `POLL_INTERVAL_CPU` を 15 秒にしているので約 7.5 時間分) にしか無く、ページを閉じれば消える。journald に出るのは起動時の 1 回だけ (7 zone 分 7 行)。`collectd` / `netdata` / prometheus exporter の類は両ノードとも動いていない (2026-09-10 実測)。**したがって過去に遡った統計は取れない。** 必要になったら記録の仕組みを先に用意する
+7. **停止と再起動はユーザーの作業を止める。** 打つ前に `curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_running\{'` で稼働中リクエストの有無を確認し、Mac 側では先に `claude` を終了して `ccsp off` で退避する (`ocsp` は環境変数を残さないので退避操作が要らない)
+8. **vLLM の自動復帰は系統で違う。** DeepSeek 系コンテナの restart policy は `unless-stopped` だが、**Qwen 系 `vllm-fn` は両ノードとも `no` なので、ノードを再起動すると上がってこない** (2026-09-06 実測)。手で `./start.sh --launch` を打ち直す。sparkDash は `always`、`docker` と (head の) `tailscaled` は enabled、RoCE は NetworkManager の autoconnect、GPU と CPU のクロック制限は 2 つの unit がどちらも enabled である (→ 制約 4・5)。どちらの系統も停止スクリプトで止めた後はコンテナ自体が消えるので再起動しても復帰しない。**cold boot での復帰は未確認なので、電源断の後は `docker ps` で確かめる**
+9. **`~/spark-bench` は再作成手段が無い。** dotfiles にも上流にも無い手書きのハーネスなので、head を作り直すと失われる
+10. **2 系統の vLLM は同時に起動できない。** ポート 8888 と GPU を共有し、Qwen 側は `REQUIRE_IDLE_GPU=true` が明示的に拒否する。切り替えは必ず「相手を停止 → 起動」の順で行う
 
 ## 依拠する外部事実
 
@@ -755,7 +779,13 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 | 稼働中のモデル名と上限 | `curl http://spark-head.local:8888/v1/models` |
 | 8888 が無認証のままか | `curl -s -o /dev/null -w "%{http_code}\n" http://spark-head.local:8888/v1/models` (200 なら無認証。対照に `/v1/nope` が 404 を返すことも見る) |
 | 各種メトリクス | 「遅いと感じたときに疑う順序」の `curl` 1 本 (完全一致の grep) |
-| クロック制限の有効性 | `ssh -n spark-head 'systemctl is-active nv-gpu-clock-limit.service'` (worker は head 経由) |
+| CPU のトポロジと governor | `ssh -n spark-head 'lscpu \| grep -E "Model name\|^CPU\(s\)"; for c in 0 5 10 15; do echo "cpu$c $(cat /sys/devices/system/cpu/cpu$c/cpufreq/scaling_driver) $(cat /sys/devices/system/cpu/cpu$c/cpufreq/scaling_governor) $(cat /sys/devices/system/cpu/cpu$c/cpufreq/cpuinfo_max_freq)"; done'` (worker は「worker に入る」節経由)。**cpu5 / cpu15 が 3900000、cpu0 / cpu10 が 2808000 なら「ハードウェアと OS」表のコア割り当てどおり。** unit が書き込む対象コアがこの割り当てに依存するので、別ロットで番号が入れ替わっていないかをここで見る。2026-09-10 実測 |
+| クロック制限の unit が有効か | `ssh -n spark-head 'systemctl is-active nv-gpu-clock-limit.service nv-cpu-clock-limit.service'` (worker は head 経由。両方 `active` で合格)。**どちらも `Type=oneshot` + `RemainAfterExit=yes` なので `active` のまま残る** (この 2 行が無い素の oneshot は実行後に `inactive` になり、この判定は使えない)。**`is-active` は unit が走ったことしか言わないので、実効値は下の 2 行で別に見る** |
+| GPU クロック制限が実際に効いているか | `ssh -n spark-head 'nvidia-smi --query-gpu=clocks.max.sm,clocks.applications.graphics --format=csv'` と、負荷中の `nvidia-smi --query-gpu=clocks.sm --format=csv,noheader`。**負荷中に 2200 MHz 前後を超えなければ効いている。** ロックは unit が `active` のままでも外部要因で解けうるので、`is-active` を実効性の証跡にしない |
+| X925 の `scaling_max_freq` が下げてあるか | `ssh -n spark-head 'for c in 5 19; do echo "$(cat /sys/devices/system/cpu/cpu$c/cpufreq/scaling_max_freq) $(cat /sys/devices/system/cpu/cpu$c/cpufreq/cpuinfo_max_freq) $(cat /sys/devices/system/cpu/cpu$c/cpufreq/max_perf)"; done'` (worker は「worker に入る」節経由)。単位はすべて kHz。**`2808000 3900000 3900000`(cpu5) / `2808000 3900000 4004000`(cpu19) が現状で、意味は「policy は下げたがハードウェアには届いていない」。** 3 列目 (`max_perf`) が 2808000 になって初めて本当のクロック制限である。1 列目と 2 列目が同値なら unit が当たっていない。sudo は要らない。2026-09-10 実測 |
+| X925 の実効クロック (**`scaling_cur_freq` は見ない**) | **`scaling_cur_freq` は `cppc_cpufreq` では要求値のエコーで、負荷と無関係に `scaling_max_freq` と同じ値を返すため検査に使えない** (これで「上限以下」を確認しても、原理的に不合格になりえない)。実効値は `cpuinfo_avg_freq` (直近区間の delivered performance) を **busy なコアに限って**読む。手順は下のコードブロック 5。**陰性対照は busy な A725 で、要求値 2808000 と実効値がほぼ一致する。** X925 が同時に 3.8〜3.9 GHz を返せば、エコーではなく実効値を見られている。**idle のコアに打つと値が動かないか `Resource temporarily unavailable` を返すので、busy 判定と必ず組で使う。** 2026-09-10 実測 |
+| 推論中に CPU を使っているのが誰か (「既知の制約」5 の因果の根拠) | 4 値をそれぞれ別の手段で採る。**(a) decode 1 ステップの時間** = 推論 1 本の前後で `curl -s http://spark-head.local:8888/metrics \| grep '^vllm:iteration_tokens_total_count'` の増分でその間の所要秒を割る。**(b) 同区間の GPU 使用率** = 負荷中に `ssh -n spark-head 'nvidia-smi --query-gpu=utilization.gpu,clocks.sm,power.draw --format=csv'`。**(c) スレッドごとの CPU 時間** = 負荷の前後で `/proc/<tid>/stat` の 14・15 列 (user / sys、単位は 10 ms) の増分を取る。**(d) 自発的にブロックした回数** = 同じ区間で `/proc/<tid>/status` の `voluntary_ctxt_switches` の増分を (a) のステップ数で割る。**tid は `ps -eLo tid,pcpu,comm` で `VLLM` を含むものを拾う** (`docker exec` は要らない。コンテナのスレッドもホストの `/proc` に見える)。2026-09-10 に (a) 63 ms / (b) 93% / (c) 3 本が 91〜99% / (d) 2〜5 回を実測。**スタックまでは追っていないので、スピンの出所が CUDA の同期待ちか NCCL かは未確認である** (コンテナに `py-spy` が無く、`perf` / `strace` は sudo が要る) |
+| CPU / SoC の温度 | `ssh -n spark-head 'for z in 0 1 2 3 4 5 6; do awk "{printf \"zone%s=%.1f \", $z, \$1/1000}" /sys/class/thermal/thermal_zone$z/temp; done; echo'` (worker は「worker に入る」節経由)。**zone の名前と読み方は「既知の制約」6。** 単位は °C。**履歴は残らないので、比較したいときは負荷の前後で自分で採る** |
 | 再起動後の復帰条件 | `ssh -n spark-head 'docker inspect <コンテナ名> --format "{{.HostConfig.RestartPolicy.Name}}"'` (DeepSeek 系は `deepseek-v4-flash-vllm-dspark-1`、Qwen 系は `vllm-fn`) |
 | Tailscale の参加状況 | Mac 側で `tailscale status` |
 | OpenCode の設定 | Mac 側で `python3 -c "import json;print(list(json.load(open('$HOME/.config/opencode/opencode.json'))['provider']))"` |
@@ -765,13 +795,13 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 | zsh 関数が配布済みか | Mac 側で `diff -q "$(readlink -f ~/.config/zsh/functions/claude-deepseek.zsh)" zsh/functions/claude-deepseek.zsh` (dotfiles で実行)。**こちらは store の実コピーなので `readlink -f` も常に `/nix/store/…` を返す。** パスではなく内容を比べる。差があれば `drs` 待ち |
 | 2 つのクライアントの疎通 | Mac 側で `ccsp status` / `ocsp status`。**`drs` を当てて新しいシェルを開くまで関数は `command not found` になる** (配布済みかは上の `diff -q` の行で判る)。**Claude の Bash ツールのシェルスナップショットには `_spark_*` ヘルパーが入らないため、そこから打つと `command not found` と「に届かない」の誤判定になる (2026-09-09 実測)。切り分けは `curl -fs -o /dev/null http://spark-head.local:8888/health` で行う** |
 | 配信中のモデルが受ける reasoning effort と既定値 | **経路ごとに 2 本打つ** (語彙が違う → 「reasoning effort の語彙」)。`ocsp` 側は `curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: application/json' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"reasoning_effort":"high","max_tokens":1}'`、`ccsp` 側は `curl -s http://spark-head.local:8888/v1/messages -H 'Content-Type: application/json' -H 'anthropic-version: 2023-06-01' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"max_tokens":1,"output_config":{"effort":"high"}}'`。**`high` を投げて 400 のエラー本文を読むのが陽性対照** (対応値と既定値を列挙する)。**陰性対照として受理される値 (`xhigh`) でも打ち、200 が返ることを確かめる** (常に 400 を返す壊れた検出でないことの確認)。**Qwen 配信中に全値で実測済み。DeepSeek 系は未確認** |
-| 2 つのクライアントが実際に送る effort | **設定値**は Mac 側で `python3 -c "import json;print({k:v.get('options') for k,v in json.load(open('$HOME/.config/opencode/opencode.json'))['provider']['spark']['models'].items()})"` (`ocsp` が読むのはこの実体。dotfiles 側を読むと、まだ `drs` を当てていない世代では送っていない値を報告してしまう。どちらを指しているかは上の `readlink` の行で判る) と `ccsp` の起動時の 1 行。**送信値そのものを見るには記録プロキシを挟む** (下の手順 4)。**`ccsp` 側は `drs` と新しいシェルを経ないと新実装が動かない**ので、`grep -c _ccsp_effort ~/.config/zsh/functions/claude-deepseek.zsh` が 0 を返す間は effort を送らない |
+| 2 つのクライアントが実際に送る effort | **設定値**は Mac 側で `python3 -c "import json;print({k:v.get('options') for k,v in json.load(open('$HOME/.config/opencode/opencode.json'))['provider']['spark']['models'].items()})"` (`ocsp` が読むのはこの実体。dotfiles 側を読むと、まだ `drs` を当てていない世代では送っていない値を報告してしまう。どちらを指しているかは上の `readlink` の行で判る) と `ccsp` の起動時の 1 行。**送信値そのものを見るには記録プロキシを挟む** (下のコードブロック 4)。**`ccsp` 側は `drs` と新しいシェルを経ないと新実装が動かない**ので、`grep -c _ccsp_effort ~/.config/zsh/functions/claude-deepseek.zsh` が 0 を返す間は effort を送らない |
 | DeepSeek 系の上流既定からの差分 | 下のコードブロック 1 (**キー行と RoCE 側の IP を持つ 4 行が出るので画面外に出さない**) |
 | Qwen 系の上流既定からの差分 | 下のコードブロック 2 |
 | 常時展開される rules | 下のコードブロック 3 |
 | L1 の再計測 | 「L1」節の `bench.py` 2 本をそのまま打つ。**前提が 2 つある**: DeepSeek 系 (Vision-Exp) を配信中であることと、`/tmp/spark.key` を書き直してあること (無認証でも中身は何でもよいが、ファイルが無いと `bench.py` が exit する) |
 
-表に入らないもの (1〜3 はパイプを含むため、4 はヒアドキュメントを含むため)。
+表に入らないもの (1〜3 と 5 はパイプを含むため、4 はヒアドキュメントを含むため)。
 
 ```bash
 # 1. .env.dspark と配布既定の差分
@@ -788,9 +818,26 @@ ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && diff <(grep -E "^[
 for f in agents/rules/core/*.md agents/rules/core/references/loop-engineering.md; do
   head -8 "$f" | grep -q __read-on-demand-only__ || echo "$f"
 done
+
+# 5. 推論中に busy なコアと、そのコアの実効クロック (ノード上で実行)
+# 「既知の制約」5 の 2 つの主張 (載り先が A725 へ移った / X925 は走れば 3.9 GHz)
+# を両方この 1 本で確かめる。推論を流している間に打つ。
+pc(){ awk '/^cpu[0-9]/ {print $1, $2+$3+$4+$6+$7+$8, $5}' /proc/stat; }
+pc > /tmp/c1; sleep 5; pc > /tmp/c2
+paste /tmp/c1 /tmp/c2 | awk '{b=$5-$2; i=$6-$3; t=b+i; p=(t>0?100*b/t:0); if (p>50) print substr($1,4)+0, int(p)}' |
+while read c p; do
+  cls=A725; case $c in 5|6|7|8|9|15|16|17|18|19) cls=X925;; esac
+  printf "cpu%s(%s) busy=%s%% avg=%s scal=%s\n" "$c" "$cls" "$p" \
+    "$(cat /sys/devices/system/cpu/cpu$c/cpufreq/cpuinfo_avg_freq 2>&1)" \
+    "$(cat /sys/devices/system/cpu/cpu$c/cpufreq/scaling_cur_freq)"
+done
+# 読み方: A725 は avg ≈ scal (2805257 前後)。X925 が出てきたら avg は 3.88 GHz 前後で
+# scal は 2808000 のまま = scal がエコーである証拠。X925 が出るのは 8 回に 1 回程度
+# なので、出なくても異常ではない (何度か打つ)。1 行も出なければ負荷が掛かっていない
+# ので、先に推論が走っていることを確かめる (陰性対照: 無負荷では 0 行になる)。
 ```
 
-**手順 4. クライアントが実際に送る本文を見る (記録プロキシ)。** effort のように「設定に書いた値が本当に飛んでいるか」は、サーバのログにもクライアントの出力にも出ない。両者の間に中継を挟んで本文を写し取る。下は Mac のローカルに立てて上流へそのまま流す最小の実装である (上の 1〜3 と違いヒアドキュメントを含むので、1 つのフェンスに収まらない)。
+**コードブロック 4. クライアントが実際に送る本文を見る (記録プロキシ)。** effort のように「設定に書いた値が本当に飛んでいるか」は、サーバのログにもクライアントの出力にも出ない。両者の間に中継を挟んで本文を写し取る。下は Mac のローカルに立てて上流へそのまま流す最小の実装である (上の 1〜3 と 5 と違いヒアドキュメントを含むので、1 つのフェンスに収まらない)。
 
 ```bash
 cat > /tmp/spark-proxy.py <<'PY'
