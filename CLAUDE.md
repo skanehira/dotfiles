@@ -165,6 +165,8 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `.luarc.json` — lua_ls の dotfiles 内 lua 編集用設定 (track 対象)
 - **herdr/** — herdr (コーディングエージェント用のターミナル多重化) の設定
   - `config.toml` — `herdr.nix` が `~/.config/herdr/config.toml` へ mkOutOfStoreSymlink する
+  - **プラグインだけは宣言的に管理できない。** `config.toml` は `type = "plugin_action"` で参照するのみで、宣言的に導入する手段は無い (実測: herdr 0.7.4、2026-09-11。`herdr --default-config` にも plugin セクションが無く、HM の `programs.herdr` も enable/package/settings の 3 オプションのみ)。導入状態は `~/.config/herdr/` 配下の herdr 所有ファイルにあり、Nix 管理外
+  - `herdr.nix` の activation が、未導入時のみ `herdr plugin install <owner>/<repo> --yes` を流す。対象は `persiyanov/herdr-reviewr` (id: `persiyanov.reviewr`) と `ChmaraX/herdr-nvim` (id: `chmarax.herdr-nvim`) の 2 本。導入判定は `herdr plugin list --plugin <id>` の出力 grep で、非対話では `--yes` が必須。導入済みへの再実行は再ダウンロードになるため skip するので、更新は手動で同じ install を流す (refresh 経路)。失敗しても activation は警告のみで止まらない (`herdr plugin list` で確認できる)。撤去は自動でやらず、リストから外しても残る (`herdr plugin uninstall` を手で流す)。`chmarax.herdr-nvim` は Neovim 側の `vim/lua/plugins/ai/herdr-nvim.lua` と対で動く
 - **リポジトリ直下** — `AGENTS.md` (このリポジトリで作業する agent 向けの repo スコープ指示。グローバル指示の正本 `agents/AGENTS.md` とは別物) / `bootstrap.sh` (mac 初回セットアップの入口) / `README.md` / `.github/workflows/nix-check.yml` (nix/** の push で flake check と fmt を回す CI)
 - **docs/** — Nix 設定だけでは伝わらない環境固有の手順書
   - `android-dev-setup.md` — Galaxy Z Fold 8 Ultra を Termux + proot-distro Debian で開発端末にする手順と制約
@@ -189,14 +191,14 @@ nix/
     ├── home/
     │   ├── harness.nix   — ハーネスを Claude Code / OpenCode 向けにコンパイルして配る + 旧方式が張った ~/.agents/skills の symlink を撤去 (Android でも要るので codex.nix には置かない)
     │   ├── claude.nix    — Claude Code (bootstrap install + Claude 固有の設定と hooks/scripts を symlink。ハーネスの生成は harness.nix)
-    │   ├── codex.nix     — Codex 向けハーネスの生成 (AGENTS.md / rules / skills / agents) + プラグイン導入。Linux のみ /etc/codex/config.toml を sudo で symlink
+    │   ├── codex.nix     — Codex 向けハーネスの生成 (AGENTS.md / rules / skills / agents) + プラグイン導入 (activation)。Linux のみ /etc/codex/config.toml を sudo で symlink
     │   ├── deno.nix      — bootstrap-install (~/.deno/bin/deno 不在時のみ公式 installer 実行)
     │   ├── direnv.nix    — programs.direnv + nix-direnv
     │   ├── env.nix       — sessionVariables / sessionPath
     │   ├── fzf.nix       — programs.fzf (default command/options, zsh integration)
     │   ├── gh.nix        — programs.gh (GitHub CLI)
     │   ├── git.nix       — programs.git (LFS, alias, difftastic)
-    │   ├── herdr.nix     — herdr の config.toml を mkOutOfStoreSymlink で live edit
+    │   ├── herdr.nix     — herdr の config.toml を mkOutOfStoreSymlink で live edit + プラグイン導入 (activation。mac / 通常 Linux のみ。home-android.nix は import しない)
     │   ├── karabiner.nix — goku で karabiner.edn → karabiner.json (mac only。home-darwin.nix からのみ import)
     │   ├── mac-app-util-icons.nix — .app の trampoline アイコン調整 (mac only)
     │   ├── neovim.nix    — vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
