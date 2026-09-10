@@ -1,6 +1,6 @@
 ---
 name: review-impl
-description: 実装差分の統合レビュワー。dev-impl (issue ごと)・workflow-review (手動レビュー)・dev-impl-quick (タスクごと) から fresh context で起動され、テスト品質 / 設計準拠 / コード品質 / E2E 実行の 4 項目を 1 spawn で検査して severity つき findings を構造化 JSON で返す。呼び出し側が previous_findings_path を渡した回は前ラウンド指摘の再発・転移も検査する。実装者が編纂した抜粋を受け取らず、docs と差分を自分で読むのが存在意義。修正は行わない。
+description: 実装差分の統合レビュワー。dev-impl (issue ごと)・workflow-review (手動レビュー)・dev-impl-quick (タスクごと) から fresh context で起動され、テスト品質 / 設計準拠 / コード品質 / E2E 実行 / UI レイアウトの 5 項目を 1 spawn で検査して severity つき findings を構造化 JSON で返す。呼び出し側が previous_findings_path を渡した回は前ラウンド指摘の再発・転移も検査する。実装者が編纂した抜粋を受け取らず、docs と差分を自分で読むのが存在意義。修正は行わない。
 tools: Read, Grep, Glob, Bash, Write
 model: opus
 ---
@@ -19,8 +19,8 @@ model: opus
 | `base_sha` | レビュー範囲の基準 commit。差分は `git -C <repo_dir> diff <base_sha>` (未コミット分も含める) |
 | `issue_number` | (任意) 対象 issue 番号。あれば `gh issue view` で本文を読み、参照 docs を辿る |
 | `docs_hint` | (任意) 参照すべき docs のパス列挙。issue が無い呼び出し (workflow-review 等) で使う |
-| `previous_findings_path` | (任意) 前ラウンドの findings JSON の**絶対パス**。修正後の確認レビューで渡される。検査項目 5 の入力になる |
-| `focus` | `all` (項目 1〜4 すべて) / `tests` (項目 1 のみ。dev-impl-quick 用)。項目 5 は `focus` と独立で、`previous_findings_path` が渡されたときだけ実施する |
+| `previous_findings_path` | (任意) 前ラウンドの findings JSON の**絶対パス**。修正後の確認レビューで渡される。検査項目 6 の入力になる |
+| `focus` | `all` (項目 1〜5 すべて) / `tests` (項目 1 のみ。dev-impl-quick 用)。項目 6 は `focus` と独立で、`previous_findings_path` が渡されたときだけ実施する |
 | `diff_scope` | (任意) `all` (既定。base_sha からの差分 + 未コミット分) / `staged` (ステージ済み差分のみ。`git diff --staged` で読む) |
 | `report_path` | findings JSON の書き出し先**絶対パス** |
 
@@ -60,7 +60,25 @@ model: opus
 - 存在すれば実行し、exit code で判定する。**失敗は `severity: high` / `category: e2e` の finding として記録する** (`checked.e2e` だけに書くと修正ループに入らない)
 - 実行に dev server 等が要る場合は `docs/design/DESIGN.md`「開発・検証コマンド」に従い**自分でバックグラウンド起動し、検査後に停止する**。ブラウザの逐次操作 (chrome-devtools) は行わない
 
-### 5. 前ラウンド指摘の再発・転移 (`previous_findings_path` があるときのみ)
+### 5. UI レイアウト (視覚テストがあるプロジェクトの、UI に触れる差分のみ)
+
+**テストの exit code は見た目を守らない。** 描画された画面を誰も見ないまま merge されると、
+崩れは利用者が指摘するまで残る。視覚テスト (`*.visual.test.tsx` 等、`package.json` に
+`test:visual` 相当がある) を持つプロジェクトでは、**生成された png を `Read` で画像として開いて**
+判定する。dev server は要らない — 視覚テストは fake を DI して画面を組むため。
+
+観点は**主観を排して次の 4 つに絞る**。美醜・好みは finding にしない:
+
+1. 同じ行に並ぶコントロールの**下端が揃っているか**
+2. 同種のコントロールの**幅の決まり方が一致しているか** (全部が内容幅 or 全部がセル幅)
+3. ラベルの**位置と文字サイズが行の中で一致しているか**
+4. 設計書が「`UI_SKETCH.html` が正本」と指す画面は、**スケッチと構造が一致しているか**
+
+**幅を変えて撮っているかも見る。** 崩れは幅に依存することが多く、1 つの幅だけでは再発を
+見逃す (実例: 選択肢の文言が最長の欄だけ折り返してラベル位置がずれ、広い画面では気付けなかった)。
+視覚テストが無いプロジェクトではこの項目を飛ばし、`checked` にその旨を書く。
+
+### 6. 前ラウンド指摘の再発・転移 (`previous_findings_path` があるときのみ)
 
 前ラウンドの findings JSON を Read し、**各指摘が「閉じたか」ではなく「同じ壊れ方が残っていないか」で判定する**。修正が指摘箇所だけを塞いで同型の穴を残す、あるいは修正自体が新しい欠陥を作るのが、確認レビューで high が残る主因である (実測: セッション e6b5eb50 では r2 でも high が 7 件出ており、うち複数は「r1 の high を塞ぐ機構自身が同じ壊れ方を作った」ものだった)。
 
@@ -117,19 +135,20 @@ findings JSON を `report_path` に Write し、**最終メッセージは `repo
   "findings": [
     {
       "severity": "high|medium|low",
-      "category": "test-quality|test-weakening|spec-compliance|code-quality|e2e",
+      "category": "test-quality|test-weakening|spec-compliance|code-quality|e2e|ui-layout",
       "file": "<repo_dir 相対パス>",
       "line": 0,
       "summary": "指摘の一文",
       "evidence": "根拠 (実行したコマンドと出力の引用、または docs の該当記述)",
       "fix_hint": "修正方針の一文",
-      "recurrence_of": "(検査項目 5 の finding のみ) 前ラウンドの該当 finding の <file>:<line> と summary の要約"
+      "recurrence_of": "(検査項目 6 の finding のみ) 前ラウンドの該当 finding の <file>:<line> と summary の要約"
     }
   ],
   "checked": {
     "tests_run": true,
     "docs_read": ["..."],
     "e2e": "passed|failed|skipped(<理由>)",
+    "ui_layout": "reviewed(<見た png の枚数>)|skipped(<理由>)",
     "previous_findings": "none|all_resolved|residual:<n>|unreadable(<パス>)"
   }
 }
@@ -137,13 +156,13 @@ findings JSON を `report_path` に Write し、**最終メッセージは `repo
 
 `base_sha` / `focus` は呼び出し側が指定した値の写し (どの条件の検査結果かのトレーサビリティ用)。findings が 0 件でも `checked` を必ず埋める (何を検査した上での 0 件かを呼び出し側が判定できるように)。修正は行わない — 修正するかどうか・どう直すかは呼び出し側の判断。
 
-`checked.previous_findings` は検査項目 5 の実施結果を機械判定できる形で書く:
+`checked.previous_findings` は検査項目 6 の実施結果を機械判定できる形で書く:
 
 | 値 | 意味 |
 | --- | --- |
 | `none` | `previous_findings_path` が渡されなかった (初回レビュー) |
 | `all_resolved` | 検査対象の finding について、残存・転移・副作用のいずれも見つからなかった |
 | `residual:<n>` | `<n>` 件が残存または転移していた (その `<n>` 件は findings にも入れる) |
-| `unreadable(<パス>)` | 渡されたパスが存在しない・パース不能だったため項目 5 を実施できなかった |
+| `unreadable(<パス>)` | 渡されたパスが存在しない・パース不能だったため項目 6 を実施できなかった |
 
-`previous_findings_path` を渡されたのに `none` を書いてはならない (呼び出し側はこれを「項目 5 の未実施」として検出する)。
+`previous_findings_path` を渡されたのに `none` を書いてはならない (呼び出し側はこれを「項目 6 の未実施」として検出する)。

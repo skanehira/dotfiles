@@ -1,6 +1,6 @@
 ---
 name: workflow-review
-description: ローカルの git 差分を統合レビュワー review-impl subagent (テスト品質 / 設計準拠 / コード品質 / E2E 実行の 4 項目) で fresh context レビューする薄い orchestrator。「差分検出 → review-impl 起動 → 結果の整形表示 → 修正アクション選択」を担当。セキュリティレビューは security-guidance プラグイン (Stop hook の LLM diff review + Edit 時の pattern 検知) に委譲しており本 skill の対象外。「レビューして」「この差分を見て」「コミット前にチェック」などで起動。
+description: ローカルの git 差分を統合レビュワー review-impl subagent (テスト品質 / 設計準拠 / コード品質 / E2E 実行 / UI レイアウトの 5 項目) で fresh context レビューする薄い orchestrator。「差分検出 → review-impl 起動 → 結果の整形表示 → 修正アクション選択」を担当。セキュリティレビューは security-guidance プラグイン (Stop hook の LLM diff review + Edit 時の pattern 検知) に委譲しており本 skill の対象外。「レビューして」「この差分を見て」「コミット前にチェック」などで起動。
 argument-hint: "[--staged]"
 allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion
 ---

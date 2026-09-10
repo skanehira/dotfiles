@@ -132,7 +132,7 @@ report_path: <SCRATCH>/impl-<N>.json`
 })
 ```
 
-**検収**: report JSON を読み、`status: done` は `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true` を満たすときだけ done と扱う (満たさない報告は**同じ `mode: implement` で 1 回だけ再起動する**。prompt に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」を足す。`mode: fix` は使わない — `findings_path` の JSON から high を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる)。**この再起動は 2.3 の fix ラウンドに数えない** — 実装の検収であって、レビュー指摘の修正ではない。**2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)。
+**検収**: report JSON を読み、`status: done` は `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true` を満たすときだけ done と扱う(UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でなく、**その画像を親が `Read` で実際に開いて**同じ行の下端・幅の決まり方・ラベル位置が揃っていることを確かめる — exit code は見た目を守らないため、ここを飛ばすと崩れは利用者が指摘するまで残る) (満たさない報告は**同じ `mode: implement` で 1 回だけ再起動する**。prompt に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」を足す。`mode: fix` は使わない — `findings_path` の JSON から high を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる)。**この再起動は 2.3 の fix ラウンドに数えない** — 実装の検収であって、レビュー指摘の修正ではない。**2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)。
 
 分岐:
 
@@ -158,13 +158,13 @@ report_path: <SCRATCH>/review-<N>-r<ラウンド>.json`
 
 **レビューと修正の回数はこう数える。初回レビューを r1 とし、レビューのたびに 1 ずつ増やす** (この採番が `findings_path` のファイル名に出るので、あとから何周したかを人も自分も数えられる。r0 から始めると 1 周ぶん過少に数えることになる)。レビューは r1 (実装直後) と r2 (fix の後の確認) の**最大 2 回**、`mode: fix` は r1 の findings に対する**最大 1 回**。`previous_findings_path` は r2 の 1 回だけ渡る。
 
-`previous_findings_path` を渡すと、レビュワーは「前ラウンドの指摘が閉じたか」に加えて「同じ壊れ方が別の箇所へ転移していないか」を検査する (review-impl の検査項目 5)。渡さないと fresh context のレビュワーは前ラウンドの存在を知らないため、修正が作った同型の穴を見逃す。**再開 run で前 run の review JSON が SCRATCH に無い場合は渡さない** (SCRATCH は run ごとに新規作成されるため)。その場合は項目 5 が働かないことを完了コメントに記す。
+`previous_findings_path` を渡すと、レビュワーは「前ラウンドの指摘が閉じたか」に加えて「同じ壊れ方が別の箇所へ転移していないか」を検査する (review-impl の検査項目 6)。渡さないと fresh context のレビュワーは前ラウンドの存在を知らないため、修正が作った同型の穴を見逃す。**再開 run で前 run の review JSON が SCRATCH に無い場合は渡さない** (SCRATCH は run ごとに新規作成されるため)。その場合は項目 6 が働かないことを完了コメントに記す。
 
 **`checked` の検収**: findings の件数を見る前に `checked` を確認する。次のいずれかなら検査が成立していないので、指示を明確化して 1 回再実行し、再発なら 2.6 へ (「何も検出できない検証の実行は検証ではない」):
 
 - `tests_run: false`
 - UI に触れる差分なのに `e2e` が理由の無い `skipped`
-- `previous_findings_path` を渡したのに `previous_findings` が `none` (検査項目 5 の未実施) または `unreadable(...)` (パスの渡し間違い — この場合はパスを直して再実行する)
+- `previous_findings_path` を渡したのに `previous_findings` が `none` (検査項目 6 の未実施) または `unreadable(...)` (パスの渡し間違い — この場合はパスを直して再実行する)
 
 review JSON が無い・パース不能の場合も同様に 1 回再起動 → 再失敗で 2.6。**検収の失敗による再実行は同じ `report_path` を上書きする** (r 番号を進めない。r 番号は fix 済みか否かの判定と `previous_findings_path` の選択に使われるので、実際には行われていない fix を数えてしまう)。
 
@@ -201,7 +201,7 @@ r1 の findings による分岐:
 
 修正対象にしなかった medium と、r2 で残った `test-quality` / `code-quality` の high は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。**保留対象が 1 件以上あるときだけ** `docs/pending-review/issue-<N>.html` を新規に書き出す (0 件なら作らない — 空ファイルが積まれると Step 3 の件数がノイズを数える)。各 finding はチェックボックス付きの 1 項目で、severity / category / `file:line` / summary / evidence / fix_hint をまとめる。**high は medium より前に置く。** 各項目の要素に `data-severity="high|medium"` と `data-category="<category>"` を持たせる — Step 3 が `rg -c 'data-severity="high"' docs/pending-review/` で件数を数え、過去 run のファイルも同じ形で数えられるようにするため。 外部依存の無い自己完結の静的 HTML とする。**issue 1 件につき 1 ファイルにする** — 全 issue が 1 枚のファイルへ追記する形だと、並列で走る issue が同じ位置に節を足して rebase のたびに必ず衝突する。ファイルを分ければ衝突は起きないので、union の衝突解決も要らない。**このファイルは 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
 
-**r2 まで回した issue では、r1 と r2 の medium を `file:line` + summary で重複排除した和を書き出す。** r2 が r1 と同じ medium を出し直すとは限らないので (検査項目 5 は high しか追わず、族の走査も high 候補を先に処理して打ち切りうる)、r2 のぶんだけを書くと r1 の medium が黙って落ちる。逆に単純な和では同じ指摘が二重に載るので、重複排除する。r1 で通過した issue は r1 の medium だけになる。
+**r2 まで回した issue では、r1 と r2 の medium を `file:line` + summary で重複排除した和を書き出す。** r2 が r1 と同じ medium を出し直すとは限らないので (検査項目 6 は high しか追わず、族の走査も high 候補を先に処理して打ち切りうる)、r2 のぶんだけを書くと r1 の medium が黙って落ちる。逆に単純な和では同じ指摘が二重に載るので、重複排除する。r1 で通過した issue は r1 の medium だけになる。
 
 **`medium` / `category: e2e` で、summary が `対象動線未指定 (設計差し戻し):` で始まる finding だけは別立てで扱う** (この書式は review-impl 側で固定してある)。 これは実装ではなく設計側の欠落なので、保留リストに載せたうえで、2.5 の完了コメントに「設計差し戻しが必要な指摘」として独立の行で書き、Step 3 の最終報告にも載せる (保留リストに埋もれると設計へ差し戻る経路が消える)。
 
