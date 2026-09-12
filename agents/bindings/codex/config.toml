@@ -9,7 +9,7 @@ sandbox_mode = "danger-full-access"
 
 notify = ["terminal-notifier", "-message", "codex task done", "-sound", "default"]
 model = "gpt-6-astra"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 personality = "pragmatic"
 service_tier = "default"
 plan_mode_reasoning_effort = "high"
