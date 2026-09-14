@@ -134,6 +134,7 @@ let
       # darwin 専用 derivation なので Linux では evaluation error になる。
       # Linux で必要になったら libreoffice (ソースビルド版) を使う
       libreoffice-bin
+      scrcpy # Android 実機の画面ミラーリング / 操作
     ];
 
   # エディタ / TUI
@@ -162,6 +163,7 @@ let
       tirith # shell security guard (homograph URL / pipe-to-shell 等を実行前にブロック)
     ]
     ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+      android-tools # adb: Android 実機との接続 / Wi-Fi ペアリング
       terminal-notifier # macOS notification API (codex notify で使用)
     ];
 
