@@ -41,7 +41,7 @@ ccds() {
 #   ccsp                自動判定 (LAN に届けば LAN、届かなければ Tailscale)
 #   ccsp lan            自宅 LAN 直結を強制 (プローブしない)
 #   ccsp ts             Tailscale 経由を強制 (プローブしない)
-#   ccsp qwen           使うモデルを指定する (qwen / vision)
+#   ccsp qwen           使うモデルを指定する (qwen / vision / v41)
 #   ccsp lan qwen       接続先とモデルは順不同で並べられる
 #   ccsp off            Anthropic に戻す
 #   ccsp status         起動せずに接続先・モデル・両経路の到達性を表示
@@ -83,9 +83,12 @@ ccds() {
 # low / medium / xhigh の 3 つ。high と max はテンプレートが、none はスキーマが
 # 弾く)。vision (DeepSeek 系) の high はレシピの DEFAULT_THINKING の語彙
 # (off / low / high / max) に合わせた値で、配信中に実測していない。
+# DeepSeek-v4.1-Flash-EXL3 は low / high / xhigh / max を両経路で受け、medium は
+# 400 になる (2026-09-15 実測)。
 _ccsp_effort() {
   case "$1" in
     qwen3.8-flash-next) echo "xhigh" ;;
+    DeepSeek-v4.1-Flash-EXL3) echo "max" ;;
     *) echo "high" ;;
   esac
 }
@@ -143,7 +146,7 @@ ccsp() {
     -h|--help)
       cat <<'USAGE' >&2
 使い方:
-  ccsp [lan|ts] [qwen|vision] [claude に渡す引数...]
+  ccsp [lan|ts] [qwen|vision|v41] [claude に渡す引数...]
   ccsp status               起動せずに接続先・配信モデル・到達性を表示
   ccsp off                  Anthropic に戻す
   ccsp -- [claude に渡す引数...]
@@ -152,12 +155,13 @@ ccsp() {
 モデル名の短縮:
   qwen    -> qwen3.8-flash-next
   vision  -> deepseek-v4-flash-vision-exp
+  v41     -> DeepSeek-v4.1-Flash-EXL3
 モデルを省略すると配信中のモデルを自動で使う。短縮名に無いものは
 CCSP_MODEL=<配信名> ccsp で渡す。
 コンテキスト上限は max_model_len から出力用の余白 (既定 32768、
 CCSP_OUTPUT_RESERVE で変更可) を引いた値になる。
 reasoning effort は配信モデルごとの最大値を使う (qwen3.8-flash-next は
-xhigh、他は high)。CCSP_EFFORT=<値> ccsp で上書きできるが、モデルの語彙に
+xhigh、DeepSeek-v4.1-Flash-EXL3 は max、他は high)。CCSP_EFFORT=<値> ccsp で上書きできるが、モデルの語彙に
 無い値を渡すと最初のリクエストが 400 で落ちる (Qwen で渡せるのは
 low / medium / xhigh の 3 つ)。
 USAGE
@@ -167,7 +171,7 @@ USAGE
       echo "  接続先: ${ANTHROPIC_BASE_URL:-(未設定)}"
       echo "  base  : $base"
       echo "  要求  : ${CCSP_MODEL:-(指定なし。配信中のモデルを使う)}"
-      echo "  effort: ${CCSP_EFFORT:-(配信モデルで決める: qwen3.8-flash-next→xhigh / 他→high)}"
+      echo "  effort: ${CCSP_EFFORT:-(配信モデルで決める: qwen3.8-flash-next→xhigh / DeepSeek-v4.1-Flash-EXL3→max / 他→high)}"
       local reachable="" probe
       echo -n "  LAN   : "
       if curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$lan_url/health"; then
@@ -202,7 +206,7 @@ USAGE
     case "$1" in
       lan) transport="$lan_url"; shift ;;
       ts) transport="$ts_url"; shift ;;
-      qwen|vision) requested="$(_spark_served_name "$1")"; shift ;;
+      qwen|vision|v41) requested="$(_spark_served_name "$1")"; shift ;;
       --) shift; break ;;
       *) break ;;
     esac

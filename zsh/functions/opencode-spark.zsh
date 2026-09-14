@@ -82,7 +82,7 @@ ocsp() {
   ocsp                      到達する方 (LAN → Tailscale) を選んで対話 TUI を起動
   ocsp lan                  自宅 LAN を強制 (プローブしない)
   ocsp ts                   Tailscale を強制 (プローブしない)
-  ocsp qwen                 モデルを指定して起動 (qwen / vision)
+  ocsp qwen                 モデルを指定して起動 (qwen / vision / v41)
   ocsp ts qwen              接続先とモデルは順不同で並べられる
   ocsp run "<指示>"          headless で 1 回実行
   ocsp qwen run "<指示>"     モデルを指定して headless 実行
@@ -94,6 +94,7 @@ ocsp() {
 モデル名の短縮:
   qwen    -> qwen3.8-flash-next
   vision  -> deepseek-v4-flash-vision-exp
+  v41     -> DeepSeek-v4.1-Flash-EXL3
 モデルを省略すると配信中のモデルを自動で使う。接続先を省略すると
 LAN -> Tailscale の順に /health をプローブして到達する方を使う。
 status と model は先頭に置く (ocsp ts status は通らない)。
@@ -103,7 +104,7 @@ USAGE
       ;;
     model)
       if [[ -z "$2" ]]; then
-        echo "ocsp: モデル名が要ります (qwen / vision / 明示名)" >&2
+        echo "ocsp: モデル名が要ります (qwen / vision / v41 / 明示名)" >&2
         return 1
       fi
       OCSP_MODEL="$(_spark_served_name "$2")"
@@ -157,7 +158,7 @@ USAGE
     case "$1" in
       lan) transport="$lan_url"; shift ;;
       ts) transport="$ts_url"; shift ;;
-      qwen|vision) model="$(_spark_served_name "$1")"; shift ;;
+      qwen|vision|v41) model="$(_spark_served_name "$1")"; shift ;;
       *) break ;;
     esac
   done
