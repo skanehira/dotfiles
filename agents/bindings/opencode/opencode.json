@@ -9,6 +9,18 @@
         "baseURL": "http://spark-head.local:8888/v1"
       },
       "models": {
+        "DeepSeek-v4.1-Flash-EXL3": {
+          "name": "DeepSeek V4.1 Flash EXL3 (Spark)",
+          "reasoning": true,
+          "tool_call": true,
+          "options": {
+            "reasoningEffort": "max"
+          },
+          "limit": {
+            "context": 600000,
+            "output": 65536
+          }
+        },
         "deepseek-v4-flash-vision-exp": {
           "name": "DeepSeek V4 Flash Vision-Exp (Spark)",
           "reasoning": true,

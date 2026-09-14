@@ -40,6 +40,7 @@ _spark_served_name() {
   case "$1" in
     qwen) echo "qwen3.8-flash-next" ;;
     vision) echo "deepseek-v4-flash-vision-exp" ;;
+    v41) echo "DeepSeek-v4.1-Flash-EXL3" ;;
     *) echo "$1" ;;
   esac
 }
