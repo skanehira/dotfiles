@@ -240,7 +240,8 @@
       "source": {
         "source": "github",
         "repo": "skanehira/misty-lantern"
-      }
+      },
+      "autoUpdate": true
     },
     "openai-codex": {
       "source": {
