@@ -5,12 +5,14 @@ description: 会議・商談・インタビューの録音をMLX Whisperでロ�
 
 # 会議録音から議事録を作成
 
+- 種別: スキル定義
+
 音声を外部の文字起こしAPIへ送信せず、Apple Silicon Mac上で処理する。文字起こし全文を時系列で確認し、確定事項と提案を混同しない議事録を作成する。
 
 ## 前提
 
 - macOS Apple Siliconで実行する。
-- `ffprobe`、`uvx`、`jq`を使用する。コマンドが無い場合は報告して停止する。
+- `ffprobe`、`ffmpeg`、`uvx`、`jq`を使用する。コマンドが無い場合は報告して停止する。
 - 初回実行時はモデルとPython依存パッケージのダウンロードが発生する。
 - 音声や文字起こしに含まれる秘密情報を、外部サービス、ログ、リポジトリへ送信・保存しない。
 
@@ -38,14 +40,24 @@ ffprobe -v error \
 
 ### 3. ローカルで文字起こしする
 
-一時ディレクトリを作り、[scripts/transcribe.sh](scripts/transcribe.sh)を実行する。言語の指定が無ければ日本語を既定値とし、複数言語または不明な場合だけ`auto`を指定する。
+一時ディレクトリを作り、[scripts/transcribe.sh](scripts/transcribe.sh)を実行する。言語の指定が無ければ日本語を既定値とし、言語が不明な場合だけ`auto`を指定する。`auto`は音声冒頭から単一言語を選ぶ機能であり、複数言語を区間ごとに判定する機能ではない。言語が切り替わる区間を再確認するときは、その区間の言語コードを明示する。
 
 ```bash
 work_dir="$(mktemp -d "${TMPDIR:-/tmp}/meeting-minutes.XXXXXX")"
 scripts/transcribe.sh "<recording>" "${work_dir}" ja
 ```
 
-録音時間に比例して数分〜数十分かかるため、同期実行せず`{{@background-run}}: true`で起動する。完了まで定期的に出力を確認し、進捗をユーザーへ伝える。`transcript.json`、`transcript.txt`、`transcript.vtt`が生成される。既存出力を上書きしない。
+録音時間に比例して数分〜数十分かかるため、同期実行せず`{{@background-run}}: true`で起動する。完了まで定期的に出力を確認し、進捗をユーザーへ伝える。`transcript.json`、`transcript.txt`、`transcript.vtt`、`transcript.srt`、`transcript.tsv`が生成される。既存出力を上書きしない。
+
+スクリプトは初回文字起こし後に[scripts/check_transcript_quality.sh](scripts/check_transcript_quality.sh)を実行する。`.segments[].text`の前後空白を除いた非空セグメントを単位とし、完全一致する同一テキストが20セグメント以上連続するか、100セグメント以上ある文字起こしで同一テキストが全体の20%以上を占める場合は、Whisperが失敗ループへ入った可能性が高いと判定する。その場合は次の処理を自動で行う。
+
+1. 初回結果を`${work_dir}/first-pass/`へ退避する。
+2. 前区間の文章を次区間へ引き継がず、語単位タイムスタンプと無音区間の幻覚抑制を有効にして全編を1回だけ再文字起こしする。
+3. 再結果にも反復崩れがあれば終了コード70で停止する。崩れた結果から議事録を作らず、ユーザーへ報告する。
+
+再実行された場合、後続処理では`${work_dir}/transcript.json`を正本として使う。`${work_dir}/first-pass/`は原因確認用であり、要約根拠には使わない。
+
+再文字起こしのプロセス自体が失敗した場合は、`first-pass/`を含む失敗時の作業ディレクトリを証跡として保持する。既存出力を削除せず、新しい`work_dir`を作って最初から再実行する。
 
 ### 4. 全編を時系列で確認する
 
@@ -84,21 +96,27 @@ jq -r '
 
 ### 5. 不確実な箇所を再確認する
 
-氏名、金額、日付、期限、製品名、決定を左右する表現が不明瞭な場合は、該当区間だけ語単位タイムスタンプ付きで再文字起こしする。モデルは3で使用したもの (`MLX_WHISPER_MODEL`、既定値`mlx-community/whisper-large-v3-turbo`) を、言語は3で指定した言語コードをそのまま使う。
+氏名、金額、日付、期限、製品名、決定を左右する表現が不明瞭な場合は、該当区間だけ語単位タイムスタンプ付きで再文字起こしする。モデルは3で使用したもの (`MLX_WHISPER_MODEL`、既定値`mlx-community/whisper-large-v3-turbo`) を使う。3で言語コードを指定した場合だけ同じコードを`--language`へ渡し、`auto`を指定した場合は`--language`行を省略する。複数区間を再確認する場合は、区間ごとに一意な`clip_id`を付けて出力を分け、開始・終了秒と出力パスを記録する。
 
 ```bash
+clip_id="<start-seconds>-<end-seconds>"
+recheck_dir="${work_dir}/recheck/${clip_id}"
+mkdir -p "${recheck_dir}"
+
 uvx --from mlx-whisper mlx_whisper "<recording>" \
   --model "${MLX_WHISPER_MODEL:-mlx-community/whisper-large-v3-turbo}" \
-  --language "<3で指定した言語>" \
+  --language "<3で指定した言語コード。autoの場合はこの行を省略>" \
   --clip-timestamps "<start-seconds>,<end-seconds>" \
   --word-timestamps True \
-  --output-dir "${work_dir}/recheck" \
+  --output-dir "${recheck_dir}" \
   --output-name transcript \
   --output-format all \
   --verbose False
 ```
 
 再確認しても確定できない場合は`要確認`と記載する。文脈から推測した値を確定事項、参加者、担当、期限として書かない。
+
+品質チェックが通っていても、固有名詞や専門用語の誤認識は残りうる。文字起こしだけから一般的な業界用語へ補正した場合は、補正後の語を確定扱いせず、議事録へ`正式名称要確認`と明記する。
 
 ### 6. 議事録を作成する
 
@@ -135,15 +153,20 @@ uvx --from mlx-whisper mlx_whisper "<recording>" \
 
 以下をすべて満たすまで修正する（全文書き起こしのみの場合は議事録に関する項目を除く）。
 
-- 文字起こしの最終区間が録音の末尾付近まで到達している。
+- 最終セグメントの終了時刻と録音時間の差を確認する。差が大きい場合は末尾区間を試聴または波形・音量で確認し、正常な無音なのか文字起こし欠落なのかを判別する。
 - 議事録を作成した場合、冒頭・中央・末尾から最低1区間ずつ、議事録との対応を確認している。
 - 議事録を作成した場合、すべての決定事項が文字起こし内の根拠へ戻れる。
 - 議事録を作成した場合、提案を決定事項として記載していない。
 - 議事録を作成した場合、氏名、数値、日付、担当、期限を推測で補っていない。
+- 自動品質チェックが成功し、`first-pass/`がある場合は再文字起こし後の結果だけを要約根拠に使っている。
 - 出力ファイルが存在し、空でなく、議事録の場合は表が崩れていない。
 - 元音声と依頼範囲外のファイルへ変更を加えていない。
 
 最後に、成果物のパス、不確実な箇所、一時文字起こしの保存場所を簡潔に報告する。
+
+## 依拠する外部仕様
+
+2026-09-09時点で、MLX Whisperの[音声読込実装](https://github.com/ml-explore/mlx-examples/blob/main/whisper/mlx_whisper/audio.py#L38)、[出力処理](https://github.com/ml-explore/mlx-examples/blob/main/whisper/mlx_whisper/writers.py#L47)、[言語判定](https://github.com/ml-explore/mlx-examples/blob/main/whisper/mlx_whisper/transcribe.py#L147)を確認した。依存コマンドやCLI引数の挙動が変わった場合は、現行の公式実装と照合する。
 
 ## 使用例
 
