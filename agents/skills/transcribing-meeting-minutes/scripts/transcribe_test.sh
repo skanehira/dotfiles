@@ -7,11 +7,13 @@ transcribe_script="${script_dir}/transcribe.sh"
 failures=0
 invalid_audio="$(mktemp "${TMPDIR:-/tmp}/invalid-meeting-recording.XXXXXX.m4a")"
 existing_output_dir="$(mktemp -d "${TMPDIR:-/tmp}/meeting-minutes-existing-output.XXXXXX")"
+existing_srt_output_dir="$(mktemp -d "${TMPDIR:-/tmp}/meeting-minutes-existing-srt-output.XXXXXX")"
+missing_ffmpeg_bin="$(mktemp -d "${TMPDIR:-/tmp}/meeting-minutes-missing-ffmpeg.XXXXXX")"
 valid_audio="$(mktemp "${TMPDIR:-/tmp}/valid-meeting-recording.XXXXXX.m4a")"
 
 cleanup() {
   rm -f "${invalid_audio}" "${valid_audio}"
-  rm -rf "${existing_output_dir}"
+  rm -rf "${existing_output_dir}" "${existing_srt_output_dir}" "${missing_ffmpeg_bin}"
 }
 
 trap cleanup EXIT
@@ -76,6 +78,29 @@ assert_failure \
   "Error: output already exists: ${existing_output_dir}/transcript.json" \
   "${valid_audio}" \
   "${existing_output_dir}"
+
+touch "${existing_srt_output_dir}/transcript.srt"
+
+assert_failure \
+  "出力ディレクトリに既存のSRTがある場合も拒否する" \
+  73 \
+  "Error: output already exists: ${existing_srt_output_dir}/transcript.srt" \
+  "${valid_audio}" \
+  "${existing_srt_output_dir}"
+
+for dependency in ffprobe uvx jq; do
+  ln -s /usr/bin/true "${missing_ffmpeg_bin}/${dependency}"
+done
+
+original_path="${PATH}"
+PATH="${missing_ffmpeg_bin}:/usr/bin:/bin"
+assert_failure \
+  "ffmpegが無い場合は文字起こし前に拒否する" \
+  69 \
+  "Error: required command is not installed: ffmpeg" \
+  "${valid_audio}" \
+  "/tmp/transcribing-meeting-minutes-test-output"
+PATH="${original_path}"
 
 if [[ "${failures}" -ne 0 ]]; then
   exit 1
