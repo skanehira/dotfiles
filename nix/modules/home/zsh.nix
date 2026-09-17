@@ -139,6 +139,7 @@
     ".config/zsh/functions/spark-common.zsh".source = ../../../zsh/functions/spark-common.zsh;
     ".config/zsh/functions/claude-deepseek.zsh".source = ../../../zsh/functions/claude-deepseek.zsh;
     ".config/zsh/functions/opencode-spark.zsh".source = ../../../zsh/functions/opencode-spark.zsh;
+    ".config/zsh/functions/codex-spark.zsh".source = ../../../zsh/functions/codex-spark.zsh;
   }
   // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
     # sleepctl は pmset/ioreg 依存の mac 専用機能
