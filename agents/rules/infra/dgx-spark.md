@@ -834,7 +834,7 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
 
 実体は `zsh/functions/codex-spark.zsh` である。**`ccsp` と違ってシェルに環境変数も alias も残さないので、`off` に相当する解除操作が要らない** (`ocsp` と同じ)。**素の `codex` は ChatGPT ログインのままで、この関数は一切触らない。**
 
-押さえるべき点が 9 つある。
+押さえるべき点が 11 つある。
 
 - **設定ファイルを置かず、`codex` の `-c` で 8 キーを起動ごとに注入する。** `--profile` は `$CODEX_HOME/<名前>.config.toml` を読む仕組みなので、使うと `~/.codex/` に状態が増えて素の `codex` と混ざる。`-c` はレイヤの最上位に近く、`/etc/codex/config.toml` (system) も `~/.codex/config.toml` (user) も上書きする。**root の `-c` は subcommand の前に置ける**ので (`codex -c … exec …`、2026-09-17 実測)、TUI も `exec` も `resume` も同じ注入で通る
 
@@ -845,7 +845,8 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
   | `model_providers.spark.base_url` | `<選んだ URL>/v1` | — |
   | `model_providers.spark.wire_api` | `"responses"` | **唯一の有効値。** `"chat"` は codex 0.154.0 で削除され、設定を読んだ時点でエラーになる |
   | `model` | `/v1/models` の配信名 | 短縮名を渡した場合は起動前に配信中かを検査する |
-  | `model_context_window` | `max_model_len` と `CXSP_CONTEXT_MAX` (既定 500,000) の小さい方 | 明示しないと**未知モデルの fallback 272,000** で頭打ちになる。codex は未知モデルに `effective_context_window_percent` = 95 を掛けるので、500,000 なら 25,000 が出力用の余白として自動的に残る (**`ccsp` のように自分で引かないのはこのため**)。**上限を設けるのは、サーバの 600,000 をそのまま渡すと実効 570,000 トークンと長すぎるため。** 既定値は `agents/bindings/codex/config.toml` の `model_context_window` と同じ 500,000 に揃えてある |
+  | `model_context_window` | `max_model_len` と `CXSP_CONTEXT_MAX` (既定 500,000) の小さい方 | **このキーだけでは効かない** (下の `model_catalog_json` が要る)。上限を設けるのは、サーバの 600,000 をそのまま渡すと実効 570,000 トークンと長すぎるため。既定値は `agents/bindings/codex/config.toml` の `model_context_window` と同じ 500,000 に揃えてある |
+| `model_catalog_json` | `cxsp` が起動ごとに書き出す catalog のパス (`~/.cache/cxsp/model-catalog.json`) | **これが無いと `model_context_window` は無視される。** codex は未知のモデル名に fallback metadata (`context_window` / `max_context_window` とも 272,000) を当て、設定値を `min(設定値, max_context_window)` でクランプする。`max_context_window` を宣言できるのは catalog だけである |
   | `model_reasoning_effort` | `_spark_effort` の値 | 上書きは `CXSP_EFFORT` |
   | `web_search` | `"disabled"` | `agents/bindings/codex/config.toml` が `"live"` を配っており、カスタム provider でも hosted の `web_search` tool が `tools` に載る。vLLM がこの tool 型を受けるかは未確認なので経路ごと切る |
 
@@ -854,9 +855,11 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
 - **`/v1/responses` を使うのは `cxsp` だけである。** codex 0.154.0 が Responses API しか話さないため。この経路には**サーバ側にパッチが要る** (→「既知の制約」12)。パッチが当たっていないサーバへ向けると、最初のリクエストが `DeepSeek V4.1 supports text and image content only; got 'input_text'` の 400 で落ちる
 - **モデル名とコンテキスト上限は `/v1/models` から取る。** 表を持たないので配信側のモデルを変えても Mac 側の編集は要らない。短縮名 (`qwen` / `vision` / `v41`) を渡した場合はそれが配信されているかを起動前に検査し、載っていなければ配信中の一覧を出して exit 1 で止まる。短縮名に無いモデルは `CXSP_MODEL=<配信名> cxsp` で渡す
 - **reasoning effort は `ccsp` と同じ `_spark_effort` を引く。** V4.1 EXL3 については `/v1/responses` の全値を実測した (`low` / `high` / `xhigh` / `max` / `none` が 200、`medium` が 400。2026-09-17 →「V4.1 EXL3 の reasoning effort の語彙」)。**Qwen 系と DeepSeek 系についてこの経路の語彙は未実測である** (実測済みなのは `/v1/messages` と `/v1/chat/completions` だけ → 「Qwen の reasoning effort の語彙」)
+- **コンテキスト上限は catalog で宣言する。** `-c model_context_window` だけでは効かない (上の表)。`cxsp` は起動ごとに codex 同梱の catalog へ配信名を 1 件 append して `~/.cache/cxsp/model-catalog.json` に書き、`-c model_catalog_json` で渡す。**全置換にしない**のは、codex がその一覧を全世界として扱い `/model` から OpenAI のモデルが消えるため。**`use_responses_lite` は `false` に落とす** — 土台 (`gpt-6-astra`) の `true` のままだと codex がツール定義を `tools` パラメータではなく `input` の先頭の `{"type": "additional_tools"}` item として送り、vLLM が `'AdditionalTools' object has no attribute 'get'` の 500 を返す (2026-09-17 実測)。`effective_context_window_percent` は土台の 95 のまま使う (100 にすると強制コンパクションの上限にも 100% が使われ、出力用の余白が消える)
+- **`/status` の分母は 1 回目と 2 回目で変わる。** 1 リクエストも送っていない間は `-c model_context_window` の生値 (500K)、最初の応答の後は catalog 由来の実効値 (500,000 × 95% = 475K) になる。**catalog を渡していないと 2 回目以降が 258K** (= 272,000 × 95%) に落ちるので、これが効いているかの判定に使える (2026-09-17 実測)
 - **起動のたびに無害な警告が 2 種類出る。** どちらも 2026-09-17 に実測したもので、推論そのものは通る。
   - `failed to refresh available models: … missing field 'models' … body: {"object":"list","data":[…]}` — codex のモデルカタログ更新が OpenAI 専用の形を期待している。vLLM の `/v1/models` は OpenAI 互換の `data` 配列を返すので形が合わない。**推論の経路とは別**で、1 起動につき 2 回出る
-  - `warning: Model metadata for 'DeepSeek-v4.1-Flash-EXL3' not found. Defaulting to fallback metadata` — 配信名が codex のカタログに無いので出る。**`model_context_window` を明示しているのはこの fallback (272,000) を避けるためである**
+  - `warning: Model metadata for 'DeepSeek-v4.1-Flash-EXL3' not found. Defaulting to fallback metadata` — **catalog を渡すようになって出なくなった** (2026-09-17 実測)。出るようになったら catalog が届いていない
 - **Neovim の `<leader>xx` 系は `cxsp` を経由する。** herdr のペインには `agent="codex"` が付くのでペインの復元は効くが、`agent_session` (セッション UUID) は zsh を挟むと `null` になるので **herdr の `resume_agents_on_restore` は効かない** (`ocsp` も同じ。2026-09-17 実測)。**Spark に届かないときは `cxsp` が exit 1 で止まるのでペインがすぐ閉じる** — 素の `codex` (ChatGPT) を使いたいときは端末から直接打つ
 - **`drs` を当てて新しいシェルを開くまで存在しない。** 関数本体は Nix store 経由で配られるので、既存シェルには定義が無い (`command not found`)
 

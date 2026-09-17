@@ -19,6 +19,11 @@
 # ~/.codex/ に状態を残すことになり、素の codex (ChatGPT ログイン) と混ざる。
 # -c は /etc/codex/config.toml と ~/.codex/config.toml の両方より優先される。
 #
+# コンテキスト上限は -c model_context_window だけでは効かない。配信名は codex の
+# カタログに無く、fallback metadata の max_context_window (272,000) でクランプ
+# されるため。model catalog を自分で書き出して -c model_catalog_json で渡す
+# (_cxsp_render_catalog)。
+#
 # Spark の vLLM は認証を無効にしてあるので API キーを扱わない。codex は
 # model_providers.<id>.env_key を省くと Authorization ヘッダ自体を送らず、
 # ChatGPT のトークンも流用しない (requires_openai_auth の既定が false のため)。
@@ -27,7 +32,8 @@
 # (このリポジトリは公開なので関数に IP を書かない)。
 
 # codex に渡す -c の一式を配列で組み立てて標準出力に 1 行 1 個で返す。
-# 引数: $1 = base URL (末尾に /v1 を含まない形), $2 = 配信名, $3 = コンテキスト上限, $4 = effort
+# 引数: $1 = base URL (末尾に /v1 を含まない形), $2 = 配信名, $3 = コンテキスト上限,
+#       $4 = effort, $5 = model catalog のパス (空なら渡さない)
 #
 # model_providers.spark.name は空にできない。空だと codex が
 # 「provider name must not be empty」で設定全体の読み込みに失敗する (実測)。
@@ -36,10 +42,11 @@
 # "chat" を渡すと設定を読んだ時点でエラーになる。
 #
 # model_context_window には max_model_len を CXSP_CONTEXT_MAX (既定 500,000) で
-# 頭打ちにした値を入れる。codex は未知モデルに effective_context_window_percent
-# = 95 を掛けるので、500,000 なら 25,000 が出力用の余白として自動的に残る
-# (ccsp のように自分で引かないのはこのため)。明示しないと未知モデルの
-# fallback 272,000 で頭打ちになる。
+# 頭打ちにした値を入れる。codex はこの値に effective_context_window_percent = 95
+# を掛けるので、500,000 なら 25,000 が出力用の余白として自動的に残る (ccsp の
+# ように自分で引かないのはこのため)。
+# ただし model_catalog_json ($5) を同時に渡さないとこのキーは無視される
+# (理由は _cxsp_render_catalog のコメント)。
 #
 # web_search は disabled にする。agents/bindings/codex/config.toml が live を
 # 配っており、カスタム provider でも hosted の web_search tool が tools に載る。
@@ -53,9 +60,71 @@ _cxsp_config_args() {
   print -r -- "model_context_window=$3"
   print -r -- "model_reasoning_effort=\"$4\""
   print -r -- "web_search=\"disabled\""
+  [[ -n "$5" ]] && print -r -- "model_catalog_json=\"$5\""
+}
+
+# 配信モデルを 1 件足した model catalog を書き出す。
+#
+# これが無いと model_context_window は効かない。codex は未知のモデル名に
+# fallback metadata (context_window / max_context_window とも 272,000) を当て、
+# 設定値を min(設定値, max_context_window) でクランプするため、500,000 を渡しても
+# 272,000 になる (実測: /status の 2 回目以降が 258K = 272,000 の 95%)。
+# max_context_window 自体を宣言できるのは catalog だけである。
+#
+# 土台は codex 同梱の catalog で、そこに 1 件 append する。全置換にすると
+# codex がその一覧を全世界として扱い、/model から OpenAI のモデルが消える。
+#
+# 副作用: スキル説明の予算は context_window の 2% なので、272,000 のときの
+# 5,440 トークンから 10,000 (上限) に増え、その分プロンプトが伸びる
+# (実測: codex debug prompt-input で約 2,700 トークン増)。窓が 258,400 →
+# 475,000 に広がる対価としては見合うと判断した。
+#
+# 引数: $1 = 配信名, $2 = コンテキスト上限, $3 = 出力先
+_cxsp_render_catalog() {
+  python3 - "$1" "$2" "$3" <<'CATALOG'
+import json, subprocess, sys
+
+served, ctx, out = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+
+try:
+    bundled = json.loads(
+        subprocess.run(
+            ["codex", "debug", "models", "--bundled"],
+            capture_output=True, text=True, check=True,
+        ).stdout
+    )
+except Exception as exc:
+    sys.stderr.write(f"cxsp: 同梱 catalog を読めません: {exc!r}\n")
+    sys.exit(1)
+
+models = bundled.get("models") or []
+if not models:
+    sys.stderr.write("cxsp: 同梱 catalog が空です\n")
+    sys.exit(1)
+
+entry = dict(models[0])
+entry.update(
+    slug=served,
+    display_name=f"{served} (Spark)",
+    context_window=ctx,
+    max_context_window=ctx,
+    priority=0,
+    # 土台の True のままだと codex がツール定義を tools パラメータではなく
+    # input の先頭の {"type": "additional_tools"} item として送り、vLLM が
+    # 'AdditionalTools' object has no attribute 'get' の 500 を返す (実測)。
+    use_responses_lite=False,
+)
+# effective_context_window_percent は土台の 95 のまま使う。100 にすると codex が
+# 強制コンパクションの上限にも 100% を使い、出力用の余白が消える。
+
+with open(out, "w") as f:
+    json.dump({"models": models + [entry]}, f, ensure_ascii=False)
+    f.write("\n")
+CATALOG
 }
 
 cxsp() {
+  local catalog="${XDG_CACHE_HOME:-$HOME/.cache}/cxsp/model-catalog.json"
   local lan_url="$(_spark_lan_url)"
   local ts_url="$(_spark_ts_url)"
   local base_url requested transport served ctx effort line
@@ -173,11 +242,18 @@ USAGE
 
   effort="${CXSP_EFFORT:-$(_spark_effort "$served")}"
 
+  # catalog を作れなかったら渡さずに進む。その場合 codex は fallback metadata を
+  # 使うので窓が 272,000 の 95% に縮む。黙って縮むと気づけないので警告を出す。
+  if ! mkdir -p "${catalog:h}" || ! _cxsp_render_catalog "$served" "$ctx" "$catalog"; then
+    echo "cxsp: model catalog を作れませんでした。コンテキストは codex の fallback (272000 の 95%) になります" >&2
+    catalog=""
+  fi
+
   cfg=()
   local kv
   while IFS= read -r kv; do
     cfg+=(-c "$kv")
-  done < <(_cxsp_config_args "$base_url" "$served" "$ctx" "$effort")
+  done < <(_cxsp_config_args "$base_url" "$served" "$ctx" "$effort" "$catalog")
 
   # exec が headless の入口なので、この案内は stdout に混ぜず stderr に出す
   echo "cxsp: Spark モード ($base_url / $served / コンテキスト $ctx / effort $effort)" >&2
