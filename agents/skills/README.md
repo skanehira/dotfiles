@@ -188,6 +188,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [utility-cf-deploy-token](./utility-cf-deploy-token/) | 1Password のマスタートークンから Cloudflare のデプロイ用トークン (Workers Scripts + D1) を発行し、GitHub Actions の secrets に登録 |
 | [transcribing-meeting-minutes](./transcribing-meeting-minutes/) | 会議録音をローカル文字起こしし、時刻根拠付きの議事録を作成 |
 | [llm-feature-design](./llm-feature-design/) | アプリに組み込む LLM 機能のプロンプトと周辺構造を設計 (回答範囲の制限 / 非信頼テキストと injection 対策 / グラウンディング / ガードレール / 評価)。規範は references/ から遅延参照し、逐語引用と出典は references/evidence.md に分離 |
+| [japanese-tech-writing](./japanese-tech-writing/) | 日本語の技術文書・書籍原稿の文章規範 (段落と論証の構成 / 演出の抑制 / LLM っぽい表現と翻訳調の禁止 / 冗長の排除)。執筆・推敲時に参照する。外部 gist の verbatim import で、frontmatter に出典と Unlicense を持つ |
 
 ## 補足
 
