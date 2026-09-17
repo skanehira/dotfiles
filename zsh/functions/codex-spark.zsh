@@ -255,8 +255,32 @@ USAGE
     cfg+=(-c "$kv")
   done < <(_cxsp_config_args "$base_url" "$served" "$ctx" "$effort" "$catalog")
 
+  # 呼び出し側が渡した -c / --config は root 位置へ移す。
+  #
+  # codex は subcommand 側に -c を 1 つでも置くと root 側の -c を**すべて捨てる**
+  # (実測: codex -c 'model_provider="nonexistent"' debug prompt-input "hi" は
+  # 「Model provider `nonexistent` not found」で exit 1、同じものに subcommand 側の
+  # -c を足すと exit 0 になる)。そのままだと Spark 向けの注入が丸ごと消えて、
+  # 素の codex (ChatGPT ログイン) で走ってしまう。
+  #
+  # cfg の後ろに積むので、呼び出し側の値が cxsp の既定を上書きする (後勝ち)。
+  local -a passthru
+  passthru=()
+  while (( $# > 0 )); do
+    case "$1" in
+      -c|--config)
+        if (( $# < 2 )); then
+          echo "cxsp: $1 に値がありません" >&2
+          return 1
+        fi
+        cfg+=(-c "$2"); shift 2 ;;
+      --config=*) cfg+=(-c "${1#--config=}"); shift ;;
+      *) passthru+=("$1"); shift ;;
+    esac
+  done
+
   # exec が headless の入口なので、この案内は stdout に混ぜず stderr に出す
   echo "cxsp: Spark モード ($base_url / $served / コンテキスト $ctx / effort $effort)" >&2
 
-  command codex "${cfg[@]}" "$@"
+  command codex "${cfg[@]}" "${passthru[@]}"
 }

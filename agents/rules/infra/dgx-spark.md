@@ -834,7 +834,7 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
 
 実体は `zsh/functions/codex-spark.zsh` である。**`ccsp` と違ってシェルに環境変数も alias も残さないので、`off` に相当する解除操作が要らない** (`ocsp` と同じ)。**素の `codex` は ChatGPT ログインのままで、この関数は一切触らない。**
 
-押さえるべき点が 11 つある。
+押さえるべき点が 12 つある。
 
 - **設定ファイルを置かず、`codex` の `-c` で 8 キーを起動ごとに注入する。** `--profile` は `$CODEX_HOME/<名前>.config.toml` を読む仕組みなので、使うと `~/.codex/` に状態が増えて素の `codex` と混ざる。`-c` はレイヤの最上位に近く、`/etc/codex/config.toml` (system) も `~/.codex/config.toml` (user) も上書きする。**root の `-c` は subcommand の前に置ける**ので (`codex -c … exec …`、2026-09-17 実測)、TUI も `exec` も `resume` も同じ注入で通る
 
@@ -856,6 +856,7 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
 - **モデル名とコンテキスト上限は `/v1/models` から取る。** 表を持たないので配信側のモデルを変えても Mac 側の編集は要らない。短縮名 (`qwen` / `vision` / `v41`) を渡した場合はそれが配信されているかを起動前に検査し、載っていなければ配信中の一覧を出して exit 1 で止まる。短縮名に無いモデルは `CXSP_MODEL=<配信名> cxsp` で渡す
 - **reasoning effort は `ccsp` と同じ `_spark_effort` を引く。** V4.1 EXL3 については `/v1/responses` の全値を実測した (`low` / `high` / `xhigh` / `max` / `none` が 200、`medium` が 400。2026-09-17 →「V4.1 EXL3 の reasoning effort の語彙」)。**Qwen 系と DeepSeek 系についてこの経路の語彙は未実測である** (実測済みなのは `/v1/messages` と `/v1/chat/completions` だけ → 「Qwen の reasoning effort の語彙」)
 - **コンテキスト上限は catalog で宣言する。** `-c model_context_window` だけでは効かない (上の表)。`cxsp` は起動ごとに codex 同梱の catalog へ配信名を 1 件 append して `~/.cache/cxsp/model-catalog.json` に書き、`-c model_catalog_json` で渡す。**全置換にしない**のは、codex がその一覧を全世界として扱い `/model` から OpenAI のモデルが消えるため。**`use_responses_lite` は `false` に落とす** — 土台 (`gpt-6-astra`) の `true` のままだと codex がツール定義を `tools` パラメータではなく `input` の先頭の `{"type": "additional_tools"}` item として送り、vLLM が `'AdditionalTools' object has no attribute 'get'` の 500 を返す (2026-09-17 実測)。`effective_context_window_percent` は土台の 95 のまま使う (100 にすると強制コンパクションの上限にも 100% が使われ、出力用の余白が消える)
+- **呼び出し側が `-c` を渡しても安全にしてある。** codex は **subcommand 側に `-c` を 1 つでも置くと root 側の `-c` をすべて捨てる** (実測: `codex -c 'model_provider="nonexistent"' debug prompt-input "hi"` は exit 1、同じものに subcommand 側の `-c` を足すと exit 0 になる)。素直に `cxsp exec -c … ` と書くと Spark 向けの注入が丸ごと消えて**素の codex (ChatGPT ログイン) で走る**ので、`cxsp` は残り引数から `-c` / `--config` / `--config=` を拾って root 位置へ移す。cxsp の既定より後ろに積むので、渡した値が既定を上書きする
 - **`/status` の分母は 1 回目と 2 回目で変わる。** 1 リクエストも送っていない間は `-c model_context_window` の生値 (500K)、最初の応答の後は catalog 由来の実効値 (500,000 × 95% = 475K) になる。**catalog を渡していないと 2 回目以降が 258K** (= 272,000 × 95%) に落ちるので、これが効いているかの判定に使える (2026-09-17 実測)
 - **起動のたびに無害な警告が 2 種類出る。** どちらも 2026-09-17 に実測したもので、推論そのものは通る。
   - `failed to refresh available models: … missing field 'models' … body: {"object":"list","data":[…]}` — codex のモデルカタログ更新が OpenAI 専用の形を期待している。vLLM の `/v1/models` は OpenAI 互換の `data` 配列を返すので形が合わない。**推論の経路とは別**で、1 起動につき 2 回出る
