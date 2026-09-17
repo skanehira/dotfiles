@@ -13,6 +13,12 @@ local M = {}
 local OCSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
   .. "; source ~/.config/zsh/functions/opencode-spark.zsh; ocsp \"$@\""
 
+-- codex も同じく Spark の接続先解決 (プローブ + 配信モデル検査 + -c 注入) を持つ
+-- cxsp を経由させる。素の codex は ChatGPT ログインのままなので、ここを通さないと
+-- Spark ではなく OpenAI に繋がる
+local CXSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
+  .. "; source ~/.config/zsh/functions/codex-spark.zsh; cxsp \"$@\""
+
 -- ツール固有の設定
 --   display     : 入力バッファ名・通知に出す表示名
 --   shift_tab   : Shift+Tab として送るキー（herdr send-keys のキー名）
@@ -33,6 +39,10 @@ local TOOL_CONFIG = {
     display = "Codex",
     newline = true,
     shift_tab = "shift+tab",
+    argv_prefix = { "zsh", "-c", CXSP_SCRIPT, "cxsp" },
+    -- 省略すると argv[1] の "zsh" が herdr のエージェント名になり、
+    -- find_pane_by_command("codex") がペインを復元できなくなる
+    name = "codex",
   },
   opencode = {
     display = "OpenCode",
