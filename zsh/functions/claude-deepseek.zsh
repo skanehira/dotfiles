@@ -51,7 +51,7 @@ ccds() {
 # Spark は同時に 1 モデルしか配信しないので、これが常に正しい既定値になる。
 # 短縮名にないモデルは CCSP_MODEL=<配信名> ccsp で渡す。
 #
-# reasoning effort は配信モデルごとに受け付ける語彙が違うので _ccsp_effort が
+# reasoning effort は配信モデルごとに受け付ける語彙が違うので _spark_effort が
 # 配信名から決める。上書きは CCSP_EFFORT=<値> ccsp で行う。
 #
 # 接続先 (ANTHROPIC_BASE_URL) は settings JSON に置かず、ここで export する。
@@ -74,24 +74,8 @@ ccds() {
 #   ccds が入れた ANTHROPIC_AUTH_TOKEN が残っていると、それがそのまま Spark へ
 #   送られる (無認証なので通ってしまい、気づきにくい)
 
-# 短縮名の表・接続先・/v1/models の照会は zsh/functions/spark-common.zsh が持つ
-# (ccsp / ocsp の 2 つで共有する)。
-
-# 配信モデルに対して使える最大の reasoning effort を返す。
-# 値はモデルのチャットテンプレートが検査するので、語彙にない値を送ると最初の
-# リクエストが 400 で止まる (ccsp の経路 /v1/messages で Qwen が受けるのは
-# low / medium / xhigh の 3 つ。high と max はテンプレートが、none はスキーマが
-# 弾く)。vision (DeepSeek 系) の high はレシピの DEFAULT_THINKING の語彙
-# (off / low / high / max) に合わせた値で、配信中に実測していない。
-# DeepSeek-v4.1-Flash-EXL3 は low / high / xhigh / max を両経路で受け、medium は
-# 400 になる (2026-09-15 実測)。
-_ccsp_effort() {
-  case "$1" in
-    qwen3.8-flash-next) echo "xhigh" ;;
-    DeepSeek-v4.1-Flash-EXL3) echo "max" ;;
-    *) echo "high" ;;
-  esac
-}
+# 短縮名の表・接続先・/v1/models の照会・reasoning effort の表は
+# zsh/functions/spark-common.zsh が持つ (ccsp / ocsp / cxsp の 3 つで共有する)。
 
 # base の settings にモデル名・コンテキスト上限・reasoning effort を注入した
 # 設定を書き出す。毎回上書きするので、base を編集すれば次の起動から効く。
@@ -247,7 +231,7 @@ USAGE
   fi
 
   # reasoning effort もモデル依存なので配信名から決める (上書きは CCSP_EFFORT)。
-  effort="${CCSP_EFFORT:-$(_ccsp_effort "$served")}"
+  effort="${CCSP_EFFORT:-$(_spark_effort "$served")}"
 
   mkdir -p "${rendered:h}" || return 1
   _ccsp_render_settings "$base" "$served" "$ctx" "$effort" "$rendered" || {

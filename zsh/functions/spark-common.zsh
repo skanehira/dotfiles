@@ -45,6 +45,25 @@ _spark_served_name() {
   esac
 }
 
+# 配信モデルに対して使える最大の reasoning effort を返す。
+# 値はモデルのチャットテンプレートが検査するので、語彙にない値を送ると最初の
+# リクエストが 400 で止まる。/v1/models は受理される effort を返さないので、
+# サーバに聞けない値としてここに表を持つ。
+#
+# ccsp (/v1/messages) で Qwen が受けるのは low / medium / xhigh の 3 つ
+# (high と max はテンプレートが、none はスキーマが弾く)。vision (DeepSeek 系) の
+# high はレシピの DEFAULT_THINKING の語彙 (off / low / high / max) に合わせた値で、
+# 配信中に実測していない。DeepSeek-v4.1-Flash-EXL3 は low / high / xhigh / max を
+# /v1/messages・/v1/chat/completions・/v1/responses の 3 経路で受け、medium は
+# 400 になる (2026-09-15 / responses は 2026-09-17 実測)。
+_spark_effort() {
+  case "$1" in
+    qwen3.8-flash-next) echo "xhigh" ;;
+    DeepSeek-v4.1-Flash-EXL3) echo "max" ;;
+    *) echo "high" ;;
+  esac
+}
+
 # 配信中のモデルを「配信名 max_model_len」の行で返す。
 # 引数: $1 = base URL ($ 末尾の /v1 は有っても無くてもよい), $2 = Bearer トークン (空可)
 # トークンが空のときは Authorization ヘッダ自体を送らない (無認証のサーバ向け)。
