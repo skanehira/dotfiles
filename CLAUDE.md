@@ -139,7 +139,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 
 - **zsh/** — `programs.zsh.initContent` から `builtins.readFile` で取り込まれる残置ファイル
   - `zshrc` — bindkey 群 + 関数 source loop
-  - `functions/*.zsh` — カスタム zsh 関数 7 本。`ghq-fzf` / `gss` / `tmuxpopup` の 3 本と、DGX Spark 系の `claude-deepseek` (`ccsp` / `ccds`) / `opencode-spark` (`ocsp`) / `spark-common` の 3 本、mac 専用の `sleepctl`
+  - `functions/*.zsh` — カスタム zsh 関数 8 本。`ghq-fzf` / `gss` / `tmuxpopup` の 3 本と、DGX Spark 系の `claude-deepseek` (`ccsp` / `ccds`) / `opencode-spark` (`ocsp`) / `codex-spark` (`cxsp`) / `spark-common` の 4 本、mac 専用の `sleepctl`
 - **karabiner/** — Karabiner-Elements 設定 (Goku DSL)
   - `karabiner.edn` — EDN で書いたルール、switch 時に goku が `~/.config/karabiner/karabiner.json` を生成
 - **wezterm/** — WezTerm 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
