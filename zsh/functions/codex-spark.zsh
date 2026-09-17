@@ -12,8 +12,8 @@
 # ccsp / ocsp との違い:
 # - ccsp と違い環境変数も alias も張らない。設定はすべて codex の -c で渡すので、
 #   1 回の起動にしか効かず off に相当する解除操作が要らない (ocsp と同じ方針)
-# - ocsp と違いサブコマンドを素通ししない。codex は root の -c を subcommand の
-#   前に置けるので (実測: codex -c ... exec ...)、全経路で同じ注入が通る
+# - ocsp と違い、サブコマンドでも検査と注入を飛ばさない。codex は root の -c を
+#   subcommand の前に置けるので (実測: codex -c ... exec ...)、全経路で同じ注入が通る
 #
 # 設定ファイルは使わない。--profile は $CODEX_HOME/<名前>.config.toml を読むので
 # ~/.codex/ に状態を残すことになり、素の codex (ChatGPT ログイン) と混ざる。
@@ -35,10 +35,11 @@
 # wire_api は responses だけが有効。codex 0.154.0 が chat を削除しており、
 # "chat" を渡すと設定を読んだ時点でエラーになる。
 #
-# model_context_window には max_model_len をそのまま入れる。codex は未知モデルに
-# effective_context_window_percent = 95 を掛けるので、600,000 なら 30,000 が
-# 出力用の余白として自動的に残る (ccsp のように自分で引かないのはこのため)。
-# 明示しないと未知モデルの fallback 272,000 で頭打ちになる。
+# model_context_window には max_model_len を CXSP_CONTEXT_MAX (既定 500,000) で
+# 頭打ちにした値を入れる。codex は未知モデルに effective_context_window_percent
+# = 95 を掛けるので、500,000 なら 25,000 が出力用の余白として自動的に残る
+# (ccsp のように自分で引かないのはこのため)。明示しないと未知モデルの
+# fallback 272,000 で頭打ちになる。
 #
 # web_search は disabled にする。agents/bindings/codex/config.toml が live を
 # 配っており、カスタム provider でも hosted の web_search tool が tools に載る。
@@ -77,8 +78,8 @@ cxsp() {
 モデルを省略すると配信中のモデルを自動で使う。短縮名に無いものは
 CXSP_MODEL=<配信名> cxsp で渡す。接続先を省略すると LAN -> Tailscale の順に
 /health をプローブして到達する方を使う。
-コンテキスト上限は max_model_len をそのまま渡す (codex が 95% を実効値に使い、
-残りが出力用の余白になる)。
+コンテキスト上限は max_model_len と 500000 の小さい方 (CXSP_CONTEXT_MAX で
+変更可)。codex はこの値の 95% を実効値に使い、残りが出力用の余白になる。
 reasoning effort は配信モデルごとの最大値を使う (qwen3.8-flash-next は xhigh、
 DeepSeek-v4.1-Flash-EXL3 は max、他は high)。CXSP_EFFORT=<値> cxsp で上書き
 できるが、モデルの語彙に無い値を渡すと最初のリクエストが 400 で落ちる。
@@ -140,14 +141,35 @@ USAGE
 
   # モデル名とコンテキスト上限はサーバに聞く。表を持たないので配信側を変えても
   # ここは追従不要で、要求したモデルが載っていなければ起動前に落とせる。
-  line=$(_spark_models "$base_url" "" | if [[ -n "$requested" ]]; then grep -x -- "$requested [0-9]*" || true; else head -1; fi)
+  local models
+  models=$(_spark_models "$base_url" "")
+  if [[ -n "$requested" ]]; then
+    # 配信名そのものと完全一致で比べる。grep の正規表現で照合すると、配信名に
+    # 含まれる . (qwen3.8-flash-next 等) が任意の 1 文字に化けて別名にも当たる。
+    line=$(echo "$models" | awk -v want="$requested" '{ name = $0; sub(/ [^ ]*$/, "", name); if (name == want) { print; exit } }')
+  else
+    line=$(echo "$models" | head -1)
+  fi
   if [[ -z "$line" ]]; then
+    local served_list
+    served_list=$(echo "$models" | awk 'NF {print $1}' | paste -sd, -)
     echo "cxsp: ${requested:-配信中のモデル} を $base_url から取得できません" >&2
-    echo "      配信中: $(_spark_models "$base_url" "" | awk '{print $1}' | paste -sd, - 2>/dev/null || echo '(取得できず)')" >&2
+    echo "      配信中: ${served_list:-(取得できず)}" >&2
     return 1
   fi
-  served="${line%% *}"
+  # 配信名に空白が混じっても最後のフィールドが max_model_len である形は変わらない。
   ctx="${line##* }"
+  served="${line% *}"
+
+  # codex に渡すコンテキスト上限。サーバの max_model_len をそのまま渡すと、
+  # codex が掛ける 95% でも実効 570,000 トークンと長すぎるので上限で頭を打つ。
+  # 既定 500,000 は agents/bindings/codex/config.toml の model_context_window と同じ値。
+  local ctx_max="${CXSP_CONTEXT_MAX:-500000}"
+  (( ctx > ctx_max )) && ctx=$ctx_max
+  if (( ctx < 1 )); then
+    echo "cxsp: コンテキスト上限が $ctx です ($base_url の /v1/models が max_model_len を返していない)" >&2
+    return 1
+  fi
 
   effort="${CXSP_EFFORT:-$(_spark_effort "$served")}"
 
@@ -157,7 +179,8 @@ USAGE
     cfg+=(-c "$kv")
   done < <(_cxsp_config_args "$base_url" "$served" "$ctx" "$effort")
 
-  echo "cxsp: Spark モード ($base_url / $served / コンテキスト $ctx / effort $effort)"
+  # exec が headless の入口なので、この案内は stdout に混ぜず stderr に出す
+  echo "cxsp: Spark モード ($base_url / $served / コンテキスト $ctx / effort $effort)" >&2
 
   command codex "${cfg[@]}" "$@"
 }
