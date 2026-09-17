@@ -40,8 +40,11 @@ local TOOL_CONFIG = {
     newline = true,
     shift_tab = "shift+tab",
     argv_prefix = { "zsh", "-c", CXSP_SCRIPT, "cxsp" },
-    -- 省略すると argv[1] の "zsh" が herdr のエージェント名になり、
-    -- find_pane_by_command("codex") がペインを復元できなくなる
+    -- herdr agent start に渡す名前。省略すると argv[1] の "zsh" が使われ、
+    -- ペインに付く agent が "zsh" になって find_pane_by_command("codex") が
+    -- 復元できなくなる (実測: 明示すると zsh ラッパー越しでも agent="codex" が付く)。
+    -- ただし agent_session (セッション UUID) は zsh を挟むと null になるので、
+    -- herdr の resume_agents_on_restore は効かない (ocsp も同じ)
     name = "codex",
   },
   opencode = {
@@ -119,7 +122,7 @@ local function get_or_create_pane(tool_name, args)
   end
 
   -- 新規ペインを作成（既存nvimペイン40% / 新規ツールペイン60%）、argvを直接起動する
-  -- （opencode だけは ocsp を呼ぶために zsh を挟む。claude/codex はシェルを経由しない）
+  -- （codex と opencode は cxsp / ocsp を呼ぶために zsh を挟む。claude だけはシェルを経由しない）
   -- コマンド終了時にペインも自動的に閉じられる
   local err
   pane_id, err = herdr.create_pane(40, argv, cfg.name)
