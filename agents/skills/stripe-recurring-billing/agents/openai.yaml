@@ -1,0 +1,4 @@
+interface:
+  display_name: "Stripe 月額自動決済"
+  short_description: "Stripe CLIでカード登録URLを発行し、登録確認後に月額請求を予約"
+  default_prompt: "$stripe-recurring-billing を使い、顧客のカード登録URL発行と月額自動決済の開始予約を進めてください。"
