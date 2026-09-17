@@ -40,7 +40,7 @@ paths:
 | `ccds` | 同じく DeepSeek 本家 API へ向けて**起動する**ところまで行う zsh 関数。`agents/bindings/claude/settings.deepseek.json` を `--settings` で渡す。**予約語は第 1 引数の `off` だけ**で、それ以外の語はそのまま `claude` に渡る (`off` の後ろに書いた引数は無視される。`ccds off` で Anthropic に戻す)。`ccsp` と環境変数 `ANTHROPIC_AUTH_TOKEN` を共有する (入る値は別) | 同上 | dotfiles | 人 |
 | `CCSP_LAN_HOST` | LAN 側ホスト名を上書きするシェル変数。`CCSP_LAN_HOST=<IP> ccsp` と前置きしても export しても効く。**名前は `ccsp` 由来だが 3 つのクライアントが共有する** | `zsh/functions/spark-common.zsh` | 人 | `ccsp` / `ocsp` / `cxsp` |
 | `ocsp` | OpenCode を本クラスタに向けて起動する zsh 関数。API キーも alias も持たない。接続先は `ccsp` と同じく到達する方を選ぶ | `zsh/functions/opencode-spark.zsh` | dotfiles | 人 |
-| `cxsp` | Codex を本クラスタに向けて起動する zsh 関数。設定ファイルを置かず、`codex` の `-c` で 8 キーを起動ごとに注入する。API キーも alias も環境変数も持たない | `zsh/functions/codex-spark.zsh` | dotfiles | 人 |
+| `cxsp` | Codex を本クラスタに向けて起動する zsh 関数。設定ファイルを置かず、`codex` の `-c` で 9 キーを起動ごとに注入する。API キーも alias も環境変数も持たない | `zsh/functions/codex-spark.zsh` | dotfiles | 人 |
 | `spark-common.zsh` | 3 つのクライアントが共有するヘルパー。短縮名の表・接続先の URL とプローブ・`/v1/models` の照会・reasoning effort の表を持つ | `zsh/functions/spark-common.zsh` | dotfiles | `ccsp` / `ocsp` / `cxsp` |
 | `_spark_models` | `/v1/models` を引いて「配信名 max_model_len」の行を返すヘルパー。Bearer が空なら Authorization ヘッダ自体を送らない | `zsh/functions/spark-common.zsh` | dotfiles | 3 クライアントの配信前検査と `status` |
 | `_spark_effort` | 配信名から reasoning effort を決める関数。`/v1/models` は受理される effort を返さないので、サーバに聞けない値としてここだけが表を持つ | `zsh/functions/spark-common.zsh` | dotfiles | `ccsp` / `cxsp` (`ocsp` は `opencode.json` の静的値を使う) |
@@ -62,7 +62,7 @@ paths:
 | `~/.cache/ccsp/settings.json` | `ccsp` が起動のたびに `settings.spark.json` へモデル名 5 キー (`ANTHROPIC_MODEL` と `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU,FABLE}_MODEL`)・`CLAUDE_CODE_MAX_CONTEXT_TOKENS`・`CLAUDE_CODE_EFFORT_LEVEL`・`fallbackModel` を注入して書き出す実ファイル | Mac の `~/.cache/ccsp/settings.json` (`XDG_CACHE_HOME` があればその下) | `ccsp` | `claude` 本体 (`--settings` で渡される) |
 | `opencode.json` | OpenCode の `provider.spark` (接続先・モデル宣言・モデルごとの `reasoningEffort`)。**キーは持たない。** 認証を戻すときだけ `options.apiKey` を足す (値は `{file:…}` / `{env:…}` で外部へ逃がす)。トップレベルの `permission` は OpenCode のツール実行の承認方針で、`allow` は全ツール自動承認を意味する。dotfiles 管理。`~/.config/opencode/` の他のファイル (`node_modules` / `package.json` / `package-lock.json` / `.gitignore` など) は opencode 自身のもの。**`skills/` / `agents/` / `AGENTS.md` は `nix/modules/home/harness.nix` の生成物** | `agents/bindings/opencode/opencode.json` | dotfiles (`nix/modules/home/opencode.nix` が symlink) | `opencode` 本体 / `ocsp` |
 | `tui.json` | OpenCode の TUI 設定 (keybinds / theme) | `agents/bindings/opencode/tui.json` | dotfiles (`nix/modules/home/opencode.nix` が symlink) | `opencode` 本体 |
-| `_cxsp_config_args` | `cxsp` が `codex` に渡す `-c` 8 キーを組み立てるヘルパー。1 行 1 キーで返す | `zsh/functions/codex-spark.zsh` | dotfiles | `cxsp` |
+| `_cxsp_config_args` | `cxsp` が `codex` に渡す `-c` 9 キーを組み立てるヘルパー。1 行 1 キーで返す | `zsh/functions/codex-spark.zsh` | dotfiles | `cxsp` |
 | `agents/bindings/codex/config.toml` | Codex の共通設定。`/etc/codex/config.toml` (system レイヤー) として配られる。**`cxsp` からは触らない** — `model` / `model_context_window` / `model_reasoning_effort` / `web_search` は `-c` が上書きする | `agents/bindings/codex/config.toml` | dotfiles (mac は `nix/modules/darwin/codex.nix` の `environment.etc`) | `codex` 本体 |
 | `patch_responses_content_parts.py` | head のパッチ。`/v1/responses` が送る `input_text` パーツを配信中のイメージの tokenizer に受けさせる。**これが無いと `cxsp` だけが 400 で落ちる** (→「既知の制約」12 に全文) | head の `~/dsv41-local/` | 人 (dotfiles に控えは無く、制約 12 の全文が正本) | `start.sh` のパッチループ経由で head のコンテナ |
 | `OPENCODE_CONFIG_CONTENT` | OpenCode がインライン JSON として読む環境変数。既存の設定に `options` の中まで再帰的にディープマージされる。`ocsp` はこれで `baseURL` の 1 キーだけを起動ごとに差し替える (前置代入なのでシェルには残らない) | `_ocsp_config_override` (中身) と `ocsp` の起動 2 か所 (変数名)。いずれも `zsh/functions/opencode-spark.zsh` | `ocsp` | `opencode` 本体 |
@@ -212,7 +212,7 @@ sparkDash は head の `~/sparkDash` に clone した [MiaAI-Lab/sparkDash](http
 **DeepSeek 系を認証ありに戻すときは、サーバとクライアントの両方を直す。** 直し忘れた側で症状が変わる。**サーバだけ直すと 3 つのクライアントが `/v1/models` の 401 で起動前に止まる** (騒がしいので気づける)。**クライアントだけ直しても無認証のサーバは Bearer を無視して 200 を返すので、認証が効いていると誤認したまま運用が続く** (静かなので気づけない)。
 
 1. サーバ側 — `.env.dspark` の `VLLM_API_KEY` に値を入れて `stop` → `start`
-2. クライアント側 — `ccsp` の前に `ANTHROPIC_AUTH_TOKEN` を export し、`opencode.json` の `options` に `apiKey` を足し、`cxsp` には `model_providers.spark.env_key="SPARK_API_KEY"` の `-c` を 9 本目として足し、その環境変数を人が export する (`cxsp` は現在このキーを持たないので `-c` は 8 本 → 「Codex (`cxsp`)」)
+2. クライアント側 — `ccsp` の前に `ANTHROPIC_AUTH_TOKEN` を export し、`opencode.json` の `options` に `apiKey` を足し、`cxsp` には `model_providers.spark.env_key="SPARK_API_KEY"` の `-c` を 10 本目として足し、その環境変数を人が export する (`cxsp` は現在このキーを持たないので `-c` は 9 本 → 「Codex (`cxsp`)」)
 3. **反映経路が 3 つで違う。** `ANTHROPIC_AUTH_TOKEN` はそのシェルで即時、`opencode.json` は `mkOutOfStoreSymlink` が効いている世代なら編集した瞬間から (2026-09-06 時点は効いている。**まだ store コピーを指している世代では `drs` を当てるまで反映されない。判定は `readlink -f` で行う** →「OpenCode (`ocsp`)」)、`cxsp` の 9 本目の `-c` は zsh 関数の編集なので `drs` と新しいシェルが要る
 4. **効いたことを確認する** — `curl -s -o /dev/null -w '%{http_code}\n' http://spark-head.local:8888/v1/models` が **401** を返すこと。200 のままならサーバ側が直っていない (これは「依拠する外部事実」の 200 判定の陽性対照でもある)
 
@@ -836,7 +836,7 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
 
 押さえるべき点が 12 つある。
 
-- **設定ファイルを置かず、`codex` の `-c` で 8 キーを起動ごとに注入する。** `--profile` は `$CODEX_HOME/<名前>.config.toml` を読む仕組みなので、使うと `~/.codex/` に状態が増えて素の `codex` と混ざる。`-c` はレイヤの最上位に近く、`/etc/codex/config.toml` (system) も `~/.codex/config.toml` (user) も上書きする。**root の `-c` は subcommand の前に置ける**ので (`codex -c … exec …`、2026-09-17 実測)、TUI も `exec` も `resume` も同じ注入で通る
+- **設定ファイルを置かず、`codex` の `-c` で 9 キーを起動ごとに注入する。** `--profile` は `$CODEX_HOME/<名前>.config.toml` を読む仕組みなので、使うと `~/.codex/` に状態が増えて素の `codex` と混ざる。`-c` はレイヤの最上位に近く、`/etc/codex/config.toml` (system) も `~/.codex/config.toml` (user) も上書きする。**root の `-c` は subcommand の前に置ける**ので (`codex -c … exec …`、2026-09-17 実測)、TUI も `exec` も `resume` も同じ注入で通る
 
   | キー | 値 | 理由 |
   | --- | --- | --- |
@@ -848,7 +848,8 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
   | `model_context_window` | `max_model_len` と `CXSP_CONTEXT_MAX` (既定 500,000) の小さい方 | **このキーだけでは効かない** (下の `model_catalog_json` が要る)。上限を設けるのは、サーバの 600,000 をそのまま渡すと実効 570,000 トークンと長すぎるため。既定値は `agents/bindings/codex/config.toml` の `model_context_window` と同じ 500,000 に揃えてある |
 | `model_catalog_json` | `cxsp` が起動ごとに書き出す catalog のパス (`~/.cache/cxsp/model-catalog.json`) | **これが無いと `model_context_window` は無視される。** codex は未知のモデル名に fallback metadata (`context_window` / `max_context_window` とも 272,000) を当て、設定値を `min(設定値, max_context_window)` でクランプする。`max_context_window` を宣言できるのは catalog だけである |
   | `model_reasoning_effort` | `_spark_effort` の値 | 上書きは `CXSP_EFFORT` |
-  | `web_search` | `"disabled"` | `agents/bindings/codex/config.toml` が `"live"` を配っており、カスタム provider でも hosted の `web_search` tool が `tools` に載る。vLLM がこの tool 型を受けるかは未確認なので経路ごと切る |
+  | `show_raw_agent_reasoning` | `true` | 思考を画面に出す。Spark が返す reasoning item は `summary` が空で本文が `content[].reasoning_text` に入るため、既定の `model_reasoning_summary` では何も見えない (2026-09-18 実測)。素の `codex` には入れないので、影響は `cxsp` から起動したセッションだけに閉じる |
+| `web_search` | `"disabled"` | `agents/bindings/codex/config.toml` が `"live"` を配っており、カスタム provider でも hosted の `web_search` tool が `tools` に載る。vLLM がこの tool 型を受けるかは未確認なので経路ごと切る |
 
 - **`agents/bindings/codex/config.toml` は触らない。** `model` / `model_context_window` / `model_reasoning_effort` / `web_search` はすべて `-c` が上書きする。レイヤの優先度は低い順に system (`/etc/codex/config.toml`) < user (`~/.codex/config.toml`) < profile < project < `-c` である
 - **API キーを扱わない。** `model_providers.<id>.env_key` を省くと codex は Authorization ヘッダ自体を送らず、**ChatGPT のトークンも流用しない** (`requires_openai_auth` の既定が false のため、ログイン画面も出ない)。`ccsp` のような資格情報の漏れ経路が無い

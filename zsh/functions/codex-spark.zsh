@@ -51,6 +51,11 @@
 # web_search は disabled にする。agents/bindings/codex/config.toml が live を
 # 配っており、カスタム provider でも hosted の web_search tool が tools に載る。
 # vLLM がこの tool 型を受けるか未確認なので経路ごと切る。
+#
+# show_raw_agent_reasoning は true にして思考を画面に出す。Spark が返す reasoning
+# item は summary が空で本文が content[].reasoning_text に入るため、既定の
+# model_reasoning_summary では何も見えない。素の codex (ChatGPT) には入れないので
+# 影響はこの関数から起動したセッションだけに閉じる。
 _cxsp_config_args() {
   print -r -- "model_provider=\"spark\""
   print -r -- "model_providers.spark.name=\"DGX Spark vLLM\""
@@ -60,6 +65,7 @@ _cxsp_config_args() {
   print -r -- "model_context_window=$3"
   print -r -- "model_reasoning_effort=\"$4\""
   print -r -- "web_search=\"disabled\""
+  print -r -- "show_raw_agent_reasoning=true"
   [[ -n "$5" ]] && print -r -- "model_catalog_json=\"$5\""
 }
 
