@@ -1,7 +1,8 @@
-# DGX Spark の vLLM に向くクライアント (ccsp / ocsp) が共有するヘルパー。
+# DGX Spark の vLLM に向くクライアント (ccsp / ocsp / cxsp) が共有するヘルパー。
 #
-# 短縮名の表と /v1/models の照会をここに 1 つだけ置く。以前はクライアントごとに
-# 同じ表を持っていたため、片方にだけモデルを足すとその側でしか通らなかった。
+# 短縮名の表・/v1/models の照会・reasoning effort の表をここに 1 つだけ置く。
+# 以前はクライアントごとに同じ表を持っていたため、片方にだけモデルを足すと
+# その側でしか通らなかった。
 #
 # 接続先のホスト名は関数に直書きしない値を 1 つだけ持つ (CCSP_LAN_HOST)。
 # このリポジトリは公開なので IP は置かず、IP を使いたいマシンだけが
@@ -51,11 +52,12 @@ _spark_served_name() {
 # サーバに聞けない値としてここに表を持つ。
 #
 # ccsp (/v1/messages) で Qwen が受けるのは low / medium / xhigh の 3 つ
-# (high と max はテンプレートが、none はスキーマが弾く)。vision (DeepSeek 系) の
-# high はレシピの DEFAULT_THINKING の語彙 (off / low / high / max) に合わせた値で、
-# 配信中に実測していない。DeepSeek-v4.1-Flash-EXL3 は low / high / xhigh / max を
+# (high と max はテンプレートが、none はスキーマが弾く)。cxsp の /v1/responses は
+# Qwen 配信中に実測していない。vision (DeepSeek 系) の high はレシピの
+# DEFAULT_THINKING の語彙 (off / low / high / max) に合わせた値で、配信中に
+# 実測していない。DeepSeek-v4.1-Flash-EXL3 は low / high / xhigh / max を
 # /v1/messages・/v1/chat/completions・/v1/responses の 3 経路で受け、medium は
-# 400 になる (2026-09-15 / responses は 2026-09-17 実測)。
+# どの経路でも 400 になる (前 2 経路は 2026-09-15、/v1/responses は 2026-09-17 実測)。
 _spark_effort() {
   case "$1" in
     qwen3.8-flash-next) echo "xhigh" ;;
