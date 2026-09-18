@@ -182,7 +182,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [utility-drawio](./utility-drawio/) | draw.io 図 (.drawio) の生成と PNG/SVG/PDF 書き出し |
 | [utility-reviewing-skills](./utility-reviewing-skills/) | スキルをベストプラクティスに基づいてレビュー |
 | [utility-doc-reading](./utility-doc-reading/) | 知識プロファイルを参照しながらドキュメント読解を支援 |
-| [utility-doc-audit](./utility-doc-audit/) | ドキュメントの整合性・フォーマット適合を fresh context の fan-out で監査 |
+| [utility-doc-audit](./utility-doc-audit/) | ドキュメントの整合性・フォーマット適合を fresh context の fan-out で監査。**ユーザー起動専用** — 普段の作業では起動せず、`/workflow-design-notes` の落とし込みフェーズからのみ自動起動する |
 | [utility-session-profile](./utility-session-profile/) | Claude Code のセッションログから所要時間の内訳を集計し HTML レポートを作る (`metadata.runtimes` で Claude Code 限定) |
 | [utility-pdf-compress](./utility-pdf-compress/) | PDF のロスレス圧縮 |
 | [utility-cf-deploy-token](./utility-cf-deploy-token/) | 1Password のマスタートークンから Cloudflare のデプロイ用トークン (Workers Scripts + D1) を発行し、GitHub Actions の secrets に登録 |

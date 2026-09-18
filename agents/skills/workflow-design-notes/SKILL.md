@@ -35,7 +35,7 @@ description: dev-spec を使わず議論しながら設計を固めるときの�
 2. `{{@rules-root}}/core/references/doc-formats/design-doc.md`（構造規範）と `../dev-spec/references/design-doc.md`（DESIGN.md テンプレートの正本）・`../dev-spec/references/feature-doc.md`（機能設計書テンプレート）を Read する
 3. 台帳**全体**から `docs/design/DESIGN.md` + `docs/design/features/` を**毎回ゼロから生成**する（前回生成物への差分編集をしない）。生成物の冒頭に `<!-- generated-from: docs/DESIGN_NOTES.md -->` を入れる（直接編集への注意標識）
 4. design-doc.md の「機械ゲート」判定コマンド（POC_NEEDED blocker=true 残存）を自分で実行し、通らなければ生成をやり直す
-5. `/utility-doc-audit` を設計書 2 ファイル + 決定台帳付きで**フル監査**として起動する（ゼロから全文再生成した直後のため、スコープ監査ではなく観点 1〜6 全体を検査させる。決定カバレッジ観点が台帳→文書の取りこぼし・棄却案の生き残りを検査する）
+5. `/utility-doc-audit` を設計書 2 ファイル + 決定台帳付きで**フル監査**として起動する（ゼロから全文再生成した直後のため、スコープ監査ではなく観点 1〜6 全体を検査させる。決定カバレッジ観点が台帳→文書の取りこぼし・棄却案の生き残りを検査する）。同スキルは通常ユーザー起動専用だが、この落とし込みフェーズだけは本スキルが直接起動する（`{{@rules-root}}/core/documentation.md`「編集後の整合性パス」3. の例外）
 6. 監査指摘のうち決定に関わるものは**台帳に反映してから再生成**する（文書だけを直すと台帳と文書が乖離する）。字句レベルの指摘は文書の直接修正でよい
 
 ## 下流への接続
