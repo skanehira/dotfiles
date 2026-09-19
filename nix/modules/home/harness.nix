@@ -48,31 +48,27 @@ let
   ];
 in
 {
-  # ハーネス (グローバル指示 / ルール / スキル / subagent) を 3 ランタイム分コンパイルして配る。
+  # ハーネス (グローバル指示 / ルール / スキル / subagent) を 2 ランタイム分コンパイルして配る。
   #
   # 正本 agents/ は 1 セットで、ランタイム別の差分は agents/bindings/<runtime>/overlay/ に
   # 節単位で置く。読み手はそれぞれ自分の語彙で書かれた完成品 1 セットだけを読む。
   #
-  # グローバル指示は overlay を base にマージした 1 枚を配る。Codex も OpenCode も
-  # AGENTS.md を 1 枚しか読まないため、以前は「共通の正本を別途 Read せよ」と指示する
-  # 別文書を配っていた。マージすればその往復が要らなくなる。
+  # グローバル指示は overlay を base にマージした 1 枚を配る。Codex も AGENTS.md を
+  # 1 枚しか読まないため、以前は「共通の正本を別途 Read せよ」と指示する別文書を
+  # 配っていた。マージすればその往復が要らなくなる。
   # Claude 向けの overlay は置かない (base = 生成物 のままにして可逆性の検証を成立させる)。
   home.activation.buildHarness = after (withDeno ''
     ${buildFile "claude" "$HOME/.claude/CLAUDE.md"}
     ${buildTree "claude" "rules" "$HOME/.claude/rules" ""}
     ${buildTree "claude" "skills" "$HOME/.claude/skills" ""}
     ${buildTree "claude" "subagents" "$HOME/.claude/agents" ""}
-
-    ${buildFile "opencode" "$HOME/.config/opencode/AGENTS.md"}
-    ${buildTree "opencode" "rules" "$HOME/.agents/rules/opencode" ""}
-    ${buildTree "opencode" "skills" "$HOME/.config/opencode/skills" ""}
-    ${buildTree "opencode" "subagents" "$HOME/.config/opencode/agents" "--subagent-format opencode"}
   '');
 
   # 旧方式は agents/skills/<name> を ~/.agents/skills/ へ個別 symlink していた。この
-  # ディレクトリは Codex と OpenCode の両方が探索し、どちらも探索を止める手段が無いため
-  # (OpenCode の skills.paths は追加専用、Codex の skip_host_skill_discovery は roots を
-  # 変えない。いずれも実測)、ランタイム別の生成物を置けない。他ツールの領域として空ける。
+  # ディレクトリは Codex が探索し、探索対象の root から外す手段が無いため (Codex の skill
+  # 設定は bundled / config / include_instructions / max_context_tokens のみで paths や
+  # roots に相当するキーが無く、skip_host_skill_discovery も root を変えない。実測)、
+  # ランタイム別の生成物を置けない。他ツールの領域として空ける。
   #
   # Home Manager は activation script が張った symlink を自動撤去しないので、ここで撤去する。
   # 対象は「target が dotfilesRoot 配下に解決する symlink」だけで、他ツールが置いた実体

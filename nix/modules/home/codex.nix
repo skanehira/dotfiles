@@ -32,9 +32,9 @@
   # (Claude は Markdown + frontmatter、Codex は TOML)。生成物は git 管理しない。
   #
   # スキルの配布先を ~/.agents/skills から ~/.codex/skills (skill root r0) へ移したのは、
-  # ~/.agents/skills を OpenCode も探索し、どちらも探索を止める手段が無いため (実測:
-  # OpenCode の skills.paths は追加専用、Codex の skip_host_skill_discovery は roots を
-  # 変えない)。同じディレクトリにランタイム別の生成物は置けない。
+  # ~/.agents/skills を Codex が探索し、探索対象の root から外す手段が無いため (実測:
+  # Codex の skill 設定に paths / roots に相当するキーが無く、skip_host_skill_discovery も
+  # root を変えない)。同じディレクトリにランタイム別の生成物は置けない。
   #
   # 旧 symlink の撤去 (linkGeneration) より後に走らせる。先に走ると生成物を旧 symlink
   # 越しに正本へ書き込んでしまう (生成器側でも出力先を検査して例外にしている)。
