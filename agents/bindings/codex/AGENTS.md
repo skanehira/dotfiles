@@ -69,6 +69,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 | `~/.claude/rules` | 同じパスをそのまま読む (同一実体) |
 | `~/.claude/skills` | `~/.agents/skills` |
 | `~/.claude/agents` | `~/.codex/agents` |
+| `~/.claude/scripts` | 同じパスをそのまま実行する (同一実体。Claude Code 用のパスに見えても同じマシン上のファイル) |
 | `plan mode` | Plan mode |
 
 ## 読み替えで吸収できないもの
