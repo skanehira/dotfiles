@@ -26,6 +26,7 @@
     ./modules/home/gh.nix
     ./modules/home/git.nix
     ./modules/home/neovim.nix
+    ./modules/home/opencode.nix
     ./modules/home/packages-android.nix
     ./modules/home/tmux.nix
     ./modules/home/vite-plus-bootstrap.nix

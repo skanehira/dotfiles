@@ -34,6 +34,15 @@
   home.file.".codex/AGENTS.md".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/codex/AGENTS.md";
 
+  # OpenCode も ~/.claude/skills と ~/.agents/skills の両方を探索し、同名スキルをマージしない。
+  # 下の linkAgentSkills が ~/.agents/skills を埋めるので、Claude Code 互換の経路を切って
+  # 二重列挙を防ぐ (OpenCode から見た正本は ~/.agents/skills)。
+  #
+  # この変数を env.nix ではなくここに置くのは、Android プロファイル (home-android.nix) が
+  # codex.nix を import せず ~/.agents/skills が埋まらないため。共通の env.nix に置くと
+  # Android では両方の root が空になり、スキルが 1 件も見えなくなる。
+  home.sessionVariables.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS = "1";
+
   # スキルは Claude と同一の正本を ~/.agents/skills/<name> へ個別 symlink する。Codex は
   # skill root r0 (~/.codex/skills) と r1 (~/.agents/skills) の両方を探索し、symlink を
   # 追跡する (実測: セッションログの `### Skill roots`)。r1 を使うのは他ツールが入れた
