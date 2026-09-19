@@ -14,7 +14,7 @@ local M = {}
 --
 -- --allow-dangerously-skip-permissions を先頭に置くのは、ccsp の引数ループが未知語で
 -- break する性質を使い、後続のユーザー引数 (-r など) が ccsp の予約語
--- (off / status / -h / qwen / vision / v41 / lan / ts) と衝突しないようにするため
+-- (off / status / -h / qwen / vision / v41 / glm / lan / ts) と衝突しないようにするため
 local CCSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
   .. "; source ~/.config/zsh/functions/claude-deepseek.zsh"
   .. "; ccsp --allow-dangerously-skip-permissions \"$@\""

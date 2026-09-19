@@ -3,7 +3,7 @@
 #   cxsp                自動判定 (LAN に届けば LAN、届かなければ Tailscale)
 #   cxsp lan            自宅 LAN 直結を強制 (プローブしない)
 #   cxsp ts             Tailscale 経由を強制 (プローブしない)
-#   cxsp qwen           使うモデルを指定する (qwen / vision / v41)
+#   cxsp qwen           使うモデルを指定する (qwen / vision / v41 / glm)
 #   cxsp lan qwen       接続先とモデルは順不同で並べられる
 #   cxsp exec "<指示>"  codex のサブコマンドはそのまま渡る
 #   cxsp status         起動せずに要求モデル・両経路の到達性・配信中モデルを表示
@@ -140,7 +140,7 @@ cxsp() {
     -h|--help|help)
       cat <<'USAGE'
 使い方:
-  cxsp [lan|ts] [qwen|vision|v41] [codex に渡す引数...]
+  cxsp [lan|ts] [qwen|vision|v41|glm] [codex に渡す引数...]
   cxsp exec "<指示>"        headless で 1 回実行 (codex のサブコマンドは素通し)
   cxsp status               起動せずに接続先・配信モデル・到達性を表示
   cxsp -- [codex に渡す引数...]
@@ -150,13 +150,14 @@ cxsp() {
   qwen    -> qwen3.8-flash-next
   vision  -> deepseek-v4-flash-vision-exp
   v41     -> DeepSeek-v4.1-Flash-EXL3
+  glm     -> GLM-5.3-Flash-EXL3
 モデルを省略すると配信中のモデルを自動で使う。短縮名に無いものは
 CXSP_MODEL=<配信名> cxsp で渡す。接続先を省略すると LAN -> Tailscale の順に
 /health をプローブして到達する方を使う。
 コンテキスト上限は max_model_len と 500000 の小さい方 (CXSP_CONTEXT_MAX で
 変更可)。codex はこの値の 95% を実効値に使い、残りが出力用の余白になる。
 reasoning effort は配信モデルごとの最大値を使う (qwen3.8-flash-next は xhigh、
-DeepSeek-v4.1-Flash-EXL3 は max、他は high)。CXSP_EFFORT=<値> cxsp で上書き
+DeepSeek-v4.1-Flash-EXL3 と GLM-5.3-Flash-EXL3 は max、他は high)。CXSP_EFFORT=<値> cxsp で上書き
 できるが、モデルの語彙に無い値を渡すと最初のリクエストが 400 で落ちる。
 環境変数も alias も残さないので解除操作は要らない (素の codex は ChatGPT の
 ままで、この関数は一切触らない)。
@@ -165,7 +166,7 @@ USAGE
       ;;
     status)
       echo "  要求  : ${CXSP_MODEL:-(指定なし。配信中のモデルを使う)}"
-      echo "  effort: ${CXSP_EFFORT:-(配信モデルで決める: qwen3.8-flash-next→xhigh / DeepSeek-v4.1-Flash-EXL3→max / 他→high)}"
+      echo "  effort: ${CXSP_EFFORT:-(配信モデルで決める: qwen3.8-flash-next→xhigh / DeepSeek-v4.1-Flash-EXL3→max / GLM-5.3-Flash-EXL3→max / 他→high)}"
       local reachable=""
       echo -n "  LAN   : "
       if curl -fs -o /dev/null --connect-timeout 3 --max-time 5 "$lan_url/health"; then
@@ -198,7 +199,7 @@ USAGE
     case "$1" in
       lan) transport="$lan_url"; shift ;;
       ts) transport="$ts_url"; shift ;;
-      qwen|vision|v41) requested="$(_spark_served_name "$1")"; shift ;;
+      qwen|vision|v41|glm) requested="$(_spark_served_name "$1")"; shift ;;
       --) shift; break ;;
       *) break ;;
     esac
