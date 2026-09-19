@@ -7,6 +7,18 @@ local comments = require("modules.ai.comments")
 
 local M = {}
 
+-- claude も Spark の接続先解決 (LAN/Tailscale プローブ + 配信モデル検査 + settings 生成) を
+-- 持つ ccsp を経由させる。argv の先頭 4 要素が固定前置になり、以降のユーザー引数が
+-- zsh -c '<script>' ccsp <args...> の $@ に入る。接続先は ccsp が export する
+-- (settings JSON に ANTHROPIC_BASE_URL を書くと出先での切り替えが効かなくなるため)
+--
+-- --allow-dangerously-skip-permissions を先頭に置くのは、ccsp の引数ループが未知語で
+-- break する性質を使い、後続のユーザー引数 (-r など) が ccsp の予約語
+-- (off / status / -h / qwen / vision / v41 / lan / ts) と衝突しないようにするため
+local CCSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
+  .. "; source ~/.config/zsh/functions/claude-deepseek.zsh"
+  .. "; ccsp --allow-dangerously-skip-permissions \"$@\""
+
 -- opencode は Spark の接続先解決 (LAN/Tailscale プローブ + 配信モデル検査 + --model 注入) を
 -- 持つ ocsp を経由させる。argv の先頭 4 要素が固定前置になり、以降のユーザー引数が
 -- zsh -c '<script>' ocsp <args...> の $@ に入る
@@ -29,11 +41,18 @@ local TOOL_CONFIG = {
   claude = {
     display = "Claude",
     shift_tab = "alt+m",
-    -- --allow-dangerously-skip-permissions は bypassPermissions を Shift+Tab のサイクルに
-    -- 追加するだけで有効化はしない。settings.json の defaultMode (plan) のまま起動し、
-    -- プラン承認後に手動で落とせる。有効化まで行う --dangerously-skip-permissions は
-    -- plan mode を経由できない
-    argv_prefix = { "claude", "--allow-dangerously-skip-permissions" },
+    -- --allow-dangerously-skip-permissions は CCSP_SCRIPT 側で渡す (ccsp が未知語として
+    -- そのまま claude に素通しする)。このフラグは bypassPermissions を Shift+Tab の
+    -- サイクルに追加するだけで有効化はしない。settings の defaultMode (plan) のまま
+    -- 起動し、プラン承認後に手動で落とせる。有効化まで行う
+    -- --dangerously-skip-permissions は plan mode を経由できない
+    argv_prefix = { "zsh", "-c", CCSP_SCRIPT, "ccsp" },
+    -- herdr agent start に渡す名前。省略すると argv[1] の "zsh" が使われ、ペインに付く
+    -- agent が "zsh" になって find_pane_by_command("claude") が復元できなくなる
+    -- (実測: 明示すると zsh ラッパー越しでも agent="claude" が付く)。ただし
+    -- agent_session (セッション UUID) は zsh を挟むと null になるので、herdr の
+    -- resume_agents_on_restore は効かない (codex も同じ)
+    name = "claude",
   },
   codex = {
     display = "Codex",
@@ -122,7 +141,7 @@ local function get_or_create_pane(tool_name, args)
   end
 
   -- 新規ペインを作成（既存nvimペイン40% / 新規ツールペイン60%）、argvを直接起動する
-  -- （codex と opencode は cxsp / ocsp を呼ぶために zsh を挟む。claude だけはシェルを経由しない）
+  -- （3 ツールとも Spark クライアント (ccsp / cxsp / ocsp) が zsh 関数なので zsh を挟む）
   -- コマンド終了時にペインも自動的に閉じられる
   local err
   pane_id, err = herdr.create_pane(40, argv, cfg.name)
