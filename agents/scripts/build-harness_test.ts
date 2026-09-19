@@ -4,6 +4,7 @@ import {
   assertSafeOutRoot,
   buildFile,
   buildTree,
+  loadVocabulary,
   mergeSections,
   planPrune,
   removeDotfilesLinks,
@@ -21,17 +22,32 @@ const VOCABULARY: Vocabulary = {
   "ask-user": {
     claude: "AskUserQuestion",
     codex: "request_user_input",
-    opencode: "question",
   },
-  "task-create": { claude: "TaskCreate", codex: "update_plan", opencode: "todowrite" },
-  "task-update": { claude: "TaskUpdate", codex: "update_plan", opencode: "todowrite" },
-  "todo-write": { claude: "TodoWrite", codex: "update_plan", opencode: "todowrite" },
+  "task-create": { claude: "TaskCreate", codex: "update_plan" },
+  "task-update": { claude: "TaskUpdate", codex: "update_plan" },
+  "todo-write": { claude: "TodoWrite", codex: "update_plan" },
   "rules-root": {
     claude: "~/.claude/rules",
     codex: "~/.agents/rules/codex",
-    opencode: "~/.agents/rules/opencode",
   },
 };
+
+// ------------------------------------------------------------ vocabulary.json
+
+/**
+ * 配布先を宣言する `metadata.runtimes` と `--runtime` が取る値は、語彙表の各エントリが
+ * 持つキーから導出される (build-harness.ts の excludedSkillDirs)。上のフィクスチャは
+ * inline なので、正本 agents/vocabulary.json の実際のランタイム集合はここでしか固定できない。
+ */
+Deno.test("vocabulary_declares_exactly_the_claude_and_codex_runtimes", async () => {
+  const vocabulary = await loadVocabulary(
+    new URL("../vocabulary.json", import.meta.url).pathname,
+  );
+  const runtimes = [
+    ...new Set(Object.values(vocabulary).flatMap((entry) => Object.keys(entry))),
+  ].sort();
+  assertEquals(runtimes, ["claude", "codex"]);
+});
 
 // ---------------------------------------------------------------- substitute
 
@@ -67,9 +83,9 @@ Deno.test("substitute_expands_placeholders_inside_code_fences", () => {
     substitute(
       "```ts\n{{@ask-user}}({ questions: [] })\n```\n",
       VOCABULARY,
-      "opencode",
+      "claude",
     ),
-    "```ts\nquestion({ questions: [] })\n```\n",
+    "```ts\nAskUserQuestion({ questions: [] })\n```\n",
   );
 });
 
@@ -489,7 +505,7 @@ async function withTrees(
 }
 
 const VOCAB_FIXTURE: Vocabulary = {
-  "ask-user": { claude: "AskUserQuestion", codex: "request_user_input", opencode: "question" },
+  "ask-user": { claude: "AskUserQuestion", codex: "request_user_input" },
 };
 
 Deno.test("buildTree_merges_the_overlay_section_then_substitutes_for_the_runtime", async () => {
@@ -802,31 +818,6 @@ developer_instructions = '''
 
 確認が要るときは request_user_input を使う。
 '''
-`,
-    );
-  });
-});
-
-Deno.test("buildTree_with_the_opencode_subagent_format_emits_markdown_with_the_subagent_mode", async () => {
-  await withTrees(async ({ base, overlay, out, dotfiles }) => {
-    await Deno.writeTextFile(`${base}/any-filename.md`, SUBAGENT_MD);
-    const result = await buildTree({
-      baseDir: base, overlayDir: overlay, outDir: out,
-      runtime: "opencode", vocabulary: VOCAB_FIXTURE, dotfilesRoot: dotfiles,
-      subagentFormat: "opencode",
-    });
-    assertEquals(result.written, ["reviewer.md"]);
-    assertEquals(
-      await Deno.readTextFile(`${out}/reviewer.md`),
-      `---
-${GENERATED_MARKER}
-description: 差分を question 抜きで検査する
-mode: subagent
----
-
-# reviewer
-
-確認が要るときは question を使う。
 `,
     );
   });

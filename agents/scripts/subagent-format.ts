@@ -1,17 +1,16 @@
 /**
- * subagent 定義 (agents/subagents/*.md) を Codex と OpenCode の形式へ変換する。
+ * subagent 定義 (agents/subagents/*.md) を Codex の形式へ変換する。
  *
- * 正本は Claude Code 形式の Markdown + frontmatter で、Codex は TOML、OpenCode は
- * 別スキーマの Markdown を要求するため、書式変換だけが避けられない。変換を呼ぶのは
- * build-harness.ts で、語彙の置換を当てた後にこの関数群へ渡す (順序が逆だと TOML の
- * 中身に置換をかけることになる)。
+ * 正本は Claude Code 形式の Markdown + frontmatter で、Codex は TOML を要求するため、
+ * 書式変換だけが避けられない。変換を呼ぶのは build-harness.ts で、語彙の置換を当てた
+ * 後にこの関数群へ渡す (順序が逆だと TOML の中身に置換をかけることになる)。
  *
- * 3 者で意味が対応しないキーは落とす:
- * - `tools` は Codex に対応キーが無く、OpenCode は真偽値マップで意味が逆になる
+ * 2 者で意味が対応しないキーは落とす:
+ * - `tools` は Codex に対応キーが無い
  * - `model` は Codex では実モデル名が要り alias が使えない。世代交代に追従できないので
  *   生成物には書かない (固定したければ `agents/bindings/codex/config.toml` の
  *   `[agents] default_subagent_model` に 1 箇所だけ書く)
- * - `context: fork` に相当する概念は Codex にも OpenCode にも無い
+ * - `context: fork` に相当する概念は Codex に無い
  */
 
 /** 生成物であることの目印。prune はこの行を持つファイルだけを撤去する */
@@ -64,10 +63,4 @@ export function toCodexToml(subagent: Subagent): string {
     body + `'''`,
     "",
   ].join("\n");
-}
-
-export function toOpencodeMarkdown(subagent: Subagent): string {
-  const description = requireKey(subagent.frontmatter, "description");
-  const body = subagent.body.endsWith("\n") ? subagent.body : `${subagent.body}\n`;
-  return `---\n${GENERATED_MARKER}\ndescription: ${description}\nmode: subagent\n---\n\n${body}`;
 }
