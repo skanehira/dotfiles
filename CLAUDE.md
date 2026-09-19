@@ -373,6 +373,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 | `bindings/claude/settings.json` `keybindings.json` / `bindings/codex/AGENTS.md` `config.toml` | 即反映 | 正本への symlink |
 | スキルの追加・削除 | `drs` / `hms` | `~/.agents/skills/<name>` の symlink を張り直す activation (`linkAgentSkills`) が要る |
 | subagent の変更・追加 | `drs` / `hms` | `~/.codex/agents/*.toml` の再変換 (`syncCodexSubagents`) が要る |
+| `~/.claude/skills/` への第三者の書き込み | 即反映 (副作用あり) | 正本への symlink なので、他ツールが置いたディレクトリは dotfiles の `agents/skills/` (git 作業ツリー) に落ち、`linkAgentSkills` が Codex へも配る |
 
 ### 開発ワークフローのスキル
 
@@ -436,7 +437,7 @@ hook を追加したくなったときの置き場は次のとおり。
 
 ### 配布
 
-`drs` (mac) / `hms` (Linux) が `nix/modules/home/{claude,codex}.nix` を適用する。専用のインストールスクリプトは無い。`claude.nix` が Claude Code 向けの symlink を、`codex.nix` が Codex 向けの symlink と 2 つの activation (`linkAgentSkills` / `syncCodexSubagents`) を持つ。Android (`home-android.nix`) は `codex.nix` を import しないので Codex 向けだけが行われない。
+`drs` (mac) / `hms` (Linux) が `nix/modules/home/{claude,codex}.nix` を適用する。専用のインストールスクリプトは無い。`claude.nix` が Claude Code 向けの symlink を、`codex.nix` が Codex 向けの symlink と activation (`linkAgentSkills` / `syncCodexSubagents` / `installCodexPlugins`、Linux では加えて `linkCodexSystemConfig`) を持つ。Android (`home-android.nix`) は `codex.nix` を import しないので Codex 向けだけが行われない。
 
 **配布の確認**:
 
@@ -451,7 +452,7 @@ readlink -f /etc/codex/config.toml                # agents/bindings/codex/config
 
 ### 配布方式の移行 (生成方式 → symlink)
 
-生成方式で配った実体が残っていると Home Manager の `checkLinkTargets` が `Existing file ... is in the way` で拒否する。**同居物を巻き込まないため、消すのは各ディレクトリの `.harness-manifest.json` に載っているパスだけ**にする。
+生成方式で配った実体が残っていると Home Manager の `checkLinkTargets` が `Existing file '$targetPath' is in the way ... will be moved to '$targetPath.hm-backup'` を出して**退避**する (`home-manager.backupFileExtension = "hm-backup"` を `flake.nix` で設定済み。実機の例: `~/.claude/settings.json.hm-backup`)。拒否はされないが、ディレクトリは丸ごと退避されるので、放置すると `~/.claude/skills.hm-backup` のような大きな残骸が残る。**同居物を巻き込まないため、消すのは各ディレクトリの `.harness-manifest.json` に載っているパスだけ**にする。
 
 ```bash
 for m in ~/.claude/rules ~/.claude/skills ~/.claude/agents ~/.codex/skills ~/.codex/agents; do
@@ -465,6 +466,8 @@ drs   # または hms
 ```
 
 `~/.agents/skills` の他ツール由来スキル (`archify` / `find-skills` / `gws-*` / `terminal-browser`) と `~/.codex/skills/.system` は触らない。`~/.codex/skills` に dotfiles 由来の実体が残ると同名スキルが `r0` と `r1` に二重に列挙されるので、`ls ~/.codex/skills` で残っていないか確認する。
+
+`~/.claude/skills` はディレクトリごと symlink するため、manifest 外の同居エントリは HM の退避で `~/.claude/skills.hm-backup` へ移る。生かしたいものがあれば手で戻す (ただし戻すと第三者のデータが dotfiles の git 作業ツリーに入る)。
 
 ### 解消しない非対称
 
