@@ -16,10 +16,9 @@
   imports = [
     ./home-core.nix
 
-    ./modules/home/harness.nix
     ./modules/home/claude.nix
-    # ハーネスの生成器 (agents/scripts/build-harness.ts) が deno で動くので外せない。
-    # harness.nix の activation がこれを呼ぶ (bootstrap は公式 installer を curl するだけ)
+    # agents/scripts/*.ts (mutate-check.ts 等) は deno の shebang で動く。
+    # review-impl の変異検証がこれを呼ぶので外せない
     ./modules/home/deno.nix
     ./modules/home/direnv.nix
     ./modules/home/env.nix
