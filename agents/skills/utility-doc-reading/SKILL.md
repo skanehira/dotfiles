@@ -13,7 +13,7 @@ user-invocable: true
 
 `~/.claude/knowledge-profile.md` がユーザの知識の永続記録。毎回の知識確認を減らし、回を重ねるごとに解説がユーザに最適化されていくための仕組み。
 
-- 実体は dotfiles の `claude/knowledge-profile.md` (mkOutOfStoreSymlink で `~/.claude/` に配置され、複数マシン間で git 同期される)
+- 実体は dotfiles の `agents/knowledge-profile.md` (mkOutOfStoreSymlink で `~/.claude/` に配置され、複数マシン間で git 同期される)
 - symlink が存在しない場合はプロファイルなしとして進め、末尾で「`drs` / `hms` 未適用のためプロファイルを更新できない」と報告する (勝手に実ファイルを作ると home-manager の symlink 配置と衝突する)
 
 ```markdown

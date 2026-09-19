@@ -70,6 +70,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 | `~/.claude/skills` | `~/.agents/skills` |
 | `~/.claude/agents` | `~/.codex/agents` |
 | `~/.claude/scripts` | 同じパスをそのまま実行する (同一実体。Claude Code 用のパスに見えても同じマシン上のファイル) |
+| `~/.claude/knowledge-profile.md` | 同じパスをそのまま読み書きする (同一実体。`utility-doc-reading` が使う) |
 | `plan mode` | Plan mode |
 
 ## 読み替えで吸収できないもの
@@ -85,7 +86,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 
 ここに無い Claude 固有の記述に出会ったら、勝手に読み替えず**その旨を報告して指示を仰ぐ**。
 
-## 3 者で表現できない subagent の属性
+## 2 者で表現できない subagent の属性
 
 変換スクリプト (`dotfiles/agents/scripts/sync-subagents.ts`) が TOML に出すのは `name` / `description` / `developer_instructions` の 3 キーだけである。正本の frontmatter にある以下は Codex 側に届かない。
 

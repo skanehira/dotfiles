@@ -79,7 +79,9 @@ skills/
 
 ## 配布先の限定
 
-dotfiles の `agents/skills/` に置いたスキルは既定で 2 ランタイムすべてに配られる。スキルは Claude Code の `~/.claude/skills/<name>` と Codex の `~/.agents/skills/<name>` へ**個別 symlink** されるので、中身は共通の 1 つである。1 つのランタイムでしか動かないスキル (そのランタイムのログや設定を直接読むものなど) は Codex 側の配布から外す。現在の該当は `utility-session-profile` の 1 本で、除外は `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。
+dotfiles の `agents/skills/` に置いたスキルは既定で 2 ランタイムすべてに配られる。スキルは Claude Code の `~/.claude/skills/<name>` と Codex の `~/.agents/skills/<name>` へ**個別 symlink** されるので、中身は共通の 1 つである。1 つのランタイムでしか動かないスキル (そのランタイムのログや設定を直接読むものなど) は Codex 側の配布から外す。除外は `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。
+
+該当するスキルは `utility-session-profile` の 1 本 (Claude Code のセッションログしか読まない)。同じリストで、スキルではないが `~/.claude/skills/` に落ちる Claude Code の同期キャッシュ `synced` も除外している。
 
 除外を変えたときは `drs` / `hms` で activation (`linkAgentSkills`) を流す。Codex 側の symlink が撤去され、Claude 側には残る。
 
