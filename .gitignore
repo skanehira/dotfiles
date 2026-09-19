@@ -3,3 +3,8 @@
 # nix build / darwin-rebuild build の出力 symlink
 result
 result-*
+
+# Claude Code が marketplace のプラグイン/スキルを同期するキャッシュ (~/.claude/skills/synced)。
+# ~/.claude/skills が agents/skills への symlink なので、同期の書き込みがこの作業ツリーに落ちる。
+# Claude Code の所有物でハーネスの一部ではないため、commit しない
+agents/skills/synced/
