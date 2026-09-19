@@ -459,11 +459,14 @@ for m in ~/.claude/rules ~/.claude/skills ~/.claude/agents ~/.codex/skills ~/.co
   [ -f "$m/.harness-manifest.json" ] || continue
   jq -r '.paths[]' "$m/.harness-manifest.json" | while read -r p; do rm -rf "$m/$p"; done
   rm -f "$m/.harness-manifest.json"
+  find "$m" -type d -empty -delete   # manifest はファイル単位なので空になった親を掃除する
 done
 rm -f ~/.claude/CLAUDE.md ~/.codex/AGENTS.md
 rm -rf ~/.agents/rules
 drs   # または hms
 ```
+
+manifest の `paths` は**ファイル単位**の相対パスなので、削除しただけでは入れ物のディレクトリが残る (`~/.claude/skills/dev-spec/references` のような空の殻)。上の `find -type d -empty -delete` がそれを消し、ディレクトリ全体が空になれば `~/.claude/rules` のように消えて HM が symlink を作り直す。
 
 `~/.agents/skills` の他ツール由来スキル (`archify` / `find-skills` / `gws-*` / `terminal-browser`) と `~/.codex/skills/.system` は触らない。`~/.codex/skills` に dotfiles 由来の実体が残ると同名スキルが `r0` と `r1` に二重に列挙されるので、`ls ~/.codex/skills` で残っていないか確認する。
 
