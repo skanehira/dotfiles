@@ -314,7 +314,7 @@ Android プロファイルだけは `pkgs.neovim` (nixpkgs-unstable の **stable
 agents/
 ├── AGENTS.md            ← グローバル指示の base
 ├── rules/               ← core/ backend/ frontend/ infra/
-├── skills/              ← 32 本 (うち 1 本は配布先を Claude Code に限定)
+├── skills/              ← 43 本 (うち 1 本は配布先を Claude Code に限定、11 本は wondelai/skills からの vendor)
 ├── subagents/           ← 4 本 (Claude Code 形式が正本)
 ├── vocabulary.json      ← 中立語彙 → 2 ランタイムの実語 (19 件)
 ├── hooks/               ← herdr-agent-state.sh のみ (herdr 本体の配布物。自作ゲートは無い)
