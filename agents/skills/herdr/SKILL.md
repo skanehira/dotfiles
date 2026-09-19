@@ -119,6 +119,7 @@ Use the executable that belongs to the requested agent:
 
 - Codex: `codex`
 - Claude Code: `claude`
+- OpenCode: `opencode`
 - pi: `pi`
 - OMP: `omp`
 
