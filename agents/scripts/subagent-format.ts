@@ -1,15 +1,18 @@
 /**
- * subagent 定義 (agents/subagents/*.md) を Codex の形式へ変換する。
+ * subagent 定義 (agents/subagents/*.md) を Codex と OpenCode の形式へ変換する。
  *
- * 正本は Claude Code 形式の Markdown + frontmatter で、Codex は TOML を要求するため、
- * 書式変換だけが避けられない。呼ぶのは sync-subagents.ts。
+ * 正本は Claude Code 形式の Markdown + frontmatter で、Codex は TOML を、OpenCode は
+ * 別スキーマの Markdown を要求するため、書式変換だけが避けられない。呼ぶのは
+ * sync-subagents.ts。
  *
- * 2 者で意味が対応しないキーは落とす:
- * - `tools` は Codex に対応キーが無い
- * - `model` は Codex では実モデル名が要り alias が使えない。世代交代に追従できないので
- *   生成物には書かない (固定したければ `agents/bindings/codex/config.toml` の
- *   `[agents] default_subagent_model` に 1 箇所だけ書く)
- * - `context: fork` に相当する概念は Codex に無い
+ * 3 者で意味が対応しないキーは落とす:
+ * - `tools` は Codex に対応キーが無く、OpenCode は真偽値マップなので形式が違う
+ * - `model` は Codex では実モデル名が要り alias が使えない。OpenCode も `provider/model-id`
+ *   の形を要求する。世代交代に追従できないので生成物には書かない (Codex で固定したければ
+ *   `agents/bindings/codex/config.toml` の `[agents] default_subagent_model` に 1 箇所書く)
+ * - `context: fork` に相当する概念はどちらにも無い
+ * - `name` は OpenCode では出さない。OpenCode は subagent 名をファイルパスから決めるため
+ *   (packages/opencode/src/config/agent.ts の configEntryNameFromPath)
  */
 
 /** 生成物であることの目印。prune はこの行を持つファイルだけを撤去する */
@@ -40,9 +43,27 @@ function requireKey(frontmatter: Record<string, string>, key: string): string {
   return value;
 }
 
-/** TOML の basic string。制御文字を含まない前提で `"` と `\` だけ逃がす */
-function tomlBasicString(value: string): string {
+/**
+ * 出力ファイル名に使う subagent 名。**形式によらず必須**である。Codex は生成物の
+ * `name` キーにも使うが、OpenCode は frontmatter に出さずファイル名だけに使う
+ * (OpenCode が subagent 名をファイルパスから決めるため)。欠けたまま通すと
+ * `undefined.md` という名前の subagent が登録されてしまう。
+ */
+export function subagentName(subagent: Subagent): string {
+  return requireKey(subagent.frontmatter, "name");
+}
+
+/**
+ * TOML の basic string と YAML の double-quoted scalar。制御文字を含まない前提で
+ * `"` と `\` だけ逃がす。両者はこの範囲で同じ書式なので 1 つで足りる。
+ */
+function quotedString(value: string): string {
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/** 本文を必ず改行で終わらせる。生成物の末尾を揃えるため */
+function bodyWithTrailingNewline(body: string): string {
+  return body.endsWith("\n") ? body : `${body}\n`;
 }
 
 export function toCodexToml(subagent: Subagent): string {
@@ -53,13 +74,33 @@ export function toCodexToml(subagent: Subagent): string {
       `${name}: 本文に ''' が含まれるため TOML の literal string に入れられません`,
     );
   }
-  const body = subagent.body.endsWith("\n") ? subagent.body : `${subagent.body}\n`;
+  const body = bodyWithTrailingNewline(subagent.body);
   return [
     GENERATED_MARKER,
-    `name = ${tomlBasicString(name)}`,
-    `description = ${tomlBasicString(description)}`,
+    `name = ${quotedString(name)}`,
+    `description = ${quotedString(description)}`,
     `developer_instructions = '''`,
     body + `'''`,
     "",
+  ].join("\n");
+}
+
+/**
+ * OpenCode の subagent Markdown。frontmatter に出すのは `description` と
+ * `mode: subagent` だけで、名前はファイル名から決まるので書かない。
+ *
+ * description は double-quoted で出す。正本の description にはコロンが含まれるものが
+ * あり (dev-impl-implementer)、無引用のプレーンスカラーでは 2 つ目のキーとして解釈される。
+ */
+export function toOpencodeMarkdown(subagent: Subagent): string {
+  const description = requireKey(subagent.frontmatter, "description");
+  return [
+    "---",
+    GENERATED_MARKER,
+    `description: ${quotedString(description)}`,
+    "mode: subagent",
+    "---",
+    "",
+    bodyWithTrailingNewline(subagent.body),
   ].join("\n");
 }
