@@ -1,10 +1,5 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert@1";
-import {
-  GENERATED_MARKER,
-  parseSubagent,
-  toCodexToml,
-  toOpencodeMarkdown,
-} from "./subagent-format.ts";
+import { GENERATED_MARKER, parseSubagent, toCodexToml } from "./subagent-format.ts";
 
 
 /** frontmatter と body を差し替えられるフィクスチャ。既定は実正本に近い形 */
@@ -59,22 +54,6 @@ developer_instructions = '''
   );
 });
 
-Deno.test("toOpencodeMarkdown_emits_only_description_and_mode_dropping_tools_model_and_context", () => {
-  assertEquals(
-    toOpencodeMarkdown(parseSubagent(subagentMarkdown())),
-    `---
-${GENERATED_MARKER}
-description: 実装差分の統合レビュワー。修正は行わない。
-mode: subagent
----
-
-# review-impl
-
-実装者と**別コンテキスト**で実装差分を検査する。
-`,
-  );
-});
-
 Deno.test("toCodexToml_escapes_quote_and_backslash_in_description", () => {
   const markdown = subagentMarkdown({
     frontmatter: 'name: q\ndescription: "引用" と \\ を含む',
@@ -92,28 +71,16 @@ body
   );
 });
 
-for (
-  const { target, render, expected } of [
-    {
-      target: "codex",
-      render: toCodexToml,
-      expected: `${GENERATED_MARKER}\nname = "q"\ndescription = "d"\ndeveloper_instructions = '''\n改行で終わらない本文\n'''\n`,
-    },
-    {
-      target: "opencode",
-      render: toOpencodeMarkdown,
-      expected: `---\n${GENERATED_MARKER}\ndescription: d\nmode: subagent\n---\n\n改行で終わらない本文\n`,
-    },
-  ]
-) {
-  Deno.test(`${render.name}_with_body_missing_trailing_newline_appends_one_for_${target}`, () => {
-    const markdown = subagentMarkdown({
-      frontmatter: "name: q\ndescription: d",
-      body: "改行で終わらない本文",
-    });
-    assertEquals(render(parseSubagent(markdown)), expected);
+Deno.test("toCodexToml_with_body_missing_trailing_newline_appends_one", () => {
+  const markdown = subagentMarkdown({
+    frontmatter: "name: q\ndescription: d",
+    body: "改行で終わらない本文",
   });
-}
+  assertEquals(
+    toCodexToml(parseSubagent(markdown)),
+    `${GENERATED_MARKER}\nname = "q"\ndescription = "d"\ndeveloper_instructions = '''\n改行で終わらない本文\n'''\n`,
+  );
+});
 
 Deno.test("toCodexToml_without_name_throws", () => {
   assertThrows(
@@ -123,9 +90,9 @@ Deno.test("toCodexToml_without_name_throws", () => {
   );
 });
 
-Deno.test("toOpencodeMarkdown_without_description_throws", () => {
+Deno.test("toCodexToml_without_description_throws", () => {
   assertThrows(
-    () => toOpencodeMarkdown(parseSubagent(subagentMarkdown({ frontmatter: "name: q" }))),
+    () => toCodexToml(parseSubagent(subagentMarkdown({ frontmatter: "name: q" }))),
     Error,
     "frontmatter に description がありません",
   );

@@ -4,7 +4,7 @@
  * ハーネス正本 (agents/) をランタイムごとの完成品へコンパイルする。
  *
  * 共通の base に対して (1) ランタイム別 overlay の節マージ (2) 語彙のプレースホルダ置換
- * を順に当て、Claude Code / Codex / OpenCode がそれぞれ自分の語彙で書かれた 1 セットを
+ * を順に当て、Claude Code / Codex がそれぞれ自分の語彙で書かれた 1 セットを
  * 読めるようにする。読み替え規約という間接層を無くすのが目的。
  *
  * 順序はマージ → 置換で固定する。見出しにツール名を含むファイルがあるため、逆順だと
@@ -15,7 +15,7 @@
 
 import { basename, dirname, join, relative, resolve } from "jsr:@std/path@1";
 import { walk } from "jsr:@std/fs@1/walk";
-import { parseSubagent, toCodexToml, toOpencodeMarkdown } from "./subagent-format.ts";
+import { parseSubagent, toCodexToml } from "./subagent-format.ts";
 
 /** 語彙表。`{{@<name>}}` → ランタイム別の実語。vocabulary.json の形と一致させる */
 export type Vocabulary = Record<string, Record<string, string>>;
@@ -405,12 +405,11 @@ export type BuildOptions = {
   vocabulary: Vocabulary;
   dotfilesRoot: string;
   /** subagent は書式変換が要る。指定するとランタイムのスキーマへ変換して出す */
-  subagentFormat?: "codex" | "opencode";
+  subagentFormat?: "codex";
 };
 
 const SUBAGENT_RENDERERS = {
   codex: { render: toCodexToml, extension: ".toml" },
-  opencode: { render: toOpencodeMarkdown, extension: ".md" },
 } as const;
 
 /**
@@ -609,7 +608,7 @@ export async function loadVocabulary(path: string): Promise<Vocabulary> {
 const USAGE = `usage:
   build-harness.ts --runtime <name> --base <dir> --out <dir> \\
       [--overlay <dir>] [--vocabulary <file>] [--dotfiles-root <dir>] \\
-      [--subagent-format codex|opencode]
+      [--subagent-format codex]
   build-harness.ts --remove-dotfiles-links <dir> --dotfiles-root <dir>`;
 
 function parseArgs(args: string[]): Record<string, string> {
@@ -663,7 +662,7 @@ async function main(args: string[]): Promise<number> {
     runtime,
     vocabulary,
     dotfilesRoot,
-    subagentFormat: options["subagent-format"] as "codex" | "opencode" | undefined,
+    subagentFormat: options["subagent-format"] as "codex" | undefined,
   });
   console.log(
     `${runtime}: ${result.written.length} 件を生成${
