@@ -49,7 +49,7 @@ Read({ file_path: "docs/design/USER_STORIES.md" })
 USER_STORIES.mdからストーリー一覧を読み込み、詳細化するストーリーを選択。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "どのユーザーストーリーを詳細化しますか？（複数選択可）",
@@ -66,10 +66,10 @@ USER_STORIES.mdからストーリー一覧を読み込み、詳細化するス�
 **遷移条件**: フェーズ2へ
 
 **ファイルが存在しない場合**:
-{{@ask-user}}で詳細化するストーリーを確認。
+AskUserQuestionで詳細化するストーリーを確認。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "詳細化したいユーザーストーリーを入力してください。",
@@ -90,7 +90,7 @@ USER_STORIES.mdからストーリー一覧を読み込み、詳細化するス�
 ユースケースに関わるアクターを洗い出す。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "このユースケースに関わるアクター（人、システム）は誰ですか？",
@@ -124,7 +124,7 @@ USER_STORIES.mdからストーリー一覧を読み込み、詳細化するス�
 - 「最終的にどうなったら成功ですか？」
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "このユースケースの正常な流れをステップバイステップで教えてください。",
@@ -164,7 +164,7 @@ USER_STORIES.mdからストーリー一覧を読み込み、詳細化するス�
 ユースケースの開始条件と終了状態を明確にする。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "このユースケースを開始するための条件は？（事前条件）",
@@ -198,7 +198,7 @@ USER_STORIES.mdからストーリー一覧を読み込み、詳細化するス�
 - 「複数の方法がある場合は？」
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "正常系の各ステップで、別の選択肢や分岐はありますか？",
@@ -235,7 +235,7 @@ USER_STORIES.mdからストーリー一覧を読み込み、詳細化するス�
 - 「タイムアウトしたらどうなりますか？」
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "どんなエラーや例外が発生し得ますか？それぞれどう対処しますか？",
@@ -271,7 +271,7 @@ USER_STORIES.mdからストーリー一覧を読み込み、詳細化するス�
 - 「自動的に行われる処理はありますか？」
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "このユースケースに関連するビジネスルールや制約はありますか？",
@@ -336,7 +336,7 @@ graph LR
 ```javascript
 Agent({
   description: "ユースケースレビュー",
-  subagent_type: "{{@general-agent}}",
+  subagent_type: "general-purpose",
   prompt: `
 以下のユースケースドキュメントをレビューし、問題があれば修正してください。
 

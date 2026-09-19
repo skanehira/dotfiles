@@ -116,7 +116,7 @@
 ```json
 {"rank": "効き目 1", "title": "issue の依存を浅く割る",
  "body": "段数がそのまま所要時間を決めるため、段を半分にすれば所要時間も半減する。",
- "where": "{{@skills-root}}/dev-spec/ の issue 分割方針",
+ "where": "~/.claude/skills/dev-spec/ の issue 分割方針",
  "gain": "段数に比例", "gain_note": "10 段 → 5 段でおよそ半減"}
 ```
 
