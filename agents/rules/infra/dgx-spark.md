@@ -12,7 +12,7 @@ paths:
 - 最終確認: 2026-09-17 (Codex (`cxsp`) の節と、`/v1/responses` にまたがる記述)
 - 他の節の確認日: 2026-09-06 (一部は 2026-09-09 / 2026-09-10 / 2026-09-15 に再確認。2026-09-15 は「系統の切り替え」「sparkDash の `workerLabel` を直す」「重みの置き場所 (3 系統)」「メモリの使われ方」「障害時」「既知の制約」8・10・11)。「実測値」節の性能値のみ 2026-09-05。日付は表のセルか本文に書いてある
 
-自宅に NVIDIA DGX Spark (GB10) が 2 台あり、vLLM の TP=2 (tensor parallel、2 台に重みを分割する並列方式) でローカル LLM を常時サービングしている。Mac の Claude Code (`ccsp`) / Codex (`cxsp`) の 2 つからバックエンドとして使える。
+自宅に NVIDIA DGX Spark (GB10) が 2 台あり、vLLM の TP=2 (tensor parallel、2 台に重みを分割する並列方式) でローカル LLM を常時サービングしている。Mac の Claude Code (`ccsp`) / OpenCode (`ocsp`) / Codex (`cxsp`) の 3 つからバックエンドとして使える。
 
 **レシピは 3 系統ある。** DeepSeek 系 (Vision-Exp)、Qwen 系 (Qwen3.8-Flash-Next)、V4.1 EXL3 系 (DeepSeek-V4.1-Flash EXL3 2.9bpw) で、ポート 8888 と GPU を共有するため**同時には 1 つしか配信できない**。2026-09-17 時点の配信は V4.1 EXL3 系である。系統ごとにスクリプト名・コンテナ名・設定ファイル名が違うので、作業前にどれが動いているかを確かめる (`ssh -n spark-head 'docker ps --format "{{.Names}}" | grep -E "vllm|dsv41"'`。**`--filter name=vllm` だけでは V4.1 EXL3 系のコンテナ `dsv41-exl3-head` を拾わない**)。
 
@@ -34,32 +34,39 @@ paths:
 | MTP | multi-token prediction。1 ステップで出す draft トークン数。**キー名が系統で違う** (DeepSeek 系 = `.env.dspark` の `MTP_NUM_TOKENS` / Qwen 系 = Qwen レシピの `.env` の `MTP_NUM_SPECULATIVE_TOKENS` / V4.1 EXL3 系は DSpark の行の `DSPARK_TOKENS`) | 各系統の設定ファイル | 人 | vLLM |
 | `nvfp4_ds_mla` / `fp8_ds_mla` | MLA (multi-head latent attention) の KV キャッシュを 4bit / 8bit で保持する形式。前者は DeepSeek 系、後者は V4.1 EXL3 系 | vLLM の CLI フラグ `--kv-cache-dtype` | DeepSeek 系はレシピの compose が指定、V4.1 EXL3 系は vLLM が自分で選ぶ | vLLM |
 | TTFT | time to first token。送信から最初のトークンが返るまでの時間。ほぼ prefill の所要時間 | 本表 | `~/spark-bench/bench.py` | 「L1」表 |
-| 受理率 | 投機デコードが出した draft トークンのうち採用された割合。decode 速度をほぼ決める | 本表 | vLLM の `/metrics` | 「L2」表・「遅いと感じたときに疑う順序」4 |
-| L1 / L2 | 計測の層。L1 = サーバを直叩き (クライアント無し) / L2 = Claude Code 経由 | 本表 | `bench.py` (L1) / `snap.py` (L2) | 「実測値」節 |
+| 受理率 | 投機デコードが出した draft トークンのうち採用された割合。decode 速度をほぼ決める | 本表 | vLLM の `/metrics` | 「L2 / L3」表・「遅いと感じたときに疑う順序」4 |
+| L1 / L2 / L3 | 計測の層。L1 = サーバを直叩き (クライアント無し) / L2 = Claude Code 経由 / L3 = OpenCode 経由 | 本表 | `bench.py` (L1) / `snap.py` (L2・L3) | 「実測値」節 |
 | `ccsp` | Claude Code を本クラスタに向けて**起動する**ところまで行う zsh 関数 | `zsh/functions/claude-deepseek.zsh` | dotfiles | 人 |
 | `ccds` | 同じく DeepSeek 本家 API へ向けて**起動する**ところまで行う zsh 関数。`agents/bindings/claude/settings.deepseek.json` を `--settings` で渡す。**予約語は第 1 引数の `off` だけ**で、それ以外の語はそのまま `claude` に渡る (`off` の後ろに書いた引数は無視される。`ccds off` で Anthropic に戻す)。`ccsp` と環境変数 `ANTHROPIC_AUTH_TOKEN` を共有する (入る値は別) | 同上 | dotfiles | 人 |
-| `CCSP_LAN_HOST` | LAN 側ホスト名を上書きするシェル変数。`CCSP_LAN_HOST=<IP> ccsp` と前置きしても export しても効く。**名前は `ccsp` 由来だが 2 つのクライアントが共有する** | `zsh/functions/spark-common.zsh` | 人 | `ccsp` / `cxsp` |
+| `CCSP_LAN_HOST` | LAN 側ホスト名を上書きするシェル変数。`CCSP_LAN_HOST=<IP> ccsp` と前置きしても export しても効く。**名前は `ccsp` 由来だが 3 つのクライアントが共有する** | `zsh/functions/spark-common.zsh` | 人 | `ccsp` / `ocsp` / `cxsp` |
+| `ocsp` | OpenCode を本クラスタに向けて起動する zsh 関数。API キーも alias も持たない。接続先は `ccsp` と同じく到達する方を選ぶ | `zsh/functions/opencode-spark.zsh` | dotfiles | 人 |
 | `cxsp` | Codex を本クラスタに向けて起動する zsh 関数。設定ファイルを置かず、`codex` の `-c` で 9 キーを起動ごとに注入する。API キーも alias も環境変数も持たない | `zsh/functions/codex-spark.zsh` | dotfiles | 人 |
-| `spark-common.zsh` | 2 つのクライアントが共有するヘルパー。短縮名の表・接続先の URL とプローブ・`/v1/models` の照会・reasoning effort の表を持つ | `zsh/functions/spark-common.zsh` | dotfiles | `ccsp` / `cxsp` |
-| `_spark_models` | `/v1/models` を引いて「配信名 max_model_len」の行を返すヘルパー。Bearer が空なら Authorization ヘッダ自体を送らない | `zsh/functions/spark-common.zsh` | dotfiles | 2 クライアントの配信前検査と `status` |
-| `_spark_effort` | 配信名から reasoning effort を決める関数。`/v1/models` は受理される effort を返さないので、サーバに聞けない値としてここだけが表を持つ | `zsh/functions/spark-common.zsh` | dotfiles | `ccsp` / `cxsp` |
+| `spark-common.zsh` | 3 つのクライアントが共有するヘルパー。短縮名の表・接続先の URL とプローブ・`/v1/models` の照会・reasoning effort の表を持つ | `zsh/functions/spark-common.zsh` | dotfiles | `ccsp` / `ocsp` / `cxsp` |
+| `_spark_models` | `/v1/models` を引いて「配信名 max_model_len」の行を返すヘルパー。Bearer が空なら Authorization ヘッダ自体を送らない | `zsh/functions/spark-common.zsh` | dotfiles | 3 クライアントの配信前検査と `status` |
+| `_spark_effort` | 配信名から reasoning effort を決める関数。`/v1/models` は受理される effort を返さないので、サーバに聞けない値としてここだけが表を持つ | `zsh/functions/spark-common.zsh` | dotfiles | `ccsp` / `cxsp` (`ocsp` は `opencode.json` の静的値を使う) |
 | `CCSP_MODEL` | `ccsp` が使う配信名を保持するシェル変数。短縮名に無いモデルを渡すときだけ使う。**未設定が既定で、その場合は配信中のモデルを採る** | `zsh/functions/claude-deepseek.zsh` | 人 | `ccsp` |
-| `CXSP_MODEL` | `cxsp` が使う配信名を保持するシェル変数。書き換えるサブコマンドは持たない。**未設定が既定で、その場合は配信中のモデルを採る** | `zsh/functions/codex-spark.zsh` | 人 | `cxsp` |
+| `OCSP_MODEL` | 同じく `ocsp` 用。`ocsp model` が書き換える。**未設定が既定で、その場合は配信中のモデルを採る** | `zsh/functions/opencode-spark.zsh` | `ocsp model` | `ocsp` |
+| `CXSP_MODEL` | 同じく `cxsp` 用。書き換えるサブコマンドは持たない (`ocsp model` に相当するものが無い)。**未設定が既定で、その場合は配信中のモデルを採る** | `zsh/functions/codex-spark.zsh` | 人 | `cxsp` |
 | `CCSP_OUTPUT_RESERVE` | `max_model_len` から差し引く出力用の余白 (トークン数)。既定は 32,768 | `zsh/functions/claude-deepseek.zsh` | 人 | `ccsp` |
-| 短縮名 | モデル名の短縮。`qwen` / `vision` / `v41` の 3 つで、`SERVED_MODEL_NAME` に展開する (`v41` → `DeepSeek-v4.1-Flash-EXL3`)。**モデルとして渡せるのはこの 3 語だけで、短縮名にも `lan` / `ts` にも当たらない語はクライアント本体の引数に回る。** 配信名を直に指定する経路は `CCSP_MODEL=` / `CXSP_MODEL=` の 2 つ | `spark-common.zsh` の `_spark_served_name` と各クライアントの `case` ガード | dotfiles | `ccsp` / `cxsp` |
-| `lan` / `ts` | 接続先を強制する選択語。省略時は `/health` のプローブで決まる。短縮名とは順不同で並べられるが、**予約語 (`ccsp` は `off` / `status` / `-h`、`cxsp` は `status` / `-h` / `--help` / `help`) とは併用できない** (予約語は第 1 引数でしか効かず、`ccsp lan status` の `status` はクライアント本体の引数に回る) | `spark-common.zsh` の `_spark_lan_url` / `_spark_ts_url` と各クライアントの引数解釈 | dotfiles | `ccsp` / `cxsp` |
-| 配信前検査 | クライアントが起動前に `/v1/models` を引いて、要求されたモデルが配信されているかを確かめる段。`ccsp` は `--settings` 注入の前、`cxsp` は `-c` の組み立ての前に行う | `zsh/functions/claude-deepseek.zsh` / `zsh/functions/codex-spark.zsh` | — | `ccsp` / `cxsp` |
-| `--` (解除語) | 解釈の打ち切り語。**`ccsp` と `cxsp` は同型**で、`lan` / `ts` / 短縮名の認識領域 (`while` ループ) に出た `--` をどこでも消費し、以降を `claude` / `codex` にそのまま渡す。予約語 (`ccsp` は `off` / `status` / `-h`、`cxsp` は `status` / `-h` / `--help` / `help`) を迂回できる。`--` 自体はクライアント本体に渡さない (渡すと option 解析の終端として後続の語を別枠に取り扱うため)。どちらも `--` を置いた起動でも配信前検査と注入 (`--settings` / `-c`) は通る | `claude-deepseek.zsh` と `codex-spark.zsh` の引数解釈 | dotfiles | `ccsp` / `cxsp` |
+| 短縮名 | モデル名の短縮。`qwen` / `vision` / `v41` の 3 つで、`SERVED_MODEL_NAME` に展開する (`v41` → `DeepSeek-v4.1-Flash-EXL3`)。**モデルとして渡せるのはこの 3 語だけで、短縮名にも `lan` / `ts` にも当たらない語はクライアント本体の引数 (`ocsp` ではサブコマンド検知) に回る。** 配信名を直に指定する経路は `CCSP_MODEL=` / `CXSP_MODEL=` / `ocsp model <名前>` の 3 つ | `spark-common.zsh` の `_spark_served_name` と各クライアントの `case` ガード | dotfiles | `ccsp` / `ocsp` / `cxsp` |
+| `lan` / `ts` | 接続先を強制する選択語。省略時は `/health` のプローブで決まる。短縮名とは順不同で並べられるが、**予約語 (`status` / `model` / `off`) とは併用できない** (予約語は第 1 引数でしか効かず、`ocsp lan status` の `status` はクライアント本体の引数に回る。`cxsp` の予約語は `status` / `-h` (`--help` / `help` を含む) で同じ制約を持つ) | `spark-common.zsh` の `_spark_lan_url` / `_spark_ts_url` と各クライアントの引数解釈 | dotfiles | `ccsp` / `ocsp` / `cxsp` |
+| 配信前検査 | クライアントが起動前に `/v1/models` を引いて、要求されたモデルが配信されているかを確かめる段。`ccsp` は `--settings` 注入の前、`ocsp` は接続先の決定後、`cxsp` は `-c` の組み立ての前に行う | `zsh/functions/claude-deepseek.zsh` / `zsh/functions/opencode-spark.zsh` / `zsh/functions/codex-spark.zsh` | — | `ccsp` / `ocsp` / `cxsp` |
+| `--` (解除語) | 解釈の打ち切り語。`ccsp` は `lan` / `ts` / 短縮名の認識領域 (`while` ループ) に出た `--` をどこでも消費し、`ocsp` は先頭出た 1 個だけ消費する (短縮名のうしろに置いた `--` は opencode に素で渡る非対称)。いずれも以降を `claude` / `opencode` にそのまま渡す。予約語 (`ccsp` の `off` / `status` / `-h`、`ocsp` の `model` / `status` / `help`) や `ocsp` のサブコマンド検知を迂回できる。`--` 自体はクライアント本体に渡さない (渡すと option 解析の終端として後続の語を別枠に取り扱うため)。`ccsp --` は配信前検査と `--settings` 注入を通過するが、`ocsp --` は接続先の上書きも配信前検査も `--model` 注入も通らない (素の `opencode` と同じになる)。**`cxsp` は `ccsp` と同型**で、認識領域に出た `--` をどこでも消費し、配信前検査と `-c` の注入は通る (予約語は `status` / `-h` / `--help` / `help`) | `claude-deepseek.zsh` と `opencode-spark.zsh` と `codex-spark.zsh` の引数解釈 | dotfiles | `ccsp` / `ocsp` / `cxsp` |
 | `settings.spark.json` | Claude Code 側の設定の土台。**モデル名・コンテキスト上限・reasoning effort は持たない**ので、モデルを増やしても変更点は無い | `agents/bindings/claude/settings.spark.json` | dotfiles | `ccsp` (生成の入力) |
 | `settings.deepseek.json` | `ccds` が `--settings` で渡す DeepSeek 本家 API の設定。**主なキーは接続先 (`env.ANTHROPIC_BASE_URL`)・モデル名 5 キー・`CLAUDE_CODE_EFFORT_LEVEL` (静的な `max`)・`fallbackModel` (既定モデルが使えないときの退避)**。`env` の残り 2 キーと `enabledPlugins` は `settings.spark.json` と共通で、**`ccsp` と違い起動ごとの生成をしない** (配信名に追従する必要が無いため) | `agents/bindings/claude/settings.deepseek.json` | dotfiles | `ccds` |
 | `CLAUDE_CODE_EFFORT_LEVEL` | Claude Code の推論の深さ。**`ccsp` が配信名から決めて起動のたびに注入する** (`qwen3.8-flash-next` → `xhigh` / `DeepSeek-v4.1-Flash-EXL3` → `max` / それ以外 → `high`)。受け付ける値は配信中のモデルが決める (`ccsp` から渡せるのは、Qwen 配信中なら `low` / `medium` / `xhigh`、V4.1 EXL3 配信中なら `low` / `high` / `xhigh` / `max`。`none` はどちらでも `/v1/messages` のスキーマが弾く → 「Qwen の reasoning effort の語彙」と「V4.1 EXL3 の reasoning effort の語彙」。DeepSeek 系は未確認 → 確かめ方は「依拠する外部事実」の reasoning effort の行) | `zsh/functions/spark-common.zsh` の `_spark_effort` | `ccsp` / `ccds` (`settings.deepseek.json` の静的な `max` を `--settings` で渡す) | `claude` 本体 (`/v1/messages` の `output_config.effort` として送る) |
 | `CCSP_EFFORT` | `_spark_effort` の決定を上書きするシェル変数。**未設定が既定** (Qwen 配信中に入れてよいのは `low` / `medium` / `xhigh`、V4.1 EXL3 配信中は `low` / `high` / `xhigh` / `max`)。語彙に無い値を入れると最初のリクエストが 400 で落ちる | `zsh/functions/claude-deepseek.zsh` | 人 | `ccsp` |
 | `CXSP_CONTEXT_MAX` | `cxsp` が `model_context_window` に渡す値の上限 (トークン数)。既定 500,000。**サーバの `max_model_len` がこれを超えたら頭打ちにする** | `zsh/functions/codex-spark.zsh` | 人 | `cxsp` |
 | `CXSP_EFFORT` | 同じものを `cxsp` 側で上書きするシェル変数。**未設定が既定。** V4.1 EXL3 配信中に `/v1/responses` で入れてよいのは `low` / `high` / `xhigh` / `max` の 4 語で、`medium` は 400 になる (2026-09-17 実測 →「V4.1 EXL3 の reasoning effort の語彙」)。**Qwen 系と DeepSeek 系のこの経路は未実測** | `zsh/functions/codex-spark.zsh` | 人 | `cxsp` |
+| `reasoningEffort` | `ocsp` 側の同じもの。`opencode.json` の `provider.spark.models.<配信名>.options` が**モデルごとに静的に持つ** (`qwen3.8-flash-next` = `xhigh` / `deepseek-v4-flash-vision-exp` = `high` / `DeepSeek-v4.1-Flash-EXL3` = `max`)。省略するとクライアントは送らず、モデルのテンプレート既定が効く | `agents/bindings/opencode/opencode.json` | dotfiles | `opencode` 本体 (`/v1/chat/completions` の `reasoning_effort` として送る) |
 | `~/.cache/ccsp/settings.json` | `ccsp` が起動のたびに `settings.spark.json` へモデル名 5 キー (`ANTHROPIC_MODEL` と `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU,FABLE}_MODEL`)・`CLAUDE_CODE_MAX_CONTEXT_TOKENS`・`CLAUDE_CODE_EFFORT_LEVEL`・`fallbackModel` を注入して書き出す実ファイル | Mac の `~/.cache/ccsp/settings.json` (`XDG_CACHE_HOME` があればその下) | `ccsp` | `claude` 本体 (`--settings` で渡される) |
+| `opencode.json` | OpenCode の `provider.spark` (接続先・モデル宣言・モデルごとの `reasoningEffort`)。**キーは持たない。** 認証を戻すときだけ `options.apiKey` を足す (値は `{file:…}` / `{env:…}` で外部へ逃がす)。トップレベルの `permission` は OpenCode のツール実行の承認方針で、`allow` は全ツール自動承認を意味する。dotfiles 管理。`~/.config/opencode/` の他のファイル (`node_modules` / `package.json` / `package-lock.json` / `.gitignore` / `skills/` など) は opencode 自身と他ツールのもの。**`AGENTS.md` は dotfiles への symlink、`agents/` は `sync-subagents.ts` の生成物**で、いずれも `nix/modules/home/opencode.nix` が配る | `agents/bindings/opencode/opencode.json` | dotfiles (`nix/modules/home/opencode.nix` が symlink) | `opencode` 本体 / `ocsp` |
+| `tui.json` | OpenCode の TUI 設定 (keybinds / theme) | `agents/bindings/opencode/tui.json` | dotfiles (`nix/modules/home/opencode.nix` が symlink) | `opencode` 本体 |
 | `_cxsp_config_args` | `cxsp` が `codex` に渡す `-c` 9 キーを組み立てるヘルパー。1 行 1 キーで返す | `zsh/functions/codex-spark.zsh` | dotfiles | `cxsp` |
 | `agents/bindings/codex/config.toml` | Codex の共通設定。`/etc/codex/config.toml` (system レイヤー) として配られる。**`cxsp` からは触らない** — `model` / `model_context_window` / `model_reasoning_effort` / `web_search` は `-c` が上書きする | `agents/bindings/codex/config.toml` | dotfiles (mac は `nix/modules/darwin/codex.nix` の `environment.etc`) | `codex` 本体 |
 | `patch_responses_content_parts.py` | head のパッチ。`/v1/responses` が送る `input_text` パーツを配信中のイメージの tokenizer に受けさせる。**これが無いと `cxsp` だけが 400 で落ちる** (→「既知の制約」12 に全文) | head の `~/dsv41-local/` | 人 (dotfiles に控えは無く、制約 12 の全文が正本) | `start.sh` のパッチループ経由で head のコンテナ |
+| `OPENCODE_CONFIG_CONTENT` | OpenCode がインライン JSON として読む環境変数。既存の設定に `options` の中まで再帰的にディープマージされる。`ocsp` はこれで `baseURL` の 1 キーだけを起動ごとに差し替える (前置代入なのでシェルには残らない) | `_ocsp_config_override` (中身) と `ocsp` の起動 2 か所 (変数名)。いずれも `zsh/functions/opencode-spark.zsh` | `ocsp` | `opencode` 本体 |
+| `_ocsp_resolve` | `opencode.json` の値に書いた `{file:~/…}` / `{env:…}` を解くヘルパー。認証を戻したときの `apiKey` を平文で置かずに済ませる (opencode 本体も同じ記法を解くので、`ocsp` の配信前検査と本体の双方に同じ値が届く) | `zsh/functions/opencode-spark.zsh` | dotfiles | `ocsp` |
 | `/tmp/spark.key` | vLLM の Bearer トークンを平文で置いた作業ファイル。**head にだけ要る。`bench.py` 専用で、無認証の現在は中身が使われない。再起動で消える** | head の `/tmp/spark.key` | 人 (1Password から書き出す) | `bench.py` |
 | `nv-gpu-clock-limit.service` / `nv-cpu-clock-limit.service` | 両ノードに手で置いた systemd unit 2 本。前者は GPU の SM クロックを 2,200 MHz にロックし、後者は X925 の `scaling_max_freq` を下げる (**後者はハードウェアのクロック上限を変えていない** → 「既知の制約」5)。dotfiles に控えが無い | 「既知の制約」4・5 (後者は unit 全文も) | 人 | systemd |
 | `drs` | dotfiles の Nix 設定を Mac に適用する zsh alias | `nix/modules/home/zsh.nix` | dotfiles | 人 |
@@ -152,7 +159,7 @@ ssh-keyscan spark-head.local spark-worker.local spark-head >> ~/.ssh/known_hosts
 | `ssh spark-head` | `ssh spark-head-ts` |
 | `http://spark-head.local:8888` | `http://spark-head:8888` |
 
-**手で読み替えるのは `ssh` と手打ちの `curl` だけである。** HTTP 側の接続先は 2 つのクライアントが自分で選ぶ (`/health` をプローブして LAN → Tailscale の順に決める。実装は `spark-common.zsh` の `_spark_base_url` で、`ccsp` / `cxsp` が共有する)。
+**手で読み替えるのは `ssh` と手打ちの `curl` だけである。** HTTP 側の接続先は 3 つのクライアントが自分で選ぶ (`/health` をプローブして LAN → Tailscale の順に決める。実装は `spark-common.zsh` の `_spark_base_url` で、`ccsp` / `ocsp` / `cxsp` が共有する)。`opencode.json` の `baseURL` に書いてある LAN 側の値が効くのは、`ocsp` を通さず素の `opencode` を打ったときだけである。
 
 **`ssh spark-head-ts` を使う前に `~/.ssh/config` に 3 ブロック目があるか確かめる。** この Mac には 1・2 ブロック目しか無く、`ssh -G spark-head-ts` が `hostname spark-head-ts` を返す (2026-09-09 実測)。無ければ「接続する」節の雛形の 3 ブロック目を追記する。
 
@@ -190,7 +197,7 @@ LAN は 2.4 GHz の WiFi (両ノードとも freq 2437) で、リンク速度は
 | vLLM (3 系統のどれでも) | `http://spark-head.local:8888` | `http://spark-head:8888` | **なし** |
 | sparkDash | `http://spark-head.local:5555` | `http://spark-head:5555` | **なし** |
 
-**8888 はどの系統でも無認証である。** Qwen 系はレシピが `--api-key` を渡さない。V4.1 EXL3 系はレシピの `.env` の `VLLM_API_KEY` がコメントアウトされたままで、起動ログの `auth` 行も `none (VLLM_API_KEY empty)` と出す (2026-09-15)。DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` を `docker-compose.dspark.yml` がコンテナの環境変数に渡すしくみだが、**`VLLM_API_KEY` を空にしてある**ので素の無認証で上がる (2026-09-06 に確認)。Qwen 配信中の 8888 は、ヘッダ無しでも出まかせの Bearer でも `/v1/models` が 200 を返すことを実測した (同じ日に存在しないパスが 404 を返すことも確かめてある)。`/health` は 2 つのクライアントの到達判定 (`ccsp` / `cxsp` の起動時と `status`) が、`/metrics` は sparkDash と `~/spark-bench/snap.py` がポーリングして消費する。**生成に使うパスはクライアントごとに違う**: `ccsp` が `/v1/messages`、`cxsp` が `/v1/responses` である (vLLM はこの 2 つに加えて `/v1/chat/completions` も持つ)。**`/v1/responses` だけはサーバ側にパッチが要る** (→「既知の制約」12)。**接続先を強制した起動 (`ccsp lan` / `cxsp ts`) はプローブを飛ばして `/v1/models` に直行する。`status` は接続先の選択とは無関係に両経路の `/health` を叩く。**
+**8888 はどの系統でも無認証である。** Qwen 系はレシピが `--api-key` を渡さない。V4.1 EXL3 系はレシピの `.env` の `VLLM_API_KEY` がコメントアウトされたままで、起動ログの `auth` 行も `none (VLLM_API_KEY empty)` と出す (2026-09-15)。DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` を `docker-compose.dspark.yml` がコンテナの環境変数に渡すしくみだが、**`VLLM_API_KEY` を空にしてある**ので素の無認証で上がる (2026-09-06 に確認)。Qwen 配信中の 8888 は、ヘッダ無しでも出まかせの Bearer でも `/v1/models` が 200 を返すことを実測した (同じ日に存在しないパスが 404 を返すことも確かめてある)。`/health` は 3 つのクライアントの到達判定 (`ccsp` / `ocsp` / `cxsp` の起動時と `status`) が、`/metrics` は sparkDash と `~/spark-bench/snap.py` がポーリングして消費する。**生成に使うパスはクライアントごとに違う**: `ccsp` が `/v1/messages`、`ocsp` が `/v1/chat/completions`、`cxsp` が `/v1/responses` である。**`/v1/responses` だけはサーバ側にパッチが要る** (→「既知の制約」12)。**接続先を強制した起動 (`ccsp lan` / `ocsp ts` / `cxsp lan`) はプローブを飛ばして `/v1/models` に直行する。`status` は接続先の選択とは無関係に両経路の `/health` を叩く。**
 
 **したがってポート 8888 を信頼できないネットワークへ出さない。** sparkDash のポート 5555 と同じ扱いにする。
 
@@ -198,15 +205,15 @@ sparkDash は head の `~/sparkDash` に clone した [MiaAI-Lab/sparkDash](http
 
 ### API キーの流れ
 
-**現在はどのクライアントも API キーを使わない。** `ccsp` / `cxsp` のいずれもキーを持たず、起動前に打つ `/v1/models` の照会も Bearer が空なら Authorization ヘッダ自体を送らない。**1Password が要るのは `ccds` (DeepSeek 本家 API) だけである。**
+**現在はどのクライアントも API キーを使わない。** `ccsp` / `ocsp` / `cxsp` のいずれもキーを持たず、起動前に打つ `/v1/models` の照会も Bearer が空なら Authorization ヘッダ自体を送らない。**1Password が要るのは `ccds` (DeepSeek 本家 API) だけである。**
 
-**`ccsp` には承知のうえの副作用がある。** `ANTHROPIC_AUTH_TOKEN` が空だと、Claude Code は自分が持っている**本物の Anthropic 認証情報**を `Authorization: Bearer` で `ANTHROPIC_BASE_URL` へ送る。宛先は自宅 LAN の Spark で経路は平文 HTTP なので、自宅に閉じている限り許容する方針である。**信頼できないネットワーク越しに使うときはダミー値を export してから打つ。** `cxsp` にはこの経路が無い (`env_key` を省くので Authorization ヘッダ自体を送らない)。
+**`ccsp` には承知のうえの副作用がある。** `ANTHROPIC_AUTH_TOKEN` が空だと、Claude Code は自分が持っている**本物の Anthropic 認証情報**を `Authorization: Bearer` で `ANTHROPIC_BASE_URL` へ送る。宛先は自宅 LAN の Spark で経路は平文 HTTP なので、自宅に閉じている限り許容する方針である。**信頼できないネットワーク越しに使うときはダミー値を export してから打つ。** `ocsp` と `cxsp` にはこの経路が無い (`cxsp` は `env_key` を省くので Authorization ヘッダ自体を送らない)。
 
-**DeepSeek 系を認証ありに戻すときは、サーバとクライアントの両方を直す。** 直し忘れた側で症状が変わる。**サーバだけ直すと 2 つのクライアントが `/v1/models` の 401 で起動前に止まる** (騒がしいので気づける)。**クライアントだけ直しても無認証のサーバは Bearer を無視して 200 を返すので、認証が効いていると誤認したまま運用が続く** (静かなので気づけない)。
+**DeepSeek 系を認証ありに戻すときは、サーバとクライアントの両方を直す。** 直し忘れた側で症状が変わる。**サーバだけ直すと 3 つのクライアントが `/v1/models` の 401 で起動前に止まる** (騒がしいので気づける)。**クライアントだけ直しても無認証のサーバは Bearer を無視して 200 を返すので、認証が効いていると誤認したまま運用が続く** (静かなので気づけない)。
 
 1. サーバ側 — `.env.dspark` の `VLLM_API_KEY` に値を入れて `stop` → `start`
-2. クライアント側 — `ccsp` の前に `ANTHROPIC_AUTH_TOKEN` を export し、`cxsp` には `model_providers.spark.env_key="SPARK_API_KEY"` の `-c` を 10 本目として足し、その環境変数を人が export する (`cxsp` は現在このキーを持たないので `-c` は 9 本 → 「Codex (`cxsp`)」)
-3. **反映経路が 2 つで違う。** `ANTHROPIC_AUTH_TOKEN` はそのシェルで即時、`cxsp` の 9 本目の `-c` は zsh 関数の編集なので `drs` と新しいシェルが要る
+2. クライアント側 — `ccsp` の前に `ANTHROPIC_AUTH_TOKEN` を export し、`opencode.json` の `options` に `apiKey` を足し、`cxsp` には `model_providers.spark.env_key="SPARK_API_KEY"` の `-c` を 10 本目として足し、その環境変数を人が export する (`cxsp` は現在このキーを持たないので `-c` は 9 本 → 「Codex (`cxsp`)」)
+3. **反映経路が 3 つで違う。** `ANTHROPIC_AUTH_TOKEN` はそのシェルで即時、`opencode.json` は `mkOutOfStoreSymlink` が効いている世代なら編集した瞬間から (2026-09-06 時点は効いている。**まだ store コピーを指している世代では `drs` を当てるまで反映されない。判定は `readlink -f` で行う** →「OpenCode (`ocsp`)」)、`cxsp` の 9 本目の `-c` は zsh 関数の編集なので `drs` と新しいシェルが要る
 4. **効いたことを確認する** — `curl -s -o /dev/null -w '%{http_code}\n' http://spark-head.local:8888/v1/models` が **401** を返すこと。200 のままならサーバ側が直っていない (これは「依拠する外部事実」の 200 判定の陽性対照でもある)
 
 **`bench.py` は無認証でもキー文字列を要求する。** `--key-file` か環境変数 `SPARK_KEY` のどちらも無いと起動時に exit する実装で、渡した値はそのまま `Authorization: Bearer` に載る。無認証のサーバはそれを無視するので、いまは中身が何でも通る。正本は 1Password の `op://Personal/DGX Spark vLLM API Key/credential` である。
@@ -231,7 +238,7 @@ op read 'op://Personal/DGX Spark vLLM API Key/credential' | ssh spark-head 'cat 
 | 投機デコード (`MTP_NUM_TOKENS`) | DSpark、draft 6 トークン |
 | メモリ確保率 (`GPU_MEMORY_UTILIZATION_TEXT`) | 0.835 (意味は「メモリの使われ方」) |
 | KV キャッシュ | `nvfp4_ds_mla` (`.env.dspark` にキーは無く、`docker-compose.dspark.yml` が `--kv-cache-dtype` に直書きしている) |
-| 既定の reasoning (`DEFAULT_THINKING`) | `low` (取りうる値: `off` / `low` / `high` / `max`。リクエスト単位の指定が優先する)。**この既定が効くのは effort を送らないクライアントだけである** — 2 つのクライアントは常に明示的に送り、`bench.py` も `chat_template_kwargs` で明示する。**リクエスト単位で受ける値の一覧は未確認** (確認コマンドは「依拠する外部事実」。DeepSeek 系を配信中でないと打てない)。**2 つのクライアントはこの系統に `high` を送る** (`ccsp` と `cxsp` が共有する `_spark_effort` の既定)。この値もこの表の語彙に合わせただけで実測していないので、DeepSeek 系に戻したら最初の 1 回で 400 が出ないことを確かめる |
+| 既定の reasoning (`DEFAULT_THINKING`) | `low` (取りうる値: `off` / `low` / `high` / `max`。リクエスト単位の指定が優先する)。**この既定が効くのは effort を送らないクライアントだけである** — 3 つのクライアントは常に明示的に送り、`bench.py` も `chat_template_kwargs` で明示する。**リクエスト単位で受ける値の一覧は未確認** (確認コマンドは「依拠する外部事実」。DeepSeek 系を配信中でないと打てない)。**3 つのクライアントはこの系統に `high` を送る** (`ccsp` と `cxsp` は `_spark_effort` の既定、`ocsp` は `opencode.json` の `reasoningEffort`)。この値もこの表の語彙に合わせただけで実測していないので、DeepSeek 系に戻したら最初の 1 回で 400 が出ないことを確かめる |
 | コンテナイメージ | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1@sha256:a83948492cf13df455170fb42885f5ef4db54fefe0feff0f841ecbff464ac9d8` (DSpark ランタイムの配布元 Anemll) |
 | レシピの commit | `f5665e8`。上流 `main` はここから先行している (件数と中身は「依拠する外部事実」の確認コマンドで見る。速い変化があるので本書に数を書かない) |
 
@@ -299,13 +306,14 @@ cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark
 
 ## モデルの追加と切り替え
 
-**同じレシピの中でモデルを 1 つ足すときに触るのは次の 5 か所である** (Qwen や V4.1 EXL3 のように別系統のレシピごと足す場合は、これに加えて clone・`.env`・イメージ取得が要る。V4.1 EXL3 系ではさらに Engram の取得と pack が要った → 「DeepSeek-V4.1-Flash EXL3」の「導入手順」)。
+**同じレシピの中でモデルを 1 つ足すときに触るのは次の 6 か所である** (Qwen や V4.1 EXL3 のように別系統のレシピごと足す場合は、これに加えて clone・`.env`・イメージ取得が要る。V4.1 EXL3 系ではさらに Engram の取得と pack が要った → 「DeepSeek-V4.1-Flash EXL3」の「導入手順」)。
 
 1. **重みを両ノードに配る** — `utility-spark-model-fetch` スキル (下記)
-2. **短縮名を足す** — **表 1 か所では足りず、動作に効くのは計 5 か所。** `spark-common.zsh` の `_spark_served_name` の展開表に 1 か所、2 クライアントの引数解釈ループ (接続先の `lan` / `ts` と並んで `qwen|vision|v41)` を消費する `case`) に 2 か所、2 クライアントの `-h` の usage に 2 か所。**`case` ガードに足さないと、その語は短縮名として認識されずクライアント本体の引数に回る** (`claude` へのプロンプトとして無言で渡ってしまう)。加えて**表示だけの列挙が 2 か所**ある (`claude-deepseek.zsh` と `codex-spark.zsh` の冒頭のコメント)。動作は変わらないが、直さないと案内が古いまま残る
-3. **reasoning effort をモデルごとに決める** — `spark-common.zsh` の `_spark_effort` の `case` (`ccsp` と `cxsp` が共有する) の 1 か所。**受け付ける語彙はモデルのチャットテンプレートが決めるので、他のモデルの値を流用しない** (確かめ方は「依拠する外部事実」の reasoning effort の行)。`_spark_effort` に足さなければ既定の `high` が送られ、それを受けないモデルでは最初のリクエストが 400 で落ちる
-4. **`drs` と新しいシェル** — zsh 関数は Nix store 経由なので、これを踏まないと古い定義が動き続ける
-5. **sparkDash の `workerLabel`** — 手書きの静的文字列なので配信を切り替えたら直す (→「sparkDash の `workerLabel` を直す」)
+2. **短縮名を足す** — **表 1 か所では足りず、動作に効くのは計 7 か所。** `spark-common.zsh` の `_spark_served_name` の展開表に 1 か所、3 クライアントの引数解釈ループ (接続先の `lan` / `ts` と並んで `qwen|vision|v41)` を消費する `case`) に 3 か所、3 クライアントの `-h` の usage に 3 か所。**`case` ガードに足さないと、その語は短縮名として認識されずクライアント本体の引数に回る** (`claude` へのプロンプトとして無言で渡ってしまう)。加えて**表示だけの列挙が 4 か所**ある (`claude-deepseek.zsh` と `codex-spark.zsh` の冒頭のコメント、`ocsp` の usage 本文とモデル名不足のエラー文)。動作は変わらないが、直さないと案内が古いまま残る
+3. **reasoning effort をモデルごとに決める** — `spark-common.zsh` の `_spark_effort` の `case` (`ccsp` と `cxsp` が共有する) と、次項で足す `opencode.json` の宣言の `options.reasoningEffort` の 2 か所。**受け付ける語彙はモデルのチャットテンプレートが決めるので、他のモデルの値を流用しない** (確かめ方は「依拠する外部事実」の reasoning effort の行)。`_spark_effort` に足さなければ既定の `high` が送られ、それを受けないモデルでは最初のリクエストが 400 で落ちる
+4. **`agents/bindings/opencode/opencode.json` の `provider.spark.models` に宣言を足す** — 宣言の無いモデルは OpenCode が拒否する
+5. **`drs` と新しいシェル** — zsh 関数は Nix store 経由なので、これを踏まないと古い定義が動き続ける
+6. **sparkDash の `workerLabel`** — 手書きの静的文字列なので配信を切り替えたら直す (→「sparkDash の `workerLabel` を直す」)
 
 `agents/bindings/claude/settings.spark.json` は**触らない**。モデル名・コンテキスト上限・reasoning effort のいずれも持たず、`ccsp` が配信名から決めて注入するので、モデルが増えても変更点は無い。
 
@@ -333,9 +341,9 @@ cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark
 
    V4.1 EXL3 系を起動するなら、加えて両ノードの `grep MemAvailable /proc/meminfo` が 111.5 GiB 以上であること
 4. **目的の系統を起動して判定する** — 表の「起動」と「起動の判定」
-5. **sparkDash の `workerLabel` を表の値に直す** — 次の小節。稼働中だった `ccsp` / `cxsp` のセッションは起動し直す
+5. **sparkDash の `workerLabel` を表の値に直す** — 次の小節。稼働中だった `ccsp` / `ocsp` / `cxsp` のセッションは起動し直す
 
-**DeepSeek 系に戻したら effort を 1 回確かめる。** 2 つのクライアントがこの系統に送る `high` はレシピの `DEFAULT_THINKING` の語彙に合わせただけで実測していないので、最初の起動で `Unexpected reasoning effort` が出ないことを見る (出たら `_spark_effort` の値を直す → 「Qwen の reasoning effort の語彙」)。
+**DeepSeek 系に戻したら effort を 1 回確かめる。** 3 つのクライアントがこの系統に送る `high` はレシピの `DEFAULT_THINKING` の語彙に合わせただけで実測していないので、最初の起動で `Unexpected reasoning effort` が出ないことを見る (出たら `_spark_effort` と `opencode.json` の値を直す → 「Qwen の reasoning effort の語彙」)。
 
 **先に相手系統を停止する。** ポート 8888 を共有するうえ、起動側の事前検査が拒否する。Qwen 系は `REQUIRE_IDLE_GPU=true` がどちらかのノードで GPU を掴むプロセスを見つけた時点で止まる。V4.1 EXL3 系は、**どちらか一方のノードでも** `MemAvailable` が 111.5 GiB に届かなければ止まる (閾値は、レシピの `scripts/weight_budget.py` が safetensors の index から見積もる 1 ランク分の重み 99.5 GiB に、余裕 `DSV41_BOOT_MARGIN_GIB` の既定 12 GiB を足した値。見積りが取れないと警告だけ出して検査を飛ばす)。**停止コマンドを取り違えると相手系統のコンテナは消えないので、「止めたつもり」で次の起動が拒否される。**
 
@@ -353,11 +361,11 @@ ssh -n spark-head 'docker restart sparkDash'
 ssh -n spark-head 'curl -s http://127.0.0.1:5555/api/sparks' | python3 -c 'import json,sys; d=json.load(sys.stdin); d=d.get("sparks",d) if isinstance(d,dict) else d; w=[s["workerLabel"] for s in d if s.get("role")=="worker"]; print(w); sys.exit(0 if w==["DeepSeek-v4.1-Flash-EXL3"] else 1)'   # exit 0 で合格。期待値も書き込んだ値に差し替える
 ```
 
-クライアント側 (`ccsp` / `cxsp`) の設定変更は要らない。**いずれも `/v1/models` を見て配信中のモデルを採る。** ただし効くのは次に起動する分からで、稼働中のセッションは起動時のモデル名を送り続けるので起動し直す (「既知の制約」7 の退避手順)。
+クライアント側 (`ccsp` / `ocsp` / `cxsp`) の設定変更は要らない。**いずれも `/v1/models` を見て配信中のモデルを採る。** ただし効くのは次に起動する分からで、稼働中のセッションは起動時のモデル名を送り続けるので起動し直す (「既知の制約」7 の退避手順)。
 
 ### Qwen3.8-Flash-Next (別系統のレシピ)
 
-**他の 2 系統とは別リポジトリ・別イメージ・別スクリプト名である。** 混同すると停止スクリプトが効かない。2026-09-06 に配置・起動・`ccsp` からの疎通まで確認した (`cxsp` の `/v1/responses` はこの系統では未試行 → 下の「使える API」)。2026-09-09 の更新後に起動の 3 段判定と reasoning effort の語彙を取り直しており、`ccsp` からの疎通はそのとき再確認していない。
+**他の 2 系統とは別リポジトリ・別イメージ・別スクリプト名である。** 混同すると停止スクリプトが効かない。2026-09-06 に配置・起動・`ccsp` / `ocsp` からの疎通まで確認した (`cxsp` の `/v1/responses` はこの系統では未試行 → 下の「使える API」) (`ocsp` は `drs` 未適用のため検証用の `HOME` に設定を置いて確認した)。2026-09-09 の更新後に起動の 3 段判定と reasoning effort の語彙を取り直しており、クライアント 2 つからの疎通はそのとき再確認していない。
 
 **この構成には認証が無い。** 下の「認証」を先に読む。
 
@@ -375,7 +383,7 @@ ssh -n spark-head 'curl -s http://127.0.0.1:5555/api/sparks' | python3 -c 'impor
 | 投機デコード (`MTP_NUM_SPECULATIVE_TOKENS`) | MTP、draft 3 トークン |
 | KV キャッシュ (`KV_CACHE_DTYPE`) | `fp8` |
 | メモリ確保率 (`GPU_MEMORY_UTILIZATION`) | 0.835 (DeepSeek 系と同値だがキー名が違う。意味は「メモリの使われ方」) |
-| 既定の reasoning | `xhigh` (`.env` に該当キーが無く、チャットテンプレートの既定が効く)。**`ccsp` が使う `/v1/messages` から使えるのは `low` / `medium` / `xhigh` の 3 つ。`high` と `max` は 400 になる** (詳細は直下の「Qwen の reasoning effort の語彙」) |
+| 既定の reasoning | `xhigh` (`.env` に該当キーが無く、チャットテンプレートの既定が効く)。**2 経路 (`ccsp` の `/v1/messages` と `ocsp` の `/v1/chat/completions`) から使えるのは `low` / `medium` / `xhigh` の 3 つ。`high` と `max` はどちらの経路でも 400 になる** (詳細は直下の「Qwen の reasoning effort の語彙」) |
 | コンテナイメージ | `vllm/vllm-openai:qwen38-flash-next` (Id `sha256:d464f3b466fa9c45ddbff8a812e80564503b6879a9fd95c1a47514f3f0df5a4a`、20.6 GB、arm64)。**両ノードに配置済み** |
 | コンテナ名 | `vllm-fn` (head と worker で同名。`start.sh` が付ける) |
 | 追加の vLLM 引数 (`EXTRA_VLLM_ARGS`) | 未設定 (`.env` でコメントアウトされている)。認証を付けるならここに `--api-key <値>` を書く |
@@ -387,14 +395,14 @@ ssh -n spark-head 'curl -s http://127.0.0.1:5555/api/sparks' | python3 -c 'impor
 
 **受理される値はエンドポイントで違う。** 2026-09-06 に両経路で全値を実測した (確認コマンドは「依拠する外部事実」の reasoning effort の行)。
 
-| 値 | `/v1/messages` (`ccsp`) | `/v1/chat/completions` | 弾く層 |
+| 値 | `/v1/messages` (`ccsp`) | `/v1/chat/completions` (`ocsp`) | 弾く層 |
 | --- | --- | --- | --- |
 | `low` / `medium` / `xhigh` | 200 | 200 | — |
 | `none` | **400** | 200 | `/v1/messages` のスキーマ |
 | `high` / `max` | 400 | 400 | チャットテンプレート |
 | 指定なし | 200 (既定 `xhigh`) | 200 (既定 `xhigh`) | — |
 
-**したがって `ccsp` が使う `/v1/messages` から使える値は `low` / `medium` / `xhigh` の 3 つである** (`/v1/chat/completions` も同じ 3 つ)。**`cxsp` の `/v1/responses` はこの系統では未実測なので、Qwen 配信中に `cxsp` を使うなら最初の 1 回で 400 が出ないことを見る。**
+**したがってこの 2 経路から使える値は `low` / `medium` / `xhigh` の 3 つである。`cxsp` の `/v1/responses` はこの系統では未実測なので、Qwen 配信中に `cxsp` を使うなら最初の 1 回で 400 が出ないことを見る。**
 
 - **`high` と `max` を弾くのはチャットテンプレートである。** `xhigh` / `medium` / `low` 以外で `raise_exception` する。エラー本文 `Unexpected reasoning effort high. Supported types are xhigh (default), medium, and low.` は既定値を自分で名乗る。**この層は両経路に共通する**ので、Anthropic ルータ (`/v1/messages`) も同じく 400 になる。ルータは `output_config.effort` を `reasoning_effort` に写して同じテンプレートへ渡すだけである
 - **`none` が `/v1/chat/completions` でだけ通るのは、テンプレートに届く前に効果が消えるためである。** vLLM は `reasoning_effort != "none"` を `enable_thinking` に導出し、テンプレートは `enable_thinking` が偽なら effort を見ない (`reasoning_effort` 自体はテンプレートに渡るが、その分岐に入らない)。**`/v1/messages` にはこの抜け道が無い。** `AnthropicOutputConfig.effort` の Literal が `low` / `medium` / `high` / `xhigh` / `max` で `none` を含まず、スキーマ検証で先に 400 になる (本文は `Input should be 'low', 'medium', 'high', 'xhigh' or 'max'`)
@@ -430,11 +438,17 @@ ssh -n spark-head 'curl -s http://127.0.0.1:5555/api/sparks' | python3 -c 'impor
 ```bash
 curl -fs -o /dev/null http://spark-head.local:8888/health && echo health-ok  # 1. API が生きている
 curl -s http://spark-head.local:8888/v1/models                               # 2. qwen3.8-flash-next が返る
-curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: application/json' \
-  -d '{"model":"qwen3.8-flash-next","messages":[{"role":"user","content":"1+1 は?"}],"max_tokens":64}'  # 3. 実際に生成が通る
+ocsp lan qwen run "1+1 は?"                                                   # 3. 実際に生成が通る (exit 0 で答えが出れば合格)
 ```
 
-2 段目に Bearer が要らないのは無認証だからである (どの系統でもヘッダは要らない → 「API キーの流れ」)。**Qwen レシピには DeepSeek 系の `smoke-…sh` に相当するスクリプトが無いので、3 段目は API を直に叩いて代用する。** クライアントから確かめるなら `ccsp lan qwen -p "1+1 は?"` で、こちらは `drs` を当てて新しいシェルを開いた Mac でしか通らない (関数本体は Nix store 経由で配られる)。出先では 3 つとも Tailscale 側に読み替える。
+2 段目に Bearer が要らないのは無認証だからである (どの系統でもヘッダは要らない → 「API キーの流れ」)。**3 段目は `drs` 適用済みの Mac でしか通らない** (`ocsp` 関数が配られていることが要る。設定の symlink は別物で、こちらは既に dotfiles を指している)。`ccsp lan qwen -p "1+1 は?"` でも同じ判定ができるが、経路が `/v1/messages` に変わる (`ocsp` は `/v1/chat/completions`)。1・2 段目に合わせて `lan` を付け、3 段が同じ経路を見るようにしてある (出先では 3 つとも Tailscale 側に読み替える)。**Qwen レシピには DeepSeek 系の `smoke-…sh` に相当するスクリプトが無い**ので、関数が未配布なら次の curl で代用する。
+
+```bash
+curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: application/json' \
+  -d '{"model":"qwen3.8-flash-next","messages":[{"role":"user","content":"1+1 は?"}],"max_tokens":64}'
+```
+
+Qwen レシピには DeepSeek 系の `smoke-…sh` に相当するスクリプトが無いので、3 段目はクライアントから叩いて代用する。
 
 #### レシピを更新する
 
@@ -514,17 +528,17 @@ ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && \
 
 #### 認証
 
-**このレシピは vLLM に `--api-key` を渡さないので、Qwen 配信中はポート 8888 が無認証になる。** `.env` にも `.env.sample` にも API キーのキーが無く (`grep -nE "API_KEY" .env` は 1 行も返さず exit 1)、`docker inspect vllm-fn` の実引数にも `--api-key` は無い。**Bearer 無しでも出まかせの Bearer でも `/v1/*` が通ることを実測で確認した。** DeepSeek 系も `VLLM_API_KEY` を空にしてあるので、いま切り替えても認証の有無は変わらない (→「API キーの流れ」)。sparkDash (ポート 5555) と同じく、ポート 8888 も信頼できないネットワークへ出さない。認証を付けたい場合は `.env` の `EXTRA_VLLM_ARGS="--api-key <値>"` で渡せる (未検証)。**その場合はクライアント側も直す。** サーバだけ直すと 2 つのクライアントが起動前に 401 で止まるので、「API キーの流れ」の「認証ありに戻す」手順 2 と 3 を同じく適用する。
+**このレシピは vLLM に `--api-key` を渡さないので、Qwen 配信中はポート 8888 が無認証になる。** `.env` にも `.env.sample` にも API キーのキーが無く (`grep -nE "API_KEY" .env` は 1 行も返さず exit 1)、`docker inspect vllm-fn` の実引数にも `--api-key` は無い。**Bearer 無しでも出まかせの Bearer でも `/v1/*` が通ることを実測で確認した。** DeepSeek 系も `VLLM_API_KEY` を空にしてあるので、いま切り替えても認証の有無は変わらない (→「API キーの流れ」)。sparkDash (ポート 5555) と同じく、ポート 8888 も信頼できないネットワークへ出さない。認証を付けたい場合は `.env` の `EXTRA_VLLM_ARGS="--api-key <値>"` で渡せる (未検証)。**その場合はクライアント側も直す。** サーバだけ直すと両方とも起動前に 401 で止まるので、「API キーの流れ」の「認証ありに戻す」手順 2 と 3 を同じく適用する。
 
-**2 つとも API キーを扱わないので 1Password は要らない。** ただし `ccsp` だけは本物の Anthropic 資格情報が Spark へ飛ぶ経路を持つ (→「API キーの流れ」)。
+**3 つとも API キーを扱わないので 1Password は要らない。** ただし `ccsp` だけは本物の Anthropic 資格情報が Spark へ飛ぶ経路を持つ (→「API キーの流れ」)。
 
 #### 使える API
 
-**Claude Code (`ccsp`) から使える (2026-09-06 に実測)。`cxsp` が使う `/v1/responses` はこの系統では未試行である** (判定は「依拠する外部事実」のコードブロック 8 のモデル名を配信名に差し替えて打つ)。 このイメージの vLLM は複数の API をフラグ無しで持つ。`/v1/messages` (Anthropic Messages API) は `vllm/entrypoints/generate/api_router.py` が `register_anthropic_api_router(app)` を無条件に呼ぶので `ccsp` が通り、`/v1/chat/completions` も同じイメージで使えた (2026-09-06 に実測)。`ccsp qwen` は `max_model_len` 524,288 から出力用の余白 32,768 を引いた 491,520 をコンテキスト上限に入れて起動する。
+**Claude Code と OpenCode の 2 つから使える (2026-09-06 に実測)。`cxsp` が使う `/v1/responses` はこの系統では未試行である** (判定は「依拠する外部事実」のコードブロック 8 のモデル名を配信名に差し替えて打つ)。 このイメージの vLLM は複数の API をフラグ無しで持つ。`/v1/messages` (Anthropic Messages API) は `vllm/entrypoints/generate/api_router.py` が `register_anthropic_api_router(app)` を無条件に呼ぶので `ccsp` が通り、`/v1/chat/completions` で `ocsp` が通る。`ccsp qwen` は `max_model_len` 524,288 から出力用の余白 32,768 を引いた 491,520 をコンテキスト上限に入れて起動する。
 
 ### DeepSeek-V4.1-Flash EXL3 (別系統のレシピ)
 
-**他の 2 系統とは別リポジトリ・別イメージ・別スクリプトである。** 2026-09-15 に導入し、常用配信をこの系統にした。起動の 3 段判定、`ccsp lan v41` からの生成、reasoning effort の語彙まで確認済み。2026-09-17 に `cxsp` (`/v1/responses`) の生成とツール呼び出しも確認した (head のパッチが前提 →「既知の制約」12)。**`ccsp` からの疎通確認は、リポジトリの zsh 関数を直接 source して行った。この Mac は 2026-09-15 時点で `drs` を当てていない**ので、素のシェルで `ccsp v41` を打つと `v41` がプロンプトとして `claude` に渡る (→「Claude Code (`ccsp`)」の反映経路)。
+**他の 2 系統とは別リポジトリ・別イメージ・別スクリプトである。** 2026-09-15 に導入し、常用配信をこの系統にした。起動の 3 段判定、`ccsp lan v41` と `ocsp lan v41 run` からの生成、reasoning effort の語彙まで確認済み。2026-09-17 に `cxsp` (`/v1/responses`) の生成とツール呼び出しも確認した (head のパッチが前提 →「既知の制約」12)。**クライアント 2 つの確認は、リポジトリの zsh 関数を直接 source して行った。この Mac は 2026-09-15 時点で `drs` を当てていない**ので、素のシェルで `ccsp v41` を打つと `v41` がプロンプトとして `claude` に渡る (→「Claude Code (`ccsp`)」の反映経路)。
 
 **この構成には認証が無い** (根拠は「動いているもの」。認証を戻す手順は DeepSeek 系向けにしか書いていない)。
 
@@ -605,14 +619,14 @@ ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && bash tests/tes
 
 `/v1/messages` と `/v1/chat/completions` は 2026-09-15 に、`/v1/responses` は 2026-09-17 に全値を実測した。確認コマンドは「依拠する外部事実」の reasoning effort の行と同じ形で、**モデル名を `DeepSeek-v4.1-Flash-EXL3` に、陽性対照の値を `high` から `medium` に差し替える** (V4.1 は `high` を受理するので、`high` では 400 にならない)。`/v1/responses` は「依拠する外部事実」のコードブロック 8 に `"reasoning":{"effort":"<値>"}` を足した形で打つ。
 
-| 値 | `/v1/messages` (`ccsp`) | `/v1/chat/completions` | `/v1/responses` (`cxsp`) |
+| 値 | `/v1/messages` (`ccsp`) | `/v1/chat/completions` (`ocsp`) | `/v1/responses` (`cxsp`) |
 | --- | --- | --- | --- |
 | `low` / `high` / `xhigh` / `max` | 200 | 200 | 200 |
 | `medium` | 400 | 400 | 400 |
 | `none` | 400 (スキーマ) | 200 | 200 |
 | 指定なし | 200 | 200 | 200 |
 
-- **2 つのクライアントに `max` を送らせている** (`ccsp` と `cxsp` が共有する `_spark_effort`)
+- **3 つのクライアントに `max` を送らせている** (`ccsp` と `cxsp` は `_spark_effort`、`ocsp` は `opencode.json`)
 - **`medium` の 400 の本文は語彙を名乗る**: `DeepSeek V4.1 reasoning_effort must be low, high, xhigh, max, or an integer within [1, 100] in chat_template_kwargs`。弾く層は vLLM 側の検査で、Qwen 系のようなチャットテンプレートの `raise_exception` ではない。レシピの `files/chat_template.jinja` のコメントは `xhigh` を挙げていないが、実測で受理されるので実測に従う
 - **`none` の非対称は Qwen 系と同じ構造である** (→「Qwen の reasoning effort の語彙」)。**弾くのは `/v1/messages` のスキーマだけ**で、`/v1/chat/completions` と `/v1/responses` は通す
 
@@ -627,9 +641,9 @@ ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && bash tests/tes
 5. **worker への事前コピー** (任意) — 8888 を止める時間を縮めたいときだけ。`rsync -a --partial model/ <worker の RoCE アドレス>:.cache/dsv41-flash-exl3/model/` を head で打つ (Engram は slim dir ができる 7 で `start.sh` が送る)。**完了判定**: worker 側で 2 の照合を `~/.cache/dsv41-flash-exl3/model` に向けて exit 0、rsync の出力に `denied` が 0 件
 6. **止める準備** — 「系統の切り替え」の手順 1
 7. **配信中の系統を止めて pack** — 「系統の切り替え」の手順 2・3 → `./start.sh pack` (worker への同期も同時に行う)。**完了判定**: head の `ls -la ~/dsv41-engram` に `engram-l{1,14}-r0of2.bin`、worker に `engram-l{1,14}-r1of2.bin` があり、各 47.2 GiB
-8. **head のパッチ** — 「既知の制約」12 の全文を `~/dsv41-local/patch_responses_content_parts.py` に置き、`start.sh` に 2 行を足す。**`cxsp` を使わないなら飛ばしてよい** (`ccsp` には要らない)。**完了判定**: `git diff --stat start.sh` が 2 insertions
+8. **head のパッチ** — 「既知の制約」12 の全文を `~/dsv41-local/patch_responses_content_parts.py` に置き、`start.sh` に 2 行を足す。**`cxsp` を使わないなら飛ばしてよい** (`ccsp` / `ocsp` には要らない)。**完了判定**: `git diff --stat start.sh` が 2 insertions
 9. **起動と判定** — 上の「起動と判定」。**完了判定**: 3 段と `/engram-packed` の確認。`cxsp` を使うなら「依拠する外部事実」のコードブロック 8 が 200 を返すことも見る
-10. **クライアント側と表示** — 短縮名と effort はコミット済みなので、`drs` と新しいシェルだけ。sparkDash の `workerLabel` を直す
+10. **クライアント側と表示** — 短縮名・effort・`opencode.json` はコミット済みなので、`drs` と新しいシェルだけ。sparkDash の `workerLabel` を直す
 
 Engram の取得 (手順 3)。HF の resolve URL は Range 指定に 206 を返すので、`curl -C -` で途中から再開できる。サイズを先に見るのは、取り終えたファイルに `-C -` を打つと範囲外の要求になるため。
 
@@ -699,24 +713,24 @@ git pull --ff-only
 
 - **`Dockerfile` / `overlay/` / `files/` / `tests/` が変わっていたら**、落とし穴 6 のコマンドの値とイメージのラベルがずれる。公開イメージを両ノードで pull し直し、値が一致することを確かめてから起動する
 - **`.env.example` にキーが増えていないか**を「依拠する外部事実」のコードブロック 6 で見る。`.env` は追跡外なので `git pull` では消えない
-- **`start.sh` のローカル差分 2 行は `git pull` で消える** (→「既知の制約」12)。`git pull` の直後に `git diff --stat start.sh` を打ち、空になっていたら 2 行を足し直す。**これを忘れると `cxsp` だけが静かに壊れる** (`ccsp` は無傷なので他の確認はすべて green のまま通る)
+- **`start.sh` のローカル差分 2 行は `git pull` で消える** (→「既知の制約」12)。`git pull` の直後に `git diff --stat start.sh` を打ち、空になっていたら 2 行を足し直す。**これを忘れると `cxsp` だけが静かに壊れる** (`ccsp` / `ocsp` は無傷なので他の確認はすべて green のまま通る)
 - **更新後の悪化確認**は Qwen 系と同じ 4 点 (→「レシピを更新する」(Qwen 系) の 1〜4) を、V4.1 EXL3 系のコマンドと語彙に読み替えて行い、5 点目として「依拠する外部事実」のコードブロック 8 (`input_text` が 200) を打つ。コンテナ名は `dsv41-exl3-head`、語彙の確認は「V4.1 EXL3 の reasoning effort の語彙」
 - **戻すとき**は `git checkout 8530568` してから停止 → 起動する。**`git checkout` も 2 行を消す**ので、起動の前に足し直す
 
 ## Mac から使う
 
-クライアントは 2 つある。**接続先もモデルも窓 (コンテキスト上限) もサーバから採る。** どちらも `spark-common.zsh` で接続先を選び (自宅 LAN → Tailscale の順に `/health` をプローブ)、`/v1/models` を聞いて配信名と `max_model_len` を採るので、モデルを切り替えても設定は触らなくてよい。違うのは次の 6 点である。
+クライアントは 3 つある。**接続先とモデルの決め方は共通である。** どれも `spark-common.zsh` で接続先を選び (自宅 LAN → Tailscale の順に `/health` をプローブ)、`/v1/models` を聞いて配信名を採るので、モデルを切り替えても設定は触らなくてよい。**窓 (コンテキスト上限) をサーバから採るのは `ccsp` と `cxsp` の 2 つだけで、`ocsp` は `opencode.json` の人が書く静的値を使う** (乖離は現に起きている →「OpenCode (`ocsp`)」)。違うのは次の 6 点である。
 
-| 観点 | `ccsp` (Claude Code) | `cxsp` (Codex) |
-| --- | --- | --- |
-| 使う API | `/v1/messages` | `/v1/responses` |
-| シェルへの副作用 | `ANTHROPIC_BASE_URL` / `NODE_OPTIONS` の export と `claude` の alias。**`ccsp off` で戻す** | なし (設定は `codex` の `-c` で 1 回の起動にだけ渡す) |
-| 引数の素通し | `lan` / `ts` / 短縮名を消費した残りをそのまま claude へ。どの経路でも配信前検査と `--settings` 注入は必ず通る | 消費した残りをそのまま codex へ。**サブコマンドでも検査と注入を飛ばさない** — codex は root の `-c` を subcommand の前に置けるので (`codex -c … exec …`)、全経路で同じ注入が通る |
-| モデルを増やしたとき | `_spark_effort` に effort を足す (`cxsp` と共有) | `ccsp` と同じ (共有の `_spark_effort` だけ) |
-| reasoning effort の決め方 | 配信名から自動 (`CCSP_EFFORT` で上書き) | 配信名から自動 (`CXSP_EFFORT` で上書き) |
-| 資格情報の漏れ | **本物の Anthropic トークンが Spark へ飛ぶ** (→「API キーの流れ」) | なし (`env_key` を省くと Authorization ヘッダ自体を送らない) |
+| 観点 | `ccsp` (Claude Code) | `ocsp` (OpenCode) | `cxsp` (Codex) |
+| --- | --- | --- | --- |
+| 使う API | `/v1/messages` | `/v1/chat/completions` | `/v1/responses` |
+| シェルへの副作用 | `ANTHROPIC_BASE_URL` / `NODE_OPTIONS` の export と `claude` の alias。**`ccsp off` で戻す** | なし (接続先は 1 回の起動にだけ効く環境変数で渡す) | なし (設定は `codex` の `-c` で 1 回の起動にだけ渡す) |
+| 引数の素通し | `lan` / `ts` / 短縮名を消費した残りをそのまま claude へ。どの経路でも配信前検査と `--settings` 注入は必ず通る | opencode のサブコマンド (`run` 以外) では**接続先の決定も配信前検査も `--model` 注入も飛ばす**。`--model` を前置するとサブコマンド的文脈で unknown option 扱いになり実行の代わりに help 表示になる (2026-09-06 実測) | 消費した残りをそのまま codex へ。**サブコマンドでも検査と注入を飛ばさない** — codex は root の `-c` を subcommand の前に置けるので (`codex -c … exec …`)、全経路で同じ注入が通る |
+| モデルを増やしたとき | `_spark_effort` に effort を足す (`cxsp` と共有) | `opencode.json` の `models` に宣言と effort が要る | `ccsp` と同じ (共有の `_spark_effort` だけ) |
+| reasoning effort の決め方 | 配信名から自動 (`CCSP_EFFORT` で上書き) | `opencode.json` の静的値 | 配信名から自動 (`CXSP_EFFORT` で上書き) |
+| 資格情報の漏れ | **本物の Anthropic トークンが Spark へ飛ぶ** (→「API キーの流れ」) | なし | なし (`env_key` を省くと Authorization ヘッダ自体を送らない) |
 
-速度はクライアント側の設定で大きく変わる (→「実測値」節の「L2: クライアント込み」)。**`cxsp` の速度は未計測で、L2 に相当する層のラベルも定義していない。**
+速度はクライアント側の作りで 10 倍以上変わる (→「実測値」節の「L2 / L3: クライアント込み」)。**`cxsp` の速度は未計測で、L2 / L3 に相当する層のラベルも定義していない。**
 
 ### 新しいマシンで手で用意するもの
 
@@ -726,11 +740,11 @@ Nix (`drs`) では入らないものが 5 つある。
 | --- | --- | --- |
 | `~/.ssh/config` と鍵 2 本 | ssh エイリアス | 「接続する」節 |
 | `known_hosts` の 3 エントリ | Claude の非対話 ssh | 「接続する」節の `ssh-keyscan` (人が実行) |
-| Tailscale へのサインイン | 出先から使うとき (`ccsp` / `cxsp` の 2 つとも)。cask はアプリを置くだけで tailnet 参加は手作業 | アプリを開いてログイン。**`tailscale status` に `spark-head` の行が出れば合格** |
-| 1Password へのサインイン | `ccds` のトークン取得と、下の `/tmp/spark.key` の書き出し。**Spark 向けの 2 つ (`ccsp` / `cxsp`) には要らない** | `op signin` |
+| Tailscale へのサインイン | 出先から使うとき (`ccsp` / `ocsp` / `cxsp` の 3 つとも)。cask はアプリを置くだけで tailnet 参加は手作業 | アプリを開いてログイン。**`tailscale status` に `spark-head` の行が出れば合格** |
+| 1Password へのサインイン | `ccds` のトークン取得と、下の `/tmp/spark.key` の書き出し。**Spark 向けの 3 つ (`ccsp` / `ocsp` / `cxsp`) には要らない** | `op signin` |
 | `/tmp/spark.key` (head のみ) | `bench.py` を打つときだけ。無認証の現在も文字列自体は要る | 「API キーの流れ」節 |
 
-`ccsp` / `cxsp` の関数本体は Nix 経由なので、**`drs` を実行してから新しいシェルを開くまで存在しない** (既存シェルには旧定義が残る)。**`codex` 本体だけは Homebrew の cask で入る** (`nix/modules/darwin/homebrew.nix`)。Tailscale 本体は `nix/modules/darwin/homebrew.nix` の cask `tailscale-app` で入る。
+`ccsp` / `ocsp` / `cxsp` の関数本体と `opencode` のバイナリは Nix 経由なので、**`drs` を実行してから新しいシェルを開くまで存在しない** (既存シェルには旧定義が残る)。**`codex` 本体だけは Homebrew の cask で入る** (`nix/modules/darwin/homebrew.nix`)。Tailscale 本体は `nix/modules/darwin/homebrew.nix` の cask `tailscale-app` で入る。
 
 ### Claude Code (`ccsp`)
 
@@ -759,9 +773,50 @@ ccsp -- status                     # 解釈を打ち切り (-- 自体を消費�
 - **2 つの設定ファイルで反映経路が違う。** `settings.spark.json` は `ccsp` が dotfiles を直参照するので編集すれば次の起動から効く。`zsh/functions/*.zsh` は Nix store 経由で配られるので `drs` と新しいシェルが要る。**この差は片側だけ適用された状態を作る。** 例えば effort を `settings.spark.json` から `_spark_effort` へ移す変更では、削除が即時に効く一方で注入する側が届かないため、`drs` を当てるまで effort を送らない状態になる (`grep -c _spark_effort ~/.config/zsh/functions/claude-deepseek.zsh` が 0 なら未適用)。**旧定義が残っているかは `ccsp -h` で判る** (新しい版は短縮名の表を出す)。旧のまま `ccsp qwen` を打つと `qwen` が短縮名として認識されず `claude` への引数に回り、プロンプト "qwen" として無言で起動してしまう
 - **モデル名とコンテキスト上限は `ccsp` が `/v1/models` から取る。** 配信名をそのまま使い、`CLAUDE_CODE_MAX_CONTEXT_TOKENS` には `max_model_len` から出力用の余白 (既定 32,768。`CCSP_OUTPUT_RESERVE` で変更可) を引いた値を入れて `~/.cache/ccsp/settings.json` を毎回生成する。`max_model_len` は入力と出力の合計なので、窓をそれと同値にすると生成時に溢れる。配信側のモデルを変えても Mac 側の編集は要らない。短縮名 (`qwen` / `vision` / `v41`) を渡した場合はそれが配信されているかを起動前に検査し、載っていなければ配信中の一覧を出して exit 1 で止まる。短縮名に無いモデルは `CCSP_MODEL=<配信名> ccsp` で渡す
 - **reasoning effort も `ccsp` が配信名から決める。** `_spark_effort` の表 (`qwen3.8-flash-next` → `xhigh` / `DeepSeek-v4.1-Flash-EXL3` → `max` / それ以外 → `high`) を引いて `CLAUDE_CODE_EFFORT_LEVEL` に注入する。**これはサーバに聞けない値なので、モデル名と違って表を持つしかない** (`/v1/models` は受理される effort を返さない)。上書きは `CCSP_EFFORT=<値> ccsp`。**モデルの語彙に無い値は起動前ではなく最初のリクエストで 400 になる** (検査がチャットテンプレートとスキーマにあるため、`ccsp` からは事前に判定できない → 「Qwen の reasoning effort の語彙」)。**解決した値が出るのは起動時の 1 行 (`ccsp: Spark モード (… / effort <値>)`) だけである。** `ccsp status` は起動せずに表示する都合で配信名を確定させないため、`CCSP_EFFORT` があればその値を、無ければ規則の文言を出す (読者が同じ画面の「配信中:」行と突き合わせる)
-- **`ccsp status` の「配信中」行は `ANTHROPIC_BASE_URL` を優先して照会する。** `ccds` はこれをシェルへ export しないので、素のシェルでは到達した方 (Spark) のモデルが出る。**空になるのは照会先が答えないとき**である (典型は `ccds` が起動した Claude Code の配下 — settings の `env` を継承して DeepSeek 本家を照会する。Spark 側が落ちている場合も同じ。`cxsp status` はこの変数を見ないので常に到達した方を照会する。2026-09-09 実測)
+- **`ccsp status` の「配信中」行は `ANTHROPIC_BASE_URL` を優先して照会する。** `ccds` はこれをシェルへ export しないので、素のシェルでは到達した方 (Spark) のモデルが出る。**空になるのは照会先が答えないとき**である (典型は `ccds` が起動した Claude Code の配下 — settings の `env` を継承して DeepSeek 本家を照会する。Spark 側が落ちている場合も同じ。`ocsp status` は常に到達した方を照会する。2026-09-09 実測)
 
 `settings.spark.json` は **`security-guidance` プラグインを無効にしている** (`enabledPlugins` のキーは完全名 `security-guidance@claude-plugins-official`)。このプラグインの Stop hook は自前の既定モデル名 `claude-opus-4-7` を `ANTHROPIC_BASE_URL` に投げるため、Spark 相手では 404 を受けて延々とリトライし、レビューを 1 件も出さないまま 1 セッションあたり約 231 秒を捨てる。`settings.deepseek.json` (DeepSeek 本家) も同じ理由で無効にしてある。
+
+### OpenCode (`ocsp`)
+
+```bash
+ocsp                       # 到達する方 (LAN → Tailscale) を選んで対話 TUI をカレントディレクトリで起動
+ocsp lan                   # 自宅 LAN を強制 (プローブしない)
+ocsp ts                    # Tailscale を強制
+ocsp qwen                  # モデルを指定して起動 (qwen / vision / v41)
+ocsp ts qwen               # 接続先とモデルは順不同で並べられる
+ocsp run "README を要約して" # headless で 1 回実行
+ocsp qwen run "..."        # モデルを指定して headless 実行
+ocsp model vision          # このシェルの既定モデルを切り替える
+ocsp status                # 要求モデル・両経路の到達性・配信中モデルを表示
+ocsp -h                    # 使い方とモデル名の短縮表を出して終了
+ocsp session list          # opencode のサブコマンドは素通し (接続先の上書きも配信前検査も --model も付けない)
+ocsp -- --help             # 解釈を打ち切り (-- 自体を消費して) 以降を全部 opencode へ。予約語の解除用
+```
+
+実体は `zsh/functions/opencode-spark.zsh` である。**`ccsp` と違ってシェルに残る環境変数も alias も作らない**ので、解除操作 (`off` に相当するもの) が要らない。**`status` と `model` は先頭に置く。** 接続先とモデルの語より前で分岐するので、`ocsp ts status` は `status` が opencode の引数に回って通らない (`ccsp` も同じ)。
+
+**接続先の決め方は `ccsp` と同じである。** `lan` / `ts` を渡せばその起動だけ強制し、渡さなければ `spark-common.zsh` の `_spark_base_url` が `/health` を LAN → Tailscale の順にプローブして到達する方を採る。どちらにも届かなければ `opencode` を起動せず exit 1 で止まる。**出先では `ocsp ts` を渡すと LAN プローブの最大 3 秒 (`--connect-timeout 3`) を飛ばせる** (`ocsp run` を繰り返す使い方では毎回効く)。**LAN 側に IP を使いたいマシンは `ccsp` と共通の `CCSP_LAN_HOST` に入れる** (`opencode.json` は編集しない)。
+
+**この挙動が効くのは `drs` を当てて新しいシェルを開いてからである。** 関数本体は Nix store 経由で配られるので、既存シェルには旧定義が残る。**旧定義かどうかは `ocsp -h` で判る** (新しい版は `lan` / `ts` の行を出す)。旧のまま `ocsp ts` を打つと `ts` が短縮名としても接続先としても認識されず opencode の引数に回る。
+
+**選んだ接続先は環境変数 `OPENCODE_CONFIG_CONTENT` で渡す。** `ocsp` が `{"provider":{"spark":{"options":{"baseURL":"<選んだ URL>/v1"}}}}` を組み立てて `opencode` の前に置く。OpenCode はこのインライン JSON を設定にディープマージする。**マージは `options` の中まで再帰するので、差し替わるのは `baseURL` の 1 キーだけで、`models` / `npm` も `options.apiKey` も生き残る** (opencode 1.18.18 で実測 → 「依拠する外部事実」)。**前置代入なのでその 1 回の起動にしか効かず、シェルには何も残らない。**
+
+**設定の読み取り経路が 2 本ある。** `ocsp` 自身の配信前検査 (`/v1/models` の照会と `apiKey` の解決) は `~/.config/opencode/opencode.json` を直読みし、`opencode` 本体だけがマージ後の設定を読む。**したがって `apiKey` を足すときはファイル側に書く** (両方の経路に同じ値が届く)。**選んだ経路は起動時に表示されない** (`ccsp` は `ANTHROPIC_BASE_URL` の export で判るが、`ocsp` はシェルに何も残さないため)。どちらに繋がるかを先に知りたいときは `ocsp status` を打つ。
+
+**モデルの決め方は `ccsp` と同じである。** 引数で短縮名を渡せばその起動だけそれを使い、渡さなければ `/v1/models` の配信中モデルを採る。`ocsp model <名前>` はシェル変数 `OCSP_MODEL` を書き換えるので以降の起動に効く (新しいシェルでは未設定に戻り、また配信中のモデルを採る)。要求したモデルが配信されていなければ起動前に exit 1 で止まる。**配信中の一覧そのものが引けないときも止まる** (`ccsp` と同じ挙動)。**`opencode.json` に `apiKey` は無い。** `ocsp` はキーが空なら Authorization ヘッダ自体を送らないので、Qwen 配信中 (無認証) はそのまま一覧が引けて起動する (2026-09-06 実測)。DeepSeek 系を認証ありで起動すると 401 になるので、そのときは `options` に `apiKey` を足す。**値は `{file:~/…}` か `{env:…}` で外部に逃がす** (`opencode.json` は公開リポジトリの追跡ファイルなので平文で置かない。→「API キーの流れ」)。**`opencode.json` の `models` に宣言が無いモデルは OpenCode 側が拒否するので、モデルを増やしたらこの JSON にも足す。** 値の決め方は `limit.context` = `/v1/models` の `max_model_len`、`limit.output` = 65536、`reasoning` と `tool_call` は `true`、`options.reasoningEffort` はそのモデルで受理を確かめた最大値 (Vision-Exp だけは未実測なので語彙に合わせた値。現在は `qwen3.8-flash-next` = `xhigh` / `deepseek-v4-flash-vision-exp` = `high` / `DeepSeek-v4.1-Flash-EXL3` = `max`) である。**`ccsp` と違ってこれは人が書く静的値なので、サーバ側の `MAX_MODEL_LEN` を変えると取り残される** (`workerLabel` と同型の乖離経路)。**`reasoningEffort` を省くと `ocsp` は effort を送らず、テンプレート既定 (Qwen なら `xhigh`) が効く。** 明示してあるのは既定が変わったときに黙って浅くならないようにするためで、Qwen については省略時と同じ値である。
+
+**opencode のサブコマンドは素通しする。** 短縮名や接続先の語のうしろの先頭語がサブコマンド名 (`session` / `models` / `stats` / `mcp` / `serve` など) のとき、接続先の決定・配信前検査・`--model` 注入の 3 段を飛ばして `command opencode` にそのまま渡す。**プローブより手前で分岐するので、サーバが両経路とも落ちていてもサブコマンドは打てる** (接続先の語を渡しても無視される)。モデルを使うのは `pr` だけ (checkout 後に起動する opencode が既定モデルを解決する。これも `opencode pr --model <任意> <番号>` が unknown option で help 表示に化けるため注入不能。実測) で、他は検査を絡めるとサーバが落ちていて一覧も見られないという誤った失敗方になるうえ、`--model` はサブコマンド側で unknown option として弾かれ、実行の代わりに help 表示になるだけだからである (2026-09-06 実測: `opencode --model spark/fake session list` は help しか出さず、素の `ocsp session list` はセッション表を出す)。**`run` は例外で、`--model spark/<名前>` と `--dir` を付けた専用経路のまま** (`run` は `--model` を受け付ける)。素通し対象は `opencode-spark.zsh` のホワイトリストで `opencode --help` の commands と対応しているが、**opencode のアップグレードで増えたサブコマンドはホワイトリストに無いため TUI 起動の組み立てに回る** (サーバが落ちているとそこまでに達せず配信前検査で止まる)。**その間は先頭 `--` の解除語で素通しできる** (2026-09-06 実測: `ocsp -- --version` は `opencode` 本体が `1.18.18` を出す)。
+
+**その乖離は現に起きている。** `DeepSeek-v4.1-Flash-EXL3` の 600,000 はサーバと一致しているが、Vision-Exp と Qwen の 2 モデルは `limit.context` が 524,288 で、DeepSeek 系 (Vision-Exp) のサーバ上限は 1,048,576 である (「サービングの構成」)。Vision-Exp を配信しても OpenCode は 524,288 で頭打ちになる。**害は早めに圧縮が走ることだけで壊れはしない**ので放置してもよいが、直すなら `agents/bindings/opencode/opencode.json` の当該エントリを 1048576 にする。
+
+**設定は `agents/bindings/opencode/{opencode.json,tui.json}` として dotfiles にあり、`nix/modules/home/opencode.nix` が `mkOutOfStoreSymlink` で `~/.config/opencode/` に貼る** (`agents/bindings/claude/settings.json` と同じ live edit)。`~/.config/opencode/` には opencode 自身と他ツールが書くファイル (`node_modules` / `package.json` / `package-lock.json` / `.gitignore` / `skills/`) が同居する (生成方式時代の残骸が残ることもある) ので、**ディレクトリごとではなくファイル単位で貼る**。同じモジュールが `AGENTS.md` (グローバル指示の symlink) と `agents/` (subagent の生成物) も配る。**`opencode.json` 自体は `ocsp` 経由でも要る** (`provider.spark` の `npm` と `models` の宣言がここにしかないため。無ければ `ocsp` は起動前に止まる)。
+
+**live edit になるのは `drs` を当てた世代からである。** それ以前の世代では同じパスが Nix store 内のコピーを指しており、dotfiles を編集しても反映されない。**どちらの状態かは `readlink -f` で判る** (→「依拠する外部事実」)。**単 hop の `readlink` では判らない。** `mkOutOfStoreSymlink` は 2 段の symlink を作り、1 段目は live でも `/nix/store/…-home-manager-files/…` を指すためである。2026-09-07 に再確認した時点でもこのマシンは live edit 側で、`opencode.json` の編集は `drs` 無しで次の起動から効く。
+
+**`baseURL` に書いてある mDNS 名 (`http://spark-head.local:8888/v1`) は素の `opencode` 用の既定値である。** IP を書けば接続あたり約 210 ms 速いが (実測 224 ms 対 7〜21 ms)、このリポジトリは公開なので置かない。mDNS 名が遅いのは、到達できない IPv6 を 2 つ返し、それを試してから IPv4 に落ちるためである。`ccsp` は `NODE_OPTIONS=--dns-result-order=ipv4first` で回避しているが、opencode には相当する手段が無い。**`ocsp` からはこれを `CCSP_LAN_HOST` に IP を入れて避ける。Tailscale 側 (`http://spark-head`) に同種の遅延が出るかは未計測で、そちらを上書きする変数も無い。**
+
+`autoupdate` は `false` にしてある (本体は Nix 管理で、store は書き換えられないため)。
 
 ### Codex (`cxsp`)
 
@@ -777,7 +832,7 @@ cxsp -h                    # usage を出して終了 (`--help` / `help` も同�
 cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) 以降を全部 codex へ
 ```
 
-実体は `zsh/functions/codex-spark.zsh` である。**`ccsp` と違ってシェルに環境変数も alias も残さないので、`off` に相当する解除操作が要らない。** **素の `codex` は ChatGPT ログインのままで、この関数は一切触らない。**
+実体は `zsh/functions/codex-spark.zsh` である。**`ccsp` と違ってシェルに環境変数も alias も残さないので、`off` に相当する解除操作が要らない** (`ocsp` と同じ)。**素の `codex` は ChatGPT ログインのままで、この関数は一切触らない。**
 
 押さえるべき点が 12 つある。
 
@@ -807,7 +862,7 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
 - **起動のたびに無害な警告が 2 種類出る。** どちらも 2026-09-17 に実測したもので、推論そのものは通る。
   - `failed to refresh available models: … missing field 'models' … body: {"object":"list","data":[…]}` — codex のモデルカタログ更新が OpenAI 専用の形を期待している。vLLM の `/v1/models` は OpenAI 互換の `data` 配列を返すので形が合わない。**推論の経路とは別**で、1 起動につき 2 回出る
   - `warning: Model metadata for 'DeepSeek-v4.1-Flash-EXL3' not found. Defaulting to fallback metadata` — **catalog を渡すようになって出なくなった** (2026-09-17 実測)。出るようになったら catalog が届いていない
-- **Neovim の `<leader>cs` は `ccsp` を、`<leader>xx` 系は `cxsp` を経由する。** 既定の `<leader>ac` 系は素の `claude` (Anthropic) のままである。herdr のペインには `vim/lua/modules/ai/init.lua` が渡した名前 (`agent="claude-spark"` / `agent="codex"`) が付くのでペインの復元は効くが、`agent_session` (セッション UUID) は zsh を挟むと `null` になるので **herdr の `resume_agents_on_restore` は効かない** (`agent="codex"` が付くことは 2026-09-17 実測。`claude-spark` は同じ機構だが未実測)。**Spark に届かないときは `ccsp` / `cxsp` が exit 1 で止まるのでペインがすぐ閉じる** (フォールバックはしない。素の `codex` (ChatGPT) を使いたいときは端末から直接打つ)
+- **Neovim の `<leader>cs` は `ccsp` を、`<leader>xx` 系は `cxsp` を、`<leader>o*` 系は `ocsp` を経由する。** 既定の `<leader>ac` 系は素の `claude` (Anthropic) のままである。herdr のペインには `vim/lua/modules/ai/init.lua` が渡した名前 (`agent="claude-spark"` / `agent="codex"` / `agent="opencode"`) が付くのでペインの復元は効くが、`agent_session` (セッション UUID) は zsh を挟むと `null` になるので **herdr の `resume_agents_on_restore` は効かない** (`agent="codex"` が付くことは 2026-09-17 実測。`claude-spark` と `opencode` は同じ機構だが未実測)。**Spark に届かないときは `ccsp` / `cxsp` が exit 1 で止まるのでペインがすぐ閉じる** (フォールバックはしない。素の `codex` (ChatGPT) を使いたいときは端末から直接打つ)
 - **`drs` を当てて新しいシェルを開くまで存在しない。** 関数本体は Nix store 経由で配られるので、既存シェルには定義が無い (`command not found`)
 
 **合格判定**: `cxsp lan exec --skip-git-repo-check "1+1 は?"` が exit 0 で答えを返すこと。**2026-09-17 に V4.1 EXL3 配信中で実測した範囲**: 単発の生成 (`cxsp exec`)、ストリーミング (codex は常に `stream:true` を送る)、シェルツールの呼び出しとその結果を載せた 2 ターン目、effort の全値。**Qwen 系と Vision-Exp 系では `/v1/responses` 自体を試していない。**
@@ -824,7 +879,7 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
 
 `~/spark-bench/bench.py` でサーバを直叩きした値である。条件はプロンプト 6,000 トークン、`max_tokens` 256、`chat_template_kwargs={"thinking": true, "reasoning_effort": "low"}` (サーバ既定の `DEFAULT_THINKING=low` と同じ)、指示は「上記は無視して、TypeScript の関数を 1 つ書いてください。説明は不要でコードだけ返してください。」`c` は `--concurrency`。中央値と (最小〜最大)。
 
-**`chat_template_kwargs` は `--extra-body` でしか渡せない。** `bench.py` はこのキーの既定を持たないので、下の再現コマンドから `--extra-body` を落とすと条件が変わる (思考が既定のまま走る)。**これはテンプレートに直接渡す第 3 の経路である。** 2 つのクライアントが使う `output_config.effort` (`ccsp`) / `reasoning.effort` (`cxsp`) と違い、スキーマの Literal 検査を通らずにテンプレートへ届く。`bench.py` は `min_tokens` を `max_tokens` と同値にし `ignore_eos` を立てるので、生成長は常に 256 トークン固定である。
+**`chat_template_kwargs` は `--extra-body` でしか渡せない。** `bench.py` はこのキーの既定を持たないので、下の再現コマンドから `--extra-body` を落とすと条件が変わる (思考が既定のまま走る)。**これはテンプレートに直接渡す第 4 の経路である。** 3 つのクライアントが使う `reasoning_effort` (`ocsp`) / `output_config.effort` (`ccsp`) / `reasoning.effort` (`cxsp`) と違い、スキーマの Literal 検査を通らずにテンプレートへ届く。`bench.py` は `min_tokens` を `max_tokens` と同値にし `ignore_eos` を立てるので、生成長は常に 256 トークン固定である。
 
 | 条件 | n | Vision-Exp |
 | --- | --- | --- |
@@ -846,26 +901,27 @@ ssh -n spark-head 'python3 ~/spark-bench/bench.py --model deepseek-v4-flash-visi
   --instruction "上記は無視して、TypeScript の関数を 1 つ書いてください。説明は不要でコードだけ返してください。"'
 ```
 
-### L2: クライアント込み (2026-09-05)
+### L2 / L3: クライアント込み (2026-09-05)
 
 同一の実タスク (TypeScript プロジェクトで Read → Edit → Edit → Grep の 4 tool call) を流し、`~/spark-bench/snap.py` で `/metrics` の前後差分を取った値である。列の意味は次のとおり。
 
 - **サーバ内時間** = リクエストごとの queue + prefill + decode の**合算**。並列に走ればこの値は実時間を超える
 - **クライアント側の待ち** = 実時間 − サーバ内時間。リクエストが重なると負になる (= クライアント側の待ちがほぼ無い)
 
-測定はいずれも Vision-Exp 配信中に取った。**effort の条件は現行の既定と違う。** この計測は Claude Code 側が静的な `medium` を送っていた時点のもので、現在は `_spark_effort` が配信モデルごとに決めた値を送る。**effort は system への指示文を変えるので、下の受理率とプロンプト長は条件を跨いで比較しない。**
+測定はいずれも Vision-Exp 配信中に取った。**effort の条件は現行の既定と違う。** この計測は Claude Code 側が静的な `medium`、OpenCode 側が未指定 (テンプレート既定) だった時点のもので、現在は `_spark_effort` と `opencode.json` が配信モデルごとに決めた値を送る。**effort は system への指示文を変えるので、下の受理率とプロンプト長は条件を跨いで比較しない。**
 
 | 層 | 構成 | n | 実時間 (秒) | ターン数 (回) | 1 ターンのプロンプト (トークン) | 受理率 | prefix ヒット率 | クライアント側の待ち (秒) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | L2 | Claude Code (通常設定) | 2 | 329〜484 | 5〜12 | 54,794〜55,866 | 0.43〜0.48 | 0.66〜0.73 | **231〜233** |
 | L2 | Claude Code (グローバル設定なし) | 1 | 41 | 5 | 18,335 | 0.60 | 0.68 | −18 |
+| L3 | OpenCode | 2 | 21〜30 | 5 | 14,998〜15,008 | 0.66〜0.69 | 0.73〜0.90 | −3〜0 |
 
 「グローバル設定なし」は `~/.claude/CLAUDE.md` と `agents/rules/` を外した `CLAUDE_CONFIG_DIR` で起動した回である。
 
-**同じサーバ・同じモデル・同じタスクでも、クライアント側の設定だけで実時間が 10 倍以上違う (41 秒 対 329〜484 秒)。差はすべてクライアント側にある。**
+**同じサーバ・同じモデル・同じタスクで実時間が 10 倍以上違う。差はすべてクライアント側にある。**
 
 - **Claude Code 通常設定の「クライアント側の待ち」231〜233 秒はほぼ全量が `security-guidance` の Stop hook である。** 無効化した回では 0 以下に落ちる。この値は 2 回の走行でほぼ一定だった
-- **1 ターンのプロンプトが 55,000 対 18,000 トークンなのは、グローバル `CLAUDE.md` と `rules` が毎ターン載るためである。** prefill 律速の本環境ではこれがそのまま待ち時間になる
+- **1 ターンのプロンプトが 55,000 対 15,000 トークンなのは、グローバル `CLAUDE.md` と `rules` が毎ターン載るためである。** prefill 律速の本環境ではこれがそのまま待ち時間になる
 - **`--settings` に `hooks: {}` を書いてもプラグインの hook は止まらない** (stream-json に `hook_started` が出続ける)。止めるには `enabledPlugins` で当該プラグインを `false` にする
 
 ### 遅いと感じたときに疑う順序
@@ -874,8 +930,8 @@ ssh -n spark-head 'python3 ~/spark-bench/bench.py --model deepseek-v4-flash-visi
 
 1. **`security-guidance` が有効になっていないか** — 症状は「最後の応答が出てから 200 秒以上プロンプトが返らない」。`settings.spark.json` の `enabledPlugins` を見る
 2. **グローバル設定の prefill** — `agents/rules/core/*.md` の 10 ファイルと `core/references/loop-engineering.md` は frontmatter を持たないため毎ターン展開される (合計 48,826 バイト / 22,907 文字、2026-09-09 実測)。`backend/**` や `frontend/**` は `paths:` で対象言語に絞られ、`core/references/` の他の 7 ファイルは `__read-on-demand-only__` で除外されているのに、この 11 本だけ素通しになっている。**これは dotfiles 側の設計課題であって Spark の問題ではない**
-3. **prefix cache のヒット率** — 機構自体は正常に動く (同一プロンプトを 2 回送れば 2 回目にヒットが立つ)。実負荷のヒット率はクライアントがプレフィックスをどれだけ安定させるかで決まる。**L2 の実測レンジは 0.66〜0.73 で、0.5 を切ったらクライアント側の変動を疑う**
-4. **投機デコードの受理率** — decode 速度をほぼ決める。**L2 の実測レンジは 0.43〜0.60 で、0.4 を切ったら疑う。** この値は生成させる内容で動く (構造化された出力で高く、散文で低い)
+3. **prefix cache のヒット率** — 機構自体は正常に動く (同一プロンプトを 2 回送れば 2 回目にヒットが立つ)。実負荷のヒット率はクライアントがプレフィックスをどれだけ安定させるかで決まる。**L2 / L3 の実測レンジは 0.66〜0.90 で、0.5 を切ったらクライアント側の変動を疑う**
+4. **投機デコードの受理率** — decode 速度をほぼ決める。**L2 / L3 の実測レンジは 0.43〜0.69 で、0.4 を切ったら疑う。** この値は生成させる内容で動く (構造化された出力で高く、散文で低い)
 5. **サーバ本体** — ここまで潰してから L1 のベンチを上のフラグで回す。**GPU クロックは 2,200 MHz に制限してあり、X925 の `scaling_max_freq` も下げてある** (→ 「既知の制約」4・5)。どちらも外しても速度はほぼ変わらないと実測済みなので、ここを最初に疑わない。切り分けのために外すなら、**外して測って戻すところまでを 1 セットで行う** (戻し忘れると温度だけが上がった状態が残り、サーバ側に履歴が無いので誰も気づけない → 制約 6)
 
 3 と 4 の計算は `/metrics` から行う。**キー名は完全一致で拾う。** `prefix_cache` には `vllm:external_prefix_cache_*` が、`spec_decode_num_.*_total` には `vllm:spec_decode_num_accepted_tokens_per_pos_total` が別に存在し、緩い grep は別系列を合算して値を過大に出す。
@@ -894,7 +950,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 
 **コンテナ名は系統で違う。** DeepSeek 系は `deepseek-v4-flash-vllm-dspark-1`、Qwen 系は `vllm-fn` (両ノードとも同名)、V4.1 EXL3 系は `dsv41-exl3-head` / `dsv41-exl3-worker` である。
 
-**表の確認手段に `ccsp status` / `cxsp status` を使う行があるが、Claude の Bash ツールから打っても正しい判定にならない** (関数自体はスナップショットに入っているが `_spark_*` ヘルパーが無く、URL が空のまま「に届かない」と表示する →「依拠する外部事実」)。切り分けは `curl -fs -o /dev/null http://spark-head.local:8888/health` で行う。
+**表の確認手段に `ccsp status` / `ocsp status` / `cxsp status` を使う行があるが、Claude の Bash ツールから打っても正しい判定にならない** (関数自体はスナップショットに入っているが `_spark_*` ヘルパーが無く、URL が空のまま「に届かない」と表示する →「依拠する外部事実」)。切り分けは `curl -fs -o /dev/null http://spark-head.local:8888/health` で行う。
 
 | 症状 | 確認 | よくある原因 |
 | --- | --- | --- |
@@ -902,14 +958,17 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | コンテナが無い | 両ノードで「系統の切り替え」の手順 3 のコマンド (3 系統すべてを拾う。表のセルに書くと `\|` のエスケープが混ざってそのまま打てないので、そちらをコピーする) | 停止コマンドで止めたまま、またはノードの再起動 (Qwen 系と V4.1 EXL3 系は再起動で上がらない。DeepSeek 系は上がる → 「既知の制約」8)。起動し直す |
 | 起動に失敗する | `./logs-deepseek-v4-flash-dspark.sh` (Qwen 系は `docker logs vllm-fn`、V4.1 EXL3 系は `./start.sh logs` / `./start.sh logs worker` と、レシピの `logs/head.log` / `logs/worker.log` / `logs/overlay-verify.log`) | DeepSeek 系の `no usable RoCEv2 GID` は RoCE 2 本目の IP か MTU (Qwen 系は `IB_HCA` が 1 本なのでこの形では出ない)。Qwen 系は相手系統が GPU を掴んだままだと `REQUIRE_IDLE_GPU` で拒否される。V4.1 EXL3 系は `not enough free unified memory` (相手系統が動いている → 「系統の切り替え」の手順 3)、`FileNotFoundError: /models/config.json` (→「導入と再導入の落とし穴」4)、`logs/hang-*-pyspy.txt` (head のログが 420 秒止まると書かれる)。**V4.1 EXL3 系は失敗してもコンテナが残るので、`./start.sh stop` してから起動し直す** |
 | Qwen 系がコンテナを作らずに `Checkpoint snapshot is incomplete` で止まる | `python3 files/resolve_snapshot.py <hub の repo ディレクトリ>` の exit code (0 以外) | シャードの欠落。`0b62e12` から `start.sh` が起動前に検査するようになった (→「重みの検証」)。**コンテナが 1 つも作られないので `docker logs vllm-fn` は空振りする。`start.sh` の標準出力を見る。** 復旧は Qwen レシピ同梱の `./download.sh` (HuggingFace から重みを取り直すスクリプト。`--launch` を付けない素の `./start.sh` が内部で呼ぶのと同じもの) での再取得だが、**revision を指定しないと配信 revision が動く** |
-| `model not found` が出る | `curl .../v1/models` で配信名を見る | セッション起動後にサーバ側で切り替えた。`ccsp` / `cxsp` は起動時のモデル名を送り続けるので起動し直す |
-| `ccsp` / `cxsp` が「取得できません」で止まる | `ccsp status` / `cxsp status` でサーバの生死を見る。メッセージが出す URL も見る | **`ccsp` と `cxsp` はこの 1 文言に 2 つの原因を束ねている。** 要求したモデルが配信されていない場合と、サーバに届かない場合の両方。メッセージが続けて出す「配信中: …」が空なら後者。認証を復活させた場合も 401 でこうなる (→「API キーの流れ」)。**接続先を誤った側に強制した場合 (出先で `lan`、自宅で `ts`) もプローブを飛ばしてここに落ちる** |
-| `ccsp` / `cxsp` が「LAN にも Tailscale にも届きません」で止まる | `ccsp status` / `cxsp status` の LAN 行と TS 行 | どちらの `/health` にも届かなかった。サーバが落ちているか、出先で Tailscale にサインインしていない。接続先が判っているなら `lan` / `ts` で強制できる (プローブを飛ばす)。**強制した先も死んでいれば次は上の「取得できません」に変わる** |
+| `model not found` が出る | `curl .../v1/models` で配信名を見る | セッション起動後にサーバ側で切り替えた。`ccsp` / `ocsp` / `cxsp` は起動時のモデル名を送り続けるので起動し直す |
+| `ocsp` が「`<名前>` は配信されていません」で止まる | メッセージが出す配信中の一覧 | 要求した短縮名と実際の配信モデルが違う。これは異常ではなく配信前検査が効いた状態。**この文言を出すのは `ocsp` だけ** |
+| `ccsp` / `ocsp` / `cxsp` が「取得できません」で止まる | `ccsp status` / `ocsp status` / `cxsp status` でサーバの生死を見る。メッセージが出す URL も見る | **`ccsp` と `cxsp` はこの 1 文言に 2 つの原因を束ねている。** 要求したモデルが配信されていない場合と、サーバに届かない場合の両方。メッセージが続けて出す「配信中: …」が空なら後者。認証を復活させた場合も 401 でこうなる (→「API キーの流れ」)。**接続先を誤った側に強制した場合 (出先で `lan`、自宅で `ts`) もプローブを飛ばしてここに落ちる** |
+| `ccsp` / `ocsp` / `cxsp` が「LAN にも Tailscale にも届きません」で止まる | `ccsp status` / `ocsp status` / `cxsp status` の LAN 行と TS 行 | どちらの `/health` にも届かなかった。サーバが落ちているか、出先で Tailscale にサインインしていない。接続先が判っているなら `lan` / `ts` で強制できる (プローブを飛ばす)。**強制した先も死んでいれば次は上の「取得できません」に変わる** |
 | `cxsp` が `DeepSeek V4.1 supports text and image content only; got 'input_text'` の 400 で落ちる | `ssh -n spark-head 'docker logs dsv41-exl3-head 2>&1 \| grep dsv41-responses-parts'` | サーバ側のパッチが当たっていない。配信を上げ直したときにパッチファイルか `start.sh` の 2 行が失われている (典型は `git pull` で `start.sh` が上書きされたとき) → 「既知の制約」12 |
 | `codex` が `provider name must not be empty` で設定を読めない | `cxsp` が組み立てる `-c` の一覧 | `model_providers.spark.name` が空。このキーは必須キーの一覧に現れないので落としやすい (→「Codex (`cxsp`)」) |
 | `codex exec` が git リポジトリの外で実行を拒否する | 実行したディレクトリ | `--skip-git-repo-check` を付ける。`cxsp` は素通しするので `cxsp exec --skip-git-repo-check "…"` と書く |
-| `Unexpected reasoning effort <値>` の 400 | 送っている effort の値 (`CCSP_EFFORT` / `CXSP_EFFORT`) | **どの経路でも出る。** 検査はチャットテンプレートにあり、`/v1/messages` も `/v1/chat/completions` も `/v1/responses` も同じテンプレートを通る (→「Qwen の reasoning effort の語彙」)。Qwen で使えるのは `low` / `medium` / `xhigh` の 3 つ。**Qwen 配信中は既定の設定で踏まない** (`_spark_effort` が `xhigh` を持つ)。踏むのは (1) `CCSP_EFFORT` に語彙外の値を入れたとき (2) `_spark_effort` に登録していないモデルを配信したとき (既定の `high` が飛ぶ) (3) **DeepSeek 系に切り替えた最初の 1 回** (2 つのクライアントが送る `high` はレシピの語彙に合わせただけで未実測)。**V4.1 EXL3 系では文言が違い**、`DeepSeek V4.1 reasoning_effort must be low, high, xhigh, max, or an integer within [1, 100]` の 400 になる。弾くのは vLLM 側の検査で、踏むのは `medium` を送ったとき (Qwen 用の `CCSP_EFFORT=medium` / `CXSP_EFFORT=medium` が残っている場合が典型 → 「系統の切り替え」の手順 1) |
-| `Input should be 'low', 'medium', ...` の 400 | 送っている effort の値 | `ccsp` の経路 (`/v1/messages`) に `none` を渡した。スキーマが `none` を持たないため、テンプレートより手前で弾かれる。**`/v1/chat/completions` では `none` が通る**という非対称がある (→「Qwen の reasoning effort の語彙」) |
+| `ocsp` が「OpenCode の設定がありません」で止まる | `ls -l ~/.config/opencode/opencode.json` (`readlink -f` はファイルが無いと空出力 + exit 1 を返すので実体を見る) | `drs` 未実行でファイルが無い。`provider.spark` の `npm` と `models` の宣言がここにしかないので、接続先を上書きする方式でも起動前に止まる |
+| `Unexpected reasoning effort <値>` の 400 | 送っている effort の値 (`CCSP_EFFORT` / `CXSP_EFFORT` / `opencode.json`) | **3 つの経路すべてで出る。** 検査はチャットテンプレートにあり、`/v1/messages` も `/v1/chat/completions` も `/v1/responses` も同じテンプレートを通る (→「Qwen の reasoning effort の語彙」)。Qwen で使えるのは `low` / `medium` / `xhigh` の 3 つ。**Qwen 配信中は既定の設定で踏まない** (`_spark_effort` と `opencode.json` が `xhigh` を持つ)。踏むのは (1) `CCSP_EFFORT` に語彙外の値を入れたとき (2) `_spark_effort` / `opencode.json` に登録していないモデルを配信したとき (既定の `high` が飛ぶ) (3) **DeepSeek 系に切り替えた最初の 1 回** (3 つのクライアントが送る `high` はレシピの語彙に合わせただけで未実測)。**V4.1 EXL3 系では文言が違い**、`DeepSeek V4.1 reasoning_effort must be low, high, xhigh, max, or an integer within [1, 100]` の 400 になる。弾くのは vLLM 側の検査で、踏むのは `medium` を送ったとき (Qwen 用の `CCSP_EFFORT=medium` / `CXSP_EFFORT=medium` が残っている場合が典型 → 「系統の切り替え」の手順 1) |
+| `Input should be 'low', 'medium', ...` の 400 | 送っている effort の値 | `ccsp` の経路 (`/v1/messages`) に `none` を渡した。スキーマが `none` を持たないため、テンプレートより手前で弾かれる。**`ocsp` の経路では `none` が通る**という非対称がある (→「Qwen の reasoning effort の語彙」) |
+| OpenCode がモデルを拒否する | `agents/bindings/opencode/opencode.json` の `provider.spark.models` | 宣言の無いモデル名は OpenCode 側が受け付けない |
 | 起動待ちが長すぎる | head は `docker logs <コンテナ名>`、worker は「worker に入る」節のコマンドで同じものを打つ | 正常な所要は DeepSeek 系が約 6 分、Qwen 系が約 13〜14 分、V4.1 EXL3 系がコンテナ起動から health まで約 8 分 (いずれも実測)。DeepSeek 系は 10 分、Qwen 系は 20 分を超えたら worker 側だけ落ちていることがあるので両ランクを見る。V4.1 EXL3 系は 15 分を超えたら `./start.sh logs worker` で worker 側を見る。`start.sh` は health を 1,500 秒待って諦め、そのときもコンテナは残る (→「起動に失敗する」の行) |
 | 推論中に CPU が熱い・ファンがうるさい | 「依拠する外部事実」の温度の行と、同節のコードブロック 5 | 正常。vLLM のスレッドが GPU / NCCL の完了をビジーポーリングで待ち、100% の使用率で回る (→ 「既知の制約」5)。計算しているわけではないので、`nvidia-smi` の GPU 使用率が高いこととは独立に CPU 側センサーが上がる。X925 の `scaling_max_freq` を下げる対処は既に入れてあり (制約 5)、それでも高いなら室温か吸気を疑う |
 | 起動直後から空きメモリが少ない | `free -h` | DeepSeek 系と Qwen 系なら正常。確保率 0.835 の先取りで、残る量は DeepSeek 系 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB。**V4.1 EXL3 系の head の 6.0〜6.5 GiB は先取りではなく実際の余裕** (重み 98.86 GiB + 固定の KV プール 2.5 GiB) で、配信中はこれ以上減らさない (→「既知の制約」11) |
@@ -919,7 +978,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | 全体的に遅い | 「遅いと感じたときに疑う順序」を上から | クライアント側が大半 |
 | ダッシュボードの worker が古いモデル | `curl -s http://spark-head.local:5555/api/sparks` の worker 行 | `workerLabel` は手書きの静的文字列で、実機とは無関係に表示される。ファイルを直しても `docker restart sparkDash` するまで画面は変わらない。直し方は→「sparkDash の `workerLabel` を直す」 |
 | ssh 出力が途中で切れる | 打ったコマンド | 入れ子の `ssh` が標準入力を飲んでいる。内側に `-n` を付ける |
-| `ccsp` / `cxsp` が `command not found` | `type ccsp` が `function` を返すか | どちらも Nix 配布なので、`drs` 未実行か、`drs` 後に新しいシェルを開いていない |
+| `ccsp` / `ocsp` / `cxsp` が `command not found` | `type ccsp` が `function` を返すか | 3 つとも Nix 配布なので、`drs` 未実行か、`drs` 後に新しいシェルを開いていない |
 
 待ち行列と稼働中リクエストは次で見る。
 
@@ -934,9 +993,9 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 - **`~/sparkDash/docker-compose.yml`** — 上流の追跡ファイル。上書きは `docker-compose.override.yml` に置く
 - **`docker compose restart`** — vLLM には使わない。`stop` → `start`
 - **`.env.dspark.bak` のような控え** — `.gitignore` が拾わずキーごと公開リポジトリに載る
-- **head の `~/dsv41-local/` と `start.sh` のローカル差分 2 行** — 消すと `cxsp` だけが静かに壊れる (`ccsp` は無傷なので他の確認は green のまま通る →「既知の制約」12)
-- **公開リポジトリ内のファイルへの IP 直書き** — 本書・`zsh/functions/*.zsh` のいずれにも書かない。IP は `CCSP_LAN_HOST` (シェル変数) で渡す。**2 つのクライアントがこの変数を見る**
-- **公開リポジトリ内のファイルへの API キー直書き** — 認証を戻すときも平文で置かず、環境変数で渡す (→ 「API キーの流れ」)
+- **head の `~/dsv41-local/` と `start.sh` のローカル差分 2 行** — 消すと `cxsp` だけが静かに壊れる (`ccsp` / `ocsp` は無傷なので他の確認は green のまま通る →「既知の制約」12)
+- **公開リポジトリ内のファイルへの IP 直書き** — 本書・`zsh/functions/*.zsh`・`agents/bindings/opencode/opencode.json` のいずれにも書かない。IP は `CCSP_LAN_HOST` (シェル変数) で渡す。**3 つのクライアントがこの変数を見る**ので、`opencode.json` を編集する必要は無い
+- **公開リポジトリ内のファイルへの API キー直書き** — 認証を戻すときも `opencode.json` に平文で置かない。`{file:~/…}` か `{env:…}` で外部へ逃がす (`_ocsp_resolve` と opencode 本体の両方が解く → 「API キーの流れ」)
 - **クロック制限の 2 unit** (`nv-gpu-clock-limit.service` / `nv-cpu-clock-limit.service`) — 切り分けで一時的に外すのは構わないが、外したままにしない。サーバ側に温度の履歴が無いので戻し忘れに誰も気づけない (→ 「既知の制約」4・5・6)
 - **sparkDash のポート 5555** — 認証が無いので信頼できないネットワークへ出さない
 - **ポート 8888** — 系統を問わず無認証なので外に出さない (→「API キーの流れ」)
@@ -966,12 +1025,12 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
    ```
 
 6. **温度センサーは ACPI の 7 つで、履歴はどこにも残っていない。** `/sys/class/thermal/thermal_zone{0..6}/temp` がミリ °C を返す。名前は起動ログ (`journalctl -b -q -o cat | grep 'Thermal Zone \['`) が登録順に出す。zone0 = `TSOC` (SoC 全体) / zone1 = `TS0E` / zone2 = `TS0P` / zone3 = `TS1E` / zone4 = `TS1P` / zone5 = `TGPU` / zone6 = `TUNC`。**`TS<n>E` / `TS<n>P` が効率コアと性能コアに対応するという読み方は本書の推測で、NVIDIA の公表資料では裏を取っていない** (X925 の制限で `TS0P` が 14.3 °C 下がった実測とは整合する)。トリップ点は全 zone とも 104.8 °C、`policy` は `step_wise` である。`TSOC` の 3 文字目は英字の O、`TS0P` / `TS0E` の 3 文字目は数字のゼロで、grep するとき紛らわしい。**サーバ側に残る履歴は無い。** sparkDash は CPU 温度も採るが (head の `~/sparkDash/server/collectors/SystemCollector.js` が hwmon の `acpitz` と thermal zone を読む)、履歴はブラウザのメモリ (`~/sparkDash/src/hooks/metricsStore.ts` の `HISTORY_MAX` = 1,800 サンプル。このリポジトリの `docker-compose.override.yml` が `POLL_INTERVAL_CPU` を 15 秒にしているので約 7.5 時間分) にしか無く、ページを閉じれば消える。journald に出るのは起動時の 1 回だけ (7 zone 分 7 行)。`collectd` / `netdata` / prometheus exporter の類は両ノードとも動いていない (2026-09-10 実測)。**したがって過去に遡った統計は取れない。** 必要になったら記録の仕組みを先に用意する
-7. **停止と再起動はユーザーの作業を止める。** 打つ前に `curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_running\{'` で稼働中リクエストの有無を確認し、Mac 側では先に `claude` を終了して `ccsp off` で退避する (`cxsp` は環境変数を残さないので退避操作が要らない。`CCSP_EFFORT` / `CXSP_EFFORT` を export していたら `unset` する)
+7. **停止と再起動はユーザーの作業を止める。** 打つ前に `curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_running\{'` で稼働中リクエストの有無を確認し、Mac 側では先に `claude` を終了して `ccsp off` で退避する (`ocsp` と `cxsp` は環境変数を残さないので退避操作が要らない。`CCSP_EFFORT` / `CXSP_EFFORT` を export していたら `unset` する)
 8. **vLLM の自動復帰は系統で違う。** DeepSeek 系コンテナの restart policy は `unless-stopped` だが、**Qwen 系 `vllm-fn` と V4.1 EXL3 系 `dsv41-exl3-head` / `dsv41-exl3-worker` は両ノードとも `no` なので、ノードを再起動すると上がってこない** (Qwen 系は 2026-09-06、V4.1 EXL3 系は 2026-09-15 に実測)。手で Qwen 系は `./start.sh --launch`、V4.1 EXL3 系は `./start.sh` を打ち直す (重みの同期はマーカーで省略されるので速い)。sparkDash は `always`、`docker` と (head の) `tailscaled` は enabled、RoCE は NetworkManager の autoconnect、GPU と CPU のクロック制限は 2 つの unit がどちらも enabled である (→ 制約 4・5)。どの系統も停止スクリプトで止めた後はコンテナ自体が消えるので再起動しても復帰しない。**cold boot での復帰は未確認なので、電源断の後は `docker ps` で確かめる**
 9. **`~/spark-bench` は再作成手段が無い。** dotfiles にも上流にも無い手書きのハーネスなので、head を作り直すと失われる
 10. **3 系統の vLLM は同時に起動できない。** ポート 8888 と GPU を共有し、Qwen 側は `REQUIRE_IDLE_GPU=true`、V4.1 EXL3 側はメモリの事前検査が明示的に拒否する。切り替えは必ず「相手を停止 → 起動」の順で行う (→「系統の切り替え」)
 11. **V4.1 EXL3 系はメモリの余裕が薄い。** 配信中の head の `MemAvailable` は 6 GiB 前後である。上流は `MAX_MODEL_LEN` 614,400 の構成で 601k トークンの prefill 中に 2.1 GiB まで下がったと書いている (当方の 600,000 では同じ入力は入らないが、長い prefill ほど下がる傾向は同じと見ている。未検証)。**上流の報告では、GB10 は統合メモリが尽きるとエラーではなくノードごと固まり、ハード再起動まで戻らなかった。** 当方では起きていないので、固まったときの兆候と復旧は未確認である。想定される兆候は、ssh も sparkDash も応答しないことと、worker だけが固まった場合に head の `/health` が応答しなくなることである。その場合は人が電源を入れ直す (sparkDash の Wake-on-LAN は電源断からの起動用で、固まったノードに効くかは未確認)。**配信中のノードで重い処理 (ダウンロード・ビルド・大きなファイルの展開) を流すときは `systemd-run --user --scope -p MemoryMax=<上限>` で上限を付ける** (`ssh -n` 経由では `XDG_RUNTIME_DIR=/run/user/$(id -u)` を前置する。head では 2026-09-15 に効くことを確かめた。worker では未確認)。**memguard (→ 用語表) は上流既定のまま無効にしている。** 上流によれば、有効にして唯一発動したときは無関係なホストのプロセスがメモリを取った場面で、原因ではない vLLM を kill しただけだった。代わりに両コンテナは `--oom-score-adj 1000` で起動されていて、カーネルの OOM killer が動けばデスクトップより先に vLLM が落ちる
-12. **`/v1/responses` は head のパッチに依存している。** 配信イメージ `ghcr.io/miaai-lab/deepseek-v4.1-flash-exl3-2x-dgx-sparks:2.9bpw` が `FROM` で使うベース `vllm/vllm-openai:deepseekv41-flash-0909` (レシピの `Dockerfile` の `ARG BASE`) に入っている `vllm/tokenizers/deepseek_v41.py` の `_normalize_messages` は、メッセージの content パーツを `text` / `image_url` / `input_image` / `image_pil` しか受けない。Responses API と Codex が使う `input_text` は 400 になる (`DeepSeek V4.1 supports text and image content only; got 'input_text'`)。**上流 vLLM の `main` は既に `("text", "input_text", "output_text")` を受けるので、これはイメージが古いだけである。** head の `~/dsv41-local/patch_responses_content_parts.py` がその 1 行を起動のたびに当て直す (**`ccsp` の経路はパッチが無くても動く**ので、壊れていることに気づくのは `cxsp` だけである)。
+12. **`/v1/responses` は head のパッチに依存している。** 配信イメージ `ghcr.io/miaai-lab/deepseek-v4.1-flash-exl3-2x-dgx-sparks:2.9bpw` が `FROM` で使うベース `vllm/vllm-openai:deepseekv41-flash-0909` (レシピの `Dockerfile` の `ARG BASE`) に入っている `vllm/tokenizers/deepseek_v41.py` の `_normalize_messages` は、メッセージの content パーツを `text` / `image_url` / `input_image` / `image_pil` しか受けない。Responses API と Codex が使う `input_text` は 400 になる (`DeepSeek V4.1 supports text and image content only; got 'input_text'`)。**上流 vLLM の `main` は既に `("text", "input_text", "output_text")` を受けるので、これはイメージが古いだけである。** head の `~/dsv41-local/patch_responses_content_parts.py` がその 1 行を起動のたびに当て直す (**`ccsp` と `ocsp` の経路はパッチが無くても動く**ので、壊れていることに気づくのは `cxsp` だけである)。
 
     - **パッチ本体は clone の外 (`~/dsv41-local/`) に置いてある。** レシピの `overlay/` に置くと `overlay_recipe_hash` (`Dockerfile` + `overlay/` + `files/` + `tests/` の hash) が動き、イメージの `dsv41.recipe.stamp` と食い違って**レジストリから約 9 GiB を pull し直す**。この分岐を止めるのは `SKIP_PULL` / `BUILD` であって `SKIP_BUILD` ではない
     - **`start.sh` は上流追跡ファイルなので 2 行がローカル差分になる。`git pull` で消える。** head 用スクリプトのパッチループに `         /opt/dsv41/patch_responses_content_parts.py \`、head コンテナの `docker run` の `-v` ブロックに `        -v "$HOME/dsv41-local/patch_responses_content_parts.py:/opt/dsv41/patch_responses_content_parts.py:ro" \` を足してある。**worker 側には足していない** — トークナイズは head の API サーバでしか走らないため
@@ -1086,10 +1145,14 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 | `start.sh` のローカル差分が残っているか | `ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && git diff --stat start.sh'` (2 insertions が出れば残っている。空なら `git pull` で消えている)。2026-09-17 実測 |
 | codex の設定が読めるか | Mac 側で `codex doctor --no-color --summary <cxsp が組み立てる -c の一式>` の Configuration 行が `config loaded`。**陽性対照は `model_providers.spark.name=""` を混ぜること** (`could not be loaded` になる)。2026-09-17 実測 |
 | Tailscale の参加状況 | Mac 側で `tailscale status` |
+| OpenCode の設定 | Mac 側で `python3 -c "import json;print(list(json.load(open('$HOME/.config/opencode/opencode.json'))['provider']))"` |
+| `ocsp` の接続先上書きが効くか | Mac 側で `OPENCODE_CONFIG_CONTENT='{"provider":{"spark":{"options":{"baseURL":"http://example.invalid:9/v1"}}}}' opencode debug config`。**`provider.spark.options.baseURL` がその値になり、`opencode.json` に宣言した全モデルと `npm` が残っていれば合格** (ディープマージの確認)。**陰性対照として環境変数を外した同じコマンドを打ち、`spark-head.local` が返ることも見る** (2026-09-07 に opencode 1.18.18 で実測) |
+| 上書きが `options` の兄弟キーを消さないか | 認証を戻す前に確かめる。`opencode.json` を写した検証用の `HOME` を作って `provider.spark.options.apiKey` に目印の文字列を入れ、`HOME=<検証用> OPENCODE_CONFIG_CONTENT='…baseURL のみ…' opencode debug config` を打つ。**`baseURL` が差し替わったうえで `apiKey` の目印が残っていれば合格** (2026-09-07 に実測。マージは `options` の中まで再帰する) |
+| OpenCode の設定が live edit か | Mac 側で `readlink -f ~/.config/opencode/opencode.json`。**dotfiles 配下を返せば live、`/nix/store/…` で終われば store コピー。** **`-f` を落とすと判定が壊れる**: `mkOutOfStoreSymlink` は `~/.config/…` → `…-home-manager-files/…` → dotfiles の 2 段になるので、単 hop の `readlink` は live でも `/nix/store/…` を返し、常に「`drs` 待ち」と誤判定する (2026-09-06 に実測。この行は live) |
 | zsh 関数が配布済みか | Mac 側で `diff -q "$(readlink -f ~/.config/zsh/functions/claude-deepseek.zsh)" zsh/functions/claude-deepseek.zsh` (dotfiles で実行)。**こちらは store の実コピーなので `readlink -f` も常に `/nix/store/…` を返す。** パスではなく内容を比べる。差があれば `drs` 待ち |
-| 2 つのクライアントの疎通 | Mac 側で `ccsp status` / `cxsp status`。**`drs` を当てて新しいシェルを開くまで関数は `command not found` になる** (配布済みかは上の `diff -q` の行で判る)。**Claude の Bash ツールのシェルスナップショットには `_spark_*` ヘルパーが入らないため、そこから打つと `command not found` と「に届かない」の誤判定になる (2026-09-09 実測)。切り分けは `curl -fs -o /dev/null http://spark-head.local:8888/health` で行う** |
-| 配信中のモデルが受ける reasoning effort と既定値 | **エンドポイントごとに打つ** (語彙が違う → 「Qwen の reasoning effort の語彙」)。`/v1/chat/completions` は `curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: application/json' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"reasoning_effort":"high","max_tokens":1}'`、`/v1/messages` (`ccsp` の経路) は `curl -s http://spark-head.local:8888/v1/messages -H 'Content-Type: application/json' -H 'anthropic-version: 2023-06-01' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"max_tokens":1,"output_config":{"effort":"high"}}'`。**`/v1/responses` (`cxsp` の経路) は下のコードブロック 8 に `"reasoning":{"effort":"<値>"}` を足した形で打つ**。**語彙外の値を投げて 400 のエラー本文を読むのが陽性対照** (対応値を列挙する)。**陰性対照として受理される値でも打ち、200 が返ることを確かめる** (常に 400 を返す壊れた検出でないことの確認)。値は系統で変える。Qwen 系は陽性対照 `high` / 陰性対照 `xhigh`、V4.1 EXL3 系は陽性対照 `medium` / 陰性対照 `max` (`high` は受理されるので陽性対照にならない)。**Qwen 系 (2026-09-06) と V4.1 EXL3 系 (2026-09-15) は全値で実測済み。DeepSeek 系は未確認** |
-| 2 つのクライアントが実際に送る effort | **設定値**は Mac 側で `ccsp` / `cxsp` の起動時の 1 行 (`cxsp` は `cxsp: Spark モード (… / effort <値>)`)。**送信値そのものを見るには記録プロキシを挟む** (下のコードブロック 4。`cxsp` を通すときは `CCSP_LAN_HOST=127.0.0.1 cxsp lan exec --skip-git-repo-check "1+1 は?"` と打ち、プロキシが写し取るキーに `reasoning` を足す — `/v1/responses` は effort を `reasoning.effort` に載せる)。**`ccsp` 側は `drs` と新しいシェルを経ないと新実装が動かない**ので、`grep -c _spark_effort ~/.config/zsh/functions/claude-deepseek.zsh` が 0 を返す間は effort を送らない |
+| 3 つのクライアントの疎通 | Mac 側で `ccsp status` / `ocsp status` / `cxsp status`。**`drs` を当てて新しいシェルを開くまで関数は `command not found` になる** (配布済みかは上の `diff -q` の行で判る)。**Claude の Bash ツールのシェルスナップショットには `_spark_*` ヘルパーが入らないため、そこから打つと `command not found` と「に届かない」の誤判定になる (2026-09-09 実測)。切り分けは `curl -fs -o /dev/null http://spark-head.local:8888/health` で行う** |
+| 配信中のモデルが受ける reasoning effort と既定値 | **経路ごとに 3 本打つ** (語彙が違う → 「Qwen の reasoning effort の語彙」)。**`/v1/responses` (`cxsp` の経路) は下のコードブロック 8 に `"reasoning":{"effort":"<値>"}` を足した形で打つ**。`ocsp` 側は `curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: application/json' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"reasoning_effort":"high","max_tokens":1}'`、`ccsp` 側は `curl -s http://spark-head.local:8888/v1/messages -H 'Content-Type: application/json' -H 'anthropic-version: 2023-06-01' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"max_tokens":1,"output_config":{"effort":"high"}}'`。**語彙外の値を投げて 400 のエラー本文を読むのが陽性対照** (対応値を列挙する)。**陰性対照として受理される値でも打ち、200 が返ることを確かめる** (常に 400 を返す壊れた検出でないことの確認)。値は系統で変える。Qwen 系は陽性対照 `high` / 陰性対照 `xhigh`、V4.1 EXL3 系は陽性対照 `medium` / 陰性対照 `max` (`high` は受理されるので陽性対照にならない)。**Qwen 系 (2026-09-06) と V4.1 EXL3 系 (2026-09-15) は全値で実測済み。DeepSeek 系は未確認** |
+| 3 つのクライアントが実際に送る effort | **設定値**は Mac 側で `python3 -c "import json;print({k:v.get('options') for k,v in json.load(open('$HOME/.config/opencode/opencode.json'))['provider']['spark']['models'].items()})"` (`ocsp` が読むのはこの実体。dotfiles 側を読むと、まだ `drs` を当てていない世代では送っていない値を報告してしまう。どちらを指しているかは上の `readlink` の行で判る) と、`ccsp` / `cxsp` の起動時の 1 行 (`cxsp` は `cxsp: Spark モード (… / effort <値>)`)。**送信値そのものを見るには記録プロキシを挟む** (下のコードブロック 4。`cxsp` を通すときは `CCSP_LAN_HOST=127.0.0.1 cxsp lan exec --skip-git-repo-check "1+1 は?"` と打ち、プロキシが写し取るキーに `reasoning` を足す — `/v1/responses` は effort を `reasoning.effort` に載せる)。**`ccsp` 側は `drs` と新しいシェルを経ないと新実装が動かない**ので、`grep -c _spark_effort ~/.config/zsh/functions/claude-deepseek.zsh` が 0 を返す間は effort を送らない |
 | DeepSeek 系の上流既定からの差分 | 下のコードブロック 1 (**キー行と RoCE 側の IP を持つ 4 行が出るので画面外に出さない**) |
 | Qwen 系の上流既定からの差分 | 下のコードブロック 2 |
 | 常時展開される rules | 下のコードブロック 3 |
@@ -1173,7 +1236,7 @@ class H(http.server.BaseHTTPRequestHandler):
         if body:
             try:
                 j = json.loads(body)
-                rec.update({k: j[k] for k in ("model", "output_config") if k in j})
+                rec.update({k: j[k] for k in ("model", "output_config", "reasoning_effort") if k in j})
             except Exception:
                 rec["raw"] = body[:200].decode(errors="replace")
         hdrs = {k: v for k, v in self.headers.items()
@@ -1212,7 +1275,14 @@ until curl -fs -o /dev/null -m 2 http://127.0.0.1:8888/health; do sleep 1; done
 # 本物へ行き、プロキシは何も記録しないまま待機する)。
 CCSP_LAN_HOST=127.0.0.1 ccsp lan -p "1+1?"
 
-grep -E 'output_config|resp' /tmp/ccsp.log
+# ocsp 側: opencode 本体を直に起動して baseURL だけ差し替える。ocsp 関数は
+# ~/.config/opencode/opencode.json を直読みして起動前プローブを打つので、
+# ラッパ経由ではその経路が切り替わらない (OPENCODE_CONFIG_CONTENT は opencode
+# 本体の設定を最後に上書きする公式の環境変数で、グローバル設定にマージされる)。
+OPENCODE_CONFIG_CONTENT='{"provider":{"spark":{"options":{"baseURL":"http://127.0.0.1:8888/v1"}}}}' \
+  opencode run --model spark/qwen3.8-flash-next "1+1?"
+
+grep -E 'output_config|reasoning_effort|resp' /tmp/ccsp.log
 ```
 
 **陽性対照を必ず取る** (不変則 4)。異常な値を入れたときに記録が反応することの確認で、これが取れて初めて、既定で記録された値 (Qwen 配信中なら `xhigh`、V4.1 EXL3 配信中なら `max`) が本当に送信経路を通っていると言える。**下の `CCSP_EFFORT=high` は Qwen 配信中の語彙外の値である。V4.1 EXL3 配信中は `high` が 200 になるので `medium` に差し替える** (400 本文も `DeepSeek V4.1 reasoning_effort must be …` になる)。**`CCSP_LAN_HOST` を落とさない** — 落とすと本物のサーバへ直行し、400 は端末に出てもログには 1 行も残らないので、この対照は成立しない。
@@ -1227,4 +1297,4 @@ grep -E 'output_config|resp' /tmp/ccsp.log | tail -2
 
 **この手順は 1 回の Bash 呼び出しで流し切る** (または `run_in_background`)。Claude のハーネスは呼び出しごとにシェルが変わるので、`&` で起動したプロキシが次の呼び出しまで残る保証が無い。
 
-**使い終わったらプロキシを止める** (`pkill -f spark-proxy.py`)。**素の `ccsp` / `cxsp` は止め忘れても本物に届く** (プロキシは `127.0.0.1` にしか bind せず、既定の宛先は `spark-head.local`)。実害は 2 つで、`CCSP_EFFORT` / `CCSP_LAN_HOST` を export したシェルだけが中継を向き続けることと、野良プロセスとログが残り続けることである。**`ccsp off` はこの 2 つの変数を消さない**ので手で `unset` する。停止後は `curl -s http://spark-head.local:8888/v1/models` が配信名を返すことまで確かめる。
+**使い終わったらプロキシを止める** (`pkill -f spark-proxy.py`)。**素の `ccsp` / `ocsp` / `cxsp` は止め忘れても本物に届く** (プロキシは `127.0.0.1` にしか bind せず、既定の宛先は `spark-head.local`)。実害は 2 つで、`CCSP_EFFORT` / `CCSP_LAN_HOST` を export したシェルだけが中継を向き続けることと、野良プロセスとログが残り続けることである。**`ccsp off` はこの 2 つの変数を消さない**ので手で `unset` する。停止後は `curl -s http://spark-head.local:8888/v1/models` が配信名を返すことまで確かめる。

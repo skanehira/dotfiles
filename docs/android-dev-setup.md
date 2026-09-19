@@ -9,14 +9,14 @@
 
 Android 16 以降の標準「Linux ターミナル」(Android Virtualization Framework の Debian VM) は、この端末では使えない。Terminal アプリが要求する non-protected VM を Snapdragon が公開しないため。One UI 8.5 / Android 17 でも Exynos 機限定のままで、Qualcomm は「市場需要が生じたら検討」と述べるにとどまる。
 
-したがって Termux 上の proot-distro Debian を使う。この経路を選ぶ理由は、glibc の aarch64-linux バイナリがそのまま動くこと。Termux 本体は Bionic libc なので、Claude Code (v2.1.113 以降 glibc ネイティブバイナリ) は直上では起動しない。
+したがって Termux 上の proot-distro Debian を使う。この経路を選ぶ理由は、glibc の aarch64-linux バイナリがそのまま動くこと。Termux 本体は Bionic libc なので、Claude Code (v2.1.113 以降 glibc ネイティブバイナリ) も OpenCode (Bun 製) も直上では起動しない。
 
 | 手段 | 判定 | 判定の条件 |
 | --- | --- | --- |
 | 標準 Linux ターミナル (AVF) | 使えない | Snapdragon が non-protected VM に非対応。ハードを替えない限り覆らない |
 | Termux + proot-distro Debian | **採用** | glibc バイナリが動き、localhost を端末と共有する |
 | Termux + nix-on-droid | 不採用 | alpha 品質。`nixOnDroidConfigurations` を別に持つ必要があり本 repo の flake を流用できない |
-| Termux 直上 | 不採用 | Claude Code が起動しない |
+| Termux 直上 | 不採用 | Claude Code と OpenCode が起動しない |
 | Termux + QEMU (TCG) | 保留 | Docker が要ると判明したときだけ再検討する。TCG で 10〜25 倍遅い |
 
 ## 前提
@@ -123,6 +123,8 @@ nix run nixpkgs#hello
 curl -fsSL https://claude.ai/install.sh | bash
 ~/.local/bin/claude --version
 
+nix run nixpkgs#opencode -- --version
+
 VP_NODE_MANAGER=no curl -fsSL https://vite.plus | bash
 ~/.vite-plus/bin/vp --version
 ```
@@ -194,10 +196,10 @@ Phase 0 で入れた Claude Code と Vite+ は再インストールされない�
 
 `nix/home-android.nix` が入口で、通常の Linux プロファイル (`nix/home-linux.nix`) とは別系統。`cache.nixos.org` に無いパッケージと大物を外し、proot の限られた RAM とストレージで完走することを優先している。
 
-`packages-android.nix` が明示列挙するのは 18 エントリ。これに `programs.git` / `programs.gh` / `programs.zsh` / `programs.fzf` / `programs.direnv` が足す分と Home Manager 内部のものが乗って、`home.packages` は 33 件になる。
+`packages-android.nix` が明示列挙するのは 19 エントリ。これに `programs.git` / `programs.gh` / `programs.zsh` / `programs.fzf` / `programs.direnv` が足す分と Home Manager 内部のものが乗って、`home.packages` は 34 件になる。
 
 - 言語ランタイム: nodejs / pnpm
-- エージェント: Claude Code (activation 時に公式インストーラを実行)
+- エージェント: Claude Code (activation 時に公式インストーラを実行) / OpenCode (nixpkgs)
 - Deno: `agents/scripts/*.ts` (mutate-check.ts 等) が deno の shebang で動く。review-impl の変異検証がこれを呼ぶので外せない。activation 時に公式インストーラを実行する
 - フロントエンド: Vite+ (activation 時に公式インストーラを実行。nixpkgs 未収録で、overlay 版は aarch64-linux でビルドが落ちるため)
 - エディタと端末: neovim (nixpkgs の stable。nightly ではない) / tmux
@@ -247,6 +249,7 @@ proot-distro login debian --user skanehira --shared-tmp
 | ビルド速度 | proot は評価もビルドも遅い。キャッシュに無いものはローカルビルドになり実質不可と考える |
 | treesitter の parser | nvim-treesitter は parser を cc でコンパイルする。手順 3 で `build-essential` を入れているが、proot でのビルドは遅い。数が多いと待たされる |
 | クリップボード | `tmux/tmux.conf` の Linux 分岐は `xsel` を前提としている。proot 内に X が無いので、copy-mode の `y` によるコピーと `prefix + ]` による貼り付けが両方失敗する |
+| OpenCode の接続先 | `agents/bindings/opencode/opencode.json` は自宅の `spark-head.local` を mDNS で引く。外出先ではモデルに繋がらない。`ocsp` は Tailscale 経由にフォールバックするが、Android プロファイルは `zsh.nix` 経由で関数を配るだけなので Tailscale 自体の導入は別途要る |
 | Claude Code の SessionStart hook | `agents/bindings/claude/settings.json` の 1 本が `/Users/skanehira/...` という mac 固定パス (herdr 用) を指す。Linux では毎回失敗するが、Claude Code 本体には影響しない (ほかに登録されているのは orca の 12 件だけで、これらは元から no-op) |
 | Claude Code の自動更新 | 更新でバイナリが差し替わる。壊れた場合は `nix/modules/home/env.nix` の `home.sessionVariables` に `DISABLE_AUTOUPDATER = "1"` を足して `hms` する |
 | Vite+ のシェル設定追記 | installer は `~/.zshrc` などに env の source を追記しようとするが、Home Manager がそれらを read-only symlink として管理しているので失敗する。PATH は `home.sessionPath` で通すので実害はない |
@@ -265,6 +268,7 @@ proot-distro login debian --user skanehira --shared-tmp
 | phantom process killer が子プロセスを殺す | https://github.com/termux/termux-app/issues/2366 |
 | Claude Code は Linux ARM64 対応 | https://code.claude.com/docs/en/setup |
 | Claude Code は glibc 化により Termux 直上で起動しない | https://github.com/anthropics/claude-code/issues/50270 |
+| Bun が Android 非対応のため OpenCode の npm 版が入らない | https://github.com/anomalyco/opencode/issues/12515 |
 | Vite+ の公式インストーラと `VP_NODE_MANAGER` | https://github.com/voidzero-dev/vite-plus |
 | Fold 8 Ultra の DeX は外部ディスプレイのみ | https://sammyguru.com/galaxy-z-fold-8-z-fold-8-ultra-samsung-dex/ |
 
@@ -272,7 +276,7 @@ proot-distro login debian --user skanehira --shared-tmp
 
 ## 端末で初めて分かること (未検証)
 
-- proot 内で Claude Code / Vite+ (gnu バイナリ) が起動するか
+- proot 内で Claude Code / OpenCode (Bun) / Vite+ (gnu バイナリ) が起動するか
 - proot 内で bind したポートが Android の Chrome から見えるか
 - One UI 9 で phantom process killer 対策が効くか
 - proot-distro の Debian が配る `/etc/locale.gen` の行形式が `# en_US.UTF-8 UTF-8` か

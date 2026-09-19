@@ -1,7 +1,7 @@
 # Codex グローバル指示
 
 このファイルは `~/.codex/AGENTS.md` に symlink され、Codex の全セッションで読まれる。
-ハーネスの正本は `dotfiles/agents/` に 1 セットだけあり、Claude Code と Codex が**同じ実体**を読む。
+ハーネスの正本は `dotfiles/agents/` に 1 セットだけあり、Claude Code / Codex / OpenCode が**同じ実体**を読む。
 
 ## 共通ハーネスの適用
 
@@ -35,6 +35,8 @@
 **hooks はこの表に無い。** このハーネスが自分で書いた hook は 1 本も配っていない (→「hooks は Codex には配られていない」節)。
 
 スキルは除外リストで絞っている。`utility-session-profile` は Claude Code のセッションログしか読まないため Codex には配られない (`nix/modules/home/codex.nix` の `claude_only_skills`)。
+
+**`~/.agents/skills` は OpenCode とも共有している。** OpenCode もこのディレクトリを探索するので、同じ symlink が両者から見える (除外リストも両者に同時に効く)。Codex 側で気にすることは無いが、ここに実体を増やすと OpenCode にも現れる。
 
 配布されているか自分で確かめる:
 
@@ -86,9 +88,9 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 
 ここに無い Claude 固有の記述に出会ったら、勝手に読み替えず**その旨を報告して指示を仰ぐ**。
 
-## 2 者で表現できない subagent の属性
+## 3 者で表現できない subagent の属性
 
-変換スクリプト (`dotfiles/agents/scripts/sync-subagents.ts`) が TOML に出すのは `name` / `description` / `developer_instructions` の 3 キーだけである。正本の frontmatter にある以下は Codex 側に届かない。
+変換スクリプト (`dotfiles/agents/scripts/sync-subagents.ts`) が Codex 向けの TOML に出すのは `name` / `description` / `developer_instructions` の 3 キーだけである (同じスクリプトが OpenCode 向けには別スキーマの Markdown を出す)。正本の frontmatter にある以下は Codex 側に届かない。
 
 - **`tools` (ツールの許可リスト)**: 表現手段が無い。制限が要るなら本文 (= `developer_instructions`) に禁止事項として書く
 - **`model`**: 生成物に書かないので、subagent は**親のモデルを継承する**。固定したいときは `dotfiles/agents/bindings/codex/config.toml` に `[agents] default_subagent_model` を 1 箇所書く (現状は未設定)

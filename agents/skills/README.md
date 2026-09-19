@@ -2,7 +2,7 @@
 
 - 種別: プロジェクト運用ガイド
 
-プロダクト開発を支援するスキル集。Claude Code / Codex の 2 ランタイムへ配られる。
+プロダクト開発を支援するスキル集。Claude Code / Codex / OpenCode の 3 ランタイムへ配られる。
 
 ## タスク規模別の入口 (まずここを見る)
 
@@ -79,11 +79,15 @@ skills/
 
 ## 配布先の限定
 
-dotfiles の `agents/skills/` に置いたスキルは既定で 2 ランタイムすべてに配られる。スキルは Claude Code の `~/.claude/skills/<name>` と Codex の `~/.agents/skills/<name>` へ**個別 symlink** されるので、中身は共通の 1 つである。1 つのランタイムでしか動かないスキル (そのランタイムのログや設定を直接読むものなど) は Codex 側の配布から外す。除外は `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。
+dotfiles の `agents/skills/` に置いたスキルは既定で 3 ランタイムすべてに配られる。配布先は 2 つしかない。Claude Code が読む `~/.claude/skills/<name>` (ディレクトリごとの symlink) と、Codex と OpenCode が共有する `~/.agents/skills/<name>` (**個別 symlink**) である。どちらも正本を指すので中身は共通の 1 つになる。
+
+1 つのランタイムでしか動かないスキル (そのランタイムのログや設定を直接読むものなど) は `~/.agents/skills` 側の配布から外す。除外は `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。**このリストは配布先ディレクトリ単位なので、Codex と OpenCode の両方に同時に効く**。
 
 該当するスキルは `utility-session-profile` の 1 本 (Claude Code のセッションログしか読まない)。同じリストで、スキルではないが `~/.claude/skills/` に落ちる Claude Code の同期キャッシュ `synced` も除外している。
 
-除外を変えたときは `drs` / `hms` で activation (`linkAgentSkills`) を流す。Codex 側の symlink が撤去され、Claude 側には残る。
+除外を変えたときは `drs` / `hms` で activation (`linkAgentSkills`) を流す。`~/.agents/skills` の symlink が撤去され、Claude 側には残る。
+
+OpenCode は `~/.claude/skills` も探索できるが、`OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=1` で切ってある。同じ実体が 2 経路から見えると同名スキルが二重に列挙されるため (OpenCode は同名スキルをマージしない)。
 
 ## モデル方針 (ループエンジニアリング)
 
