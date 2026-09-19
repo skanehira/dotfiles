@@ -120,7 +120,6 @@ Use the executable that belongs to the requested agent:
 - Codex: `codex`
 - Claude Code: `claude`
 - pi: `pi`
-- OpenCode: `opencode`
 - OMP: `omp`
 
 Do not pass the task as an argv prompt by default. Do not add non-interactive flags. Only change the normal interactive launch when the user explicitly asks for a different launch mode or command.
