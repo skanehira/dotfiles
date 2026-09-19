@@ -121,7 +121,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 
 ### Nix 管理 (中核)
 
-- **nix/** — flake-based config（最も重要）
+- **nix/** — flake-based config (最も重要)
   - `flake.nix` — inputs, outputs (`darwinConfigurations.skanehira` + `homeConfigurations` = `linuxUsers` × 3 プロファイル。現在は `skanehira` / `ubuntu` の 2 ユーザーで 6 output + `packages` + `formatter`)
   - `home-core.nix` — 全プロファイル共通の土台 (dotfilesRoot / stateVersion / programs.home-manager)。module の import は持たない
   - `home.nix` — フルセットのプロファイル (mac と通常 Linux が共有)
@@ -129,11 +129,11 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `home-linux.nix` — 通常 Linux 用エントリ (home.nix + `homeDirectory = /home/...`)
   - `home-android.nix` — Android (Termux + proot) 用エントリ (home-core.nix + 軽量 module のみ)
   - `darwin.nix` — nix-darwin imports のみ
-  - `modules/home/` — Home Manager modules（CLI パッケージ、env、git、gh、zsh、fzf、direnv、tmux、wezterm、karabiner 等）
-  - `modules/darwin/` — nix-darwin modules（system、homebrew、codex、sleepctl）
+  - `modules/home/` — Home Manager modules (CLI パッケージ、env、git、gh、zsh、fzf、direnv、tmux、wezterm、karabiner 等)
+  - `modules/darwin/` — nix-darwin modules (system、homebrew、codex、sleepctl)
   - `modules/overlays.nix` — nix-darwin 用 overlays モジュール (overlays-list.nix を消費)
   - `modules/overlays-list.nix` — overlay の素のリスト (mac/Linux 両側で共有)
-  - `install.sh` — mac bootstrap 用（一度限り）
+  - `install.sh` — mac bootstrap 用 (一度限り)
   - `pkgs/` — nixpkgs 未収録ツールの自前 derivation (tsp-server / gh-actions-language-server / kanary)
 
 ### Nix 補助
@@ -143,12 +143,12 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `functions/*.zsh` — カスタム zsh 関数 7 本。`ghq-fzf` / `gss` / `tmuxpopup` の 3 本と、DGX Spark 系の `claude-deepseek` (`ccsp` / `ccds`) / `codex-spark` (`cxsp`) / `spark-common` の 3 本、mac 専用の `sleepctl`
 - **karabiner/** — Karabiner-Elements 設定 (Goku DSL)
   - `karabiner.edn` — EDN で書いたルール、switch 時に goku が `~/.config/karabiner/karabiner.json` を生成
-- **wezterm/** — WezTerm 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
+- **wezterm/** — WezTerm 設定 (`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能)
   - `wezterm.lua` — `programs.wezterm.extraConfig` は使わず直接 symlink する。Lua の編集体験 (lua_ls) を保ち、`drs` 無しで反映するため
-- **tmux/** — tmux 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
+- **tmux/** — tmux 設定 (`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能)
   - `tmux.conf` — 編集即反映、`prefix + r` で reload。`drs` 不要
   - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
-- **agents/** — AI エージェント共通のハーネス正本（両ランタイムが同じ実体を読む。配布は正本への symlink が基本で live edit 可能）
+- **agents/** — AI エージェント共通のハーネス正本 (両ランタイムが同じ実体を読む。配布は正本への symlink が基本で live edit 可能)
   - `AGENTS.md` / `rules/` / `skills/` / `subagents/` は正本への symlink なので編集即反映。例外は **Codex 側の配布に限り**、スキルの追加・削除と subagent の変更で `drs` / `hms` が要る (どれがどれかは「live edit の範囲」の表を参照)
   - `hooks/` / `scripts/` / `knowledge-profile.md` と `bindings/claude/settings.json` / `keybindings.json` / `bindings/codex/AGENTS.md` / `config.toml` も直 symlink。`bindings/claude/settings.{deepseek,spark}.json` は配布せず、`ccsp` / `ccds` が `$GHQ_ROOT` 経由で直接読む
   - 配布先と構成は「AI エージェントのハーネス (agents/)」節を参照
@@ -159,15 +159,26 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `~/.codex/config.toml` (user レイヤー) は dotfiles で管理しない。Codex 自身が `[projects.*]` trust / `[notice]` / `/model` の選択 / `notify` / `[plugins.*]` を書き込む可変状態で、ここにあるキーは system レイヤー (`/etc/codex/config.toml`) の同名キーより優先され続ける。`[mcp_servers.*]` は両レイヤーに現れる。全マシン共通のサーバ (context7 / chrome-devtools) は `config.toml` で配り、マシン固有のものは Codex が user レイヤーに書く
   - 旧方式 (Home Manager が `~/.codex/config.toml` を生成) を使っていたマシンでは、`drs` / `hms` 後に 1 回だけ `~/.codex/config.toml` から重複するキーを手で削除する。残さないと `/etc` 側の値が遮蔽される
   - 配布の確認: `readlink -f /etc/codex/config.toml` が dotfiles の `agents/bindings/codex/config.toml` に解決すること
-  - **プラグインだけは宣言的に管理できない。** `config.toml` に `[marketplaces.*]` を書くと空ディレクトリを見に行って失敗し、`[plugins.*]` を書いても `not installed` のまま。`codex.nix` の activation が `codex plugin marketplace add` と `codex plugin add` を冪等に流す (対象は Claude 側にも入れている 6 本: document-skills / frontend-design / ui-ux-pro-max / compact-plus / archify / slide-plugin。Claude 側の `enabledPlugins` はこれを含む 18 本で、Codex に配るのはその部分集合)。Claude 形式の `.claude-plugin/marketplace.json` をそのまま読むので、リポジトリ側に Codex 用のマニフェストは要らない。**失敗しても activation は警告のみで止まらない**ので、`drs` / `hms` の後も入っていないことがある (実測: marketplace は 6 本とも登録済みなのに `codex plugin list` が全て `not installed`。手で `codex plugin add <name>@<marketplace>` を流すと成功した)。`codex plugin list` で確認し、落ちていたら手で同じコマンドを流す
-- **vim/** — Neovim 設定（`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能）
+  - **プラグインだけは宣言的に管理できない。** `config.toml` に `[marketplaces.*]` を書くと空ディレクトリを見に行って失敗し、`[plugins.*]` を書いても `not installed` のまま。`codex.nix` の activation が `codex plugin marketplace add` と `codex plugin add` を冪等に流す。Claude 形式の `.claude-plugin/marketplace.json` をそのまま読むので、リポジトリ側に Codex 用のマニフェストは要らない。対象は Claude 側にも入れている 6 本で、`agents/bindings/claude/settings.json` の `enabledPlugins` は 21 件を宣言し有効 (`true`) は 18 本なので、Codex へ配るのはその部分集合になる
+
+    | `codex plugin add` に渡す名前 | marketplace の入手元 |
+    | --- | --- |
+    | `document-skills@anthropic-agent-skills` | `anthropics/skills` |
+    | `frontend-design@claude-plugins-official` | `anthropics/claude-plugins-official` |
+    | `ui-ux-pro-max@ui-ux-pro-max-skill` | `nextlevelbuilder/ui-ux-pro-max-skill` |
+    | `compact-plus@compact-plus` | `u-ichi/compact-plus` |
+    | `archify@misty-lantern` | **ローカル** `~/dev/github.com/skanehira/misty-lantern` |
+    | `slide-plugin@slide-plugin` | **ローカル** `~/dev/github.com/skanehira/slide-plugin` |
+
+    下 2 本はローカル clone が前提で、無いマシンでは `codex.nix` が**警告なく skip** する (`[ -d "$repo_path" ] || continue`) ため `installed` にならない。**失敗しても activation は警告のみで止まらない**ので、clone 済みのマシンでも入っていないことがある (実測: marketplace は登録済みなのに `codex plugin list` が全て `not installed` で、手で流すと成功した)。`codex plugin list` で確認し、落ちていたら `codex plugin marketplace add <入手元>` → `codex plugin add <名前>` の順で手で流す
+- **vim/** — Neovim 設定 (`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能)
   - `init.lua` / `lua/` / `after/` — 編集即反映、`drs` 不要
   - `.luarc.json` — lua_ls の dotfiles 内 lua 編集用設定 (track 対象)
 - **herdr/** — herdr (コーディングエージェント用のターミナル多重化) の設定
   - `config.toml` — `herdr.nix` が `~/.config/herdr/config.toml` へ mkOutOfStoreSymlink する
   - **プラグインだけは宣言的に管理できない。** `config.toml` は `type = "plugin_action"` で参照するのみで、宣言的に導入する手段は無い (実測: herdr 0.7.4、2026-09-11。`herdr --default-config` にも plugin セクションが無く、HM の `programs.herdr` も enable/package/settings の 3 オプションのみ)。導入状態は `~/.config/herdr/` 配下の herdr 所有ファイルにあり、Nix 管理外
   - `herdr.nix` の activation が、未導入時のみ `herdr plugin install <owner>/<repo> --yes` を流す。対象は `persiyanov/herdr-reviewr` (id: `persiyanov.reviewr`) と `ChmaraX/herdr-nvim` (id: `chmarax.herdr-nvim`) の 2 本。導入判定は `herdr plugin list --plugin <id>` の出力 grep で、非対話では `--yes` が必須。導入済みへの再実行は再ダウンロードになるため skip するので、更新は手動で同じ install を流す (refresh 経路)。失敗しても activation は警告のみで止まらない (`herdr plugin list` で確認できる)。撤去は自動でやらず、リストから外しても残る (`herdr plugin uninstall` を手で流す)。Neovim 側の herdr 連携は `vim/lua/modules/ai/herdr.lua` (herdr コマンドの低レベルラッパー) が持つ
-- **リポジトリ直下** — `AGENTS.md` (このリポジトリで作業する agent 向けの repo スコープ指示。グローバル指示の正本 `agents/AGENTS.md` とは別物) / `bootstrap.sh` (mac 初回セットアップの入口) / `README.md` / `.github/workflows/nix-check.yml` (nix/** の push で flake check と fmt を回す CI)
+- **リポジトリ直下** — `AGENTS.md` (このリポジトリで作業する agent 向けの repo スコープ指示。グローバル指示の正本 `agents/AGENTS.md` とは別物) / `bootstrap.sh` (mac 初回セットアップの入口) / `README.md` / `LICENSE` / `.gitignore` / `.claude/settings.local.json` (このリポジトリでの作業用の権限設定) / `.github/workflows/nix-check.yml` (nix/** の push で flake check と fmt を回す CI)
 - **docs/** — Nix 設定だけでは伝わらない環境固有の手順書
   - `android-dev-setup.md` — Galaxy Z Fold 8 Ultra を Termux + proot-distro Debian で開発端末にする手順と制約
 
@@ -178,7 +189,7 @@ nix/
 ├── flake.nix              ← inputs + darwinConfigurations + homeConfigurations + packages + formatter
 ├── flake.lock
 ├── home-core.nix          ← 全プロファイル共通の土台 (module の imports は持たない)
-├── home.nix               ← フルセット (home-core.nix + 全 module の imports)
+├── home.nix               ← フルセット (home-core.nix + 全 module の imports + nix-index-database。`,` で未導入 CLI を一時実行できる)
 ├── home-darwin.nix        ← home.nix + karabiner / wezterm / mac-app-util-icons + homeDirectory=/Users/...
 ├── home-linux.nix         ← home.nix + homeDirectory=/home/...
 ├── home-android.nix       ← home-core.nix + 軽量 module + homeDirectory=/home/...
@@ -189,30 +200,30 @@ nix/
     ├── overlays.nix       ← nix-darwin 用 module (overlays-list.nix を nixpkgs.overlays に流す)
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
     ├── home/
-    │   ├── claude.nix    — Claude Code (bootstrap install + ハーネス正本と Claude 固有の設定を symlink)
-    │   ├── codex.nix     — Codex 向けの symlink (~/.codex/AGENTS.md) + スキルの個別 symlink (linkAgentSkills) と subagent の TOML 変換 (syncCodexSubagents) + プラグイン導入 (activation)。Linux のみ /etc/codex/config.toml を sudo で symlink
-    │   ├── deno.nix      — bootstrap-install (~/.deno/bin/deno 不在時のみ公式 installer 実行)
-    │   ├── direnv.nix    — programs.direnv + nix-direnv
-    │   ├── env.nix       — sessionVariables / sessionPath
-    │   ├── fzf.nix       — programs.fzf (default command/options, zsh integration)
-    │   ├── gh.nix        — programs.gh (GitHub CLI)
-    │   ├── git.nix       — programs.git (LFS, alias, difftastic)
-    │   ├── herdr.nix     — herdr の config.toml を mkOutOfStoreSymlink で live edit + プラグイン導入 (activation。mac / 通常 Linux のみ。home-android.nix は import しない)
-    │   ├── karabiner.nix — goku で karabiner.edn → karabiner.json (mac only。home-darwin.nix からのみ import)
-    │   ├── mac-app-util-icons.nix — .app の trampoline アイコン調整 (mac only)
-    │   ├── neovim.nix    — vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
-    │   ├── packages.nix  — home.packages 群（言語ランタイム / LSP / CLI を 13 カテゴリで宣言、約 100 件。vite-plus / nvtop / libreoffice-bin / scrcpy / android-tools / terminal-notifier / screen-capture-mcp-server / kanary の 8 件は darwin only）
-    │   ├── packages-android.nix — Android 用の明示リスト (18 エントリ。binary cache から取れる軽量なものだけ)
-    │   ├── rustup.nix    — bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
-    │   ├── tmux.nix      — tmux/tmux.conf を mkOutOfStoreSymlink で live edit。plugins.conf のみ Nix 生成 (resurrect + themepack)
-    │   ├── vite-plus-bootstrap.nix — bootstrap-install (~/.vite-plus/bin/vp 不在時のみ公式 installer 実行。Android のみ import)
-    │   ├── wezterm.nix   — wezterm/wezterm.lua を mkOutOfStoreSymlink で live edit (extraConfig は使わない)
-    │   └── zsh.nix       — programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済) + shellAliases (drs/hms を OS 別 lib.optionalAttrs。hms の -c には configName が入る)
+    │   ├── claude.nix    ← Claude Code (bootstrap install + ハーネス正本と Claude 固有の設定を symlink)
+    │   ├── codex.nix     ← Codex 向けの symlink (~/.codex/AGENTS.md) + スキルの個別 symlink (linkAgentSkills) と subagent の TOML 変換 (syncCodexSubagents) + プラグイン導入 (activation)。Linux のみ /etc/codex/config.toml を sudo で symlink
+    │   ├── deno.nix      ← bootstrap-install (~/.deno/bin/deno 不在時のみ公式 installer 実行)
+    │   ├── direnv.nix    ← programs.direnv + nix-direnv
+    │   ├── env.nix       ← sessionVariables / sessionPath
+    │   ├── fzf.nix       ← programs.fzf (default command/options, zsh integration)
+    │   ├── gh.nix        ← programs.gh (GitHub CLI)
+    │   ├── git.nix       ← programs.git (LFS, alias, difftastic)
+    │   ├── herdr.nix     ← herdr の config.toml を mkOutOfStoreSymlink で live edit + プラグイン導入 (activation。mac / 通常 Linux のみ。home-android.nix は import しない)
+    │   ├── karabiner.nix ← goku で karabiner.edn → karabiner.json (mac only。home-darwin.nix からのみ import)
+    │   ├── mac-app-util-icons.nix ← .app の trampoline アイコン調整 (mac only)
+    │   ├── neovim.nix    ← vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
+    │   ├── packages.nix  ← home.packages 群 (言語ランタイム / LSP / CLI を 13 カテゴリで宣言、約 100 件。vite-plus / nvtop / libreoffice-bin / scrcpy / android-tools / terminal-notifier / screen-capture-mcp-server / kanary の 8 件は darwin only)
+    │   ├── packages-android.nix ← Android 用の明示リスト (18 エントリ。binary cache から取れる軽量なものだけ)
+    │   ├── rustup.nix    ← bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
+    │   ├── tmux.nix      ← tmux/tmux.conf を mkOutOfStoreSymlink で live edit。plugins.conf のみ Nix 生成 (resurrect + themepack)
+    │   ├── vite-plus-bootstrap.nix ← bootstrap-install (~/.vite-plus/bin/vp 不在時のみ公式 installer 実行。Android のみ import)
+    │   ├── wezterm.nix   ← wezterm/wezterm.lua を mkOutOfStoreSymlink で live edit (extraConfig は使わない)
+    │   └── zsh.nix       ← programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済) + shellAliases (drs/hms を OS 別 lib.optionalAttrs。hms の -c には configName が入る)
     └── darwin/
-        ├── codex.nix     — /etc/codex/config.toml を agents/bindings/codex/config.toml へ symlink (environment.etc)
-        ├── homebrew.nix  — declarative brews / casks
-        ├── sleepctl.nix  — 蓋閉じ監視デーモン (disablesleep 中に蓋を閉じたら pmset displaysleepnow を 1 回打つ)
-        └── system.nix    — users, nix.settings, Touch ID, primaryUser
+        ├── codex.nix     ← /etc/codex/config.toml を agents/bindings/codex/config.toml へ symlink (environment.etc)
+        ├── homebrew.nix  ← declarative brews / casks
+        ├── sleepctl.nix  ← 蓋閉じ監視デーモン (disablesleep 中に蓋を閉じたら pmset displaysleepnow を 1 回打つ)
+        └── system.nix    ← users, nix.settings, 自動 GC (nix.gc: 日曜 3 時に 14 日より古い世代を削除) + nix.optimise, macOS defaults (キーリピート / trackpad), Touch ID, primaryUser
 ```
 
 ### 重要な設計判断
@@ -236,7 +247,7 @@ nix/
 
 このマシンでは `pam_tid` (Touch ID) + `pam_reattach` (tmux 対応) が `/etc/pam.d/sudo_local` に設定済み。
 
-### ⚠️ `sudo -n` (`--non-interactive`) は使わない
+### `sudo -n` (`--non-interactive`) は使わない
 
 `-n` フラグは PAM 認証を**完全にスキップ**する。Touch ID プロンプトすら出ない。代わりに「a password is required」エラーで即終了する。
 
@@ -244,7 +255,7 @@ nix/
 # ❌ Touch ID が呼ばれず失敗する
 sudo -n darwin-rebuild switch ...
 
-# ✅ Touch ID ダイアログが出て指紋で通せる（TTY なし環境でも OK）
+# ✅ Touch ID ダイアログが出て指紋で通せる (TTY なし環境でも OK)
 sudo darwin-rebuild switch ...
 ```
 
@@ -286,12 +297,14 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 ## Neovim Configuration
 
 ### Structure
+
 - `vim/lua/plugins/` — lazy.nvim プラグイン設定
-- `vim/lua/settings/` — 基本設定（options.lua, keymaps.lua, lsp.lua, autocmd.lua, disable.lua）
-- `vim/lua/modules/` — カスタムモジュール（AI, markdown）
+- `vim/lua/settings/` — 基本設定 (options.lua, keymaps.lua, lsp.lua, autocmd.lua, disable.lua)
+- `vim/lua/modules/` — カスタムモジュール (AI, markdown)
 - `vim/after/lsp/` — LSP 個別設定 (denols, rust_analyzer, lua_ls, nixd, tsgo, version_ls, yamlls)
 
 ### Key Paths
+
 - ghq リポジトリ: `$HOME/dev`
 - Go バイナリ: `$HOME/go/bin`
 - Deno バイナリ: `$HOME/.deno/bin`
@@ -310,7 +323,7 @@ Android プロファイルだけは `pkgs.neovim` (nixpkgs-unstable の **stable
 agents/
 ├── AGENTS.md            ← グローバル指示の正本 (`~/.claude/CLAUDE.md` へ symlink)
 ├── rules/               ← core/ backend/ frontend/ infra/
-├── skills/              ← 43 本 (うち 1 本は Codex への配布から除外、11 本は wondelai/skills からの vendor)
+├── skills/              ← 43 本 (git 管理分。11 本は wondelai/skills からの vendor。Codex への配布除外は →「スキルの配布先の限定」)
 ├── subagents/           ← 4 本 (Claude Code 形式が正本。Codex へは書式変換して配る)
 ├── hooks/               ← herdr-agent-state.sh のみ (herdr 本体の配布物。自作ゲートは無い)
 ├── scripts/             ← sync-subagents.ts (Codex の TOML 変換) / subagent-format.ts / mutate-check.ts ほか
@@ -328,8 +341,11 @@ agents/
 | ルール | `~/.claude/rules/` ← `agents/rules/` | `~/.claude/rules/` を絶対パスで直接 Read | symlink (live edit) |
 | スキル | `~/.claude/skills/` ← `agents/skills/` | `~/.agents/skills/<name>` ← `agents/skills/<name>` (個別 symlink) | symlink (追加・削除は `drs` / `hms`) |
 | subagent | `~/.claude/agents/` ← `agents/subagents/` | `~/.codex/agents/*.toml` (書式変換) | symlink (Codex のみ `drs` / `hms`) |
-| hooks / scripts / 知識プロファイル | `~/.claude/hooks` ← `agents/hooks/` / `~/.claude/scripts` ← `agents/scripts/` / `~/.claude/knowledge-profile.md` ← `agents/knowledge-profile.md` | 同じパスをそのまま読む (同一実体) | symlink (live edit) |
+| `scripts/` | `~/.claude/scripts` ← `agents/scripts/` | 同じパスをそのまま実行する (同一実体) | symlink (live edit) |
+| `knowledge-profile.md` | `~/.claude/knowledge-profile.md` ← `agents/knowledge-profile.md` | 同じパスをそのまま読み書きする (同一実体) | symlink (live edit) |
+| `hooks/` | `~/.claude/hooks` ← `agents/hooks/` | **配布しない** (Codex の hook は `~/.codex/hooks.json` と `config.toml`。→「hooks」節) | symlink (live edit) |
 | Claude 固有の設定 | `~/.claude/settings.json` / `keybindings.json` ← `agents/bindings/claude/` | 配布しない | symlink (live edit) |
+| Codex 共通設定 | 読まない | `/etc/codex/config.toml` ← `agents/bindings/codex/config.toml` | symlink (mac は `environment.etc`、Linux は activation `linkCodexSystemConfig`) |
 
 **Codex は skill root を 2 つ持つ。** 実セッションログの `### Skill roots` で `r0` = `~/.codex/skills` / `r1` = `~/.agents/skills` を確認しており (Codex 0.154)、公式ドキュメントは「symlinked skill folders を追跡する」と明記している。共有に `r1` を使うのは、`~/.agents/skills` に他ツールが入れたスキルが同居するため (`archify` / `find-skills` / `gws-*` / `terminal-browser` の 9 本)。ディレクトリごとの symlink は使えないので 1 スキルずつ張る。
 
@@ -357,7 +373,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 
 ### スキルの配布先の限定 (Codex への配布から除外)
 
-スキルは既定で両ランタイムへ配られる (同じ実体への symlink)。Codex に配らないスキルは `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。現在の宣言は 2 件。
+スキルは既定で両ランタイムへ配られる (同じ実体への symlink)。Codex に配らないものは `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。**このリストが除外の唯一の正**で、現在の宣言は 2 件。`agents/skills/` にある git 管理のスキル 43 本のうち除外は 1 本で、もう 1 件はスキルではなく未追跡の同期キャッシュ。
 
 | 名前 | 除外する理由 |
 | --- | --- |
@@ -380,7 +396,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 | `bindings/claude/settings.json` `keybindings.json` / `bindings/codex/AGENTS.md` `config.toml` | 即反映 | 正本への symlink |
 | スキルの追加・削除 | Claude は即反映 / **Codex は `drs` / `hms`** | Claude は `~/.claude/skills` がディレクトリごとの symlink。Codex は `~/.agents/skills/<name>` を 1 本ずつ張り直す activation (`linkAgentSkills`) が要る |
 | subagent の変更・追加 | Claude は即反映 / **Codex は `drs` / `hms`** | Claude は `~/.claude/agents` がディレクトリごとの symlink。Codex は `~/.codex/agents/*.toml` の再変換 (`syncCodexSubagents`) が要る |
-| `~/.claude/skills/` への第三者の書き込み | 即反映 (副作用あり) | 正本への symlink なので、他ツールが置いたディレクトリは dotfiles の `agents/skills/` (git 作業ツリー) に落ちる。Claude Code の同期キャッシュ `synced` は `.gitignore` 済みで、Codex へは `claude_only_skills` で配らない。**新たに第三者の書き込みが増えたら、Codex に配ってよいか判断して必要なら除外リストに足す** |
+| `~/.claude/skills/` への第三者の書き込み | 即反映 (副作用あり) | 正本への symlink なので、他ツールが置いたディレクトリは dotfiles の `agents/skills/` (git 作業ツリー) に落ちる。**新たに増えたら sink を 2 つとも判断する**: commit するか (`.gitignore`) と Codex へ配るか (`claude_only_skills`)。Claude Code の同期キャッシュ `synced` は両方で外してある |
 
 ### 開発ワークフローのスキル
 
@@ -388,7 +404,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 /dev-spec (設計ループ) → 承認ゲート (人間が起動) → /dev-impl (実装ループ)
 ```
 
-詳細は `agents/skills/README.md` を参照 (タスク規模別の入口・モデル方針を含む)。主要スキル：
+詳細は `agents/skills/README.md` を参照 (タスク規模別の入口・モデル方針を含む)。主要スキル:
 - `/dev-spec` — 設計ループ (ユーザーストーリー → ... → PoC 検証 → `docs/design/DESIGN.md` 1 枚 + `docs/design/features/` → GitHub issue をユースケース単位の親子 2 階層で生成 → 人間が確認)
 - `/dev-impl` — 実装ループ (`ready` ラベルの open issue を依存順に自律実装、`model: opus`)
 - `/dev-impl-quick` — 軽量実装ループ (docs 不要。依頼文をタスク分解して直営 TDD → review-impl → タスク単位コミット)
@@ -448,51 +464,88 @@ hook を追加したくなったときの置き場は次のとおり。
 
 **配布の確認**:
 
+`readlink -f` は実ディレクトリでもそのパスを exit 0 で返すので、**移行済みかどうかの判定には使えない**。`test -L` で symlink であることを先に確かめる。
+
 ```bash
-readlink -f ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/skills ~/.claude/agents   # dotfiles の agents/ に解決する
-readlink -f ~/.claude/hooks ~/.claude/scripts ~/.claude/knowledge-profile.md        # 同上
-readlink -f ~/.claude/settings.json ~/.claude/keybindings.json                      # agents/bindings/claude/ に解決する
-readlink -f ~/.codex/AGENTS.md                    # agents/bindings/codex/AGENTS.md に解決する
-readlink -f ~/.agents/skills/dev-impl             # agents/skills/dev-impl に解決する
+# 1. 配布先が symlink であること (実ディレクトリのまま残っていたら移行が終わっていない)
+for p in ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/skills ~/.claude/agents \
+         ~/.claude/hooks ~/.claude/scripts ~/.claude/knowledge-profile.md \
+         ~/.claude/settings.json ~/.claude/keybindings.json \
+         ~/.codex/AGENTS.md ~/.agents/skills/dev-impl /etc/codex/config.toml; do
+  [ -L "$p" ] && printf 'OK   %s -> %s\n' "$p" "$(readlink -f "$p")" || printf 'NG   %s (symlink ではない)\n' "$p"
+done   # 12 行すべて OK で、解決先が dotfiles 配下であること
+
+# 2. 生成物と除外
 ls ~/.codex/agents                                # subagent 4 本の .toml がある
-ls ~/.agents/skills | grep -cE '^(utility-session-profile|synced)$' || :   # 0 (Codex への配布から除外されている)
-readlink -f /etc/codex/config.toml                # agents/bindings/codex/config.toml に解決する
-codex plugin list                                 # 6 本が installed になっている (→「プラグインだけは宣言的に管理できない」)
+ls ~/.agents/skills | grep -cE '^(utility-session-profile|synced)$' || :   # 0 (Codex への配布から除外)
+codex plugin list                                 # 6 本が installed (ローカル clone の 2 本は clone のある機のみ)
 ```
 
 ### 配布方式の移行 (生成方式 → symlink)
 
-生成方式で配った実体が残っていると Home Manager の `checkLinkTargets` が衝突を検出する。**挙動は OS で違う。**
+生成方式で配った実体が残っていると、消すべき理由が 2 通りある。**混同すると手順を誤る。**
 
-| | 退避の設定 | 衝突したとき |
+| 配布先 | 残っていると起きること | 消す理由 |
+| --- | --- | --- |
+| `~/.claude/{CLAUDE.md,rules,skills,agents}` / `~/.codex/AGENTS.md` | HM が同じパスに symlink を張れず `checkLinkTargets` が衝突を報告する | **HM との衝突回避**。ディレクトリが空になりきらないと symlink が張れない |
+| `~/.codex/{skills,agents}` / `~/.agents/rules` | 現在の配布先ではないので HM は何も言わないが、`~/.codex/skills` に残ると同名スキルが `r0` と `r1` に二重に列挙される (Codex は同名スキルをマージしない) | **二重列挙の回避**。ディレクトリ自体は残ってよい |
+
+衝突したときの挙動は **OS で違う**。
+
+| OS (適用コマンド) | 退避の設定 | 衝突したとき |
 | --- | --- | --- |
 | mac (`drs`) | `home-manager.backupFileExtension = "hm-backup"` を `nix/flake.nix` の `darwinConfigurations` ブロックで設定済み | `Existing file … will be moved to '<path>.hm-backup'` を出して**退避**し、処理は続く (実機の例: `~/.claude/settings.json.hm-backup`) |
-| Linux (`hms`) | **設定が無い** (`mkLinuxHome` には `backupFileExtension` を渡していない) | 退避されず `Existing file … would be clobbered` で activation が止まる。`nh home switch … -b hm-backup` を渡すか、先に手で退避する |
+| Linux (`hms`) | **設定が無い** (`mkLinuxHome` には `backupFileExtension` を渡していない) | 退避されず `Existing file … would be clobbered` で activation が止まる。`hms -b hm-backup` で渡すか、先に手で退避する |
 
 退避されてもディレクトリは丸ごと移るので、放置すると `~/.claude/skills.hm-backup` のような大きな残骸が残る。**同居物を巻き込まないため、消すのは各ディレクトリの `.harness-manifest.json` に載っているパスだけ**にする。
 
 ```bash
-for m in ~/.claude/rules ~/.claude/skills ~/.claude/agents ~/.codex/skills ~/.codex/agents; do
-  [ -f "$m/.harness-manifest.json" ] || continue   # manifest が無いディレクトリは対象外
-  jq -r '.paths[]' "$m/.harness-manifest.json" | while read -r p; do rm -rf "$m/$p"; done
-  # manifest はファイル単位なので、載っていた top-level のものだけ空の親を掃除する
-  jq -r '.paths[]' "$m/.harness-manifest.json" | cut -d/ -f1 | sort -u | while read -r d; do
-    [ -d "$m/$d" ] && find "$m/$d" -type d -empty -delete
+# 共通の掃除関数。manifest に載っているパスと、それが空にした親だけを消す
+prune_manifest() {
+  m="$1"
+  [ -L "$m" ] && return 0                          # 既に symlink なら移行済み
+  [ -f "$m/.harness-manifest.json" ] || return 0   # manifest が無ければ対象外
+  paths=$(jq -r '.paths[]' "$m/.harness-manifest.json") || {
+    echo "manifest が読めない (手で確認する): $m" >&2; return 1; }
+  [ -n "$paths" ] || { echo "manifest が空 (手で確認する): $m" >&2; return 1; }
+  printf '%s\n' "$paths" | while read -r p; do
+    [ -n "$p" ] && rm -rf "$m/$p"                  # 空文字だと $m ごと消えるので弾く
+  done
+  # manifest はファイル単位なので、載っていた top-level の配下だけ空の親を掃除する
+  printf '%s\n' "$paths" | cut -d/ -f1 | sort -u | while read -r d; do
+    [ -n "$d" ] && [ -d "$m/$d" ] && find "$m/$d" -type d -empty -delete
   done
   rm -f "$m/.harness-manifest.json"
+}
+
+# HM が symlink を張る 3 つ。空になったディレクトリ自身も消す (残すと衝突する)
+for m in ~/.claude/rules ~/.claude/skills ~/.claude/agents; do
+  prune_manifest "$m" && rmdir "$m" 2>/dev/null || :   # 同居物があれば rmdir は失敗して残る
 done
+
+# 二重列挙を避けるための掃除。ディレクトリ自身は Codex の所有物なので残す
+for m in ~/.codex/skills ~/.codex/agents; do
+  prune_manifest "$m" || :
+done
+
 rm -f ~/.claude/CLAUDE.md ~/.codex/AGENTS.md
-rm -rf ~/.agents/rules
-drs   # または hms。この 2 つは Touch ID 経由の sudo を伴うので人間が実行する (上の削除は sudo 不要)
+rm -rf ~/.agents/rules/codex   # 旧生成器の出力先。現在は Codex が ~/.claude/rules を直接読むので再生成しない
+rmdir ~/.agents/rules 2>/dev/null || :
+
+# 適用は人間が実行する (上の削除は sudo 不要)
+drs                  # mac。Touch ID 経由の sudo が要る
+hms -b hm-backup     # Linux。退避設定が無いので -b が要る。sudo は /etc/codex/config.toml の symlink 用
 ```
 
-manifest の `paths` は**ファイル単位**の相対パスなので、削除しただけでは入れ物のディレクトリが残る (`~/.claude/skills/dev-spec/references` のような空の殻)。上の `find` が manifest に載っていた top-level の配下だけを掃除し、ディレクトリ全体が空になれば `~/.claude/rules` のように消えて HM が symlink を作り直す。`find` の起点を `$m` にすると同居物 (`~/.codex/skills/.system` など) の空ディレクトリまで消すので、top-level に絞る。
+manifest の `paths` は**ファイル単位**の相対パスなので、削除しただけでは入れ物のディレクトリが残る (`~/.claude/skills/dev-spec/references` のような空の殻)。`find` が manifest に載っていた top-level の配下だけを掃除し、最後の `rmdir` がディレクトリ自身を消して HM が symlink を張れる状態にする。`find` の起点を `$m` にすると同居物 (`~/.codex/skills/.system` など) の空ディレクトリまで消すので top-level に絞り、`rmdir` は同居物があれば失敗して何もしない。
 
-manifest がそもそも無いマシン (生成方式を経ていない新規マシン) では loop が全て skip され、この作業自体が不要になる。`.hm-backup` が既にある状態で `drs` / `hms` を再実行すると `Existing file '<path>.hm-backup' would be clobbered by backing up` で止まるので、その場合は古い `.hm-backup` を退避または削除してからリトライする。
+manifest がそもそも無いマシン (生成方式を経ていない新規マシン) では全て skip され、この作業自体が不要になる。`.hm-backup` が既にある状態で `drs` / `hms` を再実行すると `Existing file '<path>.hm-backup' would be clobbered by backing up` で止まるので、その場合は古い `.hm-backup` を退避または削除してからリトライする。
 
-**完了の判定は上の「配布の確認」のコマンドで行う** (`drs` / `hms` が通っただけでは足りない)。生成方式へ戻すときは該当コミットを `git revert` して `drs` / `hms` を流す。
+**完了の判定は「配布」節の「配布の確認」のコマンドで行う** (`drs` / `hms` が通っただけでは足りない)。あわせて `ls ~/.codex/skills` に dotfiles 由来の実体が残っていないこと、`~/.claude/*.hm-backup` を残すか消すかを決めることまでが完了条件。
 
-`~/.agents/skills` の他ツール由来スキル (`archify` / `find-skills` / `gws-*` / `terminal-browser`) と `~/.codex/skills/.system` は触らない。`~/.codex/skills` に dotfiles 由来の実体が残ると同名スキルが `r0` と `r1` に二重に列挙されるので、`ls ~/.codex/skills` で残っていないか確認する。
+生成方式へ戻すときは `277086e` (配布方式の切り替え) 以降のコミットを `git revert` して `drs` / `hms` を流す。`.hm-backup` は revert しても残るので手で片付ける。
+
+`~/.agents/skills` の他ツール由来スキル (`archify` / `find-skills` / `gws-*` / `terminal-browser`) と `~/.codex/skills` の同居物 (`.system` と、plugin や他ツール (`wrangler login` 等) が入れたもの) は触らない。
 
 `~/.claude/skills` はディレクトリごと symlink するため、manifest 外の同居エントリは HM の退避で `~/.claude/skills.hm-backup` へ移る。生かしたいものがあれば手で戻す (ただし戻すと第三者のデータが dotfiles の git 作業ツリーに入る)。
 
@@ -506,9 +559,9 @@ manifest がそもそも無いマシン (生成方式を経ていない新規マ
 ### 既存設定の変更 (Nix 管理側)
 
 1. `nix/modules/home/*.nix` または `nix/modules/darwin/*.nix` を編集
-2. `nix fmt` で整形する（`nix/**` への push で CI が `nix fmt -- --ci` と `nix flake check --all-systems --no-build` を回すので、崩れたまま push すると master で fail する）
-3. `git add` で staging（flake は tracked file しか見ない）
-4. `drs` (mac) / `hms` (Linux) で適用（`nh` が darwin-rebuild / home-manager を起動。mac は Touch ID 経由の sudo）
+2. `nix fmt` で整形する (`nix/**` への push で CI が `nix fmt -- --ci` と `nix flake check --all-systems --no-build` を回すので、崩れたまま push すると master で fail する)
+3. `git add` で staging (flake は tracked file しか見ない)
+4. `drs` (mac) / `hms` (Linux) で適用 (`nh` が darwin-rebuild / home-manager を起動。mac は Touch ID 経由の sudo)
 
 ### 新規ツール追加
 
