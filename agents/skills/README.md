@@ -2,7 +2,7 @@
 
 - 種別: プロジェクト運用ガイド
 
-プロダクト開発を支援するスキル集。Claude Code / Codex / OpenCode の 3 ランタイムへ配られる。
+プロダクト開発を支援するスキル集。Claude Code / Codex の 2 ランタイムへ配られる。
 
 ## タスク規模別の入口 (まずここを見る)
 
@@ -79,7 +79,7 @@ skills/
 
 ## 配布先の限定
 
-dotfiles の `agents/skills/` に置いたスキルは既定で 3 ランタイムすべてに配られる。1 つのランタイムでしか動かないスキル (そのランタイムのログや設定を直接読むものなど) は `SKILL.md` の frontmatter で配布先を宣言する。現在の該当は `utility-session-profile` の 1 本。
+dotfiles の `agents/skills/` に置いたスキルは既定で 2 ランタイムすべてに配られる。1 つのランタイムでしか動かないスキル (そのランタイムのログや設定を直接読むものなど) は `SKILL.md` の frontmatter で配布先を宣言する。現在の該当は `utility-session-profile` の 1 本。
 
 ```yaml
 metadata:
