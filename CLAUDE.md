@@ -373,7 +373,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 | `bindings/claude/settings.json` `keybindings.json` / `bindings/codex/AGENTS.md` `config.toml` | 即反映 | 正本への symlink |
 | スキルの追加・削除 | `drs` / `hms` | `~/.agents/skills/<name>` の symlink を張り直す activation (`linkAgentSkills`) が要る |
 | subagent の変更・追加 | `drs` / `hms` | `~/.codex/agents/*.toml` の再変換 (`syncCodexSubagents`) が要る |
-| `~/.claude/skills/` への第三者の書き込み | 即反映 (副作用あり) | 正本への symlink なので、他ツールが置いたディレクトリは dotfiles の `agents/skills/` (git 作業ツリー) に落ち、`linkAgentSkills` が Codex へも配る |
+| `~/.claude/skills/` への第三者の書き込み | 即反映 (副作用あり) | 正本への symlink なので、他ツールが置いたディレクトリは dotfiles の `agents/skills/` (git 作業ツリー) に落ち、`linkAgentSkills` が Codex へも配る。Claude Code の同期キャッシュ `synced` は `.gitignore` 済み |
 
 ### 開発ワークフローのスキル
 
