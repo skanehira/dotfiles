@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   dotfilesRoot,
@@ -28,44 +29,74 @@
     ''
   );
 
-  # ハーネスを Codex の語彙でコンパイルして配る。subagent は書式変換も要る
-  # (Claude は Markdown + frontmatter、Codex は TOML)。生成物は git 管理しない。
+  # グローバル指示は Codex 専用の文書を symlink で配る。共通の正本 agents/AGENTS.md を
+  # 参照し、Claude 綴りの語彙を Codex の語彙へ読み替える規約を書いてある。
+  home.file.".codex/AGENTS.md".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/codex/AGENTS.md";
+
+  # スキルは Claude と同一の正本を ~/.agents/skills/<name> へ個別 symlink する。Codex は
+  # skill root r0 (~/.codex/skills) と r1 (~/.agents/skills) の両方を探索し、symlink を
+  # 追跡する (実測: セッションログの `### Skill roots`)。r1 を使うのは他ツールが入れた
+  # スキルと同居させるためで、ディレクトリごとの symlink は使えない。
   #
-  # スキルの配布先を ~/.agents/skills から ~/.codex/skills (skill root r0) へ移したのは、
-  # ~/.agents/skills を Codex が探索し、探索対象の root から外す手段が無いため (実測:
-  # Codex の skill 設定に paths / roots に相当するキーが無く、skip_host_skill_discovery も
-  # root を変えない)。同じディレクトリにランタイム別の生成物は置けない。
+  # claude 専用スキルは除外する。以前は SKILL.md の metadata.runtimes を生成器が読んで
+  # いたが、生成をやめたのでこのリストが唯一の宣言になる。
   #
-  # 旧 symlink の撤去 (linkGeneration) より後に走らせる。先に走ると生成物を旧 symlink
-  # 越しに正本へ書き込んでしまう (生成器側でも出力先を検査して例外にしている)。
-  home.activation.buildCodexHarness = lib.hm.dag.entryAfter [ "linkGeneration" "bootstrapDeno" ] ''
-    if [ ! -x "$HOME/.deno/bin/deno" ]; then
-      warnEcho "deno が無いので Codex 向けハーネスの生成をスキップした"
+  # ~/.codex/skills に残る dotfiles 由来の symlink は撤去する。残すと同じスキルが r0 と
+  # r1 の両方に現れる (Codex は同名スキルをマージしない)。
+  home.activation.linkAgentSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    agent_skills_dir="$HOME/.agents/skills"
+    src_skills_dir="${dotfilesRoot}/agents/skills"
+    claude_only_skills="utility-session-profile"
+
+    run mkdir -p "$agent_skills_dir"
+
+    for skill_path in "$src_skills_dir"/*/; do
+      [ -d "$skill_path" ] || continue
+      skill_name="$(basename "$skill_path")"
+      case " $claude_only_skills " in
+        *" $skill_name "*) continue ;;
+      esac
+      dest="$agent_skills_dir/$skill_name"
+      if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+        warnEcho "skipping $dest: 同名の実体があるため symlink を張らない (手で退避してから再実行する)"
+        continue
+      fi
+      run ln -sfn "$skill_path" "$dest"
+    done
+
+    for link in "$agent_skills_dir"/*; do
+      [ -L "$link" ] || continue
+      target="$(readlink "$link")"
+      case "$target" in
+        "$src_skills_dir"/*)
+          [ -e "$link" ] || run rm -f "$link"
+          ;;
+      esac
+    done
+
+    codex_skills_dir="$HOME/.codex/skills"
+    if [ -d "$codex_skills_dir" ]; then
+      for link in "$codex_skills_dir"/*; do
+        [ -L "$link" ] || continue
+        target="$(readlink "$link")"
+        case "$target" in
+          "$src_skills_dir"/*) run rm -f "$link" ;;
+        esac
+      done
+    fi
+  '';
+
+  # subagent だけは symlink で共有できない (Codex は TOML を要求し、Markdown +
+  # frontmatter の正本を読めない)。書式変換の 1 本だけ deno で回す。変換元から消えた
+  # .toml はスクリプト側が prune する。deno を使うので bootstrapDeno の後に置く。
+  home.activation.syncCodexSubagents = lib.hm.dag.entryAfter [ "bootstrapDeno" ] ''
+    if [ -x "$HOME/.deno/bin/deno" ]; then
+      run "$HOME/.deno/bin/deno" run --allow-read --allow-write \
+        "${dotfilesRoot}/agents/scripts/sync-subagents.ts" \
+        "${dotfilesRoot}/agents/subagents" "$HOME/.codex/agents"
     else
-      run "$HOME/.deno/bin/deno" run --allow-read --allow-write --allow-env \
-        "${dotfilesRoot}/agents/scripts/build-harness.ts" --runtime codex \
-        --dotfiles-root "${dotfilesRoot}" --vocabulary "${dotfilesRoot}/agents/vocabulary.json" \
-        --base "${dotfilesRoot}/agents/AGENTS.md" \
-        --overlay "${dotfilesRoot}/agents/bindings/codex/overlay/AGENTS.md" \
-        --out "$HOME/.codex/AGENTS.md"
-      run "$HOME/.deno/bin/deno" run --allow-read --allow-write --allow-env \
-        "${dotfilesRoot}/agents/scripts/build-harness.ts" --runtime codex \
-        --dotfiles-root "${dotfilesRoot}" --vocabulary "${dotfilesRoot}/agents/vocabulary.json" \
-        --base "${dotfilesRoot}/agents/rules" \
-        --overlay "${dotfilesRoot}/agents/bindings/codex/overlay/rules" \
-        --out "$HOME/.agents/rules/codex"
-      run "$HOME/.deno/bin/deno" run --allow-read --allow-write --allow-env \
-        "${dotfilesRoot}/agents/scripts/build-harness.ts" --runtime codex \
-        --dotfiles-root "${dotfilesRoot}" --vocabulary "${dotfilesRoot}/agents/vocabulary.json" \
-        --base "${dotfilesRoot}/agents/skills" \
-        --overlay "${dotfilesRoot}/agents/bindings/codex/overlay/skills" \
-        --out "$HOME/.codex/skills"
-      run "$HOME/.deno/bin/deno" run --allow-read --allow-write --allow-env \
-        "${dotfilesRoot}/agents/scripts/build-harness.ts" --runtime codex \
-        --dotfiles-root "${dotfilesRoot}" --vocabulary "${dotfilesRoot}/agents/vocabulary.json" \
-        --base "${dotfilesRoot}/agents/subagents" \
-        --overlay "${dotfilesRoot}/agents/bindings/codex/overlay/subagents" \
-        --out "$HOME/.codex/agents" --subagent-format codex
+      warnEcho "deno が無いので ~/.codex/agents の同期をスキップした"
     fi
   '';
 

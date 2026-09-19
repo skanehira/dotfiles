@@ -3,8 +3,6 @@ name: utility-session-profile
 description: Claude Code の特定セッションのログから所要時間の内訳を集計し、図表つきの HTML レポートを作る。エージェント種別ごとの時間・並列度・ツール実行の重複・コンテキストの最大到達値を出し、dev-impl のセッションではフェーズ内訳・レビュー収束・issue 依存段のクリティカルパスも加える。「このセッションが何に時間を使ったか調べて」「セッションを分析してレポートにして」「dev-impl が遅い原因を知りたい」「セッションのプロファイルを取って」「実装ループのボトルネックを調べて」などで起動。単一の会話を要約するだけの用途、コードの性能プロファイリングは対象外。
 argument-hint: "[セッション ID (先頭数文字で可)。省略時は候補から選ぶ]"
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion, Artifact
-metadata:
-  runtimes: claude
 ---
 
 # セッションのプロファイル
@@ -52,14 +50,14 @@ mkdir -p <スクラッチパッド>/session-profile
 引数でセッションが指定されていればそれを使う。無ければ候補を出す。
 
 ```bash
-python3 {{@skills-root}}/utility-session-profile/scripts/collect.py --list
+python3 ~/.claude/skills/utility-session-profile/scripts/collect.py --list
 ```
 
 いま自分がいるディレクトリに対応するプロジェクトのセッションが、新しい順に出る
 (ID の先頭 8 文字・更新時刻・サイズ・subagent の本数)。**該当プロジェクトが無ければ
 全プロジェクトから出す。** `--limit` で件数、`--cwd` で対象ディレクトリを変えられる。
 
-{{@ask-user}} で選んでもらうときは、**最新のものを推奨として先頭に置く**。サイズと
+AskUserQuestion で選んでもらうときは、**最新のものを推奨として先頭に置く**。サイズと
 subagent の本数が、そのセッションから何が取れるかの目安になる。
 
 **進行中のセッションを対象にしてよい。** その場合はレポートの `snapshot_label` に採取時刻を
@@ -68,7 +66,7 @@ subagent の本数が、そのセッションから何が取れるかの目安�
 ### 2. 層 A を集計する
 
 ```bash
-python3 {{@skills-root}}/utility-session-profile/scripts/collect.py \
+python3 ~/.claude/skills/utility-session-profile/scripts/collect.py \
   <セッション ID か JSONL のパス> -o <出力先>/data.json
 ```
 
@@ -83,7 +81,7 @@ python3 {{@skills-root}}/utility-session-profile/scripts/collect.py \
 `collect.py` が `dev-impl 検出` と出したときだけ実行する。
 
 ```bash
-python3 {{@skills-root}}/utility-session-profile/scripts/devimpl.py \
+python3 ~/.claude/skills/utility-session-profile/scripts/devimpl.py \
   --data <出力先>/data.json -o <出力先>/ext.json
 ```
 
@@ -139,7 +137,7 @@ python3 {{@skills-root}}/utility-session-profile/scripts/devimpl.py \
 ### 6. レンダリングする
 
 ```bash
-python3 {{@skills-root}}/utility-session-profile/scripts/render.py \
+python3 ~/.claude/skills/utility-session-profile/scripts/render.py \
   --data <出力先>/data.json --ext <出力先>/ext.json \
   --narrative <出力先>/narrative.json -o <出力先>/report.html
 ```
@@ -158,7 +156,7 @@ python3 {{@skills-root}}/utility-session-profile/scripts/render.py \
 ### 7. 見て、渡す
 
 ```bash
-python3 {{@skills-root}}/utility-session-profile/scripts/serve.py \
+python3 ~/.claude/skills/utility-session-profile/scripts/serve.py \
   <出力先> --port 8731   # バックグラウンドで起動する
 ```
 
@@ -205,7 +203,7 @@ python3 {{@skills-root}}/utility-session-profile/scripts/serve.py \
   打刻があるときだけ出る。`ext.timing_used` で判別できる
 - **並列度は「働いているエージェント」だけを数える。** 要求モデルが `haiku` のエージェント
   (テスト実行・コミットの代行) を除く。名前ではなく要求モデルで判別するのは、
-  `{{@rules-root}}/core/orchestration.md` が機械実行を haiku へ委譲すると定めているためで、
+  `~/.claude/rules/core/orchestration.md` が機械実行を haiku へ委譲すると定めているためで、
   エージェント名は run ごとに変わりうる
 - **エージェント種別は `.meta.json` の `agentType` から取る。** `impl-104` → `impl`。
   名前の付け方が違うオーケストレータでは種別がばらけるので、その場合はレポートで種別に触れない

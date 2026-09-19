@@ -22,18 +22,25 @@
     fi
   '';
 
-  # ルール / スキル / subagent は harness.nix が生成して配る (ランタイムごとに語彙が
-  # 変わるため symlink では共有できない)。ここに残すのは生成を通さないものだけ。
+  # グローバル指示 / ルール / スキル / subagent も正本 agents/ への直接 symlink。
+  # 以前はランタイムごとに語彙をコンパイルして配っていたが、正本の語彙を Claude 綴りに
+  # 確定し、Codex は同じ実体を読んで読み替える方式 (agents/bindings/codex/AGENTS.md) に
+  # 変えたため symlink に戻した。
   #
   # 直接 symlink (mkOutOfStoreSymlink) にしているのは live edit のため。通常の
   # home.file.X.source = ./path だと /nix/store にコピーされ drs 必須になる。
   home.file = {
-    # Claude Code 固有の設定。他ランタイムは読まないので生成の対象外
+    ".claude/CLAUDE.md".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/AGENTS.md";
+    ".claude/rules".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/rules";
+    ".claude/skills".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/skills";
+    # Codex は TOML しか読めない subagent だけ、codex.nix の activation が .toml へ変換する
+    ".claude/agents".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/subagents";
+    # Claude Code 固有の設定。他ランタイムは読まない
     ".claude/settings.json".source =
       config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/claude/settings.json";
     ".claude/keybindings.json".source =
       config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/claude/keybindings.json";
-    # hooks と scripts は散文ではなくコード。語彙の置換対象が無いので symlink のまま
+    # hooks と scripts は散文ではなくコード。語彙の置換対象が無い
     ".claude/hooks".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/hooks";
     # agent / skill から `~/.claude/scripts/<name>` の形で呼ぶ決定的スクリプト置き場。
     # 検査対象は dotfiles とは別のリポジトリなので、repo 相対では解決できない

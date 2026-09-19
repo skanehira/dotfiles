@@ -11,11 +11,14 @@
 
 ## ハーネス (agents/) を編集するとき
 
-- グローバル指示・ルール・スキル・subagent は**ランタイムごとにコンパイルして配る**。編集しても `drs` / `hms` (または `agents/scripts/build-harness.ts` の手動実行) まで反映されない。
-- 本文はランタイム中立の語彙で書く。ツール名やパスを直接書かず `{{@ask-user}}` のようなプレースホルダを使う。対応表は `agents/vocabulary.json`。
-- **frontmatter にはプレースホルダを書かない。** `allowed-tools` に並ぶツール名は Claude Code のパーミッション宣言で、置き換えると壊れる。
-- ランタイム固有の記述は `agents/bindings/<runtime>/overlay/` に**節単位**で置く。見出しが base と一致すればその節を配下ごと差し替え、**一致しなければ末尾に追加する** (削除はできない)。差し替えたいのに見出しを typo すると、エラーにならず黙って重複した節が末尾に増えるので注意する。最初の見出しより前に本文を書くと生成器が例外で止まる。
-- **Claude 向けの overlay は置かない。** base をそのまま出すことで「語彙置換が可逆であること」を byte 比較で検証できる。
+- 配布は symlink が基本。グローバル指示 (`~/.claude/CLAUDE.md`) / ルール (`~/.claude/rules`) / スキル (`~/.claude/skills`) / subagent (`~/.claude/agents`) は正本 `agents/` への symlink なので、**本文の編集は即反映**される。
+- 例外は 2 つ。どちらも `drs` / `hms` が要る。
+  - **スキルの追加・削除**: Codex 向けに `~/.agents/skills/<name>` へ個別 symlink を張り直すため (`nix/modules/home/codex.nix` の activation `linkAgentSkills`)
+  - **subagent の変更・追加**: Codex は TOML しか読めないので `agents/scripts/sync-subagents.ts` が `~/.codex/agents/*.toml` へ書式変換する (activation `syncCodexSubagents`)
+- 本文の語彙は **Claude 綴りで確定済み**。ツール名やパスをそのまま書く (プレースホルダは使わない)。Codex は同じ実体を読み、`agents/bindings/codex/AGENTS.md` の読み替え表に従って解釈する。
+- **frontmatter にはツール名を書き換えない。** `allowed-tools` に並ぶツール名は Claude Code のパーミッション宣言で、置き換えると壊れる。
+- 配布先の限定は `SKILL.md` の frontmatter では宣言しない。Codex へ配らないスキルは `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。
+- Claude 固有で Codex に存在しない記述 (ツール名・コマンド・機能) を本文に足したら、`agents/bindings/codex/AGENTS.md` の「Claude 綴りの読み替え」表にも 1 行足す。
 
 詳細は @CLAUDE.md の「AI エージェントのハーネス (agents/)」節を参照。
 
@@ -24,4 +27,4 @@
 - `agents/bindings/codex/config.toml` はgit管理するCodex共通設定。`/etc/codex/config.toml` (systemレイヤー) にsymlinkされて全クライアント (CLI / ChatGPT.app内Codex) に読まれる。
 - `~/.codex/config.toml` (userレイヤー) はCodex自身が書く可変状態 (`[projects.*]` trust、`[notice]`、`/model` の選択、`notify`、`[mcp_servers.*]`) で、dotfilesでは管理しない。ここにあるキーはsystemレイヤーの同名キーより優先される。
 - `auth.json`、sqlite state、logs、history、cacheはgit管理しない。
-- `~/.codex/AGENTS.md` は生成物。正本は `agents/AGENTS.md` + `agents/bindings/codex/overlay/AGENTS.md` で、手で編集しない。
+- `~/.codex/AGENTS.md` は `agents/bindings/codex/AGENTS.md` への symlink (live edit)。Codex 側の規約 (共通の正本の参照と Claude 綴りの読み替え) を書くのはこのファイル。
