@@ -66,15 +66,20 @@ Deno.test("syncSubagents_prunes_a_generated_toml_whose_markdown_is_gone", async 
   });
 });
 
-Deno.test("syncSubagents_leaves_a_toml_without_the_generated_marker_in_place", async () => {
+Deno.test("syncSubagents_writes_the_source_and_leaves_every_file_that_is_not_its_own", async () => {
   await withTempDirs(async (src, out) => {
+    await Deno.writeTextFile(`${src}/review-impl.md`, MARKDOWN);
     await Deno.mkdir(out, { recursive: true });
-    const foreign = "name = \"hand-written\"\n";
-    await Deno.writeTextFile(`${out}/notes.toml`, foreign);
+    const foreignToml = "name = \"hand-written\"\n";
+    await Deno.writeTextFile(`${out}/notes.toml`, foreignToml);
+    await Deno.writeTextFile(`${out}/notes.txt`, "third party\n");
+    await Deno.mkdir(`${out}/dir.toml`);
 
     const result = await syncSubagents(src, out);
 
-    assertEquals(result, { written: [], pruned: [] });
-    assertEquals(await Deno.readTextFile(`${out}/notes.toml`), foreign);
+    assertEquals(result, { written: ["review-impl.toml"], pruned: [] });
+    assertEquals(await Deno.readTextFile(`${out}/notes.toml`), foreignToml);
+    assertEquals(await Deno.readTextFile(`${out}/notes.txt`), "third party\n");
+    assertEquals((await Deno.stat(`${out}/dir.toml`)).isDirectory, true);
   });
 });
