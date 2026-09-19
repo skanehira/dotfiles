@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "theme": "opencode",
+  "keybinds": {
+    "command_list": "alt+p,super+p",
+    "input_backspace": "backspace,shift+backspace,ctrl+h",
+    "input_move_up": "up,ctrl+p",
+    "input_move_down": "down,ctrl+n",
+    "history_previous": "up,ctrl+p",
+    "history_next": "down,ctrl+n"
+  }
+}

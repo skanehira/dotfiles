@@ -13,6 +13,7 @@ let
   core = with pkgs; [
     nodejs_24
     pnpm
+    opencode # ターミナル用コーディングエージェント (Claude Code は claude.nix が bootstrap)
   ];
 
   # 共有設定 (zsh / tmux / neovim / git) が参照するので、無いと設定が壊れるもの。

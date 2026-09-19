@@ -1,4 +1,4 @@
-# DGX Spark の vLLM に向くクライアント (ccsp / cxsp) が共有するヘルパー。
+# DGX Spark の vLLM に向くクライアント (ccsp / ocsp / cxsp) が共有するヘルパー。
 #
 # 短縮名の表・/v1/models の照会・reasoning effort の表をここに 1 つだけ置く。
 # 以前はクライアントごとに同じ表を持っていたため、片方にだけモデルを足すと

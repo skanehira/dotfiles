@@ -30,6 +30,9 @@ local keys = {
   -- herdr の reviewr サイドバー toggle。CMD 修飾は pty へエンコードできないため
   -- prefix (ctrl+s = \x13) + i のバイト列を送出する
   { key = "r", mods = "CMD",        action = action.SendString '\x13i' },
+  -- opencode の command list ( Cmd+p )。CMD 修飾は pty へ送れないため alt+p に変換して
+  -- 送出する (opencode 側 tui.json で alt+p を command_list に紐付け)
+  { key = "p", mods = "CMD",         action = action.SendKey { key = "p", mods = "ALT" } },
   -- { key = "¥", mods = "CMD", action=action{SplitHorizontal={domain="CurrentPaneDomain"}}},
   -- { key = "-", mods = "CMD", action=action{SplitVertical={domain="CurrentPaneDomain"}}},
   -- { key = "h", mods = "LEADER", action=action{AdjustPaneSize={"Left", 5}}},

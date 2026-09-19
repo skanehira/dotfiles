@@ -1,4 +1,4 @@
--- AIツール（Claude 系 / Codex）向けコメントスタックモジュール
+-- AIツール（Claude 系 / Codex / OpenCode）向けコメントスタックモジュール
 -- PRレビュー風にコメントをローカルに溜め、Submitで一括送信する
 -- 1スレッド = 1メッセージ。同じ範囲を再度開くと既存メッセージをロードして編集する設計
 -- 範囲指定（ビジュアル選択）のコメントのみを管理し、ファイル全体コメントは扱わない
@@ -19,12 +19,13 @@ local store = {
   -- (ハイフンは識別子に使えないためブラケットで書く)
   ["claude-spark"] = {},
   codex = {},
+  opencode = {},
 }
 
 -- ツール別の extmark namespace（setup() が TOOLS から機械的に作る）
 local ns = {}
 
-local TOOLS = { "claude", "claude-spark", "codex" }
+local TOOLS = { "claude", "claude-spark", "codex", "opencode" }
 
 -- コメント絵文字（U+1F4AC, speech balloon）。emoji は 2 セル幅で sign_text 制約を満たす
 local SIGN_ICON = "💬"
