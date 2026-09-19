@@ -19,7 +19,7 @@
 # {file:...} / {env:...} 置換は下の _ocsp_resolve が解いてから使う。
 
 # 短縮名の表・接続先・/v1/models の照会は zsh/functions/spark-common.zsh が持つ
-# (ccsp / ocsp の 2 つで共有する)。ocsp は max_model_len を使わないので
+# (ccsp / ocsp / cxsp の 3 つで共有する)。ocsp は max_model_len を使わないので
 # 配信名の列だけを取り出す。
 _ocsp_models() { _spark_models "$1" "$2" | awk '{print $1}' }
 
