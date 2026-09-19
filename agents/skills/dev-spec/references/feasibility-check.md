@@ -46,7 +46,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 これらの情報を元に、技術リスクを効率的に洗い出す。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "どの機能/ユースケースの技術検証を行いますか？",
@@ -63,10 +63,10 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 **遷移条件**: フェーズ2へ
 
 **ファイルが存在しない場合**:
-{{@ask-user}}で対象機能を確認。
+AskUserQuestionで対象機能を確認。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "どの機能の技術検証を行いますか？",
@@ -93,7 +93,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 - 「外部サービスとの連携で不明点は？」
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "この機能を実現する上で、技術的に不確実な点、不安な点は何ですか？",
@@ -124,7 +124,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 各不確実性のリスクレベルを評価する。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "[不確実性]について、実現できなかった場合の影響度は？",
@@ -157,7 +157,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 各リスクに対する検証項目を定義する。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "[リスク]を検証するために、何を確認すればよいですか？",
@@ -206,7 +206,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 検証のための実装計画を立てる。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "PoCの優先順位をつけてください。最もリスクが高いものから検証すべきです。",
@@ -275,7 +275,7 @@ id は安定一意 (PoC 結果・実装ループの判定ログでも参照さ�
 採用する技術スタックを整理する。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "この機能の実装に使用する技術（言語、フレームワーク、サービス）は決まっていますか？",
@@ -323,7 +323,7 @@ Write({
 ```javascript
 Agent({
   description: "技術検証レビュー",
-  subagent_type: "{{@general-agent}}",
+  subagent_type: "general-purpose",
   prompt: `
 以下の技術検証ドキュメントをレビューし、問題があれば修正してください。
 

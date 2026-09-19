@@ -47,7 +47,7 @@ work_dir="$(mktemp -d "${TMPDIR:-/tmp}/meeting-minutes.XXXXXX")"
 scripts/transcribe.sh "<recording>" "${work_dir}" ja
 ```
 
-録音時間に比例して数分〜数十分かかるため、同期実行せず`{{@background-run}}: true`で起動する。完了まで定期的に出力を確認し、進捗をユーザーへ伝える。`transcript.json`、`transcript.txt`、`transcript.vtt`、`transcript.srt`、`transcript.tsv`が生成される。既存出力を上書きしない。
+録音時間に比例して数分〜数十分かかるため、同期実行せず`run_in_background: true`で起動する。完了まで定期的に出力を確認し、進捗をユーザーへ伝える。`transcript.json`、`transcript.txt`、`transcript.vtt`、`transcript.srt`、`transcript.tsv`が生成される。既存出力を上書きしない。
 
 スクリプトは初回文字起こし後に[scripts/check_transcript_quality.sh](scripts/check_transcript_quality.sh)を実行する。`.segments[].text`の前後空白を除いた非空セグメントを単位とし、完全一致する同一テキストが20セグメント以上連続するか、100セグメント以上ある文字起こしで同一テキストが全体の20%以上を占める場合は、Whisperが失敗ループへ入った可能性が高いと判定する。その場合は次の処理を自動で行う。
 

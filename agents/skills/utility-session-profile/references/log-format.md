@@ -127,7 +127,7 @@ user の `message.content[]` の `{"type": "tool_result", "tool_use_id": ...}` �
 
 ## `Agent` 呼び出しからフェーズを復元する
 
-dev-impl は subagent の prompt に契約キーを載せる (`{{@skills-root}}/dev-impl/SKILL.md`)。
+dev-impl は subagent の prompt に契約キーを載せる (`~/.claude/skills/dev-impl/SKILL.md`)。
 メイン JSONL の `Agent` tool_use の `input.prompt` にそのまま入っているので、ここから
 フェーズ構造が復元できる。
 

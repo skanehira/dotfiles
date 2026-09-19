@@ -16,10 +16,10 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
 
 | 役割 | 実行 | モデル |
 | --- | --- | --- |
-| オーケストレーション (本ループ) | メインセッション | opus (frontmatter 指定。{{@invoke-skill}}経由起動では効かないため、ユーザーが直接起動する) |
+| オーケストレーション (本ループ) | メインセッション | opus (frontmatter 指定。Skill ツール経由起動では効かないため、ユーザーが直接起動する) |
 | 実装 | `dev-impl-implementer` subagent | `model: "opus"` 明示 |
 | レビュー | `review-impl` subagent | `model: "opus"` 明示 |
-| コミット実行・巨大出力のテスト実行 (E2E 等) | subagent | `model: "haiku"` (`{{@rules-root}}/core/orchestration.md`「委譲の判断」。メッセージ起草・対象ファイルの判断は親が行い、実行だけを委譲する) |
+| コミット実行・巨大出力のテスト実行 (E2E 等) | subagent | `model: "haiku"` (`~/.claude/rules/core/orchestration.md`「委譲の判断」。メッセージ起草・対象ファイルの判断は親が行い、実行だけを委譲する) |
 
 ## Step 0: 前提チェック
 
@@ -32,7 +32,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 
 - git / gh が解決できない → 停止して案内する
 - `POC_NEEDED: ... blocker=true` が 1 件以上 → 実装に入らず、`/dev-spec` のフェーズ 5 (PoC 検証) への差し戻しを案内して停止する (未検証の技術前提の上に実装しない)
-- ラベル 4 種を冪等に用意する (dev-spec を経ずに用意された issue でも 2.1 のラベル操作が失敗しないように。コマンドは `{{@skills-root}}/dev-spec/references/issue-template.md`「ラベルの用意」と同一)
+- ラベル 4 種を冪等に用意する (dev-spec を経ずに用意された issue でも 2.1 のラベル操作が失敗しないように。コマンドは `~/.claude/skills/dev-spec/references/issue-template.md`「ラベルの用意」と同一)
 - **docs が push 済みか確認する**: ローカルに `docs/design/DESIGN.md` があるのに `git log origin/$DEFAULT -1 -- docs/design/DESIGN.md docs/design/features/` が空なら、ブランチ基点 (origin) に設計 docs が無い。docs を含むコミットの push を人間に依頼して停止する (2.1 のブランチは origin から切るため、push されていないと implementer が docs を読めない)
 - `docs/design/DESIGN.md` が無い構成でも、issue が自己完結していれば続行してよい (issue の DoD に実行コマンドが揃っていることが条件)
 
@@ -189,7 +189,7 @@ r1 の findings による分岐:
 
 **駐車 category と保留 category が混在したら、issue 全体を 2.6 へ駐車する** (保留 category のぶんは駐車コメントに列挙する。壊れた契約を抱えた issue を merge しないことが優先する)。
 
-`test-quality` の high を保留して merge するのは、no-op に置き換えても通るテスト (`{{@rules-root}}/core/testing.md` のリトマス試験 B に落ちるもの) を抱えたまま先へ進むことを意味する。**これは意図した受容**なので、保留リストと完了コメントでは high を medium と分けて先に出し、ユーザーが気付ける状態にする。
+`test-quality` の high を保留して merge するのは、no-op に置き換えても通るテスト (`~/.claude/rules/core/testing.md` のリトマス試験 B に落ちるもの) を抱えたまま先へ進むことを意味する。**これは意図した受容**なので、保留リストと完了コメントでは high を medium と分けて先に出し、ユーザーが気付ける状態にする。
 
 **3 周目に入りたくなったら、それは「収束していない」という信号**なので、上の表に従う。**この上限を強制する機械ゲートは無い。自律遵守する。** 上限は機械ゲートが無い状態で実際に破られる (セッション e6b5eb50 の実測: 22 issue 中 6 件が 3 周目以降に入り、規定超過分だけで 5.7h を消費した)。破らないための手立ては `findings_path` のラウンド番号を毎回自分で読むことだけである。3 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)。
 
@@ -207,9 +207,9 @@ r1 の findings による分岐:
 
 ### 2.4 コミット・検証・PR・merge
 
-1. **コミット**: 変更を論理単位で Conventional Commit (`{{@rules-root}}/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針の表)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
+1. **コミット**: 変更を論理単位で Conventional Commit (`~/.claude/rules/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針の表)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
 
-   コミットが手順 2 の検証より前に来るのは、検証対象を「積み終えた差分」に固定するためである。`{{@rules-root}}/core/commit.md` のコミット条件 (全テスト green) は、implementer の `test_result` / `dod_result` が exit 0 であること (2.2 の検収で確認済み) を根拠に満たす。**手順 2 が red だった場合、このコミットは merge されない駐車ブランチ上の記録として扱う** (2.6 の WIP 退避と同じ例外)。
+   コミットが手順 2 の検証より前に来るのは、検証対象を「積み終えた差分」に固定するためである。`~/.claude/rules/core/commit.md` のコミット条件 (全テスト green) は、implementer の `test_result` / `dod_result` が exit 0 であること (2.2 の検収で確認済み) を根拠に満たす。**手順 2 が red だった場合、このコミットは merge されない駐車ブランチ上の記録として扱う** (2.6 の WIP 退避と同じ例外)。
 
 2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する (CI は使わない — 判定はこのローカル実行が兼ねる)。**実行は `$WORK_DIR` で行う** (並列実行では worktree の中。Haiku subagent に委譲する場合は `cd <WORK_DIR> && ...` の形でコマンドを渡さないと別の作業ツリーを検証することになる)。巨大出力になる場合は実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る。
 
@@ -284,7 +284,7 @@ merge により `Closes #N` で issue は自動 close される (されていな
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
 
-親 (tracking issue) を逆引きし、その親の子が全て完了していれば親も close する。API の挙動の正本は `{{@skills-root}}/dev-spec/references/issue-template.md`「親への紐付け」の実測表:
+親 (tracking issue) を逆引きし、その親の子が全て完了していれば親も close する。API の挙動の正本は `~/.claude/skills/dev-spec/references/issue-template.md`「親への紐付け」の実測表:
 
 ```bash
 gh api "repos/$REPO_SLUG/issues/$N/parent" \
@@ -357,8 +357,8 @@ done
 
 ## 参照ルール
 
-- コミット規約: `{{@rules-root}}/core/commit.md` / 委譲の判断: `{{@rules-root}}/core/orchestration.md`
-- implementer・review-impl の入出力契約は各 agent 定義 (`{{@subagents-root}}/dev-impl-implementer.md` / `review-impl.md`) が正本
+- コミット規約: `~/.claude/rules/core/commit.md` / 委譲の判断: `~/.claude/rules/core/orchestration.md`
+- implementer・review-impl の入出力契約は各 agent 定義 (`~/.claude/agents/dev-impl-implementer.md` / `review-impl.md`) が正本
 
 ## 関連スキル・エージェント
 

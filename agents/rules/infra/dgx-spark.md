@@ -574,7 +574,7 @@ cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks
 
 ```bash
 ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && setsid nohup ./start.sh > ~/dsv41-start.log 2>&1 < /dev/null & echo started'
-# 終わるまで待つ ({{@background-run}} で流す)。`^bash ./start.sh$` に固定しているので、この ssh のコマンド文字列には一致しない
+# 終わるまで待つ (run_in_background で流す)。`^bash ./start.sh$` に固定しているので、この ssh のコマンド文字列には一致しない
 until ! ssh -n spark-head 'pgrep -f "^bash ./start.sh$" >/dev/null'; do sleep 30; done
 ssh -n spark-head 'tail -25 ~/dsv41-start.log'   # 「DeepSeek-V4.1-Flash EXL3 is UP」が出ていれば起動は完了。出ていなければ上の失敗時の手順
 ```
@@ -1225,6 +1225,6 @@ CCSP_LAN_HOST=127.0.0.1 CCSP_EFFORT=high ccsp lan -p "1+1?"
 grep -E 'output_config|resp' /tmp/ccsp.log | tail -2
 ```
 
-**この手順は 1 回の Bash 呼び出しで流し切る** (または `{{@background-run}}`)。Claude のハーネスは呼び出しごとにシェルが変わるので、`&` で起動したプロキシが次の呼び出しまで残る保証が無い。
+**この手順は 1 回の Bash 呼び出しで流し切る** (または `run_in_background`)。Claude のハーネスは呼び出しごとにシェルが変わるので、`&` で起動したプロキシが次の呼び出しまで残る保証が無い。
 
 **使い終わったらプロキシを止める** (`pkill -f spark-proxy.py`)。**素の `ccsp` / `cxsp` は止め忘れても本物に届く** (プロキシは `127.0.0.1` にしか bind せず、既定の宛先は `spark-head.local`)。実害は 2 つで、`CCSP_EFFORT` / `CCSP_LAN_HOST` を export したシェルだけが中継を向き続けることと、野良プロセスとログが残り続けることである。**`ccsp off` はこの 2 つの変数を消さない**ので手で `unset` する。停止後は `curl -s http://spark-head.local:8888/v1/models` が配信名を返すことまで確かめる。

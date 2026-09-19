@@ -55,10 +55,10 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 **遷移条件**: フェーズ2へ
 
 **ファイルが存在しない場合**:
-{{@ask-user}}で対象プロダクトを確認。
+AskUserQuestionで対象プロダクトを確認。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "どのプロダクト/機能のUIをスケッチしますか？",
@@ -85,7 +85,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 - 「エラーや確認のための画面は？」
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "このプロダクトに必要な画面をすべて挙げてください",
@@ -122,7 +122,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 - 「エラーの場合はどうなりますか？」
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "主要なユーザーフロー（画面遷移）を教えてください\n\n例: ログイン → ダッシュボード → SQL入力 → 結果表示",
@@ -151,7 +151,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 各画面に必要な要素を洗い出す。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "[画面名]に必要な要素は何ですか？",
@@ -197,7 +197,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 #### 質問パターン
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "アプリ全体の骨格 (アプリシェル) を決めます。ヘッダー・ナビ・フッターはどんな構成にしますか?",
@@ -213,7 +213,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 })
 ```
 
-認証ガード / 404 / トースト / ErrorBoundary も同様に {{@ask-user}} で 1 つずつ確認する (4-5 質問を順次)。
+認証ガード / 404 / トースト / ErrorBoundary も同様に AskUserQuestion で 1 つずつ確認する (4-5 質問を順次)。
 
 #### UI_SKETCH.html への反映
 
@@ -262,7 +262,7 @@ Read({ file_path: "docs/PRODUCT_SPEC.md" })
 
 ビジュアルを作り込む前に、**必ずデザインの方向性をユーザに確認する。**
 
-{{@ask-user}} で2〜3案を提示し、選んでもらってから着手する。観点:
+AskUserQuestion で2〜3案を提示し、選んでもらってから着手する。観点:
 - プロダクトのブランド文脈に合うトーンか（例: 外資系ラグジュアリー／国内カジュアル／開発者向け 等）
 - 全体の雰囲気（ミニマル／エディトリアル／ポップ 等）、ライト／ダーク
 - 主要フォント・配色の方向性
@@ -281,7 +281,7 @@ skip 選択肢は提供しない (Voilog セッション F8 の原因は「起�
 呼び出し方は次フェーズ (5.3 以降) で具体化する。本フェーズではユーザーへの「これから frontend-design を起動します」の宣言と、5.1 で合意した方向性の最終確認のみ:
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [{
     question: "5.1 で合意した方向性 (<トーン / カラー / 雰囲気>) で frontend-design スキルを起動します。最終確認: この方向性で進めて問題ないですか?",
     header: "frontend-design 起動",
@@ -294,7 +294,7 @@ skip 選択肢は提供しない (Voilog セッション F8 の原因は「起�
 })
 ```
 
-「進める」選択後、以下のように frontend-design スキルを {{@invoke-skill}}で起動する:
+「進める」選択後、以下のように frontend-design スキルを Skill ツールで起動する:
 
 ```javascript
 Skill({
@@ -347,7 +347,7 @@ chrome-devtools 等での自動確認は行わない。ユーザーに `docs/des
 - ブラウザのコンソールにエラーが出ていないか
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [{
     question: "docs/design/UI_SKETCH.html をブラウザで開いて確認してください（フローの遷移 / 表示崩れ / コンソールエラー）。問題はありましたか?",
     header: "動作確認",
@@ -369,7 +369,7 @@ chrome-devtools 等での自動確認は行わない。ユーザーに `docs/des
 画面上のインタラクションを定義する。
 
 ```javascript
-{{@ask-user}}({
+AskUserQuestion({
   questions: [
     {
       question: "この画面でユーザーが行う主要な操作と、その結果を教えてください",
@@ -412,7 +412,7 @@ chrome-devtools 等での自動確認は行わない。ユーザーに `docs/des
 ```javascript
 Agent({
   description: "UI/UXスケッチレビュー",
-  subagent_type: "{{@general-agent}}",
+  subagent_type: "general-purpose",
   prompt: `
 以下のUI/UXスケッチドキュメントをレビューし、問題があれば修正してください。
 
