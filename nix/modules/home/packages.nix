@@ -172,7 +172,6 @@ let
     with pkgs;
     [
       ollama
-      opencode # ターミナル用コーディングエージェント。ccsp と同じ Spark バックエンドを ocsp から使う
     ]
     ++ [
       inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.default # AI agent multiplexer TUI (flake input)
