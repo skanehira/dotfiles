@@ -70,7 +70,17 @@
       target="$(readlink "$link")"
       case "$target" in
         "$src_skills_dir"/*)
-          [ -e "$link" ] || run rm -f "$link"
+          skill_name="$(basename "$link")"
+          # リンク切れに加えて、除外リストに入ったスキルの既存 symlink も外す
+          # (リストを変えたときに古いリンクが残らないようにする)
+          stale=0
+          [ -e "$link" ] || stale=1
+          case " $claude_only_skills " in
+            *" $skill_name "*) stale=1 ;;
+          esac
+          if [ "$stale" = 1 ]; then
+            run rm -f "$link"
+          fi
           ;;
       esac
     done
