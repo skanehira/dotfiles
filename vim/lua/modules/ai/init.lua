@@ -7,10 +7,10 @@ local comments = require("modules.ai.comments")
 
 local M = {}
 
--- claude も Spark の接続先解決 (LAN/Tailscale プローブ + 配信モデル検査 + settings 生成) を
--- 持つ ccsp を経由させる。argv の先頭 4 要素が固定前置になり、以降のユーザー引数が
--- zsh -c '<script>' ccsp <args...> の $@ に入る。接続先は ccsp が export する
--- (settings JSON に ANTHROPIC_BASE_URL を書くと出先での切り替えが効かなくなるため)
+-- claude-spark は、Spark の接続先解決 (LAN/Tailscale プローブ + 配信モデル検査 +
+-- settings 生成) を持つ ccsp を経由させる。argv の先頭 4 要素が固定前置になり、以降の
+-- ユーザー引数が zsh -c '<script>' ccsp <args...> の $@ に入る。接続先は ccsp が export
+-- する (settings JSON に ANTHROPIC_BASE_URL を書くと出先での切り替えが効かなくなるため)
 --
 -- --allow-dangerously-skip-permissions を先頭に置くのは、ccsp の引数ループが未知語で
 -- break する性質を使い、後続のユーザー引数 (-r など) が ccsp の予約語
@@ -35,18 +35,23 @@ local TOOL_CONFIG = {
   claude = {
     display = "Claude",
     shift_tab = "alt+m",
-    -- --allow-dangerously-skip-permissions は CCSP_SCRIPT 側で渡す (ccsp が未知語として
-    -- そのまま claude に素通しする)。このフラグは bypassPermissions を Shift+Tab の
-    -- サイクルに追加するだけで有効化はしない。settings の defaultMode (plan) のまま
-    -- 起動し、プラン承認後に手動で落とせる。有効化まで行う
-    -- --dangerously-skip-permissions は plan mode を経由できない
+    -- --allow-dangerously-skip-permissions は bypassPermissions を Shift+Tab のサイクルに
+    -- 追加するだけで有効化はしない。settings の defaultMode (plan) のまま起動し、
+    -- プラン承認後に手動で落とせる。有効化まで行う --dangerously-skip-permissions は
+    -- plan mode を経由できない
+    argv_prefix = { "claude", "--allow-dangerously-skip-permissions" },
+  },
+  -- Claude Code を Spark (自宅のローカル LLM) に向けたもの。既定の Claude Code は
+  -- <leader>ac のまま残したいので、別のツールとして持つ (ペインもコメントスタックも別)。
+  -- ハイフンは識別子に使えないためブラケットで書く
+  ["claude-spark"] = {
+    display = "Claude (Spark)",
+    shift_tab = "alt+m",
     argv_prefix = { "zsh", "-c", CCSP_SCRIPT, "ccsp" },
-    -- herdr agent start に渡す名前。省略すると argv[1] の "zsh" が使われ、ペインに付く
-    -- agent が "zsh" になって find_pane_by_command("claude") が復元できなくなる
-    -- (実測: 明示すると zsh ラッパー越しでも agent="claude" が付く)。ただし
-    -- agent_session (セッション UUID) は zsh を挟むと null になるので、herdr の
-    -- resume_agents_on_restore は効かない (codex も同じ)
-    name = "claude",
+    -- herdr agent start に渡す名前。find_pane_by_command は agent を文字列の完全一致で
+    -- 探すので、claude と別名にしないと互いのペインを取り違える。agent_session は
+    -- zsh を挟むと null になるので herdr の resume_agents_on_restore は効かない
+    name = "claude-spark",
   },
   codex = {
     display = "Codex",
@@ -57,7 +62,7 @@ local TOOL_CONFIG = {
     -- ペインに付く agent が "zsh" になって find_pane_by_command("codex") が
     -- 復元できなくなる (実測: 明示すると zsh ラッパー越しでも agent="codex" が付く)。
     -- ただし agent_session (セッション UUID) は zsh を挟むと null になるので、
-    -- herdr の resume_agents_on_restore は効かない (claude も同じ)
+    -- herdr の resume_agents_on_restore は効かない (claude-spark も同じ)
     name = "codex",
   },
 }
@@ -101,7 +106,7 @@ local function set_pane(tool_name, pane_id)
 end
 
 -- ペインを取得または作成
--- @param tool_name string ツール名（"claude" / "codex"）
+-- @param tool_name string ツール名（"claude" / "claude-spark" / "codex"）
 -- @param args string|nil コマンド引数（例: "-c" や "-r abc123"）
 -- @return string|nil ペインID、失敗時は nil
 local function get_or_create_pane(tool_name, args)
@@ -129,7 +134,7 @@ local function get_or_create_pane(tool_name, args)
   end
 
   -- 新規ペインを作成（既存nvimペイン40% / 新規ツールペイン60%）、argvを直接起動する
-  -- （Claude と Codex は Spark クライアント (ccsp / cxsp) が zsh 関数なので zsh を挟む）
+  -- （claude-spark と Codex は Spark クライアント (ccsp / cxsp) が zsh 関数なので zsh を挟む）
   -- コマンド終了時にペインも自動的に閉じられる
   local err
   pane_id, err = herdr.create_pane(40, argv, cfg.name)
@@ -394,6 +399,13 @@ function M.open_claude(args, context)
   open_input_buffer("claude", args, context or find_thread_context_at_cursor("claude"))
 end
 
+-- Claude Code を Spark に向けて開く（ccsp 経由。既定の Claude Code とは別のペイン・別スタック）
+-- @param args string|nil コマンド引数（例: "-r"）
+-- @param context table|nil 範囲コンテキスト
+function M.open_claude_spark(args, context)
+  open_input_buffer("claude-spark", args, context or find_thread_context_at_cursor("claude-spark"))
+end
+
 -- Codexを開く（context 無し時は Claude 同様にカーソル位置のスレッドを検索）
 -- @param args string|nil コマンド引数
 -- @param context table|nil 範囲コンテキスト
@@ -507,6 +519,14 @@ function M.setup()
     desc = "Open Claude in herdr pane with input buffer",
   })
 
+  -- :ClaudeSpark コマンド（引数を受け取る）
+  vim.api.nvim_create_user_command("ClaudeSpark", function(opts)
+    M.open_claude_spark(opts.args)
+  end, {
+    nargs = "*",
+    desc = "Open Claude on Spark in herdr pane with input buffer",
+  })
+
   -- :Codex コマンド（引数を受け取る）
   vim.api.nvim_create_user_command("Codex", function(opts)
     M.open_codex(opts.args)
@@ -518,18 +538,26 @@ function M.setup()
   -- コメントスタック操作系コマンド
   vim.api.nvim_create_user_command("ClaudeSubmit", function() M.submit("claude") end,
     { desc = "Submit stacked Claude comments" })
+  vim.api.nvim_create_user_command("ClaudeSparkSubmit", function() M.submit("claude-spark") end,
+    { desc = "Submit stacked Claude (Spark) comments" })
   vim.api.nvim_create_user_command("CodexSubmit", function() M.submit("codex") end,
     { desc = "Submit stacked Codex comments" })
   vim.api.nvim_create_user_command("ClaudeClear", function() M.clear_comments("claude") end,
     { desc = "Clear Claude comment stack" })
+  vim.api.nvim_create_user_command("ClaudeSparkClear", function() M.clear_comments("claude-spark") end,
+    { desc = "Clear Claude (Spark) comment stack" })
   vim.api.nvim_create_user_command("CodexClear", function() M.clear_comments("codex") end,
     { desc = "Clear Codex comment stack" })
   vim.api.nvim_create_user_command("ClaudeList", function() M.list_comments("claude") end,
     { desc = "List Claude comments in quickfix" })
+  vim.api.nvim_create_user_command("ClaudeSparkList", function() M.list_comments("claude-spark") end,
+    { desc = "List Claude (Spark) comments in quickfix" })
   vim.api.nvim_create_user_command("CodexList", function() M.list_comments("codex") end,
     { desc = "List Codex comments in quickfix" })
   vim.api.nvim_create_user_command("ClaudeDelete", function() M.delete_comment_at_cursor("claude") end,
     { desc = "Delete Claude comment at cursor line" })
+  vim.api.nvim_create_user_command("ClaudeSparkDelete", function() M.delete_comment_at_cursor("claude-spark") end,
+    { desc = "Delete Claude (Spark) comment at cursor line" })
   vim.api.nvim_create_user_command("CodexDelete", function() M.delete_comment_at_cursor("codex") end,
     { desc = "Delete Codex comment at cursor line" })
 
@@ -557,6 +585,24 @@ function M.setup()
   vim.keymap.set("x", "<leader>aC", visual_keymap_handler(function(ctx)
     M.open_claude("-c", ctx)
   end), vim.tbl_extend("force", map_opts, { desc = "Open Claude -c with selection context" }))
+
+  -- キーマップ: Claude (Spark)（ノーマルモード）
+  vim.keymap.set("n", "<leader>cs", "<Cmd>ClaudeSpark<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open Claude on Spark" }))
+
+  vim.keymap.set("n", "<leader>cS", "<Cmd>ClaudeSparkSubmit<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Submit Claude (Spark) comment stack" }))
+  vim.keymap.set("n", "<leader>cX", "<Cmd>ClaudeSparkClear<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Clear Claude (Spark) comment stack" }))
+  vim.keymap.set("n", "<leader>cL", "<Cmd>ClaudeSparkList<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "List Claude (Spark) comments" }))
+  vim.keymap.set("n", "<leader>cd", "<Cmd>ClaudeSparkDelete<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Delete Claude (Spark) comment at cursor line" }))
+
+  -- キーマップ: Claude (Spark)（ビジュアルモード）
+  vim.keymap.set("x", "<leader>cs", visual_keymap_handler(function(ctx)
+    M.open_claude_spark("", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open Claude on Spark with selection context" }))
 
   -- キーマップ: Codex（ノーマルモード）
   vim.keymap.set("n", "<leader>xx", "<Cmd>Codex<CR>",

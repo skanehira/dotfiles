@@ -807,7 +807,7 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
 - **起動のたびに無害な警告が 2 種類出る。** どちらも 2026-09-17 に実測したもので、推論そのものは通る。
   - `failed to refresh available models: … missing field 'models' … body: {"object":"list","data":[…]}` — codex のモデルカタログ更新が OpenAI 専用の形を期待している。vLLM の `/v1/models` は OpenAI 互換の `data` 配列を返すので形が合わない。**推論の経路とは別**で、1 起動につき 2 回出る
   - `warning: Model metadata for 'DeepSeek-v4.1-Flash-EXL3' not found. Defaulting to fallback metadata` — **catalog を渡すようになって出なくなった** (2026-09-17 実測)。出るようになったら catalog が届いていない
-- **Neovim の `<leader>xx` 系は `ccsp` / `cxsp` を経由する。** herdr のペインには起動した側の名前 (`agent="claude"` / `agent="codex"`) が付くのでペインの復元は効くが、`agent_session` (セッション UUID) は zsh を挟むと `null` になるので **herdr の `resume_agents_on_restore` は効かない** (`agent="codex"` が付くことは 2026-09-17 実測)。**Spark に届かないときは `cxsp` が exit 1 で止まるのでペインがすぐ閉じる** — 素の `codex` (ChatGPT) を使いたいときは端末から直接打つ
+- **Neovim の `<leader>cs` は `ccsp` を、`<leader>xx` 系は `cxsp` を経由する。** 既定の `<leader>ac` 系は素の `claude` (Anthropic) のままである。herdr のペインには `vim/lua/modules/ai/init.lua` が渡した名前 (`agent="claude-spark"` / `agent="codex"`) が付くのでペインの復元は効くが、`agent_session` (セッション UUID) は zsh を挟むと `null` になるので **herdr の `resume_agents_on_restore` は効かない** (`agent="codex"` が付くことは 2026-09-17 実測。`claude-spark` は同じ機構だが未実測)。**Spark に届かないときは `ccsp` / `cxsp` が exit 1 で止まるのでペインがすぐ閉じる** (フォールバックはしない。素の `codex` (ChatGPT) を使いたいときは端末から直接打つ)
 - **`drs` を当てて新しいシェルを開くまで存在しない。** 関数本体は Nix store 経由で配られるので、既存シェルには定義が無い (`command not found`)
 
 **合格判定**: `cxsp lan exec --skip-git-repo-check "1+1 は?"` が exit 0 で答えを返すこと。**2026-09-17 に V4.1 EXL3 配信中で実測した範囲**: 単発の生成 (`cxsp exec`)、ストリーミング (codex は常に `stream:true` を送る)、シェルツールの呼び出しとその結果を載せた 2 ターン目、effort の全値。**Qwen 系と Vision-Exp 系では `/v1/responses` 自体を試していない。**
