@@ -1,4 +1,4 @@
--- AIツール（Claude/Codex）のherdr統合モジュール
+-- AIツール（Claude/Codex/OpenCode）のherdr統合モジュール
 -- 公開APIとコマンド登録を提供
 
 local herdr = require("modules.ai.herdr")
@@ -18,6 +18,12 @@ local M = {}
 local CCSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
   .. "; source ~/.config/zsh/functions/claude-deepseek.zsh"
   .. "; ccsp --allow-dangerously-skip-permissions \"$@\""
+
+-- opencode は Spark の接続先解決 (LAN/Tailscale プローブ + 配信モデル検査 + --model 注入) を
+-- 持つ ocsp を経由させる。argv の先頭 4 要素が固定前置になり、以降のユーザー引数が
+-- zsh -c '<script>' ocsp <args...> の $@ に入る
+local OCSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
+  .. "; source ~/.config/zsh/functions/opencode-spark.zsh; ocsp \"$@\""
 
 -- codex も同じく Spark の接続先解決 (プローブ + 配信モデル検査 + -c 注入) を持つ
 -- cxsp を経由させる。素の codex は ChatGPT ログインのままなので、ここを通さないと
@@ -62,8 +68,14 @@ local TOOL_CONFIG = {
     -- ペインに付く agent が "zsh" になって find_pane_by_command("codex") が
     -- 復元できなくなる (実測: 明示すると zsh ラッパー越しでも agent="codex" が付く)。
     -- ただし agent_session (セッション UUID) は zsh を挟むと null になるので、
-    -- herdr の resume_agents_on_restore は効かない (claude-spark も同じ)
+    -- herdr の resume_agents_on_restore は効かない (claude-spark / ocsp も同じ)
     name = "codex",
+  },
+  opencode = {
+    display = "OpenCode",
+    shift_tab = "shift+tab",
+    argv_prefix = { "zsh", "-c", OCSP_SCRIPT, "ocsp" },
+    name = "opencode",
   },
 }
 
@@ -106,7 +118,7 @@ local function set_pane(tool_name, pane_id)
 end
 
 -- ペインを取得または作成
--- @param tool_name string ツール名（"claude" / "claude-spark" / "codex"）
+-- @param tool_name string ツール名（"claude" / "claude-spark" / "codex" / "opencode"）
 -- @param args string|nil コマンド引数（例: "-c" や "-r abc123"）
 -- @return string|nil ペインID、失敗時は nil
 local function get_or_create_pane(tool_name, args)
@@ -134,7 +146,8 @@ local function get_or_create_pane(tool_name, args)
   end
 
   -- 新規ペインを作成（既存nvimペイン40% / 新規ツールペイン60%）、argvを直接起動する
-  -- （claude-spark と Codex は Spark クライアント (ccsp / cxsp) が zsh 関数なので zsh を挟む）
+  -- （claude-spark / Codex / OpenCode は Spark クライアント (ccsp / cxsp / ocsp) が
+  --   zsh 関数なので zsh を挟む。素の claude だけはバイナリを直接起動する）
   -- コマンド終了時にペインも自動的に閉じられる
   local err
   pane_id, err = herdr.create_pane(40, argv, cfg.name)
@@ -413,6 +426,13 @@ function M.open_codex(args, context)
   open_input_buffer("codex", args, context or find_thread_context_at_cursor("codex"))
 end
 
+-- opencodeを開く（ocsp 経由。context 無し時は Claude 同様にカーソル位置のスレッドを検索）
+-- @param args string|nil コマンド引数（例: "--continue"）
+-- @param context table|nil 範囲コンテキスト
+function M.open_opencode(args, context)
+  open_input_buffer("opencode", args, context or find_thread_context_at_cursor("opencode"))
+end
+
 -- コメントスタックを一括送信
 function M.submit(tool_name)
   if not herdr.is_in_herdr() then
@@ -535,6 +555,14 @@ function M.setup()
     desc = "Open Codex in herdr pane with input buffer",
   })
 
+  -- :Opencode コマンド（引数を受け取る）
+  vim.api.nvim_create_user_command("Opencode", function(opts)
+    M.open_opencode(opts.args)
+  end, {
+    nargs = "*",
+    desc = "Open OpenCode in herdr pane with input buffer",
+  })
+
   -- コメントスタック操作系コマンド
   vim.api.nvim_create_user_command("ClaudeSubmit", function() M.submit("claude") end,
     { desc = "Submit stacked Claude comments" })
@@ -560,6 +588,14 @@ function M.setup()
     { desc = "Delete Claude (Spark) comment at cursor line" })
   vim.api.nvim_create_user_command("CodexDelete", function() M.delete_comment_at_cursor("codex") end,
     { desc = "Delete Codex comment at cursor line" })
+  vim.api.nvim_create_user_command("OpencodeSubmit", function() M.submit("opencode") end,
+    { desc = "Submit stacked OpenCode comments" })
+  vim.api.nvim_create_user_command("OpencodeClear", function() M.clear_comments("opencode") end,
+    { desc = "Clear OpenCode comment stack" })
+  vim.api.nvim_create_user_command("OpencodeList", function() M.list_comments("opencode") end,
+    { desc = "List OpenCode comments in quickfix" })
+  vim.api.nvim_create_user_command("OpencodeDelete", function() M.delete_comment_at_cursor("opencode") end,
+    { desc = "Delete OpenCode comment at cursor line" })
 
   local map_opts = { noremap = true, silent = true }
 
@@ -627,6 +663,22 @@ function M.setup()
     M.open_codex("resume --last", ctx)
   end), vim.tbl_extend("force", map_opts, { desc = "Open Codex resume --last with selection context" }))
 
+  -- キーマップ: OpenCode（ノーマルモード）
+  vim.keymap.set("n", "<leader>oc", "<Cmd>Opencode<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open OpenCode" }))
+
+  vim.keymap.set("n", "<leader>or", "<Cmd>Opencode --continue<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Open OpenCode --continue" }))
+
+  -- キーマップ: OpenCode（ビジュアルモード）
+  vim.keymap.set("x", "<leader>oc", visual_keymap_handler(function(ctx)
+    M.open_opencode("", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open OpenCode with selection context" }))
+
+  vim.keymap.set("x", "<leader>or", visual_keymap_handler(function(ctx)
+    M.open_opencode("--continue", ctx)
+  end), vim.tbl_extend("force", map_opts, { desc = "Open OpenCode --continue with selection context" }))
+
   -- キーマップ: コメントスタック操作
   vim.keymap.set("n", "<leader>aS", "<Cmd>ClaudeSubmit<CR>",
     vim.tbl_extend("force", map_opts, { desc = "Submit Claude comment stack" }))
@@ -644,6 +696,14 @@ function M.setup()
     vim.tbl_extend("force", map_opts, { desc = "Delete Claude comment at cursor line" }))
   vim.keymap.set("n", "<leader>xd", "<Cmd>CodexDelete<CR>",
     vim.tbl_extend("force", map_opts, { desc = "Delete Codex comment at cursor line" }))
+  vim.keymap.set("n", "<leader>oS", "<Cmd>OpencodeSubmit<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Submit OpenCode comment stack" }))
+  vim.keymap.set("n", "<leader>oX", "<Cmd>OpencodeClear<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Clear OpenCode comment stack" }))
+  vim.keymap.set("n", "<leader>oL", "<Cmd>OpencodeList<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "List OpenCode comments" }))
+  vim.keymap.set("n", "<leader>od", "<Cmd>OpencodeDelete<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Delete OpenCode comment at cursor line" }))
 end
 
 return M
