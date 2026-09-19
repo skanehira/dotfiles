@@ -42,6 +42,7 @@ _spark_served_name() {
     qwen) echo "qwen3.8-flash-next" ;;
     vision) echo "deepseek-v4-flash-vision-exp" ;;
     v41) echo "DeepSeek-v4.1-Flash-EXL3" ;;
+    glm) echo "GLM-5.3-Flash-EXL3" ;;
     *) echo "$1" ;;
   esac
 }
@@ -58,10 +59,18 @@ _spark_served_name() {
 # 実測していない。DeepSeek-v4.1-Flash-EXL3 は low / high / xhigh / max を
 # /v1/messages・/v1/chat/completions・/v1/responses の 3 経路で受け、medium は
 # どの経路でも 400 になる (前 2 経路は 2026-09-15、/v1/responses は 2026-09-17 実測)。
+#
+# GLM-5.3-Flash-EXL3 は他と構造が違う。/v1/chat/completions のスキーマは
+# none / minimal / low / medium / high / xhigh / max の 7 語を通すが、チャット
+# テンプレートが見るのは low と high だけで、それ以外は全て max に落ちる
+# (files/chat_template.jinja の effective_reasoning_effort。2026-09-20 実測)。
+# したがって実効的な語彙は low / high / max の 3 つで、max は指定なしと同じ。
+# 明示するのは、上流がテンプレート既定を変えたときに黙って浅くならないため。
 _spark_effort() {
   case "$1" in
     qwen3.8-flash-next) echo "xhigh" ;;
     DeepSeek-v4.1-Flash-EXL3) echo "max" ;;
+    GLM-5.3-Flash-EXL3) echo "max" ;;
     *) echo "high" ;;
   esac
 }

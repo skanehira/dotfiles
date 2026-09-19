@@ -9,6 +9,18 @@
         "baseURL": "http://spark-head.local:8888/v1"
       },
       "models": {
+        "GLM-5.3-Flash-EXL3": {
+          "name": "GLM-5.3 Flash EXL3 (Spark)",
+          "reasoning": true,
+          "tool_call": true,
+          "options": {
+            "reasoningEffort": "max"
+          },
+          "limit": {
+            "context": 500000,
+            "output": 65536
+          }
+        },
         "DeepSeek-v4.1-Flash-EXL3": {
           "name": "DeepSeek V4.1 Flash EXL3 (Spark)",
           "reasoning": true,
