@@ -47,7 +47,10 @@
   home.activation.linkAgentSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     agent_skills_dir="$HOME/.agents/skills"
     src_skills_dir="${dotfilesRoot}/agents/skills"
-    claude_only_skills="utility-session-profile"
+    # utility-session-profile: Claude Code のセッションログしか読まない
+    # synced: Claude Code が marketplace から同期するキャッシュ (SKILL.md を直下に持たず
+    #         Codex のスキルとしては機能しない)。.gitignore 済みだがディレクトリは実在する
+    claude_only_skills="utility-session-profile synced"
 
     run mkdir -p "$agent_skills_dir"
 
