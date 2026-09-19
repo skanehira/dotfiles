@@ -9,11 +9,11 @@
 #   cxsp status         起動せずに要求モデル・両経路の到達性・配信中モデルを表示
 #   cxsp -- <引数...>   解釈をやめて残り全部を codex へ (予約語を本体に渡す解除語)
 #
-# ccsp / ocsp との違い:
-# - ccsp と違い環境変数も alias も張らない。設定はすべて codex の -c で渡すので、
-#   1 回の起動にしか効かず off に相当する解除操作が要らない (ocsp と同じ方針)
-# - ocsp と違い、サブコマンドでも検査と注入を飛ばさない。codex は root の -c を
-#   subcommand の前に置けるので (実測: codex -c ... exec ...)、全経路で同じ注入が通る
+# ccsp との違い:
+# - ccsp は環境変数と alias を張るが、こちらは張らない。設定はすべて codex の -c で
+#   渡すので 1 回の起動にしか効かず、off に相当する解除操作が要らない
+# - サブコマンドでも検査と注入を飛ばさない。codex は root の -c を subcommand の前に
+#   置けるので (実測: codex -c ... exec ...)、全経路で同じ注入が通る
 #
 # 設定ファイルは使わない。--profile は $CODEX_HOME/<名前>.config.toml を読むので
 # ~/.codex/ に状態を残すことになり、素の codex (ChatGPT ログイン) と混ざる。
@@ -28,7 +28,7 @@
 # model_providers.<id>.env_key を省くと Authorization ヘッダ自体を送らず、
 # ChatGPT のトークンも流用しない (requires_openai_auth の既定が false のため)。
 #
-# LAN 側に IP を使いたいマシンは ccsp / ocsp と共通の CCSP_LAN_HOST に入れる
+# LAN 側に IP を使いたいマシンは ccsp と共通の CCSP_LAN_HOST に入れる
 # (このリポジトリは公開なので関数に IP を書かない)。
 
 # codex に渡す -c の一式を配列で組み立てて標準出力に 1 行 1 個で返す。

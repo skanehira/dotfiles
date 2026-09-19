@@ -75,7 +75,7 @@ ccds() {
 #   送られる (無認証なので通ってしまい、気づきにくい)
 
 # 短縮名の表・接続先・/v1/models の照会・reasoning effort の表は
-# zsh/functions/spark-common.zsh が持つ (ccsp / ocsp / cxsp の 3 つで共有する)。
+# zsh/functions/spark-common.zsh が持つ (ccsp / cxsp の 2 つで共有する)。
 
 # base の settings にモデル名・コンテキスト上限・reasoning effort を注入した
 # 設定を書き出す。毎回上書きするので、base を編集すれば次の起動から効く。
