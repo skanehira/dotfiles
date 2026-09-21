@@ -187,8 +187,16 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `herdr.nix` の activation が、未導入時のみ `herdr plugin install <owner>/<repo> --yes` を流す。対象は `persiyanov/herdr-reviewr` (id: `persiyanov.reviewr`) と `ChmaraX/herdr-nvim` (id: `chmarax.herdr-nvim`) の 2 本。導入判定は `herdr plugin list --plugin <id>` の出力 grep で、非対話では `--yes` が必須。導入済みへの再実行は再ダウンロードになるため skip するので、更新は手動で同じ install を流す (refresh 経路)。失敗しても activation は警告のみで止まらない (`herdr plugin list` で確認できる)。撤去は自動でやらず、リストから外しても残る (`herdr plugin uninstall` を手で流す)。Neovim 側の herdr 連携は `vim/lua/modules/ai/herdr.lua` (herdr コマンドの低レベルラッパー) が持つ
 - **comfyui/** — ComfyUI (Qwen-Image-2.1 の GUI) 用の補助スクリプト (mac only)
   - ComfyUI 本体と venv (`~/.local/share/comfyui/{ComfyUI,venv}`) は `nix/modules/home/comfyui.nix` の activation `bootstrapComfyui` が commit を固定して導入する。nixpkgs の `comfyui` は `meta.platforms` が linux のみで、かつ Qwen-Image-2.1 対応の v0.37.0 に追いついていないため、`deno.nix` / `rustup.nix` と同じ bootstrap パターンを採る。起動は同モジュールが生成する `ComfyUI.app` (mac-app-util が `~/Applications/Home Manager Trampolines/` へ trampoline 化する) から行い、サーバが未起動ならこれが起こす。生成画像は `~/Pictures/ComfyUI` に出る
-  - `merge-weights.py` — mflux が使う diffusers 形式の重み (`~/.cache/huggingface/hub/models--Qwen--Qwen-Image-2.1`、shard 分割) を ComfyUI が読む単一ファイル形式へ結合し、`~/.local/share/comfyui/models/` へ置く。VAE だけはキー体系が違うので `Comfy-Org/Qwen-Image-2.1` から取得する。**ComfyUI の venv の python で 1 回だけ手で実行する** (`~/.local/share/comfyui/venv/bin/python comfyui/merge-weights.py`)。32 GB の結合に数分かかるので activation では流さない。引数無しで冪等 (出力が既にあれば skip)、`--force` で作り直す
-  - 同じ重みを 2 形式で持つことになる (mflux 用 31.0 GB + ComfyUI 用 32.4 GB)。ComfyUI の `DiffusersLoader` は `DEPRECATED` かつ分割されていない `unet/` を探す実装なので diffusers 形式を直接読めず、symlink でも回避できない (shard ごとのヘッダを捨てて繋ぎ直すためバイト列が別物)
+  - **モデルの入手経路は 2 つあり、マシンによって使い分ける。** どちらも `~/.local/share/comfyui/models/{diffusion_models,text_encoders,vae}/` に置く点は同じ
+
+    | 経路 | 対象 | 版 | 容量 | 手順 |
+    | --- | --- | --- | --- | --- |
+    | shard 結合 | **mflux で 31 GB を取得済みのマシン (現在は Mac Studio のみ)** | bf16 | 30.2 GiB | `merge-weights.py` を 1 回実行 |
+    | UI ダウンロード | それ以外のマシン | int8 | 16.1 GB | ComfyUI でテンプレートを開き「すべてダウンロード」→ `~/Downloads` から手で移動 |
+
+  - `merge-weights.py` — mflux が使う diffusers 形式の重み (`~/.cache/huggingface/hub/models--Qwen--Qwen-Image-2.1`、shard 分割) を ComfyUI が読む単一ファイル形式へ結合する。VAE だけはキー体系が違うので `Comfy-Org/Qwen-Image-2.1` から取得する。**ComfyUI の venv の python で 1 回だけ手で実行する** (`~/.local/share/comfyui/venv/bin/python comfyui/merge-weights.py`)。30 GiB の結合に数分かかるので activation では流さない。引数無しで冪等 (出力が既にあれば skip)、`--force` で作り直す。**HF キャッシュが無いマシンでは `HF キャッシュが無い` で止まる**ので、その場合は UI 経路を使う
+  - **UI 経路では手で移動する作業が 1 回残る。** ComfyUI は不足モデルを列挙して「すべてダウンロード」ボタンを出すが、**ブラウザ版はブラウザのダウンロード (`~/Downloads`) になり `models/` には置かれない** (実測。上流 issue [#13676](https://github.com/Comfy-Org/ComfyUI/issues/13676) が open)。公式テンプレートが指定するのは int8 版なので、bf16 を使うマシンではテンプレートのローダのファイル名を bf16 のものへ差し替える
+  - mflux を併用するマシンは同じ重みを 2 形式で持つことになる (mflux 用 31.0 GB + ComfyUI 用 30.2 GiB)。ComfyUI の `DiffusersLoader` は `DEPRECATED` かつ分割されていない `unet/` を探す実装なので diffusers 形式を直接読めず、symlink でも回避できない (shard ごとのヘッダを捨てて繋ぎ直すためバイト列が別物)
 - **リポジトリ直下** — `AGENTS.md` (このリポジトリで作業する agent 向けの repo スコープ指示。グローバル指示の正本 `agents/AGENTS.md` とは別物) / `bootstrap.sh` (mac 初回セットアップの入口) / `README.md` / `LICENSE` / `.gitignore` / `.claude/settings.local.json` (このリポジトリでの作業用の権限設定) / `.github/workflows/nix-check.yml` (nix/** の push で flake check と fmt を回す CI)
 - **docs/** — Nix 設定だけでは伝わらない環境固有の手順書
   - `android-dev-setup.md` — Galaxy Z Fold 8 Ultra を Termux + proot-distro Debian で開発端末にする手順と制約
