@@ -14,7 +14,7 @@ paths:
 
 自宅に NVIDIA DGX Spark (GB10) が 2 台あり、vLLM の TP=2 (tensor parallel、2 台に重みを分割する並列方式) でローカル LLM を常時サービングしている。Mac の Claude Code (`ccsp`) / OpenCode (`ocsp`) / Codex (`cxsp`) の 3 つからバックエンドとして使える。
 
-**レシピは 4 系統ある。** DeepSeek 系 (Vision-Exp)、Qwen 系 (Qwen3.8-Flash-Next)、V4.1 EXL3 系 (DeepSeek-V4.1-Flash EXL3 2.9bpw)、GLM 系 (GLM-5.3-Flash EXL3 4bpw) で、ポート 8888 と GPU を共有するため**同時には 1 つしか配信できない**。2026-09-20 時点の配信は GLM 系である。系統ごとにスクリプト名・コンテナ名・設定ファイル名が違うので、作業前にどれが動いているかを確かめる (`ssh -n spark-head 'docker ps --format "{{.Names}}" | grep -E "vllm|dsv41|glm53"'`。**`--filter name=vllm` だけでは V4.1 EXL3 系の `dsv41-exl3-head` も GLM 系の `glm53-exl3-head` も拾わない**)。
+**レシピは 4 系統ある。** DeepSeek 系 (Vision-Exp)、Qwen 系 (Qwen3.8-Flash-Next)、V4.1 EXL3 系 (DeepSeek-V4.1-Flash EXL3 2.9bpw)、GLM 系 (GLM-5.3-Flash EXL3 4bpw) で、ポート 8888 と GPU を共有するため**同時には 1 つしか配信できない**。**どれを配信しているかは本書に書かない** (切り替えが頻繁なので、書いた時点で古くなる)。系統ごとにスクリプト名・コンテナ名・設定ファイル名が違うので、作業前にどれが動いているかを確かめる (`ssh -n spark-head 'docker ps --format "{{.Names}}" | grep -E "vllm|dsv41|glm53"'`。**`--filter name=vllm` だけでは V4.1 EXL3 系の `dsv41-exl3-head` も GLM 系の `glm53-exl3-head` も拾わない**)。
 
 **dotfiles リポジトリの所在は `~/dev/github.com/skanehira/dotfiles` である。** 本書でリポジトリ相対で書くパスはすべてここを基点とする。**本書の表で「—」は該当なしを意味する。**
 
@@ -78,9 +78,9 @@ paths:
 | `start.sh` / `stop.sh` | **Qwen レシピと V4.1 EXL3 レシピが同名で別々に持つ**スクリプト。Qwen 版は `--launch` で取得を飛ばして起動し、停止は `stop.sh`。V4.1 EXL3 版は引数なしで起動し、`stop` / `pack` / `status` / `logs` をサブコマンドで持つ (`stop.sh` は `start.sh stop` を呼ぶだけ)。本書では所属するレシピの節の中でだけ素の名前で書く | 「系統の切り替え」の表 | 上流 | 人 |
 | `.env` | **Qwen レシピと V4.1 EXL3 レシピが同名で別々に持つ**設定 1 枚。DeepSeek 系の `.env.dspark` とは別物。本書では「Qwen レシピの `.env`」「V4.1 EXL3 レシピの `.env`」と書き分ける | head の `~/Qwen3.8-Flash-Next-Dual-DGX-Sparks/.env` / `~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks/.env` | 人 (前者は `.env.sample`、後者は `.env.example` から複製) | 各レシピのスクリプト |
 | `vllm-fn` | Qwen レシピのコンテナ名。**head と worker で同名** | Qwen レシピの `start.sh` | `start.sh` | `docker` |
-| DeepSeek-V4.1-Flash EXL3 | `deepseek-ai/DeepSeek-V4.1-Flash` を EXL3 2.9 bpw に量子化した `Mia-AiLab/DeepSeek-V4.1-Flash-EXL3-2.9bpw` の略。配信名は `DeepSeek-v4.1-Flash-EXL3`、短縮名は `v41`。画像入力は使えない。2026-09-15 から 2026-09-20 まで常用モデルだった | 「DeepSeek-V4.1-Flash EXL3」 | 上流のチェックポイント | vLLM |
+| DeepSeek-V4.1-Flash EXL3 | `deepseek-ai/DeepSeek-V4.1-Flash` を EXL3 2.9 bpw に量子化した `Mia-AiLab/DeepSeek-V4.1-Flash-EXL3-2.9bpw` の略。配信名は `DeepSeek-v4.1-Flash-EXL3`、短縮名は `v41`。画像入力は使えない | 「DeepSeek-V4.1-Flash EXL3」 | 上流のチェックポイント | vLLM |
 | EXL3 | 推論ライブラリ ExLlamaV3 の量子化形式 (Cornell RelaxML の QTIP を簡略化した変種)。テンソルごとにビット数を変えられるので平均が 2.9 bpw のような端数になる。vLLM 本家は非対応で、V4.1 EXL3 レシピと GLM レシピがそれぞれイメージに後付けしている | 「DeepSeek-V4.1-Flash EXL3」の表 | 上流 | vLLM (レシピの overlay) |
-| GLM-5.3-Flash EXL3 | `GLM-5.3-Flash` を EXL3 4 bpw に量子化した `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` の略。配信名は `GLM-5.3-Flash-EXL3`、短縮名は `glm`。画像入力が使える。2026-09-20 時点の常用モデル | 「GLM-5.3-Flash EXL3」 | 上流のチェックポイント | vLLM |
+| GLM-5.3-Flash EXL3 | `GLM-5.3-Flash` を EXL3 4 bpw に量子化した `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` の略。配信名は `GLM-5.3-Flash-EXL3`、短縮名は `glm`。画像入力が使える | 「GLM-5.3-Flash EXL3」 | 上流のチェックポイント | vLLM |
 | GLM レシピ | GLM-5.3-Flash の EXL3 4bpw 量子化版を TP=2 で配信する別系統のレシピ。起動・停止・状態表示は `start.sh` のサブコマンドで行う | head の `~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks/` | 上流 (`git clone`) | 人 |
 | `glm53-exl3-head` / `glm53-exl3-worker` | GLM レシピのコンテナ名。**head と worker で名前が違う** | GLM レシピの `start.sh` | `start.sh` | `docker` |
 | DFlash2 | GLM レシピの投機デコードが使う**別モデルのドラフタ** (`incoai/GLM-5.3-Flash-DFlash2`、2.2 GiB)。チェックポイント内蔵の DSpark / MTP と違い、重みを別に取って配る必要がある。`DFLASH_DRAFT_TP=2` で 2 ノードに分割される | GLM レシピの `.env` の `SPEC_METHOD` / `DFLASH_MODEL` | 上流のチェックポイント | vLLM |
@@ -491,7 +491,7 @@ ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && \
 
 ### DeepSeek-V4.1-Flash EXL3
 
-**他の 3 系統とは別リポジトリ・別イメージ・別スクリプトである。** 2026-09-15 に導入し、2026-09-20 に GLM 系へ切り替えるまで常用配信だった。起動の 3 段判定、`ccsp lan v41` と `ocsp lan v41 run` からの生成、reasoning effort の語彙まで確認済み。2026-09-17 に `cxsp` (`/v1/responses`) の生成とツール呼び出しも確認した (head のパッチが前提 →「既知の制約」12)。**`ccsp` と `ocsp` の確認は、リポジトリの zsh 関数を直接 source して行った** (当時この Mac は `drs` 未適用だった。現在は適用済みで、素のシェルからも打てる → 「Claude Code (`ccsp`)」の反映経路)。
+**他の 3 系統とは別リポジトリ・別イメージ・別スクリプトである。** 2026-09-15 に導入した。起動の 3 段判定、`ccsp lan v41` と `ocsp lan v41 run` からの生成、reasoning effort の語彙まで確認済み。2026-09-17 に `cxsp` (`/v1/responses`) の生成とツール呼び出しも確認した (head のパッチが前提 →「既知の制約」12)。**`ccsp` と `ocsp` の確認は、リポジトリの zsh 関数を直接 source して行った** (当時この Mac は `drs` 未適用だった。現在は適用済みで、素のシェルからも打てる → 「Claude Code (`ccsp`)」の反映経路)。
 
 **この構成には認証が無い** (根拠は「動いているもの」。認証を戻す手順は DeepSeek 系向けにしか書いていない)。
 
@@ -672,7 +672,7 @@ git pull --ff-only
 
 ### GLM-5.3-Flash EXL3
 
-**他の 3 系統とは別リポジトリ・別イメージ・別スクリプトである。** 2026-09-20 に導入し、常用配信をこの系統にした。起動の 3 段判定、`ocsp lan glm run` からのツール呼び出し込みの生成、reasoning effort の語彙まで確認済み。**`ccsp` と `cxsp` からの疎通はこの系統では未試行である** (→ 下の「使える API」)。
+**他の 3 系統とは別リポジトリ・別イメージ・別スクリプトである。** 2026-09-20 に導入した。起動の 3 段判定、`ocsp lan glm run` からのツール呼び出し込みの生成、reasoning effort の語彙まで確認済み。**`ccsp` と `cxsp` からの疎通はこの系統では未試行である** (→ 下の「使える API」)。
 
 **この構成には認証が無い** (根拠は「動いているもの」)。起動ログの `auth` 行が `none (VLLM_API_KEY empty)` と出ることで毎回確かめられる。
 
