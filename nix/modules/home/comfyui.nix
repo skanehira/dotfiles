@@ -114,8 +114,11 @@ in
     repo="$comfyRoot/ComfyUI"
     stamp="$comfyRoot/.rev-stamp"
 
+    # --base-directory は models / custom_nodes / input / temp / user を「あるもの」として扱う。
+    # custom_nodes が無いと main.py の execute_prestartup_script が FileNotFoundError で落ちる (実測)
     run mkdir -p "$comfyRoot/models/diffusion_models" "$comfyRoot/models/text_encoders" \
-      "$comfyRoot/models/vae" "${outputDir}"
+      "$comfyRoot/models/vae" "$comfyRoot/custom_nodes" "$comfyRoot/input" \
+      "$comfyRoot/temp" "$comfyRoot/user" "${outputDir}"
 
     if [ ! -d "$repo/.git" ]; then
       echo "Bootstrapping ComfyUI (${rev})..." >&2
