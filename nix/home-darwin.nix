@@ -5,6 +5,7 @@
 {
   imports = [
     ./home.nix
+    ./modules/home/comfyui.nix
     ./modules/home/karabiner.nix
     ./modules/home/mac-app-util-icons.nix
     ./modules/home/wezterm.nix
