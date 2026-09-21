@@ -127,7 +127,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `flake.nix` — inputs, outputs (`darwinConfigurations.skanehira` + `homeConfigurations` = `linuxUsers` × 3 プロファイル。現在は `skanehira` / `ubuntu` の 2 ユーザーで 6 output + `packages` + `formatter`)
   - `home-core.nix` — 全プロファイル共通の土台 (dotfilesRoot / stateVersion / programs.home-manager)。module の import は持たない
   - `home.nix` — フルセットのプロファイル (mac と通常 Linux が共有)
-  - `home-darwin.nix` — mac 用エントリ (home.nix + mac 専用 3 module (karabiner / wezterm / mac-app-util-icons) + `homeDirectory = /Users/...`)
+  - `home-darwin.nix` — mac 用エントリ (home.nix + mac 専用 4 module (karabiner / wezterm / mac-app-util-icons / comfyui) + `homeDirectory = /Users/...`)
   - `home-linux.nix` — 通常 Linux 用エントリ (home.nix + `homeDirectory = /home/...`)
   - `home-android.nix` — Android (Termux + proot) 用エントリ (home-core.nix + 軽量 module のみ)
   - `darwin.nix` — nix-darwin imports のみ
@@ -185,6 +185,10 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `config.toml` — `herdr.nix` が `~/.config/herdr/config.toml` へ mkOutOfStoreSymlink する
   - **プラグインだけは宣言的に管理できない。** `config.toml` は `type = "plugin_action"` で参照するのみで、宣言的に導入する手段は無い (実測: herdr 0.7.4、2026-09-11。`herdr --default-config` にも plugin セクションが無く、HM の `programs.herdr` も enable/package/settings の 3 オプションのみ)。導入状態は `~/.config/herdr/` 配下の herdr 所有ファイルにあり、Nix 管理外
   - `herdr.nix` の activation が、未導入時のみ `herdr plugin install <owner>/<repo> --yes` を流す。対象は `persiyanov/herdr-reviewr` (id: `persiyanov.reviewr`) と `ChmaraX/herdr-nvim` (id: `chmarax.herdr-nvim`) の 2 本。導入判定は `herdr plugin list --plugin <id>` の出力 grep で、非対話では `--yes` が必須。導入済みへの再実行は再ダウンロードになるため skip するので、更新は手動で同じ install を流す (refresh 経路)。失敗しても activation は警告のみで止まらない (`herdr plugin list` で確認できる)。撤去は自動でやらず、リストから外しても残る (`herdr plugin uninstall` を手で流す)。Neovim 側の herdr 連携は `vim/lua/modules/ai/herdr.lua` (herdr コマンドの低レベルラッパー) が持つ
+- **comfyui/** — ComfyUI (Qwen-Image-2.1 の GUI) 用の補助スクリプト (mac only)
+  - ComfyUI 本体と venv (`~/.local/share/comfyui/{ComfyUI,venv}`) は `nix/modules/home/comfyui.nix` の activation `bootstrapComfyui` が commit を固定して導入する。nixpkgs の `comfyui` は `meta.platforms` が linux のみで、かつ Qwen-Image-2.1 対応の v0.37.0 に追いついていないため、`deno.nix` / `rustup.nix` と同じ bootstrap パターンを採る。起動は同モジュールが生成する `ComfyUI.app` (mac-app-util が `~/Applications/Home Manager Trampolines/` へ trampoline 化する) から行い、サーバが未起動ならこれが起こす。生成画像は `~/Pictures/ComfyUI` に出る
+  - `merge-weights.py` — mflux が使う diffusers 形式の重み (`~/.cache/huggingface/hub/models--Qwen--Qwen-Image-2.1`、shard 分割) を ComfyUI が読む単一ファイル形式へ結合し、`~/.local/share/comfyui/models/` へ置く。VAE だけはキー体系が違うので `Comfy-Org/Qwen-Image-2.1` から取得する。**ComfyUI の venv の python で 1 回だけ手で実行する** (`~/.local/share/comfyui/venv/bin/python comfyui/merge-weights.py`)。32 GB の結合に数分かかるので activation では流さない。引数無しで冪等 (出力が既にあれば skip)、`--force` で作り直す
+  - 同じ重みを 2 形式で持つことになる (mflux 用 31.0 GB + ComfyUI 用 32.4 GB)。ComfyUI の `DiffusersLoader` は `DEPRECATED` かつ分割されていない `unet/` を探す実装なので diffusers 形式を直接読めず、symlink でも回避できない (shard ごとのヘッダを捨てて繋ぎ直すためバイト列が別物)
 - **リポジトリ直下** — `AGENTS.md` (このリポジトリで作業する agent 向けの repo スコープ指示。グローバル指示の正本 `agents/AGENTS.md` とは別物) / `bootstrap.sh` (mac 初回セットアップの入口) / `README.md` / `LICENSE` / `.gitignore` / `.claude/settings.local.json` (このリポジトリでの作業用の権限設定) / `.github/workflows/nix-check.yml` (nix/** の push で flake check と fmt を回す CI)
 - **docs/** — Nix 設定だけでは伝わらない環境固有の手順書
   - `android-dev-setup.md` — Galaxy Z Fold 8 Ultra を Termux + proot-distro Debian で開発端末にする手順と制約
@@ -197,7 +201,7 @@ nix/
 ├── flake.lock
 ├── home-core.nix          ← 全プロファイル共通の土台 (module の imports は持たない)
 ├── home.nix               ← フルセット (home-core.nix + 全 module の imports + nix-index-database。`,` で未導入 CLI を一時実行できる)
-├── home-darwin.nix        ← home.nix + karabiner / wezterm / mac-app-util-icons + homeDirectory=/Users/...
+├── home-darwin.nix        ← home.nix + karabiner / wezterm / mac-app-util-icons / comfyui + homeDirectory=/Users/...
 ├── home-linux.nix         ← home.nix + homeDirectory=/home/...
 ├── home-android.nix       ← home-core.nix + 軽量 module + homeDirectory=/home/...
 ├── darwin.nix             ← imports modules/darwin/
@@ -208,6 +212,7 @@ nix/
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
     ├── home/
     │   ├── claude.nix    ← Claude Code (bootstrap install + ハーネス正本と Claude 固有の設定を symlink)
+    │   ├── comfyui.nix   ← ComfyUI を rev 固定で bootstrap + .app 生成 (mac only。home-darwin.nix からのみ import)
     │   ├── codex.nix     ← Codex 向けの symlink (~/.codex/AGENTS.md) + スキルの個別 symlink (linkAgentSkills。~/.agents/skills は OpenCode とも共有するので OPENCODE_DISABLE_CLAUDE_CODE_SKILLS もここで宣言) と subagent の TOML 変換 (syncCodexSubagents) + プラグイン導入 (activation)。Linux のみ /etc/codex/config.toml を sudo で symlink
     │   ├── deno.nix      ← bootstrap-install (~/.deno/bin/deno 不在時のみ公式 installer 実行)
     │   ├── direnv.nix    ← programs.direnv + nix-direnv
@@ -238,7 +243,7 @@ nix/
 
 - **設定の key**: ホスト名は使わない。複数マシンで同じ設定が走る前提。`darwinConfigurations` の key は username (`skanehira`)、`homeConfigurations` の key は `configName` (username にプロファイル接尾辞を足したもの。`skanehira` / `skanehira-aarch64` / `skanehira-android`)。
 - **system 値**: darwin は `aarch64-darwin` 固定 (Apple Silicon)。Linux は `skanehira` (x86_64-linux)、`skanehira-aarch64` (aarch64-linux)、`skanehira-android` (aarch64-linux) の 3 出力。
-- **モジュール共有**: `home-core.nix` が全プロファイル共通の土台 (dotfilesRoot / stateVersion / programs.home-manager) で、module の import は持たない。「どのツールを入れるか」はプロファイル側の決定なので、`home.nix` (フルセット) と `home-android.nix` (軽量) がそれぞれ import 一覧を持つ。`home-darwin.nix` / `home-linux.nix` は `home.nix` に homeDirectory を足す wrapper。mac 専用 module は `karabiner.nix` / `wezterm.nix` / `mac-app-util-icons.nix` で `home-darwin.nix` からだけ import。`tmux.nix` / `zsh.nix` は内部で `lib.optionalString isDarwin/isLinux` 分岐済。
+- **モジュール共有**: `home-core.nix` が全プロファイル共通の土台 (dotfilesRoot / stateVersion / programs.home-manager) で、module の import は持たない。「どのツールを入れるか」はプロファイル側の決定なので、`home.nix` (フルセット) と `home-android.nix` (軽量) がそれぞれ import 一覧を持つ。`home-darwin.nix` / `home-linux.nix` は `home.nix` に homeDirectory を足す wrapper。mac 専用 module は `karabiner.nix` / `wezterm.nix` / `mac-app-util-icons.nix` / `comfyui.nix` で `home-darwin.nix` からだけ import。`tmux.nix` / `zsh.nix` は内部で `lib.optionalString isDarwin/isLinux` 分岐済。
 - **Android を別プロファイルにする理由**: proot は RAM が数 GB でストレージも Termux のアプリ内領域に載り、binary cache に無いものをローカルビルドできない。フルセットは完走しないため、`packages-android.nix` に軽量なものを 19 エントリだけ明示列挙する (`programs.git` 等が足す分と HM 内部を含めて `home.packages` は 34 件)。規模の差は下表のとおり。neovim は nightly overlay ではなく nixpkgs の stable を使う。
 
   | プロファイル (aarch64-linux) | ローカルビルド | fetch (件) | ダウンロード | 展開後 |
