@@ -58,7 +58,7 @@ dev-impl はこのスタンプで UI の実機検証 (Playwright E2E) の要否�
 | -- | --------------------------------- | ----------------------------------- | ---------------------------------- | -------------- | ---------- |
 | 1  | ユーザーストーリー                | `references/user-story.md`          | docs/design/USER_STORIES.md               | スキップ       | 実行       |
 | 2  | UI スケッチ                       | `references/ui-sketch.md`           | docs/design/UI_SKETCH.html                | スキップ       | スキップ   |
-| 3  | ユースケース記述                  | `references/usecase-description.md` | docs/design/USECASES.md                   | スキップ       | 実行       |
+| 3  | ユースケース記述                  | `references/usecase-description.md` | docs/design/USECASES.md + USER_STORIES.md の「実現するユースケース」行 | スキップ       | 実行       |
 | 4  | 実現可能性検証                    | `references/feasibility-check.md`   | docs/design/FEASIBILITY.md (PoC 計画)     | 条件付き実行   | 実行       |
 | 5  | PoC 検証                          | `references/poc-verification.md`    | FEASIBILITY.md 更新 (PoC 結果)     | 条件付き実行   | 実行       |
 | 6  | 横断設計                          | `references/design-doc.md`          | docs/design/DESIGN.md                     | 実行           | 実行       |
@@ -103,13 +103,13 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 | ------------------------------------------- | -------------------------------------------------------------- |
 | USER_STORIES.md                             | 2 (UI スケッチ)。cli モードでは 3                              |
 | UI_SKETCH.html                              | 3 (ユースケース)                                               |
-| USECASES.md                                 | 4 (実現可能性)                                                 |
+| USECASES.md                                 | 4 (実現可能性)。ただし USER_STORIES.md もあり、`~/.claude/scripts/check-ac-coverage.ts docs/design/USER_STORIES.md docs/design/USECASES.md` が NG を出すなら 3 (ユースケースの途中で中断したか、書き戻しと被覆チェックが済んでいない。受け入れ基準を持たない旧形式の docs もここに入る) |
 | FEASIBILITY.md (blocker=true が unresolved) | 5 (PoC 検証)                                                   |
 | FEASIBILITY.md (全件解決済み)               | 6 (横断設計)                                                   |
 | DESIGN.md                                   | 7 (機能設計)。features/ 各ファイルの「対象 UC」と USECASES.md の UC 一覧を突合し、全 UC がカバー済みなら 8 (USECASES.md が無い構成では人間に確認する) |
 | GitHub に `tracking` issue が 1 件以上ある   | 9 (ドラフトを docs から再生成) → 10。ドラフトはセッション固有の scratchpad にしか無く、10 単独では突き合わせの比較元が無い。親が一部しか作られていない中断状態でも、10 の突き合わせが未作成分を補完する |
 
-更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する (DESIGN.md ではスタンプ行を押し出さず 1 行目に保つ)。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。** フェーズ 3 (ユースケース記述) は USECASES.md に加えて USER_STORIES.md の「実現するユースケース」行も書き換えるので、フェーズ 3 だけを部分実行する場合も両方が更新対象になる。
+更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する (DESIGN.md ではスタンプ行を押し出さず 1 行目に保つ)。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。** フェーズ 3 (ユースケース記述) は USECASES.md に加えて USER_STORIES.md の「実現するユースケース」行も書き換えるので、フェーズ 3 だけを部分実行する場合も両方が更新対象になる。フェーズ 1 だけを部分実行した場合は、続けて usecase-description.md の手順 9 (書き戻しと被覆チェック) を実行する (ストーリーの追加・Won't への移動がユースケース側の受け入れ基準と食い違うため)。
 
 ### 0.3 モード選択
 
@@ -158,7 +158,7 @@ docs が完成した時点で、書き手と別コンテキストの subagent �
 
 > docs/design/USECASES.md (あれば)・docs/design/DESIGN.md・docs/design/features/*.md を**全文 Read** し、次を検査して指摘だけを返せ (修正はしない):
 >
-> 1. **落とし漏れ**: USECASES.md の各 UC・各規則 (BR) が、いずれかの機能設計書でカバーされているか。各 UC の受け入れ基準の各行が、いずれかの機能設計書「テスト方針」の表に写されて検証レベルを割り当てられているか (複数の機能設計書にまたがる二重の割り当ても指摘する。同じ機能設計書の `E2E 対象動線:` 行は表の該当行の再掲であり、二重には当たらない)
+> 1. **落とし漏れ**: USECASES.md の各 UC・各規則 (BR) が、いずれかの機能設計書でカバーされているか。各 UC の受け入れ基準の各行が、いずれかの機能設計書「テスト方針」の表に写されて検証レベルを割り当てられているか (複数の機能設計書にまたがる二重の割り当ても指摘する。同じ機能設計書の `E2E 対象動線:` 行は表の該当行の再掲であり、二重には当たらない)。逆向きに、テスト方針の表の各行が USECASES.md の受け入れ基準に文面どおり実在するか (受け入れ基準を改訂したあとに古い写しが残っていないか)
 > 2. **矛盾**: 機能設計書どうし、および DESIGN.md との食い違い (スキーマと入出力、API 一覧と各機能の API 節)
 > 3. **未定義・参照切れ**: 使われている用語・テーブル・エンドポイント・節参照に定義があるか。「後述」「別途定義」のまま宙に浮いた参照が無いか
 > 4. **エッジケースの妥当性**: 明らかに起こるのに決定が書かれていないエッジケース
