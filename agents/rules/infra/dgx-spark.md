@@ -9,12 +9,12 @@ paths:
 
 - 種別: 環境リファレンス
 - 対象読者: 別セッション・別マシンで作業する Claude
-- 最終確認: 2026-09-23 (DeepSeek 系レシピを `97e8733` へ追従させ、Qwen 系から配信を切り替えた。DeepSeek 系の節・reasoning effort の語彙・使える API・画像入力・更新手順を実測で取り直した)
+- 最終確認: 2026-09-23 (DeepSeek 系レシピを `97e8733` へ追従させ、Qwen 系から配信を切り替えた。DeepSeek 系の節・reasoning effort の語彙・使える API・画像入力・更新手順を実測で取り直した。同日、decode を「1 ステップの時間」と「1 ステップで確定するトークン数」に分解して測り、DeepSeek 系を 0731 版で配信する手順と両チェックポイントの比較を足した)
 - 他の節の確認日: 2026-09-20 (GLM 系の導入に伴う系統まわりの見直しと、OpenCode (`ocsp`) の再導入に伴う全節の見直し。`ocsp` 自体の疎通の実測は GLM 系については 2026-09-20、Qwen 系と V4.1 EXL3 系については 2026-09-06 / 2026-09-07 のもので、いずれも opencode 1.18.18 で取った)。2026-09-17 は Codex (`cxsp`) の節と `/v1/responses` にまたがる記述 (`show_raw_agent_reasoning` のみ 2026-09-18)。それ以前は 2026-09-06 (一部は 2026-09-09 / 2026-09-10 / 2026-09-15 に再確認。2026-09-15 は「sparkDash の `workerLabel` を直す」「障害時」「既知の制約」8・11)。「実測値」節の性能値のみ 2026-09-05。日付は表のセルか本文に書いてある
 
 自宅に NVIDIA DGX Spark (GB10) が 2 台あり、vLLM の TP=2 (tensor parallel、2 台に重みを分割する並列方式) でローカル LLM を常時サービングしている。Mac の Claude Code (`ccsp`) / OpenCode (`ocsp`) / Codex (`cxsp`) の 3 つからバックエンドとして使える。
 
-**レシピは 4 系統ある。** DeepSeek 系 (Vision-Exp)、Qwen 系 (Qwen3.8-Flash-Next)、V4.1 EXL3 系 (DeepSeek-V4.1-Flash EXL3 2.9bpw)、GLM 系 (GLM-5.3-Flash EXL3 4bpw) で、ポート 8888 と GPU を共有するため**同時には 1 つしか配信できない**。**どれを配信しているかは本書に書かない** (切り替えが頻繁なので、書いた時点で古くなる)。系統ごとにスクリプト名・コンテナ名・設定ファイル名が違うので、作業前にどれが動いているかを確かめる (`ssh -n spark-head 'docker ps --format "{{.Names}}" | grep -E "vllm|dsv41|glm53"'`。**`--filter name=vllm` だけでは V4.1 EXL3 系の `dsv41-exl3-head` も GLM 系の `glm53-exl3-head` も拾わない**)。
+**レシピは 4 系統ある。** DeepSeek 系 (Vision-Exp または 0731。同じスクリプトとコンテナ名で、チェックポイントごとに別の作業ディレクトリから起動する)、Qwen 系 (Qwen3.8-Flash-Next)、V4.1 EXL3 系 (DeepSeek-V4.1-Flash EXL3 2.9bpw)、GLM 系 (GLM-5.3-Flash EXL3 4bpw) で、ポート 8888 と GPU を共有するため**同時には 1 つしか配信できない**。**どれを配信しているかは本書に書かない** (切り替えが頻繁なので、書いた時点で古くなる)。系統ごとにスクリプト名・コンテナ名・設定ファイル名が違うので、作業前にどれが動いているかを確かめる (`ssh -n spark-head 'docker ps --format "{{.Names}}" | grep -E "vllm|dsv41|glm53"'`。**`--filter name=vllm` だけでは V4.1 EXL3 系の `dsv41-exl3-head` も GLM 系の `glm53-exl3-head` も拾わない**)。
 
 **dotfiles リポジトリの所在は `~/dev/github.com/skanehira/dotfiles` である。** 本書でリポジトリ相対で書くパスはすべてここを基点とする。**本書の表で「—」は該当なしを意味する。**
 
@@ -27,7 +27,8 @@ paths:
 | レシピ | 上流が配布する compose + シェルスクリプト一式 | head の `~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark/` | 上流 (`git clone`) | 人 |
 | Vision-Exp | `deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` の略。画像入力が使える。DeepSeek 系のモデル | 「サービングの構成 (DeepSeek 系)」 | 上流のチェックポイント | vLLM |
 | Qwen3.8-Flash-Next | `nvidia/Qwen3.8-Flash-Next-NVFP4` の略。他の 3 系統とは別レシピで配信する | 「Qwen3.8-Flash-Next」 | 上流のチェックポイント | vLLM |
-| 0731 | `deepseek-ai/DeepSeek-V4-Flash-0731` の略。**配信候補ではない。** 重みと専用 worktree がディスクに残っているだけ | 「触らないもの」 | — | — |
+| 0731 | `deepseek-ai/DeepSeek-V4-Flash-0731` の略。DeepSeek 系のテキスト専用チェックポイント (画像入力は使えない)。Vision-Exp よりドラフタの受理率が高く、decode が速い | 「0731 版で配信する」 | 上流のチェックポイント | vLLM |
+| `~/dspark-0731` | 0731 版を起動する作業ディレクトリ。DeepSeek 系レシピの git worktree で、`70a7cc4` に detached で固定してある。0731 用の `.env.dspark` を持つ | 「0731 版で配信する」 | 人 (`git worktree add`) | 人 / 起動スクリプト (worker 側の配布先も `~/dspark-0731` になる) |
 | RoCE | RDMA over Converged Ethernet。QSFP ポート上でノード間の NCCL 集団通信を運ぶ | `.env.dspark` の `NCCL_IB_HCA` | NetworkManager の接続 `roce` / `roce2` | vLLM (NCCL) |
 | NCCL | NVIDIA Collective Communications Library。TP=2 のランク間通信を担う | 本表 | — | vLLM |
 | DSpark | チェックポイント内蔵の投機デコード。draft 用の別モデルを持たない。DeepSeek 系と V4.1 EXL3 系が使う | vLLM の CLI フラグ `--speculative-config` | DeepSeek 系はレシピの compose、V4.1 EXL3 系はレシピの `.env` の `SPEC_METHOD` / `DSPARK_TOKENS` から `start.sh` | vLLM |
@@ -58,7 +59,7 @@ paths:
 | `CCSP_EFFORT` | `_spark_effort` の決定を上書きするシェル変数。**未設定が既定** (Qwen 配信中に入れてよいのは `low` / `medium` / `xhigh`、V4.1 EXL3 配信中は `low` / `high` / `xhigh` / `max`)。語彙に無い値を入れると最初のリクエストが 400 で落ちる | `zsh/functions/claude-deepseek.zsh` | 人 | `ccsp` |
 | `CXSP_CONTEXT_MAX` | `cxsp` が `model_context_window` に渡す値の上限 (トークン数)。既定 500,000。**サーバの `max_model_len` がこれを超えたら頭打ちにする** | `zsh/functions/codex-spark.zsh` | 人 | `cxsp` |
 | `CXSP_EFFORT` | 同じものを `cxsp` 側で上書きするシェル変数。**未設定が既定。** V4.1 EXL3 配信中に `/v1/responses` で入れてよいのは `low` / `high` / `xhigh` / `max` の 4 語で、`medium` は 400 になる (2026-09-17 実測 →「V4.1 EXL3 の reasoning effort の語彙」)。**Qwen 系と DeepSeek 系のこの経路は未実測** | `zsh/functions/codex-spark.zsh` | 人 | `cxsp` |
-| `reasoningEffort` | `ocsp` 側の同じもの。`opencode.json` の `provider.spark.models.<配信名>.options` が**モデルごとに静的に持つ** (`qwen3.8-flash-next` = `xhigh` / `deepseek-v4-flash-vision-exp` = `high` / `DeepSeek-v4.1-Flash-EXL3` = `max`)。省略するとクライアントは送らず、モデルのテンプレート既定が効く | `agents/bindings/opencode/opencode.json` | dotfiles | `opencode` 本体 (`/v1/chat/completions` の `reasoning_effort` として送る) |
+| `reasoningEffort` | `ocsp` 側の同じもの。`opencode.json` の `provider.spark.models.<配信名>.options` が**モデルごとに静的に持つ** (`qwen3.8-flash-next` = `xhigh` / `deepseek-v4-flash-vision-exp` = `high` / `deepseek-v4-flash-0731` = `high` / `DeepSeek-v4.1-Flash-EXL3` = `max` / `GLM-5.3-Flash-EXL3` = `max`)。省略するとクライアントは送らず、モデルのテンプレート既定が効く | `agents/bindings/opencode/opencode.json` | dotfiles | `opencode` 本体 (`/v1/chat/completions` の `reasoning_effort` として送る) |
 | `~/.cache/ccsp/settings.json` | `ccsp` が起動のたびに `settings.spark.json` へモデル名 5 キー (`ANTHROPIC_MODEL` と `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU,FABLE}_MODEL`)・`CLAUDE_CODE_MAX_CONTEXT_TOKENS`・`CLAUDE_CODE_EFFORT_LEVEL`・`fallbackModel` を注入して書き出す実ファイル | Mac の `~/.cache/ccsp/settings.json` (`XDG_CACHE_HOME` があればその下) | `ccsp` | `claude` 本体 (`--settings` で渡される) |
 | `~/.cache/cxsp/model-catalog.json` | `cxsp` が起動のたびに codex 同梱の catalog へ配信名を 1 件 append して書き出す実ファイル。これが無いと `model_context_window` が効かない (→「Codex (`cxsp`)」) | Mac の `~/.cache/cxsp/model-catalog.json` | `cxsp` | `codex` 本体 (`-c model_catalog_json` で渡される) |
 | `opencode.json` | OpenCode の `provider.spark` (接続先・モデル宣言・モデルごとの `reasoningEffort`)。**キーは持たない。** 認証を戻すときだけ `options.apiKey` を足す (値は `{file:…}` / `{env:…}` で外部へ逃がす)。トップレベルの `permission` は OpenCode のツール実行の承認方針で、`allow` は全ツール自動承認を意味する。dotfiles 管理。`~/.config/opencode/` の他のファイル (`node_modules` / `package.json` / `package-lock.json` / `.gitignore` / `skills/` など) は opencode 自身と他ツールのもの。**`AGENTS.md` は dotfiles への symlink、`agents/` は `sync-subagents.ts` の生成物**で、いずれも `nix/modules/home/opencode.nix` が配る | `agents/bindings/opencode/opencode.json` | dotfiles (`nix/modules/home/opencode.nix` が symlink) | `opencode` 本体 / `ocsp` |
@@ -74,7 +75,7 @@ paths:
 | `.env.dspark` | DeepSeek 系レシピの設定を集約した 1 枚。git 管理外 (`.gitignore` 済み) | head の `~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark/` | 人 (`.env.dspark.example` から複製) | 起動・停止・検証スクリプト |
 | `PROJECT_NAME` | `docker compose` のプロジェクト名。コンテナ名 `deepseek-v4-flash-vllm-dspark-1` の接頭辞になる | 起動スクリプトの既定値 (`.env.dspark` のキーではない) | 起動スクリプト | `docker compose` |
 | Qwen レシピ | Qwen3.8-Flash-Next を TP=2 で配信する別系統のレシピ。他の 3 系統とは別リポジトリ・別イメージ・別スクリプト名 | head の `~/Qwen3.8-Flash-Next-Dual-DGX-Sparks/` | 上流 (`git clone`) | 人 |
-| `stop` / `start` | 本書で使う DeepSeek 系スクリプト (`stop-deepseek-v4-flash-dspark.sh` / `start-deepseek-v4-flash-dspark.sh`) の略記。**Qwen 系・V4.1 EXL3 系・GLM 系の `stop.sh` / `start.sh` とは別物** | 「DeepSeek 系 (Vision-Exp)」 | 上流 | 人 |
+| `stop` / `start` | 本書で使う DeepSeek 系スクリプト (`stop-deepseek-v4-flash-dspark.sh` / `start-deepseek-v4-flash-dspark.sh`) の略記。**Qwen 系・V4.1 EXL3 系・GLM 系の `stop.sh` / `start.sh` とは別物。** Vision-Exp 版と 0731 版は同じ名前のスクリプトを別の作業ディレクトリで打つ | 「DeepSeek 系 (Vision-Exp / 0731)」 | 上流 | 人 |
 | `start.sh` / `stop.sh` | **Qwen レシピと V4.1 EXL3 レシピが同名で別々に持つ**スクリプト。Qwen 版は `--launch` で取得を飛ばして起動し、停止は `stop.sh`。V4.1 EXL3 版は引数なしで起動し、`stop` / `pack` / `status` / `logs` をサブコマンドで持つ (`stop.sh` は `start.sh stop` を呼ぶだけ)。本書では所属するレシピの節の中でだけ素の名前で書く | 「系統の切り替え」の表 | 上流 | 人 |
 | `.env` | **Qwen レシピと V4.1 EXL3 レシピが同名で別々に持つ**設定 1 枚。DeepSeek 系の `.env.dspark` とは別物。本書では「Qwen レシピの `.env`」「V4.1 EXL3 レシピの `.env`」と書き分ける | head の `~/Qwen3.8-Flash-Next-Dual-DGX-Sparks/.env` / `~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks/.env` | 人 (前者は `.env.sample`、後者は `.env.example` から複製) | 各レシピのスクリプト |
 | `vllm-fn` | Qwen レシピのコンテナ名。**head と worker で同名** | Qwen レシピの `start.sh` | `start.sh` | `docker` |
@@ -218,7 +219,7 @@ sparkDash は head の `~/sparkDash` に clone した [MiaAI-Lab/sparkDash](http
 
 **DeepSeek 系を認証ありに戻すときは、サーバとクライアントの両方を直す。** 直し忘れた側で症状が変わる。**サーバだけ直すと 3 つのクライアントが `/v1/models` の 401 で起動前に止まる** (騒がしいので気づける)。**クライアントだけ直しても無認証のサーバは Bearer を無視して 200 を返すので、認証が効いていると誤認したまま運用が続く** (静かなので気づけない)。
 
-1. サーバ側 — `.env.dspark` の `VLLM_API_KEY` に値を入れて `stop` → `start`
+1. サーバ側 — `.env.dspark` の `VLLM_API_KEY` に値を入れて `stop` → `start`。**`.env.dspark` は Vision-Exp 版 (`~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark`) と 0731 版 (`~/dspark-0731`) に 1 枚ずつあるので、両方に入れる**
 2. クライアント側 — `ccsp` の前に `ANTHROPIC_AUTH_TOKEN` を export し、`opencode.json` の `options` に `apiKey` を足し、`cxsp` には `model_providers.spark.env_key="SPARK_API_KEY"` の `-c` を 11 本目として足し、その環境変数を人が export する (`cxsp` は現在このキーを持たないので `-c` は 10 本 → 「Codex (`cxsp`)」)
 3. **反映経路が 3 つで違う。** `ANTHROPIC_AUTH_TOKEN` はそのシェルで即時、`opencode.json` は `mkOutOfStoreSymlink` が効いている世代なら編集した瞬間から (2026-09-06 時点は効いている。**まだ store コピーを指している世代では `drs` を当てるまで反映されない。判定は `readlink -f` で行う** →「OpenCode (`ocsp`)」)、`cxsp` の 11 本目の `-c` は zsh 関数の編集なので `drs` と新しいシェルが要る
 4. **効いたことを確認する** — `curl -s -o /dev/null -w '%{http_code}\n' http://spark-head.local:8888/v1/models` が **401** を返すこと。200 のままならサーバ側が直っていない (これは「依拠する外部事実」の 200 判定の陽性対照でもある)
@@ -261,9 +262,9 @@ DeepSeek 系・Qwen 系・GLM 系の重みは両ノードの `~/.cache/huggingfa
 | Qwen3.8-Flash-Next | 124 GiB | 124 GiB | Qwen 系 (「Qwen3.8-Flash-Next」節) |
 | DeepSeek-V4.1-Flash EXL3 | 197 GiB (EXL3) + 190 GiB (Engram) + 95 GiB (pack) | 同じ | V4.1 EXL3 系。ほかにイメージの blob 9.1 GiB が両ノードの `~/.cache/dsv41-image/` に残っている (→ 用語表の `~/.cache/dsv41-image`) |
 | GLM-5.3-Flash EXL3 | 164 GiB + DFlash2 2.2 GiB | 同じ | GLM 系。ドラフタ (`models--incoai--GLM-5.3-Flash-DFlash2`) が別リポジトリなので 2 つに分かれる |
-| DeepSeek-V4-Flash-0731 | 156 GiB | 156 GiB | **使わない。** 消していないだけで、起動手順は本書に無い |
+| DeepSeek-V4-Flash-0731 | 156 GiB | 156 GiB | DeepSeek 系の 0731 版 (revision `9e165c30e2704aec5d9d593cce3eebd58bbef1cb`、両ノードで同一。2026-09-23 確認) |
 
-**配信の候補は Vision-Exp、Qwen3.8-Flash-Next、DeepSeek-V4.1-Flash EXL3、GLM-5.3-Flash EXL3 の 4 つで、どれか 1 つだけが動く。** 4 系統はポート 8888 と GPU を共有するので同時に起動できない。0731 の重みは置いてあるだけで配信候補ではない (→「触らないもの」)。
+**配信の候補は Vision-Exp、0731、Qwen3.8-Flash-Next、DeepSeek-V4.1-Flash EXL3、GLM-5.3-Flash EXL3 の 5 つで、どれか 1 つだけが動く。** Vision-Exp と 0731 は同じ DeepSeek 系のレシピで動き、コンテナ名も同じなので、どちらが配信中かは `/v1/models` の配信名で見分ける。5 つともポート 8888 と GPU を共有するので同時に起動できない。
 
 ### メモリの使われ方
 
@@ -286,9 +287,9 @@ DeepSeek 系と Qwen 系は期待値 121.7 × 0.835 = 101.6 GiB の近傍に収�
 
 **レシピは 4 系統あり、ポート 8888 と GPU を共有するので同時には 1 つしか配信できない。** 系統をまたいで切り替える手順は「系統の切り替え」にある。
 
-### DeepSeek 系 (Vision-Exp)
+### DeepSeek 系 (Vision-Exp / 0731)
 
-**この節は DeepSeek 系の話である。** Qwen 系の起動・停止は「Qwen3.8-Flash-Next」節の「起動と判定 (Qwen 系)」、V4.1 EXL3 系は「起動と判定 (V4.1 EXL3 系)」にある。系統をまたいで切り替える手順は「系統の切り替え」にある。
+**この節は DeepSeek 系の話である。** Qwen 系の起動・停止は「Qwen3.8-Flash-Next」節の「起動と判定 (Qwen 系)」、V4.1 EXL3 系は「起動と判定 (V4.1 EXL3 系)」にある。系統をまたいで切り替える手順は「系統の切り替え」にある。**以下の本文と小節は Vision-Exp 版の話で、0731 版との違いは末尾の「0731 版で配信する」にまとめてある。**
 
 head の `~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark` が上流レシピの clone である。**head で起動すると `.env.dspark` を worker へ SSH で配り直して両ランクを立ち上げるので、worker で直接コマンドを打つ必要はない。** head から worker へは head 上で生成して worker に登録済みの鍵 `~/.ssh/id_ed25519` を使い、`.env.dspark` の `WORKER_HOST` (RoCE 側のアドレス) に入る。
 
@@ -382,6 +383,48 @@ diff <(grep -E '^[A-Za-z0-9_]+=' .env.dspark.example | sed -E 's/=.*//' | sort) 
 **起動ログの先頭に `WARN: serving an UNAUTHENTICATED API on 0.0.0.0:8888` が出るのは正常である。** `VLLM_API_KEY` を空にしている当方の構成を上流が警告しているだけで、起動は止まらない。**この警告が消えていたら、意図せず認証が付いたことを疑う** (→「API キーの流れ」)。**`.env.dspark` の mode に対する `chmod 600` の警告は、秘密キーを 1 つも設定していないので出ない。**
 
 戻すときは `git checkout f5665e8` してから停止 → 起動する (detached HEAD になるので復帰は `git checkout main`)。重み・イメージ・`.env.dspark` のいずれも変わらないので戻せる。
+
+**この手順で更新するのは `~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark` (Vision-Exp 版) だけである。** `~/dspark-0731` は更新しない (→ 次の小節)。
+
+#### 0731 版で配信する
+
+**テキスト専用の 0731 を、同じ DeepSeek 系のスクリプトで配信する。** 画像入力を手放す代わりに decode が速い (→ 下の比較表)。
+
+**起動は `~/dspark-0731` から行う。** 現行 `main` (`97e8733`) の起動スクリプトは Vision-Exp 専用で、`MTP_NUM_TOKENS` に「5 以上かつ 3 の倍数」を課し (Vision-Exp の `n_predict=3` に合わせた検査)、vision のホットフィックスを無条件に当てる。0731 は `n_predict=1` で k=5 が本来の形なので、`main` からは起動できない。`~/dspark-0731` は 0731 を配信していた当時の `70a7cc4` に detached で固定した git worktree で、0731 用の `.env.dspark` (mode 600) を持つ。**この worktree で `git pull` や `git checkout main` をしない。** Vision-Exp 専用の検査が入って 0731 が起動しなくなる。
+
+| 項目 | 0731 版 | Vision-Exp 版との違い |
+| --- | --- | --- |
+| 作業ディレクトリ | head の `~/dspark-0731` @ `70a7cc4` | Vision-Exp 版は `~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark` @ `97e8733` |
+| チェックポイント | `deepseek-ai/DeepSeek-V4-Flash-0731` @ `9e165c30e2704aec5d9d593cce3eebd58bbef1cb` | 別チェックポイント。重みは両ノードの HF キャッシュにある |
+| 配信名 (`SERVED_MODEL_NAME`) | `deepseek-v4-flash-0731` | 別名。クライアントは `/v1/models` から配信名を採るので設定の変更は要らない。`ocsp` だけは `opencode.json` の宣言が要る (宣言済み) |
+| 投機デコード (`MTP_NUM_TOKENS`) | DSpark、draft 5 トークン | Vision-Exp 版は 6 |
+| 画像入力 | 使えない | — |
+| コンテナ名 | `deepseek-v4-flash-vllm-dspark-1` | 同じ。どちらが動いているかは `/v1/models` で見る |
+| worker 側の配布先 | worker の `~/dspark-0731` (`WORKER_DIR` が空なので head と同じパスになる) | 別ディレクトリなので、Vision-Exp 版の配布物は上書きされない |
+| 同じもの | イメージ (同じ digest)、`MAX_MODEL_LEN` 1,048,576、`MAX_NUM_SEQS` 6、`GPU_MEMORY_UTILIZATION_TEXT` 0.835、チューニング 3 キー、`VLLM_API_KEY` 空、restart policy `unless-stopped` | — |
+| cold start | health まで約 8.5 分 (2026-09-23 実測 507 秒) | Vision-Exp 版は約 7〜8 分 |
+
+**起動と停止は同じスクリプトを `~/dspark-0731` で打つ。** 判定も Vision-Exp 版と同じ 2 段 (`/health` → `./smoke-deepseek-v4-flash-dspark.sh` が exit 0) で、2026-09-23 に 6/6 で通った。**`~/dspark-0731` の launcher は `97e8733` の堅牢化 (全 ssh の `BatchMode` と `ConnectTimeout`、stop のコンテナ名フィルタのアンカー化など) を持たない。** worker が途中で応答しなくなると起動がタイムアウトせずに止まり続けうる。
+
+**reasoning effort の語彙は Vision-Exp 版と同じである** (2026-09-23 に 3 経路で全値を実測。→「DeepSeek 系の reasoning effort の語彙」)。3 つのクライアントが送る `high` は 3 経路とも 200 になる。**`/v1/responses` も `input_text` を 200 で受ける**ので、`cxsp` にパッチは要らない。
+
+**decode の比較** (2026-09-23、無負荷、各条件 3 回の中央値、計測方法は「実測値」節の「decode の分解」)。
+
+| 条件 | Vision-Exp (tok/s) | 0731 (tok/s) | 差 |
+| --- | --- | --- | --- |
+| コード、thinking off、短文 | 70.0 | 80.2 | +15% |
+| コード、32K 文脈 | 66.6 | 80.0 | +20% |
+| コード、100K 文脈 | 64.4 | 75.9 | +18% |
+| 日本語の散文、thinking off | 26.8 | 33.8 | +26% |
+| 数の列挙、thinking off | 81.0 | 90.5 | +12% |
+| 6K フィラー + コード指示、thinking `low`、256 トークン強制 | 42.4 | 44.4 | +5% |
+| 同じ入力で自然終了 | 44.8 | 46.1 | +3% |
+
+- **thinking を切った条件では 12〜26% 速い。** 1 ステップのトークン数が増え (コードで 5.05 → 5.50、散文で 1.77 → 2.12)、k が 6 から 5 に減って 1 ステップも 3〜7 ms 軽くなる
+- **thinking `low` の 2 条件では差が 3〜5% に縮む。** 1 ステップのトークン数はむしろ Vision-Exp 版のほうが多く (3.05 対 2.84)、差は 1 ステップが軽いぶんだけである。**推論を伴う実負荷での伸びは、thinking off の条件ほど大きくないと見込む**
+- 上流が同じ機材で記録した比較 (greedy で −15〜20%、temperature 0.6 で −20〜30%、いずれも Vision-Exp 側) は thinking off の条件と整合する
+
+**Vision-Exp 版へ戻すときは、`~/dspark-0731` で停止してから `~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark` で起動する** (→「系統の切り替え」の表)。重みと `.env.dspark` はチェックポイントごとに別で、イメージは同じものを読み取るだけなので、切り替えで書き換わるものは無い。
 
 ### Qwen3.8-Flash-Next
 
@@ -938,7 +981,8 @@ diff <(grep -vE '^\s*#|^\s*$' .env.example) <(grep -vE '^\s*#|^\s*$' .env)   # �
 
 | 系統 | 停止 | 起動 | 起動の判定 | `workerLabel` に入れる値 |
 | --- | --- | --- | --- | --- |
-| DeepSeek 系 | `cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && ./stop-deepseek-v4-flash-dspark.sh` | `cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && ./start-deepseek-v4-flash-dspark.sh` | 「DeepSeek 系 (Vision-Exp)」の 2 段 | `deepseek-v4-flash-vision-exp` |
+| DeepSeek 系 (Vision-Exp 版) | `cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && ./stop-deepseek-v4-flash-dspark.sh` | `cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && ./start-deepseek-v4-flash-dspark.sh` | 「DeepSeek 系 (Vision-Exp / 0731)」の 2 段 | `deepseek-v4-flash-vision-exp` |
+| DeepSeek 系 (0731 版) | `cd ~/dspark-0731 && ./stop-deepseek-v4-flash-dspark.sh` | `cd ~/dspark-0731 && ./start-deepseek-v4-flash-dspark.sh` | 同上 (smoke は `~/dspark-0731` 側を打つ) | `deepseek-v4-flash-0731` |
 | Qwen 系 | `cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && ./stop.sh` | `cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && ./start.sh --launch` | 「起動と判定 (Qwen 系)」の 3 段 | `qwen3.8-flash-next` |
 | V4.1 EXL3 系 | `cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && ./start.sh stop` (同じディレクトリの `./stop.sh` も同じ動作) | `cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && ./start.sh` (Claude から打つ形は「起動と判定 (V4.1 EXL3 系)」) | 「起動と判定 (V4.1 EXL3 系)」の 3 段 | `DeepSeek-v4.1-Flash-EXL3` |
 | GLM 系 | `cd ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks && ./start.sh stop` (同じディレクトリの `./stop.sh` も同じ動作) | `cd ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks && SKIP_BUILD=1 ./start.sh` (**`SKIP_BUILD=1` が要る** →「GLM 系の stamp は判定に使えない」) | 「起動と判定 (GLM 系)」の 3 段 | `GLM-5.3-Flash-EXL3` |
@@ -1142,7 +1186,7 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
 | c=4・decode (tok/s) | 8 (4 並列 × 2 回) | 21.95 (14.44〜34.88) |
 | c=4・TTFT (秒) | 8 (4 並列 × 2 回) | 9.44 (4.93〜13.47) |
 
-**判定: c=1 の decode 中央値が 35 tok/s を下回る、または c=4 の TTFT 中央値が 15 秒を超えたら異常を疑う。** 個別値ではなく中央値で見る (正常時でも最小値は 34.88 tok/s まで落ちる)。再現は次の 2 本で、結果は `~/spark-bench/results/<ラベル>-<日時>.json` に残る。
+**判定 (Vision-Exp 版): c=1 の decode 中央値が 35 tok/s を下回る、または c=4 の TTFT 中央値が 15 秒を超えたら異常を疑う。** 0731 版の閾値は採っていないので、0731 配信中は下の「decode の分解」の表と比べる。個別値ではなく中央値で見る (正常時でも最小値は 34.88 tok/s まで落ちる)。再現は次の 2 本で、結果は `~/spark-bench/results/<ラベル>-<日時>.json` に残る。
 
 ```bash
 ssh -n spark-head 'python3 ~/spark-bench/bench.py --model deepseek-v4-flash-vision-exp \
@@ -1154,6 +1198,30 @@ ssh -n spark-head 'python3 ~/spark-bench/bench.py --model deepseek-v4-flash-visi
   --extra-body "{\"chat_template_kwargs\":{\"thinking\":true,\"reasoning_effort\":\"low\"}}" \
   --instruction "上記は無視して、TypeScript の関数を 1 つ書いてください。説明は不要でコードだけ返してください。"'
 ```
+
+### decode の分解 (2026-09-23)
+
+**decode tok/s は「1 ステップで確定するトークン数 ÷ 1 ステップの時間」で決まる。** DeepSeek 系で、1 ステップの時間は内容にも文脈長にもほぼ依らない。速度の差はほとんどが 1 ステップのトークン数、つまり投機デコードの受理率から来る。
+
+**測り方。** 各リクエストの前後で `/metrics` を読み、`vllm:spec_decode_num_drafts_total` の増分を decode ステップ数として使う。1 ステップの時間 = (最終トークン時刻 − 初回トークン時刻) ÷ ステップ数、1 ステップのトークン数 = `vllm:generation_tokens_total` の増分 ÷ ステップ数である。**他のリクエストが重なるとステップ数に相手の分が混ざって分解が壊れる。** そこで 16 秒続けて無負荷になってから 1 本ずつ投げ、`generation_tokens_total` の増分が自分の `completion_tokens` と一致した回だけを採る (2026-09-23 は両チェックポイントとも 21 回中 21 回が一致)。スクリプトは使い捨てで、リポジトリには置いていない。
+
+各条件 3 回の中央値。プロンプトはどれも末尾に指示を 1 つ付けたもので、フィラーは `bench.py` と同じ繰り返し文である。
+
+| 条件 | Vision-Exp tok/s | Vision-Exp tok/step | Vision-Exp step (ms) | 0731 tok/s | 0731 tok/step | 0731 step (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 数の列挙、thinking off | 81.0 | 5.71 | 69.8 | 90.5 | 5.94 | 65.5 |
+| コード、thinking off、短文 | 70.0 | 5.05 | 71.7 | 80.2 | 5.50 | 68.5 |
+| コード、32K 文脈 | 66.6 | 4.86 | 72.9 | 80.0 | 5.56 | 69.4 |
+| コード、100K 文脈 | 64.4 | 4.99 | 75.4 | 75.9 | 5.44 | 71.6 |
+| 6K フィラー + コード指示、thinking `low`、256 トークン強制 (L1 と同条件) | 42.4 | 3.05 | 71.6 | 44.4 | 2.84 | 64.7 |
+| 同じ入力で自然終了 | 44.8 | 3.17 | 70.5 | 46.1 | 2.98 | 64.4 |
+| 日本語の散文、thinking off | 26.8 | 1.77 | 65.9 | 33.8 | 2.12 | 62.4 |
+
+- **1 ステップの時間は短文から 100K まで +5% しか伸びない。** 長い文脈が decode を遅くしているわけではない
+- **日本語の散文は受理率が低い** (Vision-Exp 0.13 / 0731 0.22)。上流が測った英語の散文は Vision-Exp で 0.25 前後である。ドラフタが日本語を苦手にしている可能性があるが、プロンプト 1 つからの推測である
+- **1 ステップ約 70 ms は 2 台 TP=2 の固定費である。** 投機の全トークンが受理されても上限はおよそ 100 tok/s (Vision-Exp の k=6 で 7 トークン ÷ 70 ms)
+
+**実負荷の単一ストリーム区間も同じ形に分解できる。** Vision-Exp 配信中に、他のリクエストが重ならなかった区間だけを外から 124 秒ぶん観測した値は、42.6 tok/s = 3.30 トークン ÷ 77 ms だった。位置別の受理率は 0.80 / 0.56 / 0.39 / 0.27 / 0.17 / 0.105 である。
 
 ### L2 / L3: クライアント込み (2026-09-05)
 
@@ -1253,7 +1321,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 - **クロック制限の 2 unit** (`nv-gpu-clock-limit.service` / `nv-cpu-clock-limit.service`) — 切り分けで一時的に外すのは構わないが、外したままにしない。サーバ側に温度の履歴が無いので戻し忘れに誰も気づけない (→ 「既知の制約」4・5・6)
 - **sparkDash のポート 5555** — 認証が無いので信頼できないネットワークへ出さない
 - **ポート 8888** — 系統を問わず無認証なので外に出さない (→「API キーの流れ」)
-- **0731 の残置物** — head の `~/dspark-0731` (detached `70a7cc4` の git worktree、4.4 MB) と両ノードの重み 156 GiB ずつ。**使わないが消さない。** ディスクは 2.5 TiB 空いていて (→「ハードウェアと OS」) 消す動機が無く、再取得は HuggingFace から約 5.5 時間かかる
+- **`~/dspark-0731` の git の状態** — `70a7cc4` に detached で固定してある。`git pull` や `git checkout main` をすると Vision-Exp 専用の検査が入り、0731 版が起動しなくなる (→「0731 版で配信する」)
 
 ## 既知の制約
 
