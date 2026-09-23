@@ -27,7 +27,8 @@ let
   # models / custom_nodes / input / temp / user は --base-directory 側 (clone の外) に残る
   outputDir = "${config.home.homeDirectory}/Pictures/ComfyUI";
 
-  # .app の本体。サーバが起きていなければ起こし、ブラウザを開く。
+  # .app の本体。サーバが起きていなければ起こしてブラウザを開く。
+  # 起きていれば「ブラウザを開く / 停止」を選ばせる (nohup で裏に起こすので、GUI から止める手段がここしかない)。
   # 常駐させない方針なので launchd は使わない (sleepctl.nix のような user agent は作らない)
   launcher = pkgs.writeShellScript "comfyui-launch" ''
     set -u
@@ -38,16 +39,40 @@ let
     }
 
     fail() {
-      /usr/bin/osascript -e "display alert \"ComfyUI を起動できませんでした\" message \"$1\"" >/dev/null 2>&1
+      /usr/bin/osascript -e "display alert \"$1\" message \"$2\"" >/dev/null 2>&1
       exit 1
     }
 
-    if ! alive; then
+    listener_pids() {
+      /usr/sbin/lsof -tiTCP:${port} -sTCP:LISTEN
+    }
+
+    stop() {
+      pids=$(listener_pids)
+      [ -n "$pids" ] || return 0
+      kill $pids
+
+      # 生成中でも SIGTERM で落ちる。20 秒待っても残るならユーザーに任せる
+      for _ in $(seq 1 40); do
+        [ -z "$(listener_pids)" ] && return 0
+        /bin/sleep 0.5
+      done
+      fail "ComfyUI を停止できませんでした" "20 秒待っても終了しません。強制終了: kill -9 $pids"
+    }
+
+    if alive; then
+      # キャンセル (Esc) は osascript が非 0 で返るので何もせず終わる
+      choice=$(/usr/bin/osascript -e 'button returned of (display dialog "ComfyUI は起動中です" with title "ComfyUI" buttons {"キャンセル", "停止", "ブラウザを開く"} default button "ブラウザを開く" cancel button "キャンセル")' 2>/dev/null) || exit 0
+      if [ "$choice" = "停止" ]; then
+        stop
+        exit 0
+      fi
+    else
       if [ ! -x "${venvPython}" ]; then
-        fail "venv がありません。drs を実行してください: ${venvPython}"
+        fail "ComfyUI を起動できませんでした" "venv がありません。drs を実行してください: ${venvPython}"
       fi
 
-      cd "${root}/ComfyUI" || fail "ComfyUI のディレクトリがありません: ${root}/ComfyUI"
+      cd "${root}/ComfyUI" || fail "ComfyUI を起動できませんでした" "ComfyUI のディレクトリがありません: ${root}/ComfyUI"
       /usr/bin/nohup "${venvPython}" "${mainPy}" \
         --listen 127.0.0.1 --port ${port} --disable-auto-launch \
         --base-directory "${root}" \
@@ -59,7 +84,7 @@ let
         alive && break
         /bin/sleep 0.5
       done
-      alive || fail "120 秒待っても応答がありません。ログ: ${root}/comfyui.log"
+      alive || fail "ComfyUI を起動できませんでした" "120 秒待っても応答がありません。ログ: ${root}/comfyui.log"
     fi
 
     /usr/bin/open "$url"
