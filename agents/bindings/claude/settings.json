@@ -30,7 +30,6 @@
     ],
     "defaultMode": "plan"
   },
-  "model": "opus[1m]",
   "fallbackModel": [
     "claude-opus-4-8",
     "sonnet"
@@ -268,6 +267,7 @@
       }
     }
   },
+  "outputStyle": "concise",
   "language": "Japanese",
   "spinnerTipsEnabled": false,
   "alwaysThinkingEnabled": true,
@@ -288,5 +288,5 @@
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
   "voiceEnabled": true,
-  "outputStyle": "concise"
+  "model": "opusplan"
 }
