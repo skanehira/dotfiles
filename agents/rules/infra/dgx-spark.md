@@ -9,8 +9,8 @@ paths:
 
 - 種別: 環境リファレンス
 - 対象読者: 別セッション・別マシンで作業する Claude
-- 最終確認: 2026-09-23 (DeepSeek 系レシピを `97e8733` へ追従させ、Qwen 系から配信を切り替えた。DeepSeek 系の節・reasoning effort の語彙・使える API・画像入力・更新手順を実測で取り直した。同日、decode を「1 ステップの時間」と「1 ステップで確定するトークン数」に分解して測り、DeepSeek 系を 0731 版で配信する手順と両チェックポイントの比較を足した)
-- 他の節の確認日: 2026-09-20 (GLM 系の導入に伴う系統まわりの見直しと、OpenCode (`ocsp`) の再導入に伴う全節の見直し。`ocsp` 自体の疎通の実測は GLM 系については 2026-09-20、Qwen 系と V4.1 EXL3 系については 2026-09-06 / 2026-09-07 のもので、いずれも opencode 1.18.18 で取った)。2026-09-17 は Codex (`cxsp`) の節と `/v1/responses` にまたがる記述 (`show_raw_agent_reasoning` のみ 2026-09-18)。それ以前は 2026-09-06 (一部は 2026-09-09 / 2026-09-10 / 2026-09-15 に再確認。2026-09-15 は「sparkDash の `workerLabel` を直す」「障害時」「既知の制約」8・11)。「実測値」節の性能値のみ 2026-09-05。日付は表のセルか本文に書いてある
+- 最終確認: 2026-09-30 (V4.1 EXL3 系の画像入力を有効にして実測し、同系統のレシピの commit・`.env` と配布既定の差分・配信中のメモリを取り直した)
+- 他の節の確認日: 2026-09-23 (DeepSeek 系レシピを `97e8733` へ追従させ、DeepSeek 系の節・reasoning effort の語彙・使える API・画像入力・更新手順を実測で取り直した。同日、decode を「1 ステップの時間」と「1 ステップで確定するトークン数」に分解して測り、DeepSeek 系を 0731 版で配信する手順と両チェックポイントの比較を足した)。2026-09-20 (GLM 系の導入に伴う系統まわりの見直しと、OpenCode (`ocsp`) の再導入に伴う全節の見直し。`ocsp` 自体の疎通の実測は GLM 系については 2026-09-20、Qwen 系と V4.1 EXL3 系については 2026-09-06 / 2026-09-07 のもので、いずれも opencode 1.18.18 で取った)。2026-09-17 は Codex (`cxsp`) の節と `/v1/responses` にまたがる記述 (`show_raw_agent_reasoning` のみ 2026-09-18)。それ以前は 2026-09-06 (一部は 2026-09-09 / 2026-09-10 / 2026-09-15 に再確認。2026-09-15 は「sparkDash の `workerLabel` を直す」「障害時」「既知の制約」8・11)。「実測値」節の性能値のみ 2026-09-05。日付は表のセルか本文に書いてある
 
 自宅に NVIDIA DGX Spark (GB10) が 2 台あり、vLLM の TP=2 (tensor parallel、2 台に重みを分割する並列方式) でローカル LLM を常時サービングしている。Mac の Claude Code (`ccsp`) / OpenCode (`ocsp`) / Codex (`cxsp`) の 3 つからバックエンドとして使える。
 
@@ -79,7 +79,7 @@ paths:
 | `start.sh` / `stop.sh` | **Qwen レシピと V4.1 EXL3 レシピが同名で別々に持つ**スクリプト。Qwen 版は `--launch` で取得を飛ばして起動し、停止は `stop.sh`。V4.1 EXL3 版は引数なしで起動し、`stop` / `pack` / `status` / `logs` をサブコマンドで持つ (`stop.sh` は `start.sh stop` を呼ぶだけ)。本書では所属するレシピの節の中でだけ素の名前で書く | 「系統の切り替え」の表 | 上流 | 人 |
 | `.env` | **Qwen レシピと V4.1 EXL3 レシピが同名で別々に持つ**設定 1 枚。DeepSeek 系の `.env.dspark` とは別物。本書では「Qwen レシピの `.env`」「V4.1 EXL3 レシピの `.env`」と書き分ける | head の `~/Qwen3.8-Flash-Next-Dual-DGX-Sparks/.env` / `~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks/.env` | 人 (前者は `.env.sample`、後者は `.env.example` から複製) | 各レシピのスクリプト |
 | `vllm-fn` | Qwen レシピのコンテナ名。**head と worker で同名** | Qwen レシピの `start.sh` | `start.sh` | `docker` |
-| DeepSeek-V4.1-Flash EXL3 | `deepseek-ai/DeepSeek-V4.1-Flash` を EXL3 2.9 bpw に量子化した `Mia-AiLab/DeepSeek-V4.1-Flash-EXL3-2.9bpw` の略。配信名は `DeepSeek-v4.1-Flash-EXL3`、短縮名は `v41`。画像入力は使えない | 「DeepSeek-V4.1-Flash EXL3」 | 上流のチェックポイント | vLLM |
+| DeepSeek-V4.1-Flash EXL3 | `deepseek-ai/DeepSeek-V4.1-Flash` を EXL3 2.9 bpw に量子化した `Mia-AiLab/DeepSeek-V4.1-Flash-EXL3-2.9bpw` の略。配信名は `DeepSeek-v4.1-Flash-EXL3`、短縮名は `v41`。画像入力が使える (量子化せずに残した vision tower をチェックポイントが持つ) | 「DeepSeek-V4.1-Flash EXL3」 | 上流のチェックポイント | vLLM |
 | EXL3 | 推論ライブラリ ExLlamaV3 の量子化形式 (Cornell RelaxML の QTIP を簡略化した変種)。テンソルごとにビット数を変えられるので平均が 2.9 bpw のような端数になる。vLLM 本家は非対応で、V4.1 EXL3 レシピと GLM レシピがそれぞれイメージに後付けしている | 「DeepSeek-V4.1-Flash EXL3」の表 | 上流 | vLLM (レシピの overlay) |
 | GLM-5.3-Flash EXL3 | `GLM-5.3-Flash` を EXL3 4 bpw に量子化した `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` の略。配信名は `GLM-5.3-Flash-EXL3`、短縮名は `glm`。画像入力が使える | 「GLM-5.3-Flash EXL3」 | 上流のチェックポイント | vLLM |
 | GLM レシピ | GLM-5.3-Flash の EXL3 4bpw 量子化版を TP=2 で配信する別系統のレシピ。起動・停止・状態表示は `start.sh` のサブコマンドで行う | head の `~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks/` | 上流 (`git clone`) | 人 |
@@ -268,16 +268,16 @@ DeepSeek 系・Qwen 系・GLM 系の重みは両ノードの `~/.cache/huggingfa
 
 ### メモリの使われ方
 
-GB10 は CPU と GPU が同じ物理メモリを共有する統合メモリ構成である。**`GPU_MEMORY_UTILIZATION_TEXT=0.835` は通常の GPU なら VRAM の 83.5% を指すが、ここではシステムメモリ全体の 83.5% を意味する。** 起動直後から 100 GiB 超が vLLM に確保されて `free` の残りが数 GiB になる (DeepSeek 系で 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB) が、これは設定どおりの先取りであって、リークでも不足でもない。**V4.1 EXL3 系は仕組みが違う。** 確保率のキーを予算に使わず、重み (起動ログで 98.86 GiB) と KV プール (`KV_CACHE_MEMORY_BYTES` で固定した 2.5 GiB) を確保する。head の残りは 6.0〜6.5 GiB で、これは先取りではなく実際の余裕の少なさなので、扱いは「既知の制約」11 に従う。
+GB10 は CPU と GPU が同じ物理メモリを共有する統合メモリ構成である。**`GPU_MEMORY_UTILIZATION_TEXT=0.835` は通常の GPU なら VRAM の 83.5% を指すが、ここではシステムメモリ全体の 83.5% を意味する。** 起動直後から 100 GiB 超が vLLM に確保されて `free` の残りが数 GiB になる (DeepSeek 系で 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB) が、これは設定どおりの先取りであって、リークでも不足でもない。**V4.1 EXL3 系は仕組みが違う。** 確保率のキーを予算に使わず、重み (起動ログで 99.8 GiB。vision tower を含む) と KV プール (`KV_CACHE_MEMORY_BYTES` で固定した 2.5 GiB) を確保する。head の残りは 4.8 GiB になる。これは先取りではなく実際の余裕の少なさなので、扱いは「既知の制約」11 に従う。
 
-**値は配信中の系統で変わる。** DeepSeek 系の列は 2026-09-23 に起動 15 分後の無負荷で採った値、Qwen 系の列は 2026-09-09 の再起動後に無負荷で採った値 (`MemAvailable` だけは 2026-09-06 の高負荷時からの幅)、V4.1 EXL3 系の列は 2026-09-15 の起動直後に短い生成を 2 回流した後の値、GLM 系の列は 2026-09-20 の起動直後に短い生成を数回流した後の値である。
+**値は配信中の系統で変わる。** DeepSeek 系の列は 2026-09-23 に起動 15 分後の無負荷で採った値、Qwen 系の列は 2026-09-09 の再起動後に無負荷で採った値 (`MemAvailable` だけは 2026-09-06 の高負荷時からの幅)、V4.1 EXL3 系の列は 2026-09-30 に画像入力を有効にして起動し、smoke と画像 2 件を流した後の値、GLM 系の列は 2026-09-20 の起動直後に短い生成を数回流した後の値である。
 
 | 項目 | DeepSeek 系 head / worker | Qwen 系 head / worker | V4.1 EXL3 系 head / worker | GLM 系 head / worker |
 | --- | --- | --- | --- | --- |
 | 物理メモリ合計 | 121.7 / 121.7 GiB | 121.7 / 121.7 GiB | 121.7 / 121.7 GiB | 121.7 / 121.7 GiB |
-| vLLM の確保 | 101.1 / 101.1 GiB (`nvidia-smi` の 103,540 / 103,530 MiB) | 100.7 / 100.8 GiB | 103.5 / 103.5 GiB (`nvidia-smi` の 105,987 MiB) | 99.9 / 99.9 GiB (`nvidia-smi` の 102,316 MiB) |
-| `MemAvailable` | 6.8 / 7.1 GiB | 1.3〜5.7 / 5.6〜10.1 GiB | 6.0〜6.5 / 7.2〜7.5 GiB | 4.6 / 4.6 GiB |
-| swap 使用 | 4.3 / 5.4 GiB | 5.0 / 4.1 GiB | 4.7 / 4.7 GiB | 2 / 2 GiB |
+| vLLM の確保 | 101.1 / 101.1 GiB (`nvidia-smi` の 103,540 / 103,530 MiB) | 100.7 / 100.8 GiB | 104.4 / 104.4 GiB (`nvidia-smi` の 106,907 MiB) | 99.9 / 99.9 GiB (`nvidia-smi` の 102,316 MiB) |
+| `MemAvailable` | 6.8 / 7.1 GiB | 1.3〜5.7 / 5.6〜10.1 GiB | 4.8 / 5.9 GiB | 4.6 / 4.6 GiB |
+| swap 使用 | 4.3 / 5.4 GiB | 5.0 / 4.1 GiB | 4 / 7 GiB | 2 / 2 GiB |
 
 **DeepSeek 系の swap は直前に何を配信していたかで動く。** 上の値は 44 時間 Qwen 系を配信した直後に切り替えたときのもので、前の系統が押し出したページを含む。**swap の量を系統の特性として読まない。**
 
@@ -609,7 +609,7 @@ ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && \
 
 | 項目 | 値 |
 | --- | --- |
-| レシピ | head の `~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks` @ `8530568` |
+| レシピ | head の `~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks` @ `b9c49e9` |
 | 量子化 | EXL3 (→ 用語表) の平均 2.9 bpw。テンソルごとにビット数が違う (routed experts は 3 bit で層 18〜22 だけ 2 bit、shared experts は 5 bit / 4 bit、attention は 5 bit。レシピの `files/exl3_k_map.json`) |
 | 重み (本体) | `Mia-AiLab/DeepSeek-V4.1-Flash-EXL3-2.9bpw` @ `64ba41b6c916a587db06eae2e19b7845f7be6e6b`。49 ファイル / safetensors 39 本 / 196.2 GiB。head はレシピ直下の `model/`、worker は `~/.cache/dsv41-flash-exl3/model/`。HF の org 表記は `Mia-AiLab` で、GitHub の `MiaAI-Lab` とは綴りが違う (どちらも実在する表記) |
 | 重み (Engram) | `deepseek-ai/DeepSeek-V4.1-Flash` @ `dba1be0a40aa45a94ad051997016db3960a90277` の shard 47 / 48 (各 94.6 GiB) と `model.safetensors.index.json` と `config.json`。head はレシピ直下の `engram-src/`。この先の経路は下の「Engram の流れ」 |
@@ -620,11 +620,11 @@ ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && \
 | 投機デコード (`SPEC_METHOD` / `DSPARK_TOKENS`) | DSpark (draft はチェックポイント内の `mtp.*`)、draft 3 トークン |
 | KV キャッシュ | vLLM が `fp8_ds_mla` を自分で選ぶ (`--kv-cache-dtype` は渡さない)。プールは `KV_CACHE_MEMORY_BYTES` で 2.5 GiB に固定 |
 | `GPU_MEM_UTIL` | 0.88。KV プールを固定しているので予算ではなく、vLLM が起動時に空きメモリと比べる検査値 |
-| 画像入力 | **使えない** (`LANGUAGE_MODEL_ONLY=1`。GB10 の FlashInfer に対応カーネルが無い) |
+| 画像入力 | **使える** (`LANGUAGE_MODEL_ONLY=0`、`LIMIT_MM={"image":100}`)。**`MAX_NUM_BATCHED_TOKENS` を 1536 以上にすることが必須**で、1024 のままだと重みロードの数分後に `compute_mm_encoder_budget` の `ValueError` で起動が止まる (画像 1 枚の 1,025 トークンが 1 チャンクに収まる必要があるため。上流 README)。それに合わせて `LONG_PREFILL_TOKEN_THRESHOLD` を 1280 にしてある (上流は「`MAX_NUM_BATCHED_TOKENS` との差を 256 以上空ける」と規定している)。2026-09-30 に、左半分が青・右半分が黄の 64x32 PNG を data URL で `/v1/chat/completions` に渡すと「左: 青、右: 黄色」と答え (prompt 239 トークン)、同じ質問を画像なしで送ると「左: 赤、右: 青」と外れる (prompt 35 トークン) ことを実測した。**GB10 では画像内の双方向 attention が無効になる** (レシピの `patch_sm120_block64.py` が sliding window を 128 に固定するため)。上流は OCR と複数画像の取り違えに影響を測れなかったとしているが、確かめたのは合否判定だけで、元のチェックポイントと品質を比べた検証は無い |
 | 既定の reasoning | thinking ON。effort を送らないときの既定は `high` (レシピの `files/chat_template.jinja` の `reasoning_effort` の既定値) |
 | コンテナイメージ | `ghcr.io/miaai-lab/deepseek-v4.1-flash-exl3-2x-dgx-sparks:2.9bpw` (Id `sha256:4cdba4e946da2d19bf5b5a20c6d3a1a4bf421fa4d6db5082f271a986168176cb`、展開後 22.5 GB、arm64、ラベル `dsv41.recipe.stamp` = `8c01a8543ff7e7b222ae1cd46b8be5051838dc7a7b075b4e647f3785c0429584`)。**両ノードに配置済み** |
 | コンテナ名 | `dsv41-exl3-head` / `dsv41-exl3-worker`。restart policy は両方 `no` |
-| 上流既定からの差分 | 4 キー。`WORKER_USER=skanehira` (上流は作者のユーザー名)、`WORKER_CX7_IF=enp1s0f1np1` / `WORKER_CX7_IB=rocep1s0f1` (上流の作者機は worker が `f0`。当方は両ノードとも `f1`)、`WEIGHT_SYNC=rsync` (上流既定は `nfs`)。これに `HF_HUB_ENABLE_HF_TRANSFER=0` を 1 行足してある (head に `hf_transfer` が無いため)。確かめ方は「依拠する外部事実」のコードブロック 6 |
+| 上流既定からの差分 | 手元の `.env.example` (`b9c49e9`) と比べて 7 キー。`WORKER_USER=skanehira` (上流は作者のユーザー名)、`WORKER_CX7_IF=enp1s0f1np1` / `WORKER_CX7_IB=rocep1s0f1` (上流の作者機は worker が `f0`。当方は両ノードとも `f1`)、`WEIGHT_SYNC=rsync` (上流既定は `nfs`)、画像入力のための `LANGUAGE_MODEL_ONLY=0` / `MAX_NUM_BATCHED_TOKENS=1536` / `LONG_PREFILL_TOKEN_THRESHOLD=1280`。後ろの 3 キーは手元の `.env.example` とは違うが、上流 `8404ac7` 以降の `.env.example` の既定と同じ値である。これに `HF_HUB_ENABLE_HF_TRANSFER=0` を 1 行足してある (head に `hf_transfer` が無いため)。確かめ方は「依拠する外部事実」のコードブロック 6 |
 
 **`WEIGHT_SYNC=rsync` にしている理由。** 上流既定の NFS では worker が head の export を RoCE (上流は CX7 = ConnectX-7 と呼ぶ) 越しに読み、head が配信中の単一障害点になる。pack した Engram はどちらの方式でもローカル NVMe から読まれるので、配信中の速度は変わらない見込みである。**上流は rsync を fallback 扱いにしている**ので、検証の厚みは NFS 経路より薄い。
 
@@ -672,7 +672,7 @@ ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && bash tests/tes
 | --- | --- |
 | コンテナ起動から `/health` 200 まで | 470 秒 |
 | 重みロード | 本体 191.75 秒 + draft 32.27 秒 (ログの `Loading weights took` が 2 行出る)。`Model loading took 98.86 GiB memory and 270.5 seconds`。合計との差 46 秒の内訳は取っていない |
-| `MemAvailable` の推移 (head / worker) | 起動前 116.1 / 114.9 GiB → 重みロード後 16 / 16 GiB → health 通過時 6.0 / 7.2 GiB |
+| `MemAvailable` の推移 (head / worker) | 起動前 116.1 / 114.9 GiB → 重みロード後 16 / 16 GiB → health 通過時 6.0 / 7.2 GiB。画像入力を有効にした 2026-09-30 の起動では、`Model loading took` が 99.8 GiB (0.9 GiB 増)、起動ログ末尾の `memory` 行が 5.1 / 6.0 GiB だった |
 | pack の所要 | 1 本 (47.2 GiB) あたり約 90 秒、両ノードで計 4 本。`FORCE_SYNC=1` を付けても、変わったファイルが `config.json` だけなら rsync は 1 分以内に終わった |
 | 単一リクエストの decode | コード生成 400 トークン (thinking OFF、temperature 0) で約 36 tok/s、TTFT 0.60 秒。上流の散文での値は 31.6 tok/s |
 
@@ -778,7 +778,7 @@ git pull --ff-only
 - **`.env.example` にキーが増えていないか**を「依拠する外部事実」のコードブロック 6 で見る。`.env` は追跡外なので `git pull` では消えない
 - **`start.sh` のローカル差分 2 行は `git pull` で消える** (→「既知の制約」12)。`git pull` の直後に `git diff --stat start.sh` を打ち、空になっていたら 2 行を足し直す。**これを忘れると `cxsp` だけが静かに壊れる** (`ccsp` / `ocsp` は無傷なので他の確認はすべて green のまま通る)
 - **更新後の悪化確認**は Qwen 系と同じ 4 点 (→「レシピを更新する (Qwen 系)」の 1〜4) を、V4.1 EXL3 系のコマンドと語彙に読み替えて行い、5 点目として「依拠する外部事実」のコードブロック 8 (`input_text` が 200) を打つ。コンテナ名は `dsv41-exl3-head`、語彙の確認は「V4.1 EXL3 の reasoning effort の語彙」
-- **戻すとき**は `git checkout 8530568` してから停止 → 起動する。**`git checkout` も 2 行を消す**ので、起動の前に足し直す
+- **戻すとき**は `git checkout b9c49e9` してから停止 → 起動する。**`git checkout` も 2 行を消す**ので、起動の前に足し直す
 
 ### GLM-5.3-Flash EXL3
 
@@ -1293,7 +1293,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | OpenCode がモデルを拒否する | `agents/bindings/opencode/opencode.json` の `provider.spark.models` | 宣言の無いモデル名は OpenCode 側が受け付けない |
 | 起動待ちが長すぎる | head は `docker logs <コンテナ名>`、worker は「worker に入る」節のコマンドで同じものを打つ | 正常な所要は DeepSeek 系が約 7〜8 分、Qwen 系が約 13〜14 分、V4.1 EXL3 系がコンテナ起動から health まで約 8 分 (いずれも実測)。DeepSeek 系は 12 分、Qwen 系は 20 分を超えたら worker 側だけ落ちていることがあるので両ランクを見る。V4.1 EXL3 系は 15 分を超えたら `./start.sh logs worker` で worker 側を見る。`start.sh` は health を 1,500 秒待って諦め、そのときもコンテナは残る (→「起動に失敗する」の行) |
 | 推論中に CPU が熱い・ファンがうるさい | 「依拠する外部事実」の温度の行と、同節のコードブロック 5 | 正常。vLLM のスレッドが GPU / NCCL の完了をビジーポーリングで待ち、100% の使用率で回る (→ 「既知の制約」5)。計算しているわけではないので、`nvidia-smi` の GPU 使用率が高いこととは独立に CPU 側センサーが上がる。X925 の `scaling_max_freq` を下げる対処は既に入れてあり (制約 5)、それでも高いなら室温か吸気を疑う |
-| 起動直後から空きメモリが少ない | `free -h` | DeepSeek 系と Qwen 系なら正常。確保率 0.835 の先取りで、残る量は DeepSeek 系 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB。**V4.1 EXL3 系の head の 6.0〜6.5 GiB は先取りではなく実際の余裕** (重み 98.86 GiB + 固定の KV プール 2.5 GiB) で、配信中はこれ以上減らさない (→「既知の制約」11) |
+| 起動直後から空きメモリが少ない | `free -h` | DeepSeek 系と Qwen 系なら正常。確保率 0.835 の先取りで、残る量は DeepSeek 系 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB。**V4.1 EXL3 系の head の 4.8 GiB は先取りではなく実際の余裕** (vision tower を含む重み 99.8 GiB + 固定の KV プール 2.5 GiB) で、配信中はこれ以上減らさない (→「既知の制約」11) |
 | 配信中に応答が止まった (V4.1 EXL3 系) | `curl -fs -o /dev/null http://spark-head.local:8888/health`、待ち行列コマンド、両ノードの `docker ps` | 起動中の hang 検知 (420 秒) は配信中には働かない。health が返らない、または `num_requests_running` が動かないまま時間が経つなら、`./start.sh stop` → 「系統の切り替え」の手順 3 → `./start.sh`。片方のノードに ssh も通らない場合は「既知の制約」11 |
 | `hi` と打っただけで network retry | `ccsp status` で LAN 到達を確認 | mDNS の IPv6 フォールバック。`NODE_OPTIONS` に `--dns-result-order=ipv4first` が入っているか見る |
 | 応答後に 200 秒以上返らない | `settings.spark.json` の `enabledPlugins` | `security-guidance` の Stop hook (→「遅いと感じたときに疑う順序」1) |
@@ -1351,7 +1351,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 8. **vLLM の自動復帰は系統で違う。** DeepSeek 系コンテナの restart policy は `unless-stopped` だが、**Qwen 系 `vllm-fn` と V4.1 EXL3 系 `dsv41-exl3-head` / `dsv41-exl3-worker` は両ノードとも `no` なので、ノードを再起動すると上がってこない** (Qwen 系は 2026-09-06、V4.1 EXL3 系は 2026-09-15 に実測)。手で Qwen 系は `./start.sh --launch`、V4.1 EXL3 系は `./start.sh` を打ち直す (重みの同期はマーカーで省略されるので速い)。sparkDash は `always`、`docker` と (head の) `tailscaled` は enabled、RoCE は NetworkManager の autoconnect、GPU と CPU のクロック制限は 2 つの unit がどちらも enabled である (→ 制約 4・5)。どの系統も停止スクリプトで止めた後はコンテナ自体が消えるので再起動しても復帰しない。**cold boot での復帰は未確認なので、電源断の後は `docker ps` で確かめる**
 9. **`~/spark-bench` は再作成手段が無い。** dotfiles にも上流にも無い手書きのハーネスなので、head を作り直すと失われる
 10. **4 系統の vLLM は同時に起動できない。** ポート 8888 と GPU を共有し、Qwen 側は `REQUIRE_IDLE_GPU=true`、V4.1 EXL3 側はメモリの事前検査が明示的に拒否する。切り替えは必ず「相手を停止 → 起動」の順で行う (→「系統の切り替え」)
-11. **V4.1 EXL3 系はメモリの余裕が薄い。** 配信中の head の `MemAvailable` は 6 GiB 前後である。上流は `MAX_MODEL_LEN` 614,400 の構成で 601k トークンの prefill 中に 2.1 GiB まで下がったと書いている (当方の 600,000 では同じ入力は入らないが、長い prefill ほど下がる傾向は同じと見ている。未検証)。**上流の報告では、GB10 は統合メモリが尽きるとエラーではなくノードごと固まり、ハード再起動まで戻らなかった。** 当方では起きていないので、固まったときの兆候と復旧は未確認である。想定される兆候は、ssh も sparkDash も応答しないことと、worker だけが固まった場合に head の `/health` が応答しなくなることである。その場合は人が電源を入れ直す (sparkDash の Wake-on-LAN は電源断からの起動用で、固まったノードに効くかは未確認)。**配信中のノードで重い処理 (ダウンロード・ビルド・大きなファイルの展開) を流すときは `systemd-run --user --scope -p MemoryMax=<上限>` で上限を付ける** (`ssh -n` 経由では `XDG_RUNTIME_DIR=/run/user/$(id -u)` を前置する。head では 2026-09-15 に効くことを確かめた。worker では未確認)。**memguard (→ 用語表) は上流既定のまま無効にしている。** 上流によれば、有効にして唯一発動したときは無関係なホストのプロセスがメモリを取った場面で、原因ではない vLLM を kill しただけだった。代わりに両コンテナは `--oom-score-adj 1000` で起動されていて、カーネルの OOM killer が動けばデスクトップより先に vLLM が落ちる
+11. **V4.1 EXL3 系はメモリの余裕が薄い。** 配信中の head の `MemAvailable` は 5 GiB 前後である (画像入力を有効にした 2026-09-30 の実測で 4.8 GiB)。上流は `MAX_MODEL_LEN` 614,400 の構成で 601k トークンの prefill 中に 2.1 GiB まで下がったと書いている (当方の 600,000 では同じ入力は入らないが、長い prefill ほど下がる傾向は同じと見ている。未検証)。**上流の報告では、GB10 は統合メモリが尽きるとエラーではなくノードごと固まり、ハード再起動まで戻らなかった。** 当方では起きていないので、固まったときの兆候と復旧は未確認である。想定される兆候は、ssh も sparkDash も応答しないことと、worker だけが固まった場合に head の `/health` が応答しなくなることである。その場合は人が電源を入れ直す (sparkDash の Wake-on-LAN は電源断からの起動用で、固まったノードに効くかは未確認)。**配信中のノードで重い処理 (ダウンロード・ビルド・大きなファイルの展開) を流すときは `systemd-run --user --scope -p MemoryMax=<上限>` で上限を付ける** (`ssh -n` 経由では `XDG_RUNTIME_DIR=/run/user/$(id -u)` を前置する。head では 2026-09-15 に効くことを確かめた。worker では未確認)。**memguard (→ 用語表) は上流既定のまま無効にしている。** 上流によれば、有効にして唯一発動したときは無関係なホストのプロセスがメモリを取った場面で、原因ではない vLLM を kill しただけだった。代わりに両コンテナは `--oom-score-adj 1000` で起動されていて、カーネルの OOM killer が動けばデスクトップより先に vLLM が落ちる
 12. **`/v1/responses` は head のパッチに依存している。** 配信イメージ `ghcr.io/miaai-lab/deepseek-v4.1-flash-exl3-2x-dgx-sparks:2.9bpw` が `FROM` で使うベース `vllm/vllm-openai:deepseekv41-flash-0909` (レシピの `Dockerfile` の `ARG BASE`) に入っている `vllm/tokenizers/deepseek_v41.py` の `_normalize_messages` は、メッセージの content パーツを `text` / `image_url` / `input_image` / `image_pil` しか受けない。Responses API と Codex が使う `input_text` は 400 になる (`DeepSeek V4.1 supports text and image content only; got 'input_text'`)。**上流 vLLM の `main` は既に `("text", "input_text", "output_text")` を受けるので、これはイメージが古いだけである。** head の `~/dsv41-local/patch_responses_content_parts.py` がその 1 行を起動のたびに当て直す (**`ccsp` と `ocsp` の経路はパッチが無くても動く**ので、壊れていることに気づくのは `cxsp` だけである)。
 
     - **パッチ本体は clone の外 (`~/dsv41-local/`) に置いてある。** レシピの `overlay/` に置くと `overlay_recipe_hash` (`Dockerfile` + `overlay/` + `files/` + `tests/` の hash) が動き、イメージの `dsv41.recipe.stamp` と食い違って**レジストリから約 9 GiB を pull し直す**。この分岐を止めるのは `SKIP_PULL` / `BUILD` であって `SKIP_BUILD` ではない
@@ -1444,7 +1444,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(runn
 | DeepSeek 系レシピの上流の先行コミット | `ssh -n spark-head 'cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && git fetch -q && git rev-list --count HEAD..origin/main && git log --oneline HEAD..origin/main'` |
 | 全モデルの重み | `ssh -n spark-head 'du -sh ~/.cache/huggingface/hub/models--* ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks/{model,engram-src} ~/dsv41-engram'` (HF キャッシュの全モデルとレシピ直下の V4.1 EXL3 系を拾う。worker の V4.1 EXL3 系は `~/.cache/dsv41-flash-exl3/{model,engram-src}` と `~/dsv41-engram`) |
 | Qwen レシピの commit | `ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && git log --oneline -1'`。上流の先行分は同じディレクトリで `git fetch -q && git log --oneline HEAD..origin/main` |
-| V4.1 EXL3 レシピの commit | `ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && git log --oneline -1'` (2026-09-15 時点 `8530568`)。上流が先行していたら `git log --stat HEAD..origin/main` で `Dockerfile` / `overlay/` / `files/` / `tests/` に変更があるかを見る (あればイメージの stamp がずれる →「導入と再導入の落とし穴」6) |
+| V4.1 EXL3 レシピの commit | `ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && git log --oneline -1'` (2026-09-30 時点 `b9c49e9`)。上流が先行していたら `git log --stat HEAD..origin/main` で `Dockerfile` / `overlay/` / `files/` / `tests/` に変更があるかを見る (あればイメージの stamp がずれる →「導入と再導入の落とし穴」6) |
 | V4.1 EXL3 の重みがそろっているか | 下のコードブロック 7 (本体 49 ファイルのサイズを revision 固定の HF API と比べる。`OFF=1` にすると期待値を 1 本だけ 1 バイトずらす陽性対照になり、exit 1 を返す)。2026-09-15 に両ノードで exit 0、`OFF=1` で exit 1 を確認。Engram の 2 本は「導入手順」の Engram のコードブロック末尾の `sha256sum -c` で照合し、`engram-src/` に `config.json` と `model.safetensors.index.json` があることも見る |
 | V4.1 EXL3 系の上流既定からの差分 | 下のコードブロック 6 |
 | GLM 系の上流既定からの差分 | レシピのディレクトリで `diff <(grep -vE '^\s*#\|^\s*$' .env.example) <(grep -vE '^\s*#\|^\s*$' .env)`。**4 キーだけが出れば合格** (`WORKER_USER` / `WORKER_CX7_IF` / `WORKER_CX7_IB` / `MAX_MODEL_LEN`)。`VLLM_API_KEY` が差分に出たら認証が付いている |
@@ -1520,7 +1520,7 @@ done
 
 ```bash
 # 6. V4.1 EXL3 レシピの .env と配布既定の差分 (キー名だけを出す。値に IP を含む行があるので値は出さない)
-# 行頭の < は配布既定、> は当方の値。2026-09-15 時点は HF_HUB_ENABLE_HF_TRANSFER (> だけ) と WEIGHT_SYNC / WORKER_CX7_IB / WORKER_CX7_IF / WORKER_USER (< と > の両方) の 5 キーが出る
+# 行頭の < は配布既定、> は当方の値。2026-09-30 時点は HF_HUB_ENABLE_HF_TRANSFER (> だけ) と LANGUAGE_MODEL_ONLY / LONG_PREFILL_TOKEN_THRESHOLD / MAX_NUM_BATCHED_TOKENS / WEIGHT_SYNC / WORKER_CX7_IB / WORKER_CX7_IF / WORKER_USER (< と > の両方) の 8 キーが出る
 ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && diff <(grep -E "^[A-Za-z0-9_]+=" .env.example | sort) <(grep -E "^[A-Za-z0-9_]+=" .env | sort) | grep -E "^[<>]" | sed -E "s/=.*//" | sort -u'
 
 # 7. V4.1 EXL3 の本体の重みが revision 固定の HF API とサイズで一致するか (head で実行。worker は DIR を ~/.cache/dsv41-flash-exl3/model に)
