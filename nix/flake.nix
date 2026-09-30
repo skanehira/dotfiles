@@ -178,21 +178,19 @@
 
       # 自前 derivation (nixpkgs 未収録 LSP)。`packages.nix` からも callPackage で
       # 参照されるが、ここに出すことで `nix build .#tsp-server` 等で個別 build できる
-      packages =
-        nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ]
-          (
-            system:
-            let
-              pkgs = import nixpkgs { inherit system; };
-            in
-            {
-              tsp-server = pkgs.callPackage ./pkgs/tsp-server.nix { };
-              gh-actions-language-server = pkgs.callPackage ./pkgs/gh-actions-language-server.nix { };
-            }
-            // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
-              kanary = pkgs.callPackage ./pkgs/kanary.nix { };
-            }
-          );
+      packages = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ] (
+        system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in
+        {
+          tsp-server = pkgs.callPackage ./pkgs/tsp-server.nix { };
+          gh-actions-language-server = pkgs.callPackage ./pkgs/gh-actions-language-server.nix { };
+        }
+        // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
+          kanary = pkgs.callPackage ./pkgs/kanary.nix { };
+        }
+      );
 
       # `nix fmt` で呼ばれるフォーマッター。RFC 166 準拠の公式 nixfmt の
       # treefmt ラッパー。引数なし `nix fmt` で repo 内 .nix を再帰的に整形する。
@@ -200,7 +198,6 @@
       formatter = nixpkgs.lib.genAttrs [
         "x86_64-linux"
         "aarch64-linux"
-        "x86_64-darwin"
         "aarch64-darwin"
       ] (system: nixpkgs.legacyPackages.${system}.nixfmt-tree);
     };
