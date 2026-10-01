@@ -60,12 +60,12 @@ _spark_served_name() {
 # /v1/messages・/v1/chat/completions・/v1/responses の 3 経路で受け、medium は
 # どの経路でも 400 になる (前 2 経路は 2026-09-15、/v1/responses は 2026-09-17 実測)。
 #
-# GLM-5.3-Flash-EXL3 は他と構造が違う。/v1/chat/completions のスキーマは
-# none / minimal / low / medium / high / xhigh / max の 7 語を通すが、チャット
-# テンプレートが見るのは low と high だけで、それ以外は全て max に落ちる
-# (files/chat_template.jinja の effective_reasoning_effort。2026-09-20 実測)。
-# したがって実効的な語彙は low / high / max の 3 つで、max は指定なしと同じ。
-# 明示するのは、上流がテンプレート既定を変えたときに黙って浅くならないため。
+# GLM-5.3-Flash-EXL3 は他と構造が違う。配信している TensorFold のサーバは
+# none / minimal / low / medium / high / xhigh / max の 7 語を通し、それ以外を 400 で
+# 弾く。チャットテンプレートが見るのは low と high だけで、medium と xhigh は max に
+# 落ち、none は thinking を切る (/v1/chat/completions と /v1/responses の両方で
+# 2026-10-02 実測)。したがって実効的な語彙は low / high / max の 3 つで、max は指定
+# なしと同じ。明示するのは、上流がテンプレート既定を変えたときに黙って浅くならないため。
 _spark_effort() {
   case "$1" in
     qwen3.8-flash-next) echo "xhigh" ;;
