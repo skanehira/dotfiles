@@ -41,7 +41,7 @@
 配布されているか自分で確かめる:
 
 ```bash
-# dotfiles のスキルを指す symlink の数。git 管理のスキル 43 本から除外の 1 本を引いた 42 になる
+# dotfiles のスキルを指す symlink の数。git 管理のスキル 44 本から除外の 1 本を引いた 43 になる
 find ~/.agents/skills -mindepth 1 -maxdepth 1 | while read -r d; do readlink -f "$d"; done | rg -c '/dotfiles/agents/skills/'
 ls ~/.codex/agents                     # subagent の .toml がある
 readlink -f ~/.claude/rules            # dotfiles の agents/rules に解決する

@@ -4,7 +4,7 @@
 
 - 種別: プロジェクト運用ガイド
 - 対象読者: このリポジトリで作業する Claude / Codex / OpenCode
-- 最終確認: 2026-10-03。**本書の件数 (スキル 43 本・subagent 4 本・`enabledPlugins` 22 件で有効 19 本・`settings.json` の hooks 13 件・`packages-android.nix` 19 エントリ) は実環境に依存するので、疑わしいときは数え直す**
+- 最終確認: 2026-10-03。**本書の件数 (スキル 44 本・subagent 4 本・`enabledPlugins` 22 件で有効 19 本・`settings.json` の hooks 13 件・`packages-android.nix` 19 エントリ) は実環境に依存するので、疑わしいときは数え直す**
 
 ## Repository Overview
 
@@ -358,7 +358,7 @@ Android プロファイルだけは `pkgs.neovim` (nixpkgs-unstable の **stable
 agents/
 ├── AGENTS.md            ← グローバル指示の正本 (`~/.claude/CLAUDE.md` へ symlink)
 ├── rules/               ← core/ backend/ frontend/ infra/
-├── skills/              ← 43 本 (git 管理分。11 本は wondelai/skills からの vendor。配布除外は →「スキルの配布先の限定」節)
+├── skills/              ← 44 本 (git 管理分。12 本は外部からの vendor で、wondelai/skills の 11 本と nanaism/yomiyasu の 1 本。出典は `LICENSE-wondelai` / `LICENSE-yomiyasu`。配布除外は →「スキルの配布先の限定」節)
 ├── subagents/           ← 4 本 (Claude Code 形式が正本。Codex / OpenCode へは書式変換して配る)
 ├── hooks/               ← herdr-agent-state.sh のみ (herdr 本体の配布物。自作ゲートは無い)
 ├── scripts/             ← sync-subagents.ts (Codex / OpenCode への書式変換) / subagent-format.ts / mutate-check.ts ほか
@@ -388,7 +388,7 @@ agents/
 
 **`~/.codex/skills` は配布先ではない。** ここに dotfiles 由来の実体が残っていると同名スキルが `r0` と `r1` に二重に列挙される (Codex は同名スキルをマージしない。**未実測の推測で、根拠は 2 つの root が独立に列挙されることだけ**)。移行時に消す (→「配布方式の移行 (生成方式 → symlink)」節)。`.system` と plugin 由来のものは Codex の所有物なので触らない。
 
-**OpenCode は `~/.agents/skills` と `~/.claude/skills` の両方を読む。** OpenCode (V2) のスキル探索先は `~/.config/opencode/{skill,skills}` / `~/.claude/skills` / `~/.agents/skills` (とプロジェクトの `.opencode` / `.claude` / `.agents` の下) で、symlink を追跡する。スキルの識別子は `SKILL.md` の親ディレクトリ名 (スキル置き場の直下にある `*.md` はファイル名) で、同じ識別子は 1 つにまとまるので、同じ実体が 2 経路から見えても二重には並ばない (opencode v2.0.22 のソースと、実環境のスキル置き場を `opencode api skill.list` で列挙して重複 0 件を 2026-10-03 に確認)。`~/.claude/skills` 側だけを読まない設定は V2 に無い。そのため除外リスト `claude_only_skills` は OpenCode には効かない (→「スキルの配布先の限定」節)。列挙は `opencode api skill.list > /tmp/s.json && jq '.data | length' /tmp/s.json` で見る。出力は 700KB を超えるので**パイプに直結せずファイルに落とす** (パイプだと途中で切れる)。**常駐サービスの起動直後は一覧が欠けて返る** (0 件のように) ので、件数が落ち着くのを待つのではなく、`jq -r '.data[].name'` に `dev-impl` が現れるまで 2 秒おきに最大 10 回繰り返す。10 回で現れなければ配布の失敗として扱う (手順は `agents/bindings/opencode/AGENTS.md` の確認コマンド)。2026-10-03 のこのマシンでは 61 件で、内訳は OpenCode の組み込み 2・git 管理のスキル 43・`synced` の下 10・`README.md` 1・`~/.agents/skills` に他ツールが入れたもの 5 である。Android は `~/.agents/skills` が埋まらないので `~/.claude/skills` からだけ読む。
+**OpenCode は `~/.agents/skills` と `~/.claude/skills` の両方を読む。** OpenCode (V2) のスキル探索先は `~/.config/opencode/{skill,skills}` / `~/.claude/skills` / `~/.agents/skills` (とプロジェクトの `.opencode` / `.claude` / `.agents` の下) で、symlink を追跡する。スキルの識別子は `SKILL.md` の親ディレクトリ名 (スキル置き場の直下にある `*.md` はファイル名) で、同じ識別子は 1 つにまとまるので、同じ実体が 2 経路から見えても二重には並ばない (opencode v2.0.22 のソースと、実環境のスキル置き場を `opencode api skill.list` で列挙して重複 0 件を 2026-10-03 に確認)。`~/.claude/skills` 側だけを読まない設定は V2 に無い。そのため除外リスト `claude_only_skills` は OpenCode には効かない (→「スキルの配布先の限定」節)。列挙は `opencode api skill.list > /tmp/s.json && jq '.data | length' /tmp/s.json` で見る。出力は 700KB を超えるので**パイプに直結せずファイルに落とす** (パイプだと途中で切れる)。**常駐サービスの起動直後は一覧が欠けて返る** (0 件のように) ので、件数が落ち着くのを待つのではなく、`jq -r '.data[].name'` に `dev-impl` が現れるまで 2 秒おきに最大 10 回繰り返す。10 回で現れなければ配布の失敗として扱う (手順は `agents/bindings/opencode/AGENTS.md` の確認コマンド)。2026-10-03 のこのマシンでは 61 件で、内訳は OpenCode の組み込み 2・git 管理のスキル 43・`synced` の下 10・`README.md` 1・`~/.agents/skills` に他ツールが入れたもの 5 である。この計測は yomiyasu の追加前のもので、git 管理のスキルが 44 本になってからは測り直していない。Android は `~/.agents/skills` が埋まらないので `~/.claude/skills` からだけ読む。
 
 **OpenCode が自動で読むグローバル指示は `~/.config/opencode/AGENTS.md` だけである。** V2 は `~/.claude/CLAUDE.md` へのフォールバックを持たない (opencode v2.0.22 の `packages/core/src/config/plugin/instruction.ts`、2026-10-03 に確認)。したがって `agents/bindings/opencode/AGENTS.md` には「共通の正本 `~/.claude/CLAUDE.md` を自分で Read せよ」と書いてある。Codex の binding と同じ構造で、Read 指示を書いておかないと共通ハーネスが届かない。
 
@@ -422,7 +422,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 
 ### スキルの配布先の限定 (`~/.agents/skills` への配布から除外)
 
-スキルは既定で 3 ランタイムへ配られる (同じ実体への symlink)。`~/.agents/skills` へ配らないものは `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。変数名は「Claude Code だけに残す」だが、**実際に除外が効くのは Codex だけ**である。**このリストが除外の唯一の正**で、現在の宣言は 2 件。`agents/skills/` にある git 管理のスキル 43 本のうち除外は 1 本で、もう 1 件はスキルではなく未追跡の同期キャッシュ。
+スキルは既定で 3 ランタイムへ配られる (同じ実体への symlink)。`~/.agents/skills` へ配らないものは `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。変数名は「Claude Code だけに残す」だが、**実際に除外が効くのは Codex だけ**である。**このリストが除外の唯一の正**で、現在の宣言は 2 件。`agents/skills/` にある git 管理のスキル 44 本のうち除外は 1 本で、もう 1 件はスキルではなく未追跡の同期キャッシュ。
 
 除外の効く先は `~/.agents/skills` なので Codex からは消える。**OpenCode からは消えない** (OpenCode は `~/.claude/skills` も読み、そこには残っているため)。OpenCode で除外する手段は V2 に無い。
 
