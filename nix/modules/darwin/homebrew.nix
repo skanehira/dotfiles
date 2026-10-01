@@ -28,9 +28,6 @@
       autoUpdate = false;
       upgrade = false;
       cleanup = "uninstall";
-      # Homebrew 6.x で `--cleanup` は deprecated + dry-run + exit 1 化された。
-      # nix-darwin 側は master でも未対応 (PR #1789 / #1802 が open)。マージされたら外す。
-      extraFlags = [ "--force-cleanup" ];
     };
 
     # サードパーティ tap
