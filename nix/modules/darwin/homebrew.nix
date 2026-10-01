@@ -46,6 +46,11 @@
       # cask 依存の保険
       "ca-certificates"
       "openssl@3"
+      # gcloud-cli (cask) が依存する python。bundle cleanup は cask の依存を最新の cask 定義から
+      # 引くので、定義だけが新しい python へ進むと (upgrade = false のため installed は古いまま)
+      # installed が使う python が削除候補になり、brew uninstall に拒否されて drs が警告を出す。
+      # gcloud-cli を upgrade して receipt の python が変わったら、ここも合わせて書き換える
+      "python@3.14"
       "aqua"
     ];
 
