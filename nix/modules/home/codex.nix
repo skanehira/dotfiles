@@ -131,7 +131,13 @@
   # 自分のリポジトリ 2 本は clone 先がマシンごとに変わるのでローカルパスで登録する。
   # いずれも Claude 形式 (.claude-plugin/marketplace.json) だが Codex がそのまま読む。
   # ネットワークやリポジトリの不在で失敗しても activation は止めない。
+  #
+  # activation の PATH は HM が nix の基本ツールだけに絞るので、mac の cask で入れた codex も
+  # marketplace の取得に使う git も見えない。home.path (home.packages の bin) と Homebrew の bin を
+  # サブシェル内でだけ足し、後続の activation には PATH の変更を漏らさない。
   home.activation.installCodexPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    (
+    export PATH="${config.home.path}/bin${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ":/opt/homebrew/bin"}:$PATH"
     if ! command -v codex >/dev/null 2>&1; then
       warnEcho "codex が無いのでプラグインの導入をスキップした"
     else
@@ -164,6 +170,7 @@
           || warnEcho "codex plugin add $plugin に失敗した"
       done
     fi
+    )
   '';
 
 }
