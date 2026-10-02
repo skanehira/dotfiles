@@ -899,6 +899,13 @@ RuntimeError: RoCE all-gather failed (sequence 1, peer 1, hca 0)
 
 **`cxsp` は `cxsp: コンテキスト上限が 0 です (… の /v1/models が max_model_len を返していない)` で exit 1 になる。** TensorFold の `/v1/models` は `id` / `object` / `owned_by` の 3 キーしか返さない。`cxsp` はコンテキスト上限を `max_model_len` から決める作りなので、値が取れない時点で止まる。OpenCode は `opencode.json` の静的値を使うので影響を受けない。
 
+**上限の取り方を直しても `cxsp` は通らないので、GLM 系は OpenCode 専用にしてある。** 2026-10-02 に codex 0.159.3 で、上限の代わりに `CXSP_CONTEXT_MAX` を使う修正を試した。codex の送信本文を写し取って TensorFold へ再送すると、次の 2 段で 400 になった。修正は採らずに戻してある。
+
+1. `include is not supported (reasoning.encrypted_content)` — codex は effort を `none` にしてもこの `include` を必ず付ける。TensorFold の `server/responses_translate.py` が意図して拒否している
+2. `tools of type 'custom' are not supported: this server runs function tools only` — `include` を外して再送するとこれが出る。`custom` 型は catalog の `tool_mode` を外すと消えるが、MCP サーバと ChatGPT アプリ連携が `namespace` 型で 20 個近く残る
+
+通すにはサーバ側で両方を受けさせる必要がある。上流が追跡している `start.sh` に `docker run -v` の差分を足す保守が要るので、見送った。
+
 **この系統のサーバは配信していないモデル名で要求しても応答を返す** (2026-10-03 実測)。クライアントが古いモデル名を送り続けても `model not found` にならず、GLM がそのまま答えるので気づきにくい。`/v1/models` の `owned_by` は `tensorfold` である (OpenCode 組み込みの vLLM 自動発見を使わない理由 →「OpenCode」)。
 
 **手元の sparkDash (`cc44d35`) は GLM 配信中に LLM のメトリクスを表示できない。** `vllm:` の系列しか読まないためである。上流の `main` には TensorFold の `/health` を読む変更が入っている。
