@@ -2,7 +2,7 @@
 
 - 種別: 手順書
 - 対象: Galaxy Z Fold 8 Ultra (Snapdragon 8 Elite Gen 5 / One UI 9)
-- 最終更新: 2026-09-06
+- 最終更新: 2026-10-03 (OpenCode を V2 に切り替え、接続先を Tailscale に固定)
 - 状態: dotfiles 側の Android プロファイルは実装・コミット済み。端末上での実行 (Phase 0 / Phase 1) はまだ誰も試していない
 
 ## なぜ Termux + proot なのか
@@ -123,7 +123,9 @@ nix run nixpkgs#hello
 curl -fsSL https://claude.ai/install.sh | bash
 ~/.local/bin/claude --version
 
-nix run nixpkgs#opencode -- --version
+# OpenCode は nixpkgs (V1) ではなく V2 のビルド済みバイナリを使う。版は nix/pkgs/opencode.nix に合わせる
+curl -fsSL https://registry.npmjs.org/@opencode/cli-linux-arm64/-/cli-linux-arm64-2.0.22.tgz | tar xz -C /tmp
+/tmp/package/bin/opencode --version
 
 VP_NODE_MANAGER=no curl -fsSL https://vite.plus | bash
 ~/.vite-plus/bin/vp --version
@@ -199,7 +201,7 @@ Phase 0 で入れた Claude Code と Vite+ は再インストールされない�
 `packages-android.nix` が明示列挙するのは 19 エントリ。これに `programs.git` / `programs.gh` / `programs.zsh` / `programs.fzf` / `programs.direnv` が足す分と Home Manager 内部のものが乗って、`home.packages` は 34 件になる。
 
 - 言語ランタイム: nodejs / pnpm
-- エージェント: Claude Code (activation 時に公式インストーラを実行) / OpenCode (nixpkgs)
+- エージェント: Claude Code (activation 時に公式インストーラを実行) / OpenCode V2 (`nix/pkgs/opencode.nix`。npm のビルド済みバイナリを展開するだけなのでローカルビルドは走らない)
 - Deno: `agents/scripts/*.ts` (mutate-check.ts 等) が deno の shebang で動く。review-impl の変異検証がこれを呼ぶので外せない。activation 時に公式インストーラを実行する
 - フロントエンド: Vite+ (activation 時に公式インストーラを実行。nixpkgs 未収録で、overlay 版は aarch64-linux でビルドが落ちるため)
 - エディタと端末: neovim (nixpkgs の stable。nightly ではない) / tmux
@@ -249,7 +251,7 @@ proot-distro login debian --user skanehira --shared-tmp
 | ビルド速度 | proot は評価もビルドも遅い。キャッシュに無いものはローカルビルドになり実質不可と考える |
 | treesitter の parser | nvim-treesitter は parser を cc でコンパイルする。手順 3 で `build-essential` を入れているが、proot でのビルドは遅い。数が多いと待たされる |
 | クリップボード | `tmux/tmux.conf` の Linux 分岐は `xsel` を前提としている。proot 内に X が無いので、copy-mode の `y` によるコピーと `prefix + ]` による貼り付けが両方失敗する |
-| OpenCode の接続先 | `agents/bindings/opencode/opencode.json` は自宅の `spark-head.local` を mDNS で引く。外出先ではモデルに繋がらない。`ocsp` は Tailscale 経由にフォールバックするが、Android プロファイルは `zsh.nix` 経由で関数を配るだけなので Tailscale 自体の導入は別途要る |
+| OpenCode の接続先 | `agents/bindings/opencode/opencode.json` は Tailscale の MagicDNS 名 `spark-head` に固定してある (自宅 LAN の経路は使わない)。Android 側で Tailscale アプリに接続している必要があり、その導入は dotfiles の外。proot 内から MagicDNS 名が引けるかは未検証 |
 | Claude Code の SessionStart hook | `agents/bindings/claude/settings.json` の 1 本が `/Users/skanehira/...` という mac 固定パス (herdr 用) を指す。Linux では毎回失敗するが、Claude Code 本体には影響しない (ほかに登録されているのは orca の 12 件だけで、これらは元から no-op) |
 | Claude Code の自動更新 | 更新でバイナリが差し替わる。壊れた場合は `nix/modules/home/env.nix` の `home.sessionVariables` に `DISABLE_AUTOUPDATER = "1"` を足して `hms` する |
 | Vite+ のシェル設定追記 | installer は `~/.zshrc` などに env の source を追記しようとするが、Home Manager がそれらを read-only symlink として管理しているので失敗する。PATH は `home.sessionPath` で通すので実害はない |
