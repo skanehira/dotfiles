@@ -172,7 +172,7 @@ let
     with pkgs;
     [
       ollama
-      opencode # ターミナル用コーディングエージェント。ccsp と同じ Spark バックエンドを ocsp から使う
+      (pkgs.callPackage ../../pkgs/opencode.nix { }) # OpenCode V2 (nixpkgs は V1 のため自前)。DGX Spark 専用
     ]
     ++ [
       inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.default # AI agent multiplexer TUI (flake input)

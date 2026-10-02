@@ -8,33 +8,43 @@
 {
   # 設定は dotfiles repo への直接 symlink (mkOutOfStoreSymlink) で扱う。
   # claude.nix と同じ方針で、編集が drs 不要で即反映される (live edit)。
+  # OpenCode V2 の常駐サービスは ~/.config/opencode を監視していて、設定ファイルの
+  # 変更を自動で再読み込みする。
   #
   # symlink するのはファイル単位にする。~/.config/opencode/ には opencode 自身が書く領域
-  # (skills/ / node_modules / package.json) が同居しており、ディレクトリごと貼ると
+  # (cli.json / service.json / node_modules など) が同居しており、ディレクトリごと貼ると
   # dotfiles に流れ込むため。
   #
-  # baseURL には自宅 LAN の mDNS 名 (spark-head.local) を書いてある。これは素の
-  # opencode を打ったときの既定値で、ocsp 経由の起動では ocsp が到達する方
-  # (LAN / Tailscale) を選んで OPENCODE_CONFIG_CONTENT で上書きする。
-  # IP を書けば接続あたり約 210ms 速いが、このリポジトリは公開なので置かない
-  # (IP を使いたいマシンは CCSP_LAN_HOST に入れる)。
-  # vLLM が認証を要求しないので API キーは持たない (詳細は
-  # agents/rules/infra/dgx-spark.md)。
+  # OpenCode は DGX Spark 専用で、接続先は Tailscale の MagicDNS 名 (spark-head) に固定
+  # している。自宅 LAN の mDNS 名は使わない。vLLM が認証を要求しないので API キーは
+  # 持たない (詳細は agents/rules/infra/dgx-spark.md)。
   home.file.".config/opencode/opencode.json".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/opencode.json";
 
-  # tui.json は keybinds / theme の設定ファイルで、TUI 側の theme 切り替えなど
-  # opencode 自身の書き込みも repo 側の working tree に反映される (live edit)。
-  home.file.".config/opencode/tui.json".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/tui.json";
+  # 配信中のモデルだけを有効にして既定に据えるローカルプラグイン。V2 は
+  # ~/.config/opencode/plugins/ 直下の *.ts を自動で読み込む。テスト
+  # (spark-served_test.ts) は配らない。
+  home.file.".config/opencode/plugins/spark-served.ts".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/plugins/spark-served.ts";
+
+  # cli.json (keybinds / theme) は symlink にできない。V2 は TUI でテーマ等を変えると
+  # 一時ファイルを書いて rename で置き換えるので、symlink が実ファイルに化ける。
+  # そこで、無いときだけ repo の内容をコピーする (以後の TUI での変更はローカルに残る)。
+  # repo 側を変えたときは ~/.config/opencode/cli.json を消してから drs / hms する。
+  home.activation.seedOpencodeCliConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if [ ! -e "$HOME/.config/opencode/cli.json" ]; then
+      run mkdir -p "$HOME/.config/opencode"
+      run install -m 644 "${dotfilesRoot}/agents/bindings/opencode/cli.json" \
+        "$HOME/.config/opencode/cli.json"
+    fi
+  '';
 
   # グローバル指示は OpenCode 専用の文書を symlink で配る。共通の正本 agents/AGENTS.md を
   # 参照し、Claude 綴りの語彙を OpenCode の語彙へ読み替える規約を書いてある。
   #
-  # このファイルを置くと ~/.claude/CLAUDE.md は自動では読まれなくなる。OpenCode は
-  # ~/.config/opencode/AGENTS.md → ~/.claude/CLAUDE.md の順に探して最初の 1 つで
-  # break するため (packages/opencode/src/session/instruction.ts)。配る文書側に
-  # 「正本を Read せよ」と書いてあるので、共通ハーネスはそこから届く。
+  # V2 がグローバル指示として読むのは ~/.config/opencode/AGENTS.md の 1 本だけで、
+  # ~/.claude/CLAUDE.md へのフォールバックは無い。配る文書側に「正本を Read せよ」と
+  # 書いてあるので、共通ハーネスはそこから届く。
   home.file.".config/opencode/AGENTS.md".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/AGENTS.md";
 

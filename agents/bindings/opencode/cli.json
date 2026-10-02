@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/v2/cli.json",
+  "theme": {
+    "name": "opencode"
+  },
+  "keybinds": {
+    "command.palette.show": "alt+p,super+p",
+    "input.backspace": "backspace,shift+backspace,ctrl+h",
+    "input.move.up": "up,ctrl+p",
+    "input.move.down": "down,ctrl+n",
+    "prompt.history.previous": "up,ctrl+p",
+    "prompt.history.next": "down,ctrl+n"
+  }
+}
