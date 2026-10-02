@@ -2,7 +2,24 @@
   "$schema": "https://www.schemastore.org/claude-code-keybindings.json",
   "$docs": "https://code.claude.com/docs/en/keybindings",
   "bindings": [
-    { "context": "Chat", "bindings": { "alt+m": "chat:cycleMode" } },
-    { "context": "Confirmation", "bindings": { "alt+m": "confirm:cycleMode" } }
+    {
+      "context": "Chat",
+      "bindings": {
+        "alt+m": "chat:cycleMode"
+      }
+    },
+    {
+      "context": "Confirmation",
+      "bindings": {
+        "alt+m": "confirm:cycleMode"
+      }
+    },
+    {
+      "context": "Chat",
+      "bindings": {
+        "ctrl+x b": "app:cycleDiffBase",
+        "ctrl+x i": "abovePrompt:toggle"
+      }
+    }
   ]
 }
