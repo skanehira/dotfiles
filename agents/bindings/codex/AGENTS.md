@@ -36,7 +36,7 @@
 
 スキルは除外リストで絞っている。`utility-session-profile` は Claude Code のセッションログしか読まないため Codex には配られない (`nix/modules/home/codex.nix` の `claude_only_skills`)。
 
-**`~/.agents/skills` は OpenCode とも共有している。** OpenCode もこのディレクトリを探索するので、同じ symlink が両者から見える (除外リストも両者に同時に効く)。Codex 側で気にすることは無いが、ここに実体を増やすと OpenCode にも現れる。
+**`~/.agents/skills` は OpenCode とも共有している。** OpenCode もこのディレクトリを探索するので、同じ symlink が両者から見える。Codex 側で気にすることは無いが、ここに実体を増やすと OpenCode にも現れる。除外リストが効くのは Codex だけである (OpenCode は `~/.claude/skills` も読むので、除外したスキルもそちらから見える)。
 
 配布されているか自分で確かめる:
 
