@@ -30,6 +30,7 @@
     ],
     "defaultMode": "plan"
   },
+  "model": "opusplan",
   "fallbackModel": [
     "claude-opus-4-8",
     "sonnet"
@@ -208,7 +209,8 @@
     "typescript-lsp@claude-plugins-official": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "claude-security@claude-plugins-official": true,
-    "stripe@claude-plugins-official": true
+    "stripe@claude-plugins-official": true,
+    "session-brief@claude-session-brief": true
   },
   "extraKnownMarketplaces": {
     "agent-plugins-for-aws": {
@@ -265,6 +267,12 @@
         "source": "github",
         "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
       }
+    },
+    "claude-session-brief": {
+      "source": {
+        "source": "github",
+        "repo": "skanehira/claude-session-brief"
+      }
     }
   },
   "outputStyle": "concise",
@@ -287,6 +295,5 @@
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
-  "model": "opusplan"
+  "voiceEnabled": true
 }
