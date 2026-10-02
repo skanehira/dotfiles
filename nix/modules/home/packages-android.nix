@@ -7,13 +7,14 @@
 # (3) 評価もビルドも遅い
 # ため、「binary cache から fetch できる軽量なものだけ」を明示列挙する方針。
 # 増やすときは cache.nixos.org に無いもの (flake input のツール類・neovim
-# nightly・自前 derivation) を入れないこと。
+# nightly・自前 derivation) を入れないこと。例外は opencode で、自前 derivation だが
+# ビルド済みバイナリを展開して置くだけなのでローカルビルドが走らない。
 let
   # 要件そのもの。git / gh は programs.git / programs.gh が入れるのでここには書かない
   core = with pkgs; [
     nodejs_24
     pnpm
-    opencode # ターミナル用コーディングエージェント (Claude Code は claude.nix が bootstrap)
+    (callPackage ../../pkgs/opencode.nix { }) # OpenCode V2 (Claude Code は claude.nix が bootstrap)
   ];
 
   # 共有設定 (zsh / tmux / neovim / git) が参照するので、無いと設定が壊れるもの。

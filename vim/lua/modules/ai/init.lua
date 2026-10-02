@@ -19,12 +19,6 @@ local CCSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
   .. "; source ~/.config/zsh/functions/claude-deepseek.zsh"
   .. "; ccsp --allow-dangerously-skip-permissions \"$@\""
 
--- opencode は Spark の接続先解決 (LAN/Tailscale プローブ + 配信モデル検査 + --model 注入) を
--- 持つ ocsp を経由させる。argv の先頭 4 要素が固定前置になり、以降のユーザー引数が
--- zsh -c '<script>' ocsp <args...> の $@ に入る
-local OCSP_SCRIPT = "source ~/.config/zsh/functions/spark-common.zsh"
-  .. "; source ~/.config/zsh/functions/opencode-spark.zsh; ocsp \"$@\""
-
 -- codex も同じく Spark の接続先解決 (プローブ + 配信モデル検査 + -c 注入) を持つ
 -- cxsp を経由させる。素の codex は ChatGPT ログインのままなので、ここを通さないと
 -- Spark ではなく OpenAI に繋がる
@@ -67,13 +61,14 @@ local TOOL_CONFIG = {
     -- Herdr の agent alias。省略すると argv[1] の "zsh" が alias になり、
     -- find_pane_by_command("codex") で復元できなくなる。
     -- ただし agent_session (セッション UUID) は zsh を挟むと null になるので、
-    -- herdr の resume_agents_on_restore は効かない (claude-spark / ocsp も同じ)
+    -- herdr の resume_agents_on_restore は効かない (claude-spark も同じ)
     name = "codex",
   },
+  -- opencode は DGX Spark 専用の設定 (接続先と配信中モデルの選択) を opencode 自身が
+  -- 持つので、ラッパーを挟まずバイナリを直接起動する
   opencode = {
     display = "OpenCode",
     shift_tab = "shift+tab",
-    argv_prefix = { "zsh", "-c", OCSP_SCRIPT, "ocsp" },
     name = "opencode",
   },
 }
@@ -145,8 +140,8 @@ local function get_or_create_pane(tool_name, args)
   end
 
   -- 新規ペインを作成（既存nvimペイン40% / 新規ツールペイン60%）、argvを直接起動する
-  -- （claude-spark / Codex / OpenCode は Spark クライアント (ccsp / cxsp / ocsp) が
-  --   zsh 関数なので zsh を挟む。素の claude だけはバイナリを直接起動する）
+  -- （claude-spark / Codex は Spark クライアント (ccsp / cxsp) が zsh 関数なので
+  --   zsh を挟む。素の claude と OpenCode はバイナリを直接起動する）
   -- 新しい右ペインでツールを起動する
   local err
   pane_id, err = herdr.create_pane(40, argv, cfg.name)
@@ -425,7 +420,7 @@ function M.open_codex(args, context)
   open_input_buffer("codex", args, context or find_thread_context_at_cursor("codex"))
 end
 
--- opencodeを開く（ocsp 経由。context 無し時は Claude 同様にカーソル位置のスレッドを検索）
+-- opencodeを開く（context 無し時は Claude 同様にカーソル位置のスレッドを検索）
 -- @param args string|nil コマンド引数（例: "--continue"）
 -- @param context table|nil 範囲コンテキスト
 function M.open_opencode(args, context)
