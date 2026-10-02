@@ -38,19 +38,23 @@ local function parse_pane_id(json_str)
   return decoded.result.pane.pane_id
 end
 
--- JSON レスポンスから result.agent.pane_id を取り出す（agent start 用）
--- @param json_str string herdrコマンドのJSON出力
--- @return string|nil pane_id、取り出せない場合はnil
-local function parse_agent_pane_id(json_str)
-  local ok, decoded = pcall(vim.json.decode, json_str)
-  if not ok or not decoded.result or not decoded.result.agent then
-    return nil
+local function rename_agent_when_detected(pane_id, name)
+  local attempts = 0
+  local function rename()
+    attempts = attempts + 1
+    local _, err = exec_herdr({ "herdr", "agent", "rename", pane_id, name })
+    if err then
+      if attempts < 60 then
+        vim.defer_fn(rename, 1000)
+      else
+        vim.notify("herdrエージェント名の設定に失敗しました:\n" .. err, vim.log.levels.WARN)
+      end
+    end
   end
-  return decoded.result.agent.pane_id
+  vim.defer_fn(rename, 100)
 end
 
--- 現在のペインを右方向に分割し、シェルを経由せずargvを直接起動する
--- （agent start は split と起動が原子的なため、シェル起動→タイプ→実行の遅延が発生しない）
+-- 現在のペインを右方向に分割し、新しいペインでエージェントを起動する
 -- @param size_percent number 新規ペインのサイズ（%）
 -- @param argv table 実行するコマンドと引数のリスト（例: {"claude", "-r"}）
 -- @param name string|nil エージェント名（省略時は argv[1]）
@@ -62,31 +66,38 @@ function M.create_pane(size_percent, argv, name)
   end
 
   -- agent name はグローバル一意が必要なため、エージェント名 + タブIDで構成する
-  local agent_name = string.format("%s-%s", name or argv[1], tab_id:gsub(":", "-"))
+  local agent_name = string.format("%s-%s", name or argv[1], tab_id:gsub(":", "-"):lower())
 
-  local args = {
-    "herdr", "agent", "start", agent_name,
-    "--tab", tab_id,
+  local split_output, split_err = exec_herdr({
+    "herdr", "pane", "split", "--current",
+    "--direction", "right",
     "--cwd", vim.fn.getcwd(),
-    "--split", "right",
     "--no-focus",
-    "--",
-  }
-  for _, a in ipairs(argv) do
-    table.insert(args, a)
+  })
+  if not split_output then
+    return nil, split_err
   end
 
-  local output, err = exec_herdr(args)
-  if not output then
-    return nil, err
-  end
-
-  local pane_id = parse_agent_pane_id(output)
+  local pane_id = parse_pane_id(split_output)
   if not pane_id then
-    return nil, "Failed to parse pane ID from output: " .. output
+    return nil, "Failed to parse pane ID from output: " .. split_output
   end
 
-  -- agent start は分割比率を指定できず50/50固定になるため、既存挙動と合わせてリサイズする
+  local escaped_argv = {}
+  for _, arg in ipairs(argv) do
+    table.insert(escaped_argv, vim.fn.shellescape(arg))
+  end
+  local _, run_err = exec_herdr({
+    "herdr", "pane", "run", pane_id,
+    "exec " .. table.concat(escaped_argv, " "),
+  })
+  if run_err then
+    exec_herdr({ "herdr", "pane", "close", pane_id })
+    return nil, run_err
+  end
+  rename_agent_when_detected(pane_id, agent_name)
+
+  -- pane split の既定比率 50/50 を、既存挙動の 40/60 に合わせてリサイズする
   local target_ratio = size_percent / 100
   local _, resize_err = exec_herdr({
     "herdr", "pane", "resize", "--pane", pane_id,
@@ -107,29 +118,29 @@ function M.pane_exists(pane_id)
   return err == nil
 end
 
--- 現在のタブ内で指定エージェントが動いているペインを検索
--- @param pattern string エージェント名（herdr が検出するラベル。"claude" / "claude-spark" / "codex" / "opencode"）
+-- 現在のタブ内で指定エージェントが動いているペインを alias で検索
+-- @param pattern string エージェント名（"claude" / "claude-spark" / "codex" / "opencode"）
 -- @return string|nil ペインID、見つからない場合はnil
 function M.find_pane_by_command(pattern)
-  local workspace_id = vim.env.HERDR_WORKSPACE_ID
   local tab_id = vim.env.HERDR_TAB_ID
-  if not workspace_id or not tab_id then
+  if not tab_id then
     return nil
   end
 
-  local output = exec_herdr({ "herdr", "pane", "list", "--workspace", workspace_id })
+  local output = exec_herdr({ "herdr", "agent", "list" })
   if not output then
     return nil
   end
 
   local ok, decoded = pcall(vim.json.decode, output)
-  if not ok or not decoded.result or not decoded.result.panes then
+  if not ok or not decoded.result or not decoded.result.agents then
     return nil
   end
 
-  for _, pane in ipairs(decoded.result.panes) do
-    if pane.tab_id == tab_id and pane.agent == pattern then
-      return pane.pane_id
+  local expected_name = string.format("%s-%s", pattern, tab_id:gsub(":", "-"):lower())
+  for _, agent in ipairs(decoded.result.agents) do
+    if agent.tab_id == tab_id and agent.name == expected_name then
+      return agent.pane_id
     end
   end
   return nil

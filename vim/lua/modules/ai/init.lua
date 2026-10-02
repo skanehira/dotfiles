@@ -54,7 +54,7 @@ local TOOL_CONFIG = {
     display = "Claude (Spark)",
     shift_tab = "alt+m",
     argv_prefix = { "zsh", "-c", CCSP_SCRIPT, "ccsp" },
-    -- herdr agent start に渡す名前。find_pane_by_command は agent を文字列の完全一致で
+    -- Herdr の agent alias。find_pane_by_command は alias を文字列の完全一致で
     -- 探すので、claude と別名にしないと互いのペインを取り違える。agent_session は
     -- zsh を挟むと null になるので herdr の resume_agents_on_restore は効かない
     name = "claude-spark",
@@ -64,9 +64,8 @@ local TOOL_CONFIG = {
     newline = true,
     shift_tab = "shift+tab",
     argv_prefix = { "zsh", "-c", CXSP_SCRIPT, "cxsp" },
-    -- herdr agent start に渡す名前。省略すると argv[1] の "zsh" が使われ、
-    -- ペインに付く agent が "zsh" になって find_pane_by_command("codex") が
-    -- 復元できなくなる (実測: 明示すると zsh ラッパー越しでも agent="codex" が付く)。
+    -- Herdr の agent alias。省略すると argv[1] の "zsh" が alias になり、
+    -- find_pane_by_command("codex") で復元できなくなる。
     -- ただし agent_session (セッション UUID) は zsh を挟むと null になるので、
     -- herdr の resume_agents_on_restore は効かない (claude-spark / ocsp も同じ)
     name = "codex",
@@ -148,7 +147,7 @@ local function get_or_create_pane(tool_name, args)
   -- 新規ペインを作成（既存nvimペイン40% / 新規ツールペイン60%）、argvを直接起動する
   -- （claude-spark / Codex / OpenCode は Spark クライアント (ccsp / cxsp / ocsp) が
   --   zsh 関数なので zsh を挟む。素の claude だけはバイナリを直接起動する）
-  -- コマンド終了時にペインも自動的に閉じられる
+  -- 新しい右ペインでツールを起動する
   local err
   pane_id, err = herdr.create_pane(40, argv, cfg.name)
   if not pane_id then
