@@ -1,10 +1,28 @@
-# 横断設計書 (docs/design/DESIGN.md) の書き方 (dev-spec フェーズ 6)
+# 横断設計書 (docs/design/DESIGN.md) の書き方 (dev-spec のフェーズ 6)
 
 - 種別: テンプレート + 記入基準
-- 生成者: dev-spec フェーズ 6。更新者: dev-impl (実装詳細レベルの乖離補正のみ)
+- 生成者: dev-spec のフェーズ 6。更新者: dev-impl (実装詳細レベルの乖離補正のみ)
 - 消費者: 機能設計書 (docs/design/features/) と issue から節名で参照される / dev-impl の implementer・review-impl が横断規約・スキーマ・検証コマンドを引く / 人間が全体像を掴む
 
 **1 ファイルに横断関心事だけを書く。** 機能単位の契約 (入出力・エッジケース) は docs/design/features/ が正本で、ここに書かない。逆に、複数機能が共有するもの (スキーマ・API 規約・エラー形式・認証) は必ずここに書き、features 側に重複させない。
+
+## 入力と転記
+
+書き始める前に次を Read する。無いものは飛ばす。
+
+| 入力 | 生成者 | 使い方 |
+| --- | --- | --- |
+| `docs/design/FEASIBILITY.md` | dev-spec のフェーズ 4・5 | 下の転記規則 1〜3 で DESIGN.md へ写す |
+| `docs/design/USECASES.md` | dev-spec のフェーズ 3 | 「目的とスコープ」と、機能をまたぐ規則 (BR) の置き場を決める |
+| `docs/design/UI_SKETCH.html` | dev-spec のフェーズ 2 (webapp のみ) | アプリシェルの決定を「横断規約」へ写す (転記規則 4) |
+| `docs/PRODUCT_SPEC.md` | 利用者が置くか fullstack-app-builder が生成する | プロダクトの目的・技術的制約を「目的とスコープ」「アーキテクチャと技術選定」に反映する |
+
+転記規則:
+
+1. **verified の PoC 結果**: FEASIBILITY.md「PoC 結果」の `verified` の結論を、「アーキテクチャと技術選定」の選定理由に根拠として書く (PoC の id を添える)
+2. **fallback_adopted / scope_reduced の PoC 結果**: 「アーキテクチャと技術選定」に、当初案を却下案、fallback またはスコープ縮小後の案を採用案として転記する。scope_reduced で外した範囲は「目的とスコープ」のやらないことにも書く
+3. **未検証で残った blocker=false の PoC 計画**: `POC_NEEDED` マーカー (書式は下の「記入基準」) として、その要素を扱う DESIGN.md の節に置く。機能単体の契約に属する要素は、dev-spec のフェーズ 7 が docs/design/features/ の該当ファイルに置く。マーカーの `scope` は計画の `**目的**`、`risk` と `blocker` は計画の値を写す
+4. **アプリシェルの決定** (webapp で UI_SKETCH.html がある場合): ui-sketch.md 手順4.5 で決めたグローバルレイアウト・認証ガード・404 / 権限なし / ネットワークエラー画面・グローバルトースト・ErrorBoundary の配置・共通 loading 表示を「横断規約」に写す。実装者は UI_SKETCH.html を読まずに issue と docs だけで着手するので、写さないと決定が実装に届かない
 
 ## テンプレート
 
@@ -45,7 +63,8 @@
 
 ## 横断規約 (該当時)
 
-<エラー応答の共通形式・認証方式・ログ・共通 UX (ローディング・エラー表示) など、全機能に効く決めごと>
+<エラー応答の共通形式・認証方式・ログ・共通 UX (ローディング・エラー表示) など、全機能に効く決めごと。
+ webapp では UI_SKETCH.html のアプリシェルの決定 (グローバルレイアウト・認証ガード・404 等の画面・トースト・ErrorBoundary・loading) をここに写す>
 
 ## ドメインモデル (該当時)
 
@@ -72,9 +91,10 @@
 ## 記入基準
 
 - **決めが要る点はその場で聞く**: 変更コストの高い決定 (データストア選定・API の外部契約・認証方式・データ保持・トランザクション境界) はその場でユーザーに確認して書き込む。独立したインタビューフェーズは無い
-- **技術検証待ちの未確定要素**は `<!-- POC_NEEDED: id=<id>, scope=<検証対象>, risk=<high|medium|low>, blocker=<true|false> -->` マーカーを該当節に残す。blocker=true 相当の不確実性が設計中に見つかったらフェーズ 5 (PoC 検証) へ差し戻す。**解決した (`verified` / `fallback_adopted` / `scope_reduced`) マーカーは、結果を設計へ反映すると同時に除去する** — blocker=true の残置は /dev-impl の開始ガードを恒久的にブロックする
+- **技術検証待ちの未確定要素**は `<!-- POC_NEEDED: id=<id>, scope=<検証対象>, risk=<high|medium|low>, blocker=<true|false> -->` マーカーを該当節に残す。blocker=true 相当の不確実性が設計中に見つかったら、マーカーを `blocker=true` で残して dev-spec のフェーズ 5 (PoC 検証) へ差し戻す (poc-verification.md 手順 1 が設計書のマーカーも拾って PoC 計画に足す)。dev-spec のフェーズ 5 が終わったら本フェーズに戻り、**解決した (`verified` / `fallback_adopted` / `scope_reduced`) マーカーは、結果を設計へ反映すると同時に除去する** — blocker=true の残置は /dev-impl の開始ガードを恒久的にブロックする。除去の確認は dev-spec のフェーズ 8 の開始前の検査が行う
+- **未検証のまま残す blocker=false のマーカー**は、実装ループの中で解消される。マーカーがある docs を参照する子 issue の DoD に「マーカーの検証項目を確かめ、結果を docs に反映してマーカーを除去する」が入る (issue-template.md「子 issue テンプレート」の DoD)
 - **「既知の制約」は 3 つの近隣節と役割が違う**。「未解決の論点」は非技術で未決のもの、`POC_NEEDED` は技術検証が未了のもの、「横断規約」は自分たちで決めた約束。対してここは**検証済みで動かせない外部の性質**を置く。実装者は issue の `## 設計` が名指しした docs しか読まないため、この節は必ず節名で issue から参照させる (置くだけでは届かない)
-- **「既知の制約」は実装が進むほど育つ**。レビューで「知らずに踏んだ制約」が見つかったら、その issue の `docs_updates` でここへ追記する (実装を制約に合わせる方向の追記であり、docs を実装の都合に合わせて緩める下方修正とは逆向き)
+- **「既知の制約」は実装が進むほど育つ**。実装やレビューで「知らずに踏んだ制約」が見つかったら、implementer (`dev-impl-implementer`) がここへ追記し、報告 JSON の `docs_updates` に記録する (dev-impl がその issue のコミットに含める) (実装を制約に合わせる方向の追記であり、docs を実装の都合に合わせて緩める下方修正とは逆向き)
 - **並列実装を使うなら、テストが固定ポートを共有しない形にしておく**。dev server を起動する検証は、ポートを外から指定でき、そのポートで起動できなければ失敗する (既存サーバに相乗りしない) 契約にする。相乗りする設定のままだと、別の worktree のサーバに対してテストが通り**静かに誤った green** を出す。あわせて `.gitignore` に `.claude/worktrees/` を、リポジトリルートの `.worktreeinclude` に「実行に必要だが gitignored なファイル」(`.env` 系など) を用意する
 - **開発・検証コマンドは実行して確かめてから書く** (書いた時点で動かないコマンドは全 issue の DoD を巻き添えにする)。プロジェクトがまだ scaffold されていない場合は「セットアップ issue の完了後に確定」と明記し、セットアップ issue の DoD に「本節を実測値で確定させる (E2E があるプロダクトは Playwright のセットアップ・実行手順を含む)」を含める
 - 更新時は変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を 2 行目以降に追記する (1 行目のスタンプを押し出さない)
