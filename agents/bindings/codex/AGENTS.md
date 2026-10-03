@@ -74,10 +74,13 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 | `~/.claude/scripts` | 同じパスをそのまま実行する (同一実体。Claude Code 用のパスに見えても同じマシン上のファイル) |
 | `~/.claude/knowledge-profile.md` | 同じパスをそのまま読み書きする (同一実体。`utility-doc-reading` が使う) |
 | `plan mode` | Plan mode |
+| `$ARGUMENTS` | 起動時にスキルへ渡された引数 (無ければユーザーの依頼文) |
+| `scratchpad` (セッション固有の作業ディレクトリ) | git 管理外の一時ディレクトリ。無ければ `mktemp -d` で作り、パスを報告する |
 
 ## 読み替えで吸収できないもの
 
-- **呼び出し例の引数の形は Claude Code のもの**。ツール名は読み替えられるが、`request_user_input({ questions: [...] })` のような例に出てくる引数の構造は Claude Code のスキーマのまま。**自分のツールのスキーマに合わせて読み替える**
+- **ツールの呼び出し方**: 正本はツールの呼び出し例 (引数つき) を載せず、何を聞くか・何を起動するかの意図だけを書く。引数は自分のツールのスキーマで組み立てる。本文に残るツール名は上の表で読み替え、スキルの frontmatter の `allowed-tools` は下の frontmatter の項、subagent の `tools` は「3 者で表現できない subagent の属性」節に従う
+- **選択式の質問の形**: `request_user_input` は 2〜3 択の単一選択で、複数選択の項目を持たない (codex 0.159.2 のバイナリに含まれる文字列が根拠で、公式のスキーマは未確認)。4 択以上や複数選択の質問は、選択肢を番号付きでメッセージに並べ、番号で答えてもらう
 - **`request_user_input` は非対話実行 (`codex exec`) では使えない**。その場合は `~/.claude/CLAUDE.md`「エスカレーション」の自律モード規定に従い、前提と選択の根拠を出力に明示して前進する
 - **`spawn_agent` に渡す `model` / `subagent_type`** は subagent の生成物に表現手段が無く落ちるので、**親のモデルを継承する**。定義が無い名前を指している場合は組み込みの `explorer` / `worker` で代替するか、同一セッション内で逐次実行して報告に明記する
 - **スキルの相互呼び出し**で `slide-plugin:*` / `document-skills:*` のような Claude 専用プラグインのスキルが指定されている場合は、その旨を伝えて代替手段を提案する
@@ -98,7 +101,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 
 ## hooks は Codex には配られていない
 
-**このハーネスが自分で書いた hook は 0 本である。** そもそも機械ゲートを 1 本も持っていない (Claude Code 向けにも無い) ので、移植すべきものが無い。**ただし Codex 環境に hook が 1 件も無いという意味ではない。** `~/.codex/hooks.json` (user レイヤー) に herdr 連携の SessionStart hook が 1 件、`nix/modules/home/codex.nix` の activation が入れる compact-plus プラグイン由来が 7 件登録されている (承認状態は `~/.codex/config.toml` の `[hooks.state]` に残る)。いずれもこのハーネスが書いたゲートではない。dev-impl 系のスキルを Codex で回すときは、修正ラウンド上限を自律遵守する。
+**このハーネスが自分で書いた hook は 0 本である。** そもそも機械ゲートを 1 本も持っていない (Claude Code 向けにも無い) ので、移植すべきものが無い。**ただし Codex 環境に hook が 1 件も無いという意味ではない。** `~/.codex/hooks.json` (user レイヤー) に herdr 連携の SessionStart hook が 1 件と、外部ツール orca が書き込んだ 8 件 (8 イベントに 1 件ずつ。`~/.orca/agent-hooks/codex-hook.sh` があればそれを起動し、無ければ入力を読み捨てる)、`nix/modules/home/codex.nix` の activation が入れる compact-plus プラグイン由来が 7 件 (compact-plus 1.3.2 の場合) 登録されている (承認状態は `~/.codex/config.toml` の `[hooks.state]` に残る)。いずれもこのハーネスが書いたゲートではない。dev-impl 系のスキルを Codex で回すときは、修正ラウンド上限を自律遵守する。
 
 ## hooks を追加するときの置き場
 

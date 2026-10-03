@@ -32,8 +32,8 @@
 | スキル | `~/.agents/skills/<name>` と `~/.claude/skills/<name>` (OpenCode は両方を読む) | `agents/skills/<name>` | 中身の編集は即反映。`~/.agents/skills` 側の追加と削除は `drs` / `hms` が要る (個別 symlink の張り直し) |
 | subagent | `~/.config/opencode/agents/*.md` | `agents/subagents/*.md` を書式変換したもの | **変更も追加も `drs` / `hms` が要る** (Markdown の再生成) |
 | ルール | `~/.claude/rules/` を絶対パスで直接 Read する (OpenCode 側に複製は無い) | `agents/rules/` | 即反映 (symlink) |
-| Spark の provider 設定 | `~/.config/opencode/opencode.json` | `agents/bindings/opencode/opencode.json` | 即反映 (symlink。常駐サービスが変更を検知して読み直す) |
-| 配信中モデルの選択 (プラグイン) | `~/.config/opencode/plugins/spark-served.ts` | `agents/bindings/opencode/plugins/spark-served.ts` | 即反映 (symlink) |
+| Spark の provider 設定 | `~/.config/opencode/opencode.json` | `agents/bindings/opencode/opencode.json` | 即反映 (symlink。常駐サービスが変更を検知して読み直す実装がソースにあるが、反映を実際に確かめてはいない。反映されなければ `opencode service restart`) |
+| 配信中モデルの選択 (プラグイン) | `~/.config/opencode/plugins/spark-served.ts` | `agents/bindings/opencode/plugins/spark-served.ts` | 即反映 (symlink。読み直しの確度は上の行と同じ) |
 | TUI のキーバインドとテーマ | `~/.config/opencode/cli.json` | `agents/bindings/opencode/cli.json` | 即反映 (symlink)。**TUI でテーマなどを変えると symlink が実ファイルに置き換わり repo との同期が切れる**ので、変えるときは repo 側を編集する |
 
 **hooks はこの表に無い。** OpenCode はシェルコマンドを hook として登録する仕組みを持たない
@@ -48,12 +48,13 @@ Codex 向けの除外リスト (`nix/modules/home/codex.nix` の `claude_only_sk
 Claude Code 専用の前提で書かれたスキル (`utility-session-profile` は Claude Code のセッションログしか
 読まない) は使わない。
 
-配布されているか自分で確かめる。**常駐サービスへの最初の問い合わせは空を返す**ので、各コマンドは
-2 回目の結果を見る。出力が大きいのでパイプに直結せずファイルに落とす (パイプだと途中で切れる)。
+配布されているか自分で確かめる。**常駐サービスの起動直後は件数が少なく出る** (0 件のこともある) ので、
+各コマンドは件数が変わらなくなるまで繰り返して、その値を見る。出力が大きいのでパイプに直結せずファイルに落とす
+(パイプだと途中で切れる)。
 
 ```bash
-opencode api skill.list > /tmp/s.json && jq '.data | length' /tmp/s.json   # 2 回目が 60 件前後
-opencode debug agents > /tmp/a.json && jq -r '.[].id' /tmp/a.json          # 2 回目に subagent 4 本が出る
+opencode api skill.list > /tmp/s.json && jq '.data | length' /tmp/s.json   # 落ち着いた値が 60 件前後
+opencode debug agents > /tmp/a.json && jq -r '.[].id' /tmp/a.json          # 落ち着くと subagent 4 本が出る
 ls ~/.config/opencode/agents               # subagent の .md がある
 readlink -f ~/.claude/rules                # dotfiles の agents/rules に解決する
 ```
@@ -89,10 +90,13 @@ readlink -f ~/.claude/rules                # dotfiles の agents/rules に解決
 | `~/.claude/scripts` | 同じパスをそのまま実行する (同一実体。Claude Code 用のパスに見えても同じマシン上のファイル) |
 | `~/.claude/knowledge-profile.md` | 同じパスをそのまま読み書きする (同一実体。`utility-doc-reading` が使う) |
 | `plan mode` | `plan` エージェント |
+| `$ARGUMENTS` | 起動時にスキルへ渡された引数 (無ければユーザーの依頼文) |
+| `scratchpad` (セッション固有の作業ディレクトリ) | git 管理外の一時ディレクトリ。無ければ `mktemp -d` で作り、パスを報告する |
 
 ## 読み替えで吸収できないもの
 
-- **呼び出し例の引数の形は Claude Code のもの**。ツール名は読み替えられるが、`question({ questions: [...] })` のような例に出てくる引数の構造は Claude Code のスキーマのまま。**自分のツールのスキーマに合わせて読み替える**
+- **ツールの呼び出し方**: 正本はツールの呼び出し例 (引数つき) を載せず、何を聞くか・何を起動するかの意図だけを書く。引数は自分のツールのスキーマで組み立てる。本文に残るツール名は上の表で読み替え、スキルの frontmatter の `allowed-tools` は下の frontmatter の項、subagent の `tools` は「3 者で表現できない subagent の属性」節に従う
+- **選択式の質問の形**: `question` が受け付ける選択肢の数と複数選択の可否は確かめていない。選択肢が多いときや複数選択のときは、選択肢を番号付きでメッセージに並べ、番号で答えてもらう
 - **`question` は非対話実行 (`opencode run`) では使えない**。その場合は `~/.claude/CLAUDE.md`「エスカレーション」の自律モード規定に従い、前提と選択の根拠を出力に明示して前進する
 - **`task` に渡す `model` / `subagent_type`** は subagent の生成物に表現手段が無く落ちるので、**親のモデルを継承する**。定義が無い名前を指している場合は組み込みの `explore` / `general` で代替するか、同一セッション内で逐次実行して報告に明記する
 - **スキルの相互呼び出し**で `slide-plugin:*` / `document-skills:*` のような Claude 専用プラグインのスキルが指定されている場合は、その旨を伝えて代替手段を提案する
