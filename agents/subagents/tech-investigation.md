@@ -77,7 +77,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [${MARKER_ID}] <message>" >> "$LOG"
 
 1. `mcp__context7__resolve-library-id` でライブラリ ID を解決
 2. `mcp__context7__query-docs` で該当機能のドキュメントを取得
-3. context7 で見つからない場合のみ `WebFetch` で公式ドキュメント URL から取得 (URL は scope / マーカー id から推測 or 詳細設計の references から)
+3. context7 で見つからない場合のみ公式ドキュメントの URL から内容を取得 (URL は scope / マーカー id から推測 or 詳細設計の references から)
 4. ドキュメント内容を `investigation_steps` に 1 行で記録
 
 ### Step 3: 最小 PoC コード実行 (必要時)
@@ -120,24 +120,17 @@ PoC コードは「**マーカー scope だけを検証する最小コード**�
 - `context_paths` のドキュメントがすべて欠如 → stdout に `NO_CONTEXT_DOCS` でエラー終了
 - 調査 step 5 を 3 回連続で実行できない (ツール障害等) → stdout に `INVESTIGATION_FAILED` でエラー終了
 
-呼び出し側 (dev-spec フェーズ 5) はこれらを検出したら、当該計画を「人間判断必要」として AskUserQuestion でユーザーに判断を仰ぐ。
+呼び出し側 (dev-spec フェーズ 5) はこれらを検出したら、当該計画を「人間判断必要」としてユーザーに判断を仰ぐ。
 
 ## 呼び出し例 (dev-spec フェーズ 5 から)
 
-```javascript
-const investigationResult = await Agent({
-  description: "POC_NEEDED マーカーの自動調査",
-  subagent_type: "tech-investigation",
-  model: "opus",
-  prompt: `marker: id=react-19-suspense, scope=async-data-loading, risk=high, blocker=true
+「POC_NEEDED マーカーの自動調査」として、サブエージェント `tech-investigation` を起動する (モデル: opus、同期実行)。次の内容を渡す:
+
+```
+marker: id=react-19-suspense, scope=async-data-loading, risk=high, blocker=true
 context_paths: docs/design/FEASIBILITY.md
 output_path: /tmp/tech-investigation-react-19-suspense.json
-workspace_dir: /tmp/poc-react-19-suspense/`
-})
-const result = JSON.parse(await Read(investigationResult.trim()))
-if (result.blocker_resolved) {
-  // FEASIBILITY.md の「PoC 結果」に反映し、PoC 計画を resolved にする
-} else {
-  // AskUserQuestion でユーザーに判断を仰ぐ (fallback 採用 / スコープ縮小 / 再検討)
-}
+workspace_dir: /tmp/poc-react-19-suspense/
 ```
+
+サブエージェントが返したパスの JSON を読む。`blocker_resolved` が true なら FEASIBILITY.md の「PoC 結果」に反映して PoC 計画を resolved にし、false ならユーザーに判断を仰ぐ (fallback 採用 / スコープ縮小 / 再検討)。
