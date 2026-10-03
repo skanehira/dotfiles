@@ -18,7 +18,7 @@ argument-hint: "[cli|webapp] [タスク説明]"
 
 設計ループを回して docs/design/ 配下に設計成果物を生成し、GitHub issue に落として実装ループ (`/dev-impl`) に引き渡す。成果物は 3 種:
 
-- **docs/design/DESIGN.md** (横断設計 1 枚): 目的・アーキテクチャ・開発検証コマンド・スキーマ・API 一覧・横断規約・既知の制約
+- **docs/design/DESIGN.md** (横断設計 1 枚): 目的・アーキテクチャ・開発検証コマンド・スキーマ・API 一覧・CLI インターフェース (cli モード)・横断規約 (webapp ではアプリシェルの項を含む)・既知の制約
 - **docs/design/features/<機能名>.md** (機能設計): 機能単位の入出力・API・実装配置・エッジケース・テスト方針。**正本は常に docs 側で、issue は参照するだけ** (ローカルで「この機能の設計はどうなっているか」を AI にも人間にも引ける)
 - **GitHub issue**: ユースケース単位の親 (`tracking`) + その sub-issue の子 (作業単位) の 2 階層。**人間が issue 本文 + 参照 docs だけで着手できる**ことが情報設計の基準
 
@@ -48,7 +48,7 @@ sed -nE 's/.*<!-- product-mode: (cli|webapp) -->.*/\1/p' docs/design/DESIGN.md |
 
 dev-impl が起動する implementer (`dev-impl-implementer`) とレビュワー (`review-impl`) は、このスタンプで UI の実機検証 (Playwright E2E) の要否を切り替える。
 
-**クイックモードとの合成規則**: 各フェーズの有効・無効は「クイックモード列を適用 → cli モード列を適用」の順で決める。どちらか一方でも「スキップ」ならスキップする。フェーズ 4・5 の条件は「フェーズ 0.3 の不確実性確認の結果 (あり/なし)」。
+**クイックモードとの合成規則**: 各フェーズの有効・無効は「クイックモード列を適用 → cli モード列を適用」の順で決める。どちらか一方でも「スキップ」ならスキップする。フェーズ 4・5 の条件は「フェーズ 0.4 (不確実性の確認) の結果 (あり/なし)」。
 
 ## フェーズ一覧
 
@@ -60,7 +60,7 @@ dev-impl が起動する implementer (`dev-impl-implementer`) とレビュワー
 | 2  | UI スケッチ                       | `references/ui-sketch.md`           | docs/design/UI_SKETCH.html                | スキップ       | スキップ   |
 | 3  | ユースケース記述                  | `references/usecase-description.md` | docs/design/USECASES.md + USER_STORIES.md の「実現するユースケース」行 | スキップ       | 実行       |
 | 4  | 実現可能性検証                    | `references/feasibility-check.md`   | docs/design/FEASIBILITY.md (PoC 計画)     | 条件付き実行   | 実行       |
-| 5  | PoC 検証                          | `references/poc-verification.md`    | FEASIBILITY.md 更新 (PoC 結果)     | 条件付き実行   | 実行       |
+| 5  | PoC 検証                          | `references/poc-verification.md`    | FEASIBILITY.md 更新 (設計書のマーカーから足した PoC 計画と PoC 結果)。スコープ縮小を選んだときは USER_STORIES.md・USECASES.md (features/ があればそれも) の書き換え | 条件付き実行   | 実行       |
 | 6  | 横断設計                          | `references/design-doc.md`          | docs/design/DESIGN.md                     | 実行           | 実行       |
 | 7  | 機能設計                          | `references/feature-doc.md`         | docs/design/features/<機能名>.md          | 実行           | 実行       |
 | 8  | 設計チェック                      | (本ファイル下記)                    | 指摘の反映 (docs 修正)             | 実行           | 実行       |
@@ -71,17 +71,22 @@ dev-impl が起動する implementer (`dev-impl-implementer`) とレビュワー
 
 ### ゲート条件 (フェーズ 6 の開始条件)
 
-FEASIBILITY.md に **`blocker=true` の未解決 PoC 計画が残っている間は、フェーズ 6 (設計書生成) に進んではならない**。判定はプロンプト遵守ではなく次のコマンドで機械的に行う:
+FEASIBILITY.md に **`blocker=true` の未解決 PoC 計画が残っている間は、フェーズ 6 (設計書生成) に進んではならない**。判定はプロンプト遵守ではなく次の 2 つのコマンドで機械的に行う:
 
 ```bash
+# 1. 未解決の blocker=true の計画
 rg -n 'POC_STATUS:.*blocker=true.*status=unresolved' docs/design/FEASIBILITY.md
+# 2. PoC 計画の見出しの数と POC_STATUS 行の数 (0 件のときはどちらも何も出力しない)
+rg -c '^### PoC:' docs/design/FEASIBILITY.md
+rg -c 'POC_STATUS:' docs/design/FEASIBILITY.md
 ```
 
-- 1 件以上ヒット → フェーズ 5 (PoC 検証) へ戻る
-- 0 件 → 通過 (FEASIBILITY.md が「不確実性なし (YYYY-MM-DD 確認)」の 1 行だけのときも 0 件で通過する)
-- FEASIBILITY.md 自体が無い → 不確実性を確認した記録が無いので、フェーズ 0.3 の不確実性確認に戻る
+- 1 が 1 件以上ヒット → フェーズ 5 (PoC 検証) へ戻る
+- 2 の 2 つの件数が食い違う → POC_STATUS 行の無い計画がある (行の無い計画は 1 に現れず素通りする)。フェーズ 5 へ戻る (poc-verification.md 手順 1 が行を補ってから抽出する)
+- 1 が 0 件で 2 の件数が一致 → 通過 (FEASIBILITY.md が「不確実性なし」の記録だけのときも、計画が無いので通過する)
+- FEASIBILITY.md 自体が無い → 不確実性を確認した記録が無いので、フェーズ 0.4 (不確実性の確認) に戻る。フルコースでもクイックでも戻り先は同じで、不確実性があれば 0.4 からフェーズ 4 へ進む
 
-`POC_STATUS` 行の書式は `references/poc-verification.md` で定義する (フェーズ 4 が `status=unresolved` で書き、フェーズ 5 が更新する)。「不確実性なし」の行の書式は `references/feasibility-template.md`「ドキュメント構造」で定義し、フェーズ 0.3 またはフェーズ 4 が書く。
+`POC_STATUS` 行の書式は `references/poc-verification.md` で定義する (フェーズ 4 が `status=unresolved` で書き、フェーズ 5 が更新する)。「不確実性なし」の記録の形は `references/feasibility-template.md`「ドキュメント構造」で定義し、フェーズ 0.4 またはフェーズ 4 が書く。
 
 ## フェーズ 0: ルーティング
 
@@ -97,19 +102,24 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 
 旧構成の成果物 (DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / DOMAIN_MODEL.md / TODO.md) を見つけたら、本スキルの対象外であることを伝え、「新構成 (DESIGN.md 1 枚 + features/) で設計し直す / 中止」を確認する。旧成果物は読み取りの参考にはするが更新しない。
 
-途中まで存在する場合は「続きから (推奨) / 最初から / 既存を更新」をユーザーに選ばせる。「続きから」の再開フェーズは次の表で決める (存在する成果物のうち最も下流のものを見る):
+成果物が 1 つも無ければ 0.3 (モード選択) へ進む。途中まで存在する場合は「続きから (推奨) / 最初から / 既存を更新」をユーザーに選ばせ、「最初から」を選んだときだけ 0.3 へ進む。「続きから」と「既存を更新」では 0.3 と 0.4 (不確実性の確認) を行わない。回し方は既存の成果物が決めており (USECASES.md があればフルコース、無ければクイック)、不確実性を確認した記録は FEASIBILITY.md にある (無ければ「ゲート条件」がフェーズ 6 の前に 0.4 へ戻す)。
+
+「続きから」の再開フェーズは次の順で決める。
+
+1. FEASIBILITY.md があれば、先に「ゲート条件」の 2 つのコマンドを実行する。未解決の `blocker=true` が 1 件以上あるか、見出しと POC_STATUS 行の件数が食い違えば、下流の成果物 (DESIGN.md など) の有無によらずフェーズ 5 から再開する (フェーズ 6・7 から差し戻したあと、フェーズ 5 の途中で中断した場合がこれに当たる)
+2. 1 に当たらなければ、次の表で決める (存在する成果物のうち最も下流のものを見る)。UI_SKETCH.html の行は `rg -q '<!-- ui-sketch: finalized -->' docs/design/UI_SKETCH.html` の終了コード (0 = 印あり / 1 = 印なし) で分ける
 
 | 最も下流の既存成果物                        | 再開フェーズ                                                   |
 | ------------------------------------------- | -------------------------------------------------------------- |
 | USER_STORIES.md                             | 2 (UI スケッチ)。cli モードでは 3                              |
-| UI_SKETCH.html                              | 3 (ユースケース)                                               |
+| UI_SKETCH.html (完了の印 `<!-- ui-sketch: finalized -->` なし) | 2 (UI スケッチの途中で中断した)。ui-sketch.md の手順 1 から始め、既存の UI_SKETCH.html から読み取れる決定は確認だけで済ませる |
+| UI_SKETCH.html (完了の印あり)               | 3 (ユースケース)                                               |
 | USECASES.md                                 | 4 (実現可能性)。ただし USER_STORIES.md もあり、`~/.claude/scripts/check-ac-coverage.ts docs/design/USER_STORIES.md docs/design/USECASES.md` が NG を出すなら 3 (ユースケースの途中で中断したか、書き戻しと被覆チェックが済んでいない。受け入れ基準を持たない旧形式の docs もここに入る) |
-| FEASIBILITY.md (blocker=true が unresolved) | 5 (PoC 検証)                                                   |
-| FEASIBILITY.md (全件解決済み、または「不確実性なし」の 1 行) | 6 (横断設計)                                     |
+| FEASIBILITY.md                              | 6 (横断設計)。1 を通過しているので未解決の `blocker=true` は無い。`blocker=false` の計画だけが unresolved で残っていても 6 へ進み、design-doc.md「入力と転記」の規則 3 がマーカーにする |
 | DESIGN.md                                   | 7 (機能設計)。features/ 各ファイルの「対象 UC」と USECASES.md の UC 一覧を突合し、全 UC がカバー済みなら 8 (USECASES.md が無い構成では人間に確認する) |
 | GitHub に `tracking` issue が 1 件以上ある   | 9 (ドラフトを docs から再生成) → 10。ドラフトはセッション固有の scratchpad にしか無く、10 単独では突き合わせの比較元が無い。親が一部しか作られていない中断状態でも、10 の突き合わせが未作成分を補完する |
 
-更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する (DESIGN.md ではスタンプ行を押し出さず 1 行目に保つ)。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。** フェーズ 3 (ユースケース記述) は USECASES.md に加えて USER_STORIES.md の「実現するユースケース」行も書き換えるので、フェーズ 3 だけを部分実行する場合も両方が更新対象になる。フェーズ 1 だけを部分実行した場合は、続けて usecase-description.md の手順 9 (書き戻しと被覆チェック) を実行する (ストーリーの追加・Won't への移動がユースケース側の受け入れ基準と食い違うため)。
+更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する (DESIGN.md ではスタンプ行を押し出さず 1 行目に保つ)。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。** フェーズ 3 (ユースケース記述) は USECASES.md に加えて USER_STORIES.md の「実現するユースケース」行も書き換えるので、フェーズ 3 だけを部分実行する場合も両方が更新対象になる。フェーズ 1 だけを部分実行した場合は、USECASES.md があるときだけ、続けて usecase-description.md の手順 9 (書き戻しと被覆チェック) を実行する (ストーリーの追加・Won't への移動がユースケース側の受け入れ基準と食い違うため。USECASES.md が無ければ照合する相手が無く、被覆チェックのコマンドもファイルが無いことで異常終了する)。
 
 ### 0.3 モード選択
 
@@ -120,7 +130,17 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 | フルコース | ユーザーストーリー〜issue 生成まで全フェーズ (1〜10)。新規プロダクト・大きい機能向け |
 | クイック | タスク説明から設計書 + issue を直接生成 (6〜10)。技術的な不確実性がある場合のみ実現可能性検証 + PoC (4〜5) を先に通す |
 
-クイック選択時は、まずスキルを実行しているエージェント自身がタスク説明と会話履歴から不確実性候補 (未経験ライブラリ / 外部 API 連携 / 性能・スケール懸念 / 新しいプラットフォーム機能) を走査して列挙し、その候補を提示した上で「これらを含め、成立するか未検証の技術要素はありますか?」とユーザーに確認する (人間の記憶だけに頼らない)。あればフェーズ 4 → 5 を実行してから 6 へ進む。なければ `docs/design/FEASIBILITY.md` を「不確実性なし (YYYY-MM-DD 確認)」の 1 行で書き出してから 6 を開始する (書式は `references/feasibility-template.md`「ドキュメント構造」)。この行が、ゲート条件と再開判定が読む「不確実性を確認済み」の記録になる。
+フルコースを選んだらフェーズ 1 から始める。クイックを選んだら 0.4 へ進む。
+
+0.2 で「続きから」「既存を更新」を選んだときと、部分実行のときは、0.3 を行わない (0.2 を参照)。
+
+### 0.4 不確実性の確認
+
+クイックを選んだときと、「ゲート条件」が FEASIBILITY.md の無いままフェーズ 6 に入ろうとしたときに行う。
+
+まずスキルを実行しているエージェント自身がタスク説明と会話履歴から不確実性候補 (未経験ライブラリ / 外部 API 連携 / 性能・スケール懸念 / 新しいプラットフォーム機能) を走査して列挙し、その候補を提示した上で「これらを含め、成立するか未検証の技術要素はありますか?」とユーザーに確認する (人間の記憶だけに頼らない)。あればフェーズ 4 → 5 を実行してから 6 へ進む。なければ `docs/design/FEASIBILITY.md` に「不確実性なし」の記録 (形は `references/feasibility-template.md`「ドキュメント構造」) を書き出してから 6 を開始する。この記録が、ゲート条件と再開判定が読む「不確実性を確認済み」の根拠になる。
+
+**FEASIBILITY.md が既にあるときは「不確実性なし」の記録で上書きしない。** 既存の PoC 計画・POC_STATUS 行・「PoC 結果」が消え、ゲートが判定の根拠を失うため。既存の FEASIBILITY.md を確認済みの記録として扱い、未解決の計画が残っていればゲートがフェーズ 5 へ戻す。
 
 ### 部分実行
 
@@ -150,20 +170,21 @@ docs が完成した時点で、書き手と別コンテキストの subagent �
 **開始前に、dev-impl の開始ガードと同じコマンドで `blocker=true` のマーカーが残っていないことを確かめる**:
 
 ```bash
-rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/
+rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>/dev/null
 ```
 
-1 件以上ヒットしたら、その id が FEASIBILITY.md の POC_STATUS で解決済み (`verified` / `fallback_adopted` / `scope_reduced`) なら結果を設計へ反映してマーカーを除去し、未解決ならフェーズ 5 (PoC 検証) へ戻る。0 件になってから検査 subagent を起動する (残したまま issue にすると、dev-impl が開始ガードで止まって設計ループへ差し戻される)。
+判定は終了コードではなく出力の行数で行う (渡したパスが無いと rg は終了コード 2 を返すが、`2>/dev/null` で警告を捨てているので、無いファイルは 0 件として読める)。1 件以上ヒットしたら、その id が FEASIBILITY.md の POC_STATUS で解決済み (`verified` / `fallback_adopted` / `scope_reduced`) なら結果を設計へ反映してマーカーを除去し、未解決ならフェーズ 5 (PoC 検証) へ戻る。0 件になってから検査 subagent を起動する (残したまま issue にすると、dev-impl が開始ガードで止まって設計ループへ差し戻される)。
 
-`general-purpose` subagent を**モデル: opus を明示**して 1 本起動する (機能設計書が 8 本を超える場合は機能ごとに分担させて並列 fan-out し、横断の整合は親がまとめる)。指示文に含める内容:
+`general-purpose` subagent を**モデル: opus を明示**して 1 本起動し、完了を待ってから結果の分岐へ進む。機能設計書が 8 本を超える場合は分担して並列に起動する (同じ段の複数起動は並列でよい)。観点 3・4 は機能設計書ごとに判定できるので、機能設計書を分けて複数本に持たせる。観点 1・2・5・6 はセット全体を見ないと判定できないので、全文を読む 1 本に残す。指示文に含める内容:
 
-> docs/design/USECASES.md (あれば)・docs/design/DESIGN.md・docs/design/features/*.md を**全文 Read** し、次を検査して指摘だけを返せ (修正はしない):
+> docs/design/USECASES.md (あれば)・docs/design/DESIGN.md・docs/design/features/*.md を**全文 Read** し、照合用に docs/design/FEASIBILITY.md と docs/design/UI_SKETCH.html (それぞれあれば) も Read して、次を検査して指摘だけを返せ (修正はしない):
 >
-> 1. **落とし漏れ**: USECASES.md の各 UC・各規則 (BR) が、いずれかの機能設計書でカバーされているか。各 UC の受け入れ基準の各行が、いずれかの機能設計書「テスト方針」の表に写されて検証レベルを割り当てられているか (複数の機能設計書にまたがる二重の割り当ても指摘する。同じ機能設計書の `E2E 対象動線:` 行は表の該当行の再掲であり、二重には当たらない)。逆向きに、テスト方針の表の各行が USECASES.md の受け入れ基準に文面どおり実在するか (受け入れ基準を改訂したあとに古い写しが残っていないか)。「対象 UC」が複数の機能設計書では、行の先頭の `UC-<n>: ` を除いた文面を、その UC の受け入れ基準と比べる。1 列目の見出しが `確かめること` の表 (「対象 UC」がなしの機能設計書) は受け入れ基準の写しではないので、この照合の対象外
+> 1. **落とし漏れ**: USECASES.md の各 UC・各規則 (BR) が、いずれかの機能設計書でカバーされているか。各 UC の受け入れ基準の各行が、いずれかの機能設計書「テスト方針」の表に写されて検証レベルを割り当てられているか (複数の機能設計書にまたがる二重の割り当ても指摘する。同じ機能設計書の `E2E 対象動線:` 行は表の該当行の再掲であり、二重には当たらない)。逆向きに、テスト方針の表の各行が USECASES.md の受け入れ基準に文面どおり実在するか (受け入れ基準を改訂したあとに古い写しが残っていないか)。「対象 UC」が複数の機能設計書では、行の先頭の `UC-<n>: ` を除いた文面を、その UC の受け入れ基準と比べる。1 列目の見出しが `確かめること` で始まる表 (「対象 UC」がなしの機能設計書と、DESIGN.md「横断規約」のアプリシェルの項) は受け入れ基準の写しではないので、この照合の対象外
 > 2. **矛盾**: 機能設計書どうし、および DESIGN.md との食い違い (スキーマと入出力、API 一覧と各機能の API 節)
 > 3. **未定義・参照切れ**: 使われている用語・テーブル・エンドポイント・節参照に定義があるか。「後述」「別途定義」のまま宙に浮いた参照が無いか
 > 4. **エッジケースの妥当性**: 明らかに起こるのに決定が書かれていないエッジケース
 > 5. **開発・検証コマンドの実在**: DESIGN.md「開発・検証コマンド」が現リポジトリで実行可能か (可能なら実行して確かめる)
+> 6. **転記の漏れ**: FEASIBILITY.md「PoC 結果」の各結果と、未検証で残った `blocker=false` の計画が、DESIGN.md または機能設計書に写っているか (規則は `~/.claude/skills/dev-spec/references/design-doc.md`「入力と転記」)。webapp で UI_SKETCH.html があるとき、そのアプリシェルの決定が DESIGN.md「横断規約」のアプリシェルの項に写り、その項に「テスト方針」の表と `E2E 対象動線:` 行があるか
 >
 > 出力: `[severity] 該当箇所 / 問題の一文 / 修正案の一文` (severity: high = 実装が詰まる / medium = 曖昧さが残る / low = 可読性)
 
@@ -171,9 +192,9 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/
 
 ## フェーズ 9: issue ドラフト + ドラフトチェック
 
-`references/issue-template.md` を Read し、テンプレートに従って**親 <m> 件 + 子 <n> 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。**ファイル名は子が `issue-<連番>.md`、親が `parent-<識別子>.md`** (フェーズ 10 の作成手順と同じ規約。子の連番はドラフト段階の依存 `Depends on issue-<連番>` と観点 3 の段数算出が参照する)。親は USECASES.md の UC 1 件につき 1 件。例外 (基盤親・UC 統合親・クイックモードのフォールバック) は issue-template.md「親 issue テンプレート」の表に従う。再実行時 (issue への反映・別セッションからの再開) もドラフトは docs から再生成する — 前セッションの scratchpad は残っていない。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。**依存は「依存先が merge した成果物が無いと DoD が失敗する」ものだけに絞り、並行して着手できる形を優先する** (基準と段数の算出は issue-template.md「依存の段数」。依存の段数がそのまま実装ループの所要時間の下限になる)。
+`references/issue-template.md` を Read し、テンプレートに従って**親 <m> 件 + 子 <n> 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。**ファイル名は子が `issue-<連番>.md`、親が `parent-<識別子>.md`** (フェーズ 10 の作成手順と同じ規約。子の連番はドラフト段階の依存 `Depends on issue-<連番>` と観点 3 の段数算出が参照する)。タイトルはドラフトのファイルに入らないので、全ドラフトのファイル名とタイトルを `<scratchpad>/titles.tsv` に書き出す (形式は issue-template.md「タイトル一覧ファイル」)。子のタイトルは、GitHub に既存の子 issue があれば issue-template.md「子 issue テンプレート」の引き継ぎ規則で既存のタイトルを使う (docs から作り直したドラフトの言い回しがずれると、フェーズ 10 のタイトル突き合わせが外れて子が二重に作られるため)。親は USECASES.md の UC 1 件につき 1 件。例外 (基盤親・UC 統合親・クイックモードのフォールバック) は issue-template.md「親 issue テンプレート」の表に従う。再実行時 (issue への反映・別セッションからの再開) もドラフトは docs から再生成する — 前セッションの scratchpad は残っていない。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。**依存は「依存先が merge した成果物が無いと DoD が失敗する」ものだけに絞り、並行して着手できる形を優先する** (基準と段数の算出は issue-template.md「依存の段数」。依存の段数がそのまま実装ループの所要時間の下限になる)。
 
-全ドラフトが揃ったら、`general-purpose` subagent (**モデル: opus を明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合・相互の重複漏れ・UC 帰属はセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 6 項目を指示文に転記し (観点 3 が参照する「依存の段数」の基準・算出手順・閾値も一緒に転記する。閾値判定の前提になる並列実行の条件は、dev-impl の SKILL.md「2.0 並列実行の可否と枠組み」を Read してその本文を転記する)、USECASES.md (あれば)・機能設計書と DESIGN.md のパスを渡して照合させる。出力形式はフェーズ 8 と同じで、**その前に観点 3 の `依存段数:` の 1 行を置かせる** (段数は severity を持たない情報なので findings の形式に載らない)。
+全ドラフトが揃ったら、`general-purpose` subagent (**モデル: opus を明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合・相互の重複漏れ・UC 帰属はセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 6 項目を指示文に転記し (観点 3 が参照する「依存の段数」の基準・算出手順・閾値も一緒に転記する。閾値判定の前提になる並列実行の条件は、dev-impl の SKILL.md「2.0 並列実行の可否と枠組み」を Read してその本文を転記する)、`<scratchpad>/titles.tsv`・USECASES.md (あれば)・機能設計書と DESIGN.md のパスを渡して照合させる。完了を待ってから結果の分岐へ進む。出力形式はフェーズ 8 と同じで、**その前に観点 3 の `依存段数:` の 1 行を置かせる** (段数は severity を持たない情報なので findings の形式に載らない)。
 
 分岐も同じ (**最大 2 周**): high は修正して再実行、2 周で残れば人間に提示、無ければフェーズ 10 へ。**`依存段数:` の行と、段数超過の medium は、フェーズ 10 の作成同意を取る前にユーザーへ提示する** (依存をどう削るかは設計判断なので、他の medium と違って自動では反映しない)。
 
@@ -181,7 +202,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/
 
 `references/issue-template.md` の「issue 作成手順」に従う。要点:
 
-1. **docs をコミットする**: docs/design/ 配下の成果物 (DESIGN.md / features/ ほか。ただし `docs/pending-review/` は対象外 — dev-impl が管理する) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/rules/core/orchestration.md` に従う)。**/dev-impl は origin のデフォルトブランチから切ったブランチで docs を読むため、実装開始前にこのコミットが origin のデフォルトブランチに入っている必要がある。** デフォルトブランチ上でコミットした場合は push を、デフォルトブランチが保護されていて直接 push できない場合は docs のブランチから PR を作って merge することを、手順 4 の案内に含める
+1. **docs をコミットする**: docs/design/ 配下の成果物 (DESIGN.md / features/ ほか。ただし `docs/pending-review/` は対象外 — dev-impl が管理する) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/rules/core/orchestration.md` に従う)。**/dev-impl は origin のデフォルトブランチから切ったブランチで docs を読むため、実装開始前にこのコミットが origin のデフォルトブランチに入っている必要がある。** デフォルトブランチ上でコミットした場合は push を、デフォルトブランチが保護されていて直接 push できない場合は docs のブランチから PR を作って merge することを、下の 4. の案内に含める
 
 2. **作成前に人間の同意を取る** (GitHub への書き込みなので):
 
@@ -193,7 +214,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/
 | ドラフトを見せて | ドラフト全文を表示してから再確認 |
 | 中止 | ここで終了 (docs とドラフトは残る。issue は作成しない) |
 
-3. 手順書どおり作成する: ラベル用意 → 既存 issue との突き合わせ (冪等。「タイトル → 番号」の対応表を作り、番号が分かる依存をドラフトで置換する) → 親の特定/作成 → 子を依存順に作成 (作成の直前に残りの依存を置換する) → 既存 issue の本文更新 (置換の後に比較する) → 対応する親へ sub-issue 紐付け (旧構成の単一親があれば、issue-template.md の移行の条件に従って貼り替えて close)
+3. issue-template.md の「issue 作成手順」どおり作成する: ラベル用意 → 既存 issue との突き合わせ (冪等。タイトルは `<scratchpad>/titles.tsv` から引く。「タイトル → 番号」の対応表を作り、番号が分かる依存をドラフトで置換する。どのドラフトとも一致しない open の既存の子は最終報告に挙げて close するかを人間に聞く) → 親の特定/作成 → 子を依存順に作成 (作成の直前に残りの依存を置換する) → 既存 issue の本文更新 (置換の後に比較する) → 対応する親へ sub-issue 紐付け (旧構成の単一親があれば、issue-template.md の移行の条件に従って貼り替えて close)
 4. 結果を報告し、次を案内する:
 
 ```
@@ -203,7 +224,7 @@ GitHub で issue をざっと確認し、docs のコミットを origin のデ�
 
 A (推奨): 新しいセッションで起動 — 対象リポジトリで同じランタイムの新しいセッションを開き、dev-impl スキルを起動する
    (設計の対話履歴を持ち込まず、クリーンなコンテキストで実装ループが回る)
-B: このセッションで続行 — このまま dev-impl スキルを起動する
+B: このセッションで続行 — このセッションのまま、あなたが dev-impl スキルを起動する
 
 修正したい issue があれば、指摘してください (docs を直してフェーズ 8 → 9 → 10 で issue に反映します)。
 ```
@@ -214,10 +235,10 @@ B: このセッションで続行 — このまま dev-impl スキルを起動�
 
 - [ ] 対象フェーズがすべて実行された (またはユーザー判断でスキップ)
 - [ ] blocker=true の PoC 計画がすべて解決済み (`verified` / `fallback_adopted` / `scope_reduced` のいずれか)
-- [ ] docs/design/DESIGN.md と docs/design/features/ に `POC_NEEDED: ... blocker=true` が残っていない (`rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/` が 0 件)
+- [ ] docs/design/DESIGN.md と docs/design/features/ に `POC_NEEDED: ... blocker=true` が残っていない (`rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>/dev/null` の出力が 0 行)
 - [ ] docs/design/DESIGN.md と docs/design/features/ が生成され、フェーズ 8 の設計チェックを通過した (high 0 件、または未解消のまま人間判断に提示済み)
 - [ ] 全ドラフトがフェーズ 9 のドラフトチェックを通過した (high 0 件、または 2 周で残った high を人間判断に提示済み)
-- [ ] 親 issue 全件 + 子 issue 全件が作成され、全子が対応する親に sub-issue として紐付いた。対応 UC 不明で紐付けられなかった子は issue-template.md の最終報告の形式で列挙した
+- [ ] 親 issue 全件 + 子 issue 全件が作成され、全子が対応する親に sub-issue として紐付いた。対応 UC 不明で紐付けられなかった子と、どのドラフトとも一致しない open の既存の子は、issue-template.md の最終報告の形式で列挙した
 
 ## 参照ルール
 
