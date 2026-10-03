@@ -152,7 +152,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
 - **agents/** — AI エージェント共通のハーネス正本 (3 ランタイムが同じ実体を読む。配布は正本への symlink が基本で live edit 可能)
   - `AGENTS.md` / `rules/` / `skills/` / `subagents/` は正本への symlink なので編集即反映。例外は **Codex と OpenCode 側の配布に限り**、スキルの追加・削除と subagent の変更で `drs` / `hms` が要る (どれがどれかは「live edit の範囲」の表を参照)
-  - `hooks/` / `scripts/` / `knowledge-profile.md` と `bindings/claude/settings.json` / `keybindings.json` / `bindings/codex/AGENTS.md` / `config.toml` / `bindings/opencode/AGENTS.md` / `opencode.json` / `plugins/spark-served.ts` も直 symlink (`bindings/opencode/cli.json` だけは symlink にできずコピーで配る)。`bindings/claude/settings.{deepseek,spark}.json` は配布せず、`ccsp` / `ccds` が `$GHQ_ROOT` 経由で直接読む
+  - `hooks/` / `scripts/` / `knowledge-profile.md` と `bindings/claude/settings.json` / `keybindings.json` / `bindings/codex/AGENTS.md` / `config.toml` / `bindings/opencode/AGENTS.md` / `opencode.json` / `plugins/spark-served.ts` / `cli.json` も直 symlink。`bindings/claude/settings.{deepseek,spark}.json` は配布せず、`ccsp` / `ccds` が `$GHQ_ROOT` 経由で直接読む
   - 配布先と構成は「AI エージェントのハーネス (agents/)」節を参照
 - **agents/bindings/codex/** — Codex 固有の設定 (ハーネス本体は `agents/` 直下)
   - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として dotfiles 直接 symlink され、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる (live edit 可能)
@@ -177,8 +177,8 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `AGENTS.md` — OpenCode のグローバル指示。`~/.config/opencode/AGENTS.md` へ symlink され、共通の正本 (`~/.claude/CLAUDE.md`) を Read する指示と Claude 綴りの読み替え表を持つ。**OpenCode が自動で読むグローバル指示はこのファイルだけ**なので、Read 指示は飾りではない (→「配布先」節)
   - `opencode.json` — Spark の provider 定義 (接続先・モデル宣言・モデルごとの `reasoningEffort` と `limit`)。接続先は Tailscale の MagicDNS 名 `http://spark-head:8888/v1` に固定し、自宅 LAN の経路は使わない。`enabled_providers: ["spark"]` で Spark 以外の provider (OpenCode Zen の無料モデル) を選択肢から外す。V1 書式のまま書いてあり、V2 が読み込み時にメモリ上で正規化する。API キーは持たない (詳細は `agents/rules/infra/dgx-spark.md`)
   - `plugins/spark-served.ts` — 配信中のモデルだけを有効にして既定に据える V2 のローカルプラグイン。`~/.config/opencode/plugins/` へ symlink され、起動時と 30 秒ごとに `/v1/models` を引く。接続先 URL を `opencode.json` と 2 か所に持ち (setup の時点で設定の provider を読めないため)、一致は同じディレクトリの `spark-served_test.ts` が検査する
-  - `cli.json` — TUI のキーバインドとテーマ (V2 書式)。V2 は TUI での変更を一時ファイルの rename で書くので symlink が実ファイルに化ける。そこで `opencode.nix` の activation `seedOpencodeCliConfig` が **`~/.config/opencode/cli.json` が無いときだけ**コピーする。repo 側の変更を反映するときは `~/.config/opencode/cli.json` を消してから `drs` / `hms` する
-  - 配布の確認: `readlink -f ~/.config/opencode/AGENTS.md` が dotfiles の `agents/bindings/opencode/AGENTS.md` に解決すること。**`~/.config/opencode/` には opencode 自身と他ツールが書くもの (`cli.json` / `service.json` / `node_modules` / `package.json` / `skills/`) が同居する**ので、ディレクトリごとではなくファイル単位で symlink する
+  - `cli.json` — TUI のキーバインドとテーマ (V2 書式)。`~/.config/opencode/cli.json` へ symlink される。**起動しただけでは V2 は書き換えないが、TUI でテーマなどを変えると一時ファイルの rename で書き換えるので symlink が実ファイルに化け、repo との同期が黙って切れる。設定は repo 側を編集して変え、TUI では変えない**。化けたら実ファイルを消して `drs` / `hms` で張り直す
+  - 配布の確認: `readlink -f ~/.config/opencode/AGENTS.md` が dotfiles の `agents/bindings/opencode/AGENTS.md` に解決すること。**`~/.config/opencode/` には opencode 自身と他ツールが書くもの (`service.json` / `node_modules` / `package.json` / `skills/`) が同居する**ので、ディレクトリごとではなくファイル単位で symlink する
   - 本体は `nix/pkgs/opencode.nix` の自前 derivation (nixpkgs の `opencode` は V1)。npm の `@opencode/cli-<platform>` に入っている bun コンパイル済みの単一バイナリを展開するだけで、ローカルビルドは走らない。更新手順はファイル冒頭のコメントにある
   - 素の `opencode` は常駐サービス (`opencode serve --service`、`127.0.0.1:49374`) を起動して接続し、TUI を閉じてもサービスは残る。設定ファイルとプラグインの変更はサービスが検知して読み直す。止めるときは `opencode service stop`
 - **vim/** — Neovim 設定 (`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能)
@@ -235,7 +235,7 @@ nix/
     │   ├── karabiner.nix ← goku で karabiner.edn → karabiner.json (mac only。home-darwin.nix からのみ import)
     │   ├── mac-app-util-icons.nix ← .app の trampoline アイコン調整 (mac only)
     │   ├── neovim.nix    ← vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
-    │   ├── opencode.nix  ← OpenCode 向けの symlink (opencode.json / plugins/spark-served.ts / ~/.config/opencode/AGENTS.md) + cli.json の初回コピー (seedOpencodeCliConfig) + subagent の Markdown 変換 (syncOpencodeSubagents)
+    │   ├── opencode.nix  ← OpenCode 向けの symlink (opencode.json / cli.json / plugins/spark-served.ts / ~/.config/opencode/AGENTS.md) + subagent の Markdown 変換 (syncOpencodeSubagents)
     │   ├── packages.nix  ← home.packages 群 (言語ランタイム / LSP / CLI を 13 カテゴリで宣言、約 100 件。vite-plus / nvtop / libreoffice-bin / scrcpy / android-tools / terminal-notifier / screen-capture-mcp-server / kanary の 8 件は darwin only)
     │   ├── packages-android.nix ← Android 用の明示リスト (19 エントリ。binary cache から取れる軽量なものと、ビルド済みバイナリを展開するだけの opencode)
     │   ├── rustup.nix    ← bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
@@ -371,7 +371,7 @@ agents/
 | `hooks/` | `~/.claude/hooks` ← `agents/hooks/` | **配布しない** (Codex の hook は `~/.codex/hooks.json` と `config.toml`。→「hooks」節) | **配布しない** (シェル hooks を持たない) | symlink (live edit) |
 | Claude 固有の設定 | `~/.claude/settings.json` / `keybindings.json` ← `agents/bindings/claude/` | 配布しない | 配布しない | symlink (live edit) |
 | Codex 共通設定 | 読まない | `/etc/codex/config.toml` ← `agents/bindings/codex/config.toml` | 読まない | symlink (mac は `environment.etc`、Linux は activation `linkCodexSystemConfig`) |
-| OpenCode 固有の設定 | 読まない | 読まない | `~/.config/opencode/{opencode.json,plugins/spark-served.ts}` ← `agents/bindings/opencode/`。`cli.json` だけは無いときにコピー | symlink (live edit)。`cli.json` は activation `seedOpencodeCliConfig` |
+| OpenCode 固有の設定 | 読まない | 読まない | `~/.config/opencode/{opencode.json,cli.json,plugins/spark-served.ts}` ← `agents/bindings/opencode/` | symlink (live edit) |
 
 **Codex は skill root を 2 つ持つ。** 実セッションログの `### Skill roots` で `r0` = `~/.codex/skills` / `r1` = `~/.agents/skills` を確認しており (Codex 0.154)、公式ドキュメントは「symlinked skill folders を追跡する」と明記している。共有に `r1` を使うのは、`~/.agents/skills` に他ツールが入れたスキルが同居するため (`archify` / `find-skills` / `gws-*` / `terminal-browser` の 9 本)。ディレクトリごとの symlink は使えないので 1 スキルずつ張る。
 
@@ -427,14 +427,13 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 
 ### live edit の範囲
 
-**本文の編集は `drs` / `hms` を待たずに反映される。** `drs` / `hms` が要るのは **Codex / OpenCode 側の配布と OpenCode の `cli.json` だけ**で、Claude Code はどの場合も即反映される。
+**本文の編集は `drs` / `hms` を待たずに反映される。** `drs` / `hms` が要るのは **Codex / OpenCode 側の配布だけ**で、Claude Code はどの場合も即反映される。
 
 | 対象 | 反映 | 理由 |
 | --- | --- | --- |
 | `AGENTS.md` / `rules/` / `skills/` / `subagents/` の本文 | 即反映 (3 ランタイムとも) | 正本への symlink |
 | `hooks/` `scripts/` `knowledge-profile.md` | 即反映 | 正本への symlink (`knowledge-profile.md` は `utility-doc-reading` が書き込む) |
-| `bindings/claude/settings.json` `keybindings.json` / `bindings/codex/AGENTS.md` `config.toml` / `bindings/opencode/AGENTS.md` `opencode.json` `plugins/spark-served.ts` | 即反映 | 正本への symlink (OpenCode の常駐サービスは設定とプラグインの変更を検知して読み直す) |
-| `bindings/opencode/cli.json` | **反映されない** (`~/.config/opencode/cli.json` を消してから `drs` / `hms`) | symlink にできずコピーで配り、配布先が既にあればコピーしない (→「agents/bindings/opencode/」) |
+| `bindings/claude/settings.json` `keybindings.json` / `bindings/codex/AGENTS.md` `config.toml` / `bindings/opencode/AGENTS.md` `opencode.json` `cli.json` `plugins/spark-served.ts` | 即反映 | 正本への symlink (OpenCode の常駐サービスは設定とプラグインの変更を検知して読み直す)。`cli.json` は TUI で設定を変えると symlink が切れる (→「agents/bindings/opencode/」) |
 | スキルの追加・削除 | Claude と OpenCode は即反映 / **Codex は `drs` / `hms`** | `~/.claude/skills` がディレクトリごとの symlink で、OpenCode もここを読む。Codex は `~/.agents/skills/<name>` を 1 本ずつ張り直す activation (`linkAgentSkills`) が要る |
 | subagent の変更・追加 | Claude は即反映 / **Codex と OpenCode は `drs` / `hms`** | Claude は `~/.claude/agents` がディレクトリごとの symlink。Codex は `~/.codex/agents/*.toml`、OpenCode は `~/.config/opencode/agents/*.md` の再変換 (`syncCodexSubagents` / `syncOpencodeSubagents`) が要る |
 | `~/.claude/skills/` への第三者の書き込み | 即反映 (副作用あり) | 正本への symlink なので、他ツールが置いたディレクトリは dotfiles の `agents/skills/` (git 作業ツリー) に落ちる。**新たに増えたら sink を 2 つとも判断する**: commit するか (`.gitignore`) と `~/.agents/skills` へ配るか (`claude_only_skills`)。Claude Code の同期キャッシュ `synced` は両方で外してある |
@@ -512,7 +511,7 @@ hook を追加したくなったときの置き場は次のとおり。
 
 ### 配布
 
-`drs` (mac) / `hms` (Linux) が `nix/modules/home/{claude,codex,opencode}.nix` を適用する。専用のインストールスクリプトは無い。`claude.nix` が Claude Code 向けの symlink を、`codex.nix` が Codex 向けの symlink と activation (`linkAgentSkills` / `syncCodexSubagents` / `installCodexPlugins`、Linux では加えて `linkCodexSystemConfig`) を、`opencode.nix` が OpenCode 向けの symlink と activation (`seedOpencodeCliConfig` / `syncOpencodeSubagents`) を持つ。
+`drs` (mac) / `hms` (Linux) が `nix/modules/home/{claude,codex,opencode}.nix` を適用する。専用のインストールスクリプトは無い。`claude.nix` が Claude Code 向けの symlink を、`codex.nix` が Codex 向けの symlink と activation (`linkAgentSkills` / `syncCodexSubagents` / `installCodexPlugins`、Linux では加えて `linkCodexSystemConfig`) を、`opencode.nix` が OpenCode 向けの symlink と activation (`syncOpencodeSubagents`) を持つ。
 
 Android (`home-android.nix`) は `codex.nix` を import しないので Codex 向けだけが行われない。`opencode.nix` は import するため、Android でも OpenCode のグローバル指示と subagent は配られる。ただし `linkAgentSkills` が走らないので `~/.agents/skills` は埋まらず、OpenCode は `~/.claude/skills` からだけスキルを読む (→「配布先」節)。
 
@@ -527,20 +526,19 @@ for p in ~/.claude/CLAUDE.md ~/.claude/rules ~/.claude/skills ~/.claude/agents \
          ~/.claude/settings.json ~/.claude/keybindings.json \
          ~/.codex/AGENTS.md ~/.agents/skills/dev-impl /etc/codex/config.toml \
          ~/.config/opencode/AGENTS.md ~/.config/opencode/opencode.json \
-         ~/.config/opencode/plugins/spark-served.ts; do
+         ~/.config/opencode/cli.json ~/.config/opencode/plugins/spark-served.ts; do
   [ -L "$p" ] && printf 'OK   %s -> %s\n' "$p" "$(readlink -f "$p")" || printf 'NG   %s (symlink ではない)\n' "$p"
-done   # 15 行すべて OK で、解決先が dotfiles 配下であること
+done   # 16 行すべて OK で、解決先が dotfiles 配下であること
 
 # 2. 生成物と除外
 ls ~/.codex/agents                                # subagent 4 本の .toml がある
 ls ~/.config/opencode/agents                      # subagent 4 本の .md がある
 ls ~/.agents/skills | grep -cE '^(utility-session-profile|synced)$' || :   # 0 (Codex への配布から除外)
 codex plugin list                                 # 下の「プラグインは別枠」を読む
-test -f ~/.config/opencode/cli.json && ! test -L ~/.config/opencode/cli.json && echo OK   # 実ファイルで置かれている
 opencode --version                                # opencode v2.0.22 (nix/pkgs/opencode.nix の version)
 ```
 
-**Android は 12 行で判定する。** `codex.nix` を import しないので `~/.codex/AGENTS.md` / `~/.agents/skills/dev-impl` / `/etc/codex/config.toml` の 3 行は NG になるのが正しく、`codex plugin list` も `codex` 自体が無い。残る 12 行が OK なら合格である。
+**Android は 13 行で判定する。** `codex.nix` を import しないので `~/.codex/AGENTS.md` / `~/.agents/skills/dev-impl` / `/etc/codex/config.toml` の 3 行は NG になるのが正しく、`codex plugin list` も `codex` 自体が無い。残る 13 行が OK なら合格である。
 
 **プラグインは別枠で、`installed` にならないことがある。** `codex plugin marketplace list` に 6 件が登録済みでも `codex plugin list` には現れない状態を実測している (2026-09-20)。activation は失敗しても警告だけで止まらないので、落ちていたら `codex plugin marketplace add <入手元>` → `codex plugin add <名前>` を手で流す (→「agents/bindings/codex/」節の表)。ローカル clone の 2 本は clone のあるマシンでしか入らない。
 
@@ -551,7 +549,7 @@ opencode --version                                # opencode v2.0.22 (nix/pkgs/o
 | 種別 | 対象 |
 | --- | --- |
 | モジュールの import | `nix/home.nix` / `nix/home-android.nix` の `./modules/home/opencode.nix` |
-| モジュール本体 | `nix/modules/home/opencode.nix` (symlink 3 本 + `seedOpencodeCliConfig` + `syncOpencodeSubagents`) |
+| モジュール本体 | `nix/modules/home/opencode.nix` (symlink 4 本 + `syncOpencodeSubagents`) |
 | パッケージ | `nix/pkgs/opencode.nix` と、それを呼ぶ `nix/modules/home/packages.nix` / `packages-android.nix` のエントリ |
 | binding | `agents/bindings/opencode/` 一式 (プラグインとそのテストを含む) |
 | Neovim | `vim/lua/modules/ai/init.lua` の `TOOL_CONFIG` / コマンド / キーマップ、`comments.lua` の `TOOLS` |
@@ -559,7 +557,7 @@ opencode --version                                # opencode v2.0.22 (nix/pkgs/o
 
 **binding の削除とモジュールの削除は同じコミットに入れる。** 分けると `home.file` や activation の参照先が消えた状態で評価が走り `drs` が失敗する。
 
-**`drs` / `hms` は生成物を片付けない。** activation ごと消えるので `~/.config/opencode/agents/*.md` は prune されず残り、コピーで置いた `~/.config/opencode/cli.json` も残る。**手で消す**: `rm -rf ~/.config/opencode/agents ~/.config/opencode/cli.json`。常駐サービス (`opencode serve --service`) が動いていれば、パッケージを外す前に `opencode service stop` で止める。HM が張った symlink 3 本は activation が撤去するが、過去に退避された `*.hm-backup` や `*.bak` は残るので同様に判断する。
+**`drs` / `hms` は生成物を片付けない。** activation ごと消えるので `~/.config/opencode/agents/*.md` は prune されず残る。**手で消す**: `rm -rf ~/.config/opencode/agents`。常駐サービス (`opencode serve --service`) が動いていれば、パッケージを外す前に `opencode service stop` で止める。HM が張った symlink 4 本は activation が撤去するが、過去に退避された `*.hm-backup` や `*.bak` は残るので同様に判断する。
 
 ### 配布方式の移行 (生成方式 → symlink)
 
@@ -633,7 +631,7 @@ done   # 1 行も出なければ合格 (他ツールが入れたものは解決�
 
 生成方式へ戻すときは `277086e` (配布方式の切り替え) 以降のコミットを `git revert` して `drs` / `hms` を流す。`.hm-backup` は revert しても残るので手で片付ける。
 
-`~/.agents/skills` の他ツール由来スキル (`archify` / `find-skills` / `gws-*` / `terminal-browser`)、`~/.codex/skills` の同居物 (`.system` と、plugin や他ツール (`wrangler login` 等) が入れたもの)、`~/.config/opencode/` の OpenCode 所有物と他ツールの書き込み (`cli.json` / `service.json` / `node_modules` / `package.json` / `package-lock.json` / `.gitignore` / `skills/`) は触らない。
+`~/.agents/skills` の他ツール由来スキル (`archify` / `find-skills` / `gws-*` / `terminal-browser`)、`~/.codex/skills` の同居物 (`.system` と、plugin や他ツール (`wrangler login` 等) が入れたもの)、`~/.config/opencode/` の OpenCode 所有物と他ツールの書き込み (`service.json` / `node_modules` / `package.json` / `package-lock.json` / `.gitignore` / `skills/`) は触らない。
 
 `~/.claude/skills` はディレクトリごと symlink するため、manifest 外の同居エントリは HM の退避で `~/.claude/skills.hm-backup` へ移る。生かしたいものがあれば手で戻す (ただし戻すと第三者のデータが dotfiles の git 作業ツリーに入る)。
 
