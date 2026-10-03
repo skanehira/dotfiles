@@ -203,13 +203,13 @@ BR-003: 無料プラン制限
 
 ### 被覆の確認
 
-受け入れ基準の接頭辞と、USER_STORIES.md の「実現するユースケース」行は、同じ対応を表す。`~/.claude/scripts/check-ac-coverage.ts` が次を検査し、NG を 1 行ずつ出して exit 1 で終わる（問題が無ければ何も出さず exit 0）。コマンドは [usecase-description.md](usecase-description.md) 手順9 にある。
+受け入れ基準の接頭辞と、USER_STORIES.md の「実現するユースケース」行は、同じ対応を表す。`~/.claude/scripts/check-ac-coverage.ts` が次を検査し、NG を 1 行ずつ出して exit 1 で終わる（問題が無ければ何も出さず exit 0）。コマンドは [usecase-description.md](usecase-description.md) 手順 9 にある。
 
 - `#### US-<番号>` 見出しのストーリーごとに、受け入れ基準が UC の節の中に 1 行以上ある
 - ストーリーごとに「実現するユースケース」行があり、その UC の集合が、受け入れ基準が現れる UC の集合と一致する
 - 受け入れ基準の行が UC の節の外に無く、USER_STORIES.md に無い番号を指していない
 
-受け入れ基準として数えるのは `- [ ] （US-<番号>）` で始まる行だけで、フローの表に番号が書かれていても数えない。誤って印を付けた `- [x] （US-<番号>）` の行も数えるので、印を付けても被覆は崩れない。Won't のストーリーは `#### US-` 見出しを持たないので検査の対象外になる（Won't は USER_STORIES.md で表に並べる。→ [user-story.md](user-story.md) 手順5）。
+受け入れ基準として数えるのは `- [ ] （US-<番号>）` で始まる行だけで、フローの表に番号が書かれていても数えない。誤って印を付けた `- [x] （US-<番号>）` の行も数えるので、印を付けても被覆は崩れない。Won't のストーリーは `#### US-` 見出しを持たないので検査の対象外になる（Won't は USER_STORIES.md で表に並べる。→ [user-story.md](user-story.md) 手順 5）。
 
 ## よくある間違い
 
