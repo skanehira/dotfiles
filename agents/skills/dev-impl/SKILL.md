@@ -16,10 +16,38 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
 
 | 役割 | 実行 | モデル |
 | --- | --- | --- |
-| オーケストレーション (本ループ) | メインセッション | opus (frontmatter 指定。別のスキルから自動で起動した場合は効かないため、ユーザーが直接起動する) |
-| 実装 | `dev-impl-implementer` subagent | `model: "opus"` 明示 |
-| レビュー | `review-impl` subagent | `model: "opus"` 明示 |
-| コミット実行・巨大出力のテスト実行 (E2E 等) | subagent | `model: "haiku"` (`~/.claude/rules/core/orchestration.md`「委譲の判断」。メッセージ起草・対象ファイルの判断は親が行い、実行だけを委譲する) |
+| オーケストレーション (本ループ) | メインセッション | opus (frontmatter 指定。ユーザーが `/dev-impl` を直接入力して起動した場合以外 (エージェントが自分の判断で起動した場合を含む) は効かないため、ユーザーが直接起動する) |
+| 実装 | `dev-impl-implementer` subagent | opus を明示 |
+| レビュー | `review-impl` subagent | opus を明示 |
+| コミット実行・巨大出力のテスト実行 (E2E 等) | `general-purpose` subagent | haiku を明示 (下記「Haiku への委譲」) |
+
+### Haiku への委譲
+
+`~/.claude/rules/core/orchestration.md`「委譲の判断」に従い、コミットの実行と、出力が巨大になるテスト実行 (E2E 等) だけを Haiku に委譲してよい。委譲するのはコマンドの実行だけで、コミットメッセージの起草・ステージ対象の決定・結果の判定は親が行う。委譲先にはファイルを編集させない。
+
+コミットの実行 (2.4 手順 1) は、サブエージェント `general-purpose` を起動する (モデル: haiku を明示)。完了を待ってから次の手順へ進む。
+
+- 説明: `issue #<N> のコミット`
+- 次の内容を渡す:
+
+```
+repo_dir: <WORK_DIR> (すべてのコマンドを cd <WORK_DIR> && ... の形で実行する)
+ステージするファイル: <親が決めたパスの列挙>
+コミットメッセージ: <親が起草した全文。改行を含むので HEREDOC でそのまま渡す>
+ファイルを編集しない。メッセージを書き換えない。コミット後に git log -1 --pretty=%s の出力とコミットの SHA を返す
+```
+
+返ってきた subject を `~/.claude/rules/core/commit.md` の形式と照合するのは親である (委譲先は照合者にならない)。
+
+巨大出力のテスト実行 (2.4 手順 2) は、サブエージェント `general-purpose` を起動する (モデル: haiku を明示)。完了を待ってから次の手順へ進む。
+
+- 説明: `issue #<N> の検証`
+- 次の内容を渡す:
+
+```
+実行するコマンド: cd <WORK_DIR> && <コマンド> (複数あれば 1 行ずつ)
+ファイルを編集しない。コマンドごとに exit code と pass/fail 件数を返し、失敗があればテスト名と原因が分かる最小限のエラー引用を添える
+```
 
 ## Step 0: 前提チェック
 
@@ -58,7 +86,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 | 状態 (`gh pr list --repo "$REPO_SLUG" --head issue-<N>` と、`git fetch origin` 後の `git branch --list issue-<N>` / `git branch -r --list "origin/issue-<N>"`) | 再開位置 |
 | --- | --- |
 | PR が open | 2.4 手順 4 (merge と状態確認) から。手順 4 の先頭が `PR_NUM` を引き直すので番号の復元は要らないが、**並列実行では worktree を作り直して `$WORK_DIR` を再設定してから入る** (rebase 分岐が使う)。検証は push 前に済んでいる前提なので繰り返さないが、`gh pr view --json headRefOid` と `git -C "$WORK_DIR" rev-parse HEAD` が一致しなければ PR 作成後に差分が足されているので、手順 2 の検証を 1 巡してから merge する。レビュー未実施が疑われる場合は 2.3 から |
-| ブランチのみ残存 (ローカルまたは origin、PR なし) | ブランチへ switch し (origin のみに在る場合は `git switch issue-<N>` が追跡ブランチを作る)、`BASE_SHA=$(git merge-base origin/$DEFAULT HEAD)` で基準を復元して 2.2 から。implementer の prompt に「ブランチに前回の差分がある。既存差分を前提に続きから実装せよ」を 1 行追加する |
+| ブランチのみ残存 (ローカルまたは origin、PR なし) | ブランチへ switch し (origin のみに在る場合は `git switch issue-<N>` が追跡ブランチを作る)、`BASE_SHA=$(git merge-base origin/$DEFAULT HEAD)` で基準を復元して 2.2 から。implementer に渡す内容 (2.2) に「ブランチに前回の差分がある。既存差分を前提に続きから実装せよ」の行を足す |
 | どちらも無い | 最初から (2.1 から) |
 
 実装途中の**未コミット**差分はマシンローカルで、別マシンには引き継げない。ブランチも push されるまではマシンローカル (2.6 の駐車時は WIP を退避して push を試みる)。別マシンで再開して残置ブランチが origin に無い場合、その issue は最初からやり直しになる — これは仕様で、issue 単位が再開の粒度である。ローカルと origin の両方にブランチが在る場合は fetch 後に ahead/behind を確認し、behind ならローカルを origin に合わせ (`git switch -C "issue-<N>" "origin/issue-<N>"`)、ahead なら push してから続行する。
@@ -120,7 +148,10 @@ gh issue comment "$N" --repo "$REPO_SLUG" --body "実装を開始します (dev-
 
 ### 2.2 実装 (implementer subagent)
 
-「issue #<N> の実装」として、サブエージェント `dev-impl-implementer` を起動する (モデル: opus、同期実行)。次の内容を渡す:
+サブエージェント `dev-impl-implementer` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (同じ段の複数起動は並列でよい。2.0 の並列実行では、同じ依存レベルの issue の起動がこれに当たる)。
+
+- 説明: `issue #<N> の実装`
+- 次の内容を渡す:
 
 ```
 mode: implement
@@ -129,7 +160,7 @@ issue_number: <N>
 report_path: <SCRATCH>/impl-<N>.json
 ```
 
-**検収**: report JSON を読み、`status: done` は `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true` を満たすときだけ done と扱う(UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でなく、**その画像を親が `Read` で実際に開いて**同じ行の下端・幅の決まり方・ラベル位置が揃っていることを確かめる — exit code は見た目を守らないため、ここを飛ばすと崩れは利用者が指摘するまで残る) (満たさない報告は**同じ `mode: implement` で 1 回だけ再起動する**。prompt に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」を足す。`mode: fix` は使わない — `findings_path` の JSON から high を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる)。**この再起動は 2.3 の fix ラウンドに数えない** — 実装の検収であって、レビュー指摘の修正ではない。**2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)。
+**検収**: report JSON を読み、`status: done` は `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true` を満たすときだけ done と扱う(UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でなく、**その画像を親が `Read` で実際に開いて**同じ行の下端・幅の決まり方・ラベル位置が揃っていることを確かめる — exit code は見た目を守らないため、ここを飛ばすと崩れは利用者が指摘するまで残る) (満たさない報告は**同じ `mode: implement` で 1 回だけ再起動する**。渡す内容に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」の行を足す。`mode: fix` は使わない — `findings_path` の JSON から high を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる)。**この再起動は 2.3 の fix ラウンドに数えない** — 実装の検収であって、レビュー指摘の修正ではない。**2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)。
 
 分岐:
 
@@ -139,16 +170,22 @@ report_path: <SCRATCH>/impl-<N>.json
 
 ### 2.3 レビュー (review-impl subagent、修正 ≤ 1 ラウンド)
 
-「issue #<N> のレビュー」として、サブエージェント `review-impl` を起動する (モデル: opus、同期実行)。次の内容を渡す:
+サブエージェント `review-impl` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (同じ段の複数起動は並列でよい。2.0 の並列実行では、同じ依存レベルの issue の起動がこれに当たる)。
+
+- 説明: `issue #<N> のレビュー`
+- 次の内容を渡す:
 
 ```
 repo_dir: <WORK_DIR>
-base_sha: <BASE_SHA>       // 2.1 で控えた値
+base_sha: <BASE_SHA>
 issue_number: <N>
 focus: all
-previous_findings_path: <SCRATCH>/review-<N>-r1.json   // r2 のみ。初回は行ごと省く
+previous_findings_path: <SCRATCH>/review-<N>-r1.json
 report_path: <SCRATCH>/review-<N>-r<ラウンド>.json
 ```
+
+- `base_sha` は 2.1 で控えた値を渡す
+- `previous_findings_path` の行は r2 でだけ渡し、r1 (初回) では行ごと省く
 
 **レビューと修正の回数はこう数える。初回レビューを r1 とし、レビューのたびに 1 ずつ増やす** (この採番が `findings_path` のファイル名に出るので、あとから何周したかを人も自分も数えられる。r0 から始めると 1 周ぶん過少に数えることになる)。レビューは r1 (実装直後) と r2 (fix の後の確認) の**最大 2 回**、`mode: fix` は r1 の findings に対する**最大 1 回**。`previous_findings_path` は r2 の 1 回だけ渡る。
 
@@ -170,6 +207,23 @@ r1 の findings による分岐:
 
 - **high が 0 件** → 2.4 へ。medium は保留リストに記録し (下記「保留レビュー項目の記録」)、low は完了コメントに「報告のみ」として記載する
 - **high がある** → **先に `category: test-weakening` の finding を下記の裁定で処理し** (implementer に渡すと `test_weakening_suspected` で escalate が返り、2.2 の分岐で 2.6 へ落ちて裁定経路が迂回される)、残った high について implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して **high だけ**を直させ、r2 を回す。**fix はこの 1 回だけ (固定)**。裁定の結果 high が 0 件になったら fix を起動せず 2.4 へ進む
+
+fix は、サブエージェント `dev-impl-implementer` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (同じ段の複数起動は並列でよい。2.0 の並列実行では、同じ依存レベルの issue の起動がこれに当たる)。
+
+- 説明: `issue #<N> の修正`
+- 次の内容を渡す:
+
+```
+mode: fix
+repo_dir: <WORK_DIR>
+issue_number: <N>
+findings_path: <SCRATCH>/review-<N>-r1.json
+report_path: <SCRATCH>/impl-<N>-fix.json
+```
+
+- `findings_path` は、`test-weakening` の裁定の印 (`adjudication`) を書き足した後の r1 の review JSON を指す
+- `report_path` は 2.2 の `impl-<N>.json` と別名にする (実装時の報告を上書きしない)
+- 返った report が `done` なら r2 を回す。`escalate` / `failed` と、subagent のエラー・report の欠落は 2.2 の分岐に従う
 
 **r2 に high が無ければ 2.4 へ進む** (medium は保留リストに記録する)。r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わない) は、その high の `category` で分岐する。**契約・証跡・検証器が壊れているものだけを駐車し、成果物の内部品質は記録して先へ進む**:
 
@@ -201,11 +255,11 @@ r1 の findings による分岐:
 
 ### 2.4 コミット・検証・PR・merge
 
-1. **コミット**: 変更を論理単位で Conventional Commit (`~/.claude/rules/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針の表)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
+1. **コミット**: 変更を論理単位で Conventional Commit (`~/.claude/rules/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針「Haiku への委譲」)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
 
    コミットが手順 2 の検証より前に来るのは、検証対象を「積み終えた差分」に固定するためである。`~/.claude/rules/core/commit.md` のコミット条件 (全テスト green) は、implementer の `test_result` / `dod_result` が exit 0 であること (2.2 の検収で確認済み) を根拠に満たす。**手順 2 が red だった場合、このコミットは merge されない駐車ブランチ上の記録として扱う** (2.6 の WIP 退避と同じ例外)。
 
-2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する (CI は使わない — 判定はこのローカル実行が兼ねる)。**実行は `$WORK_DIR` で行う** (並列実行では worktree の中。Haiku subagent に委譲する場合は `cd <WORK_DIR> && ...` の形でコマンドを渡さないと別の作業ツリーを検証することになる)。巨大出力になる場合は実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る。
+2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する (CI は使わない — 判定はこのローカル実行が兼ねる)。**実行は `$WORK_DIR` で行う** (並列実行では worktree の中。Haiku subagent に委譲する場合は `cd <WORK_DIR> && ...` の形でコマンドを渡さないと別の作業ツリーを検証することになる)。巨大出力になる場合は実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る (起動と渡す内容はモデル方針「Haiku への委譲」)。
 
    **同じコマンドを二度走らせない。** issue の `## DoD` に並ぶコマンドが `docs/design/DESIGN.md`「開発・検証コマンド」の全体テスト・lint と重複する場合は 1 回だけ実行する。**重複と見なすのは前後の空白を除いた文字列が完全一致するときだけ**で、包含関係 (`deno test src/export/` と `deno test`)・オプション違い・言い換えは重複と見なさず両方実行する (部分集合を「同じ」と読むと DoD の検証をしないまま green を宣言できる)。DESIGN.md が無い構成と、DESIGN.md はあるが「開発・検証コマンド」節が無い構成では、同一性を判定できないので重複排除せず両方実行する。
 
