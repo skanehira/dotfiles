@@ -14,13 +14,14 @@ scaffold と環境構築で確定した事実を `docs/PRODUCT_SPEC.md` に書�
 
 ## なぜ PRODUCT_SPEC.md なのか (dev-spec 側の受け口)
 
-dev-spec は以下の 3 フェーズの冒頭で `docs/PRODUCT_SPEC.md` を Read し、存在すればプロダクトのスコープ・技術的制約として利用する:
+dev-spec は以下の 4 フェーズで `docs/PRODUCT_SPEC.md` を Read し、存在すればプロダクトのスコープ・技術的制約として利用する:
 
 | dev-spec のフェーズ | 手順書 | PRODUCT_SPEC.md の使われ方 |
 | --- | --- | --- |
 | フェーズ 1 ユーザーストーリー | `references/user-story.md` | プロダクトのスコープ・コア価値の把握 |
 | フェーズ 2 UI スケッチ | `references/ui-sketch.md` | プロダクトのスコープ把握 |
 | フェーズ 4 実現可能性検証 | `references/feasibility-check.md` | 技術的制約の把握 (PoC 対象の絞り込み) |
+| フェーズ 6 横断設計 | `references/design-doc.md` | プロダクトの目的・技術的制約を DESIGN.md の「目的とスコープ」「アーキテクチャと技術選定」に反映 |
 
 `docs/PRODUCT_SPEC.md` は dev-spec の**途中再開判定の対象外** (判定は USER_STORIES.md 〜 DESIGN.md / features/ と GitHub の親 issue を見る) なので、これを置いても「途中から再開」と誤認されず、モード選択から正常に始まる。
 
@@ -115,9 +116,8 @@ PRODUCT_SPEC.md を書いたら、以下を表示してスキルを終える:
 | dev-spec の仕組み | このスキルの対応 |
 | --- | --- |
 | 途中再開判定 (USER_STORIES.md 〜 DESIGN.md / features/・親 issue を見る) | PRODUCT_SPEC.md は判定対象外なので、モード選択から正常に開始される |
-| フェーズ 1 / 2 / 4 が PRODUCT_SPEC.md を Read | 確定スタックと制約が設計入力になる (主経路) |
+| フェーズ 1 / 2 / 4 / 6 が PRODUCT_SPEC.md を Read | 確定スタックと制約が設計入力になる (主経路)。クイックモードでもフェーズ 6 が読むので、確定スタックは DESIGN.md に届く |
 | クイックモードでは 1・2 がスキップ、4 は条件付き実行 | 起動コマンドのタスク説明で言及して補う (副経路) |
-| フェーズ 6 は PRODUCT_SPEC.md を読まない | 同上 |
 | フェーズ 4〜5 の PoC 判定 | 「検証済み」列によりスタック起因の PoC を抑制し、ドメイン固有の不確実性 (実 Cognito でのパスワード検証・Stripe 実課金・外部 API 連携など) だけを PoC 候補に残す |
 | DESIGN.md の「開発・検証コマンド」節 | scaffold 済みなので PRODUCT_SPEC.md を参照する形で足りる |
 | product-mode スタンプ (`<!-- product-mode: webapp -->`) | dev-spec のフェーズ 6 が DESIGN.md に書き込む。このスキルでは触らない (起動時に `webapp` を渡すだけ) |
