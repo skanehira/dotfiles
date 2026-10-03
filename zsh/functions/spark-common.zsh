@@ -54,9 +54,9 @@ _spark_served_name() {
 #
 # ccsp (/v1/messages) で Qwen が受けるのは low / medium / xhigh の 3 つ
 # (high と max はテンプレートが、none はスキーマが弾く)。cxsp の /v1/responses は
-# Qwen 配信中に実測していない。vision (DeepSeek 系) の high はレシピの
-# DEFAULT_THINKING の語彙 (off / low / high / max) に合わせた値で、配信中に
-# 実測していない。DeepSeek-v4.1-Flash-EXL3 は low / high / xhigh / max を
+# Qwen 配信中に実測していない。DeepSeek 系 (vision / 0731) は既定の分岐の high を
+# 送る。low / medium / high / xhigh / max を /v1/messages・/v1/chat/completions・
+# /v1/responses の 3 経路で受ける (2026-09-23 に curl で実測)。DeepSeek-v4.1-Flash-EXL3 は low / high / xhigh / max を
 # /v1/messages・/v1/chat/completions・/v1/responses の 3 経路で受け、medium は
 # どの経路でも 400 になる (前 2 経路は 2026-09-15、/v1/responses は 2026-09-17 実測)。
 #
