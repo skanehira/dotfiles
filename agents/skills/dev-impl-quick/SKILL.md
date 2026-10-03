@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, TaskCreate, TaskUpdat
 
 # dev-impl-quick — 軽量実装ループ
 
-設計 docs (DESIGN.md / TODO.md 等) を前提にしない、依頼文をそのまま入力にできる薄い実装ループ。`dev-impl` が持つ承認ゲート・複数観点レビュー fan-out (quality / product-readiness / adversarial)・進捗ログ・HTML レポートは持たない。TDD の RED→GREEN→REFACTOR 順序はメインループが `~/.claude/rules/core/tdd.md` に従い自律遵守する。
+設計 docs (DESIGN.md 等) と GitHub issue を前提にしない、依頼文をそのまま入力にできる薄い実装ループ。`dev-impl` が持つ issue 起点の進行 (issue コメントでの進捗記録・PR 作成と merge・worktree での並列実行)・`review-impl` の 5 項目統合レビュー (`focus: all`)・保留レビュー項目のチェックリスト (`docs/pending-review/`) は持たない。TDD の RED→GREEN→REFACTOR 順序はメインループが `~/.claude/rules/core/tdd.md` に従い自律遵守する。
 
 順序を守っても「テストは通るが意味がない (トートロジー・実装詳細への依存)」は起きうる。これはメインループが自分で書いたテストを自己レビューしても見逃しやすいため、タスクごとに `review-impl` subagent (fresh context、`focus: tests`) を 1 観点だけ都度起動して検証する。
 
