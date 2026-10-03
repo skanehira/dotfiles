@@ -8,12 +8,12 @@
 {
   # 設定は dotfiles repo への直接 symlink (mkOutOfStoreSymlink) で扱う。
   # claude.nix と同じ方針で、編集が drs 不要で即反映される (live edit)。
-  # OpenCode V2 の常駐サービスは ~/.config/opencode を監視していて、設定ファイルの
-  # 変更を自動で再読み込みする。
+  # OpenCode V2 の常駐サービスが設定ファイルの変更を検知して読み直す実装はソースにあるが、
+  # 反映を実際に確かめてはいない (変更が効いていないように見えたら opencode service restart)。
   #
-  # symlink するのはファイル単位にする。~/.config/opencode/ には opencode 自身が書く領域
-  # (service.json / node_modules など) が同居しており、ディレクトリごと貼ると
-  # dotfiles に流れ込むため。
+  # symlink するのはファイル単位にする。~/.config/opencode/ には dotfiles 以外のもの
+  # (常駐サービスが書く service.json、V1 のプラグイン SDK を入れた node_modules など) が
+  # 同居しており、ディレクトリごと貼ると dotfiles に流れ込むため。
   #
   # OpenCode は DGX Spark 専用で、接続先は Tailscale の MagicDNS 名 (spark-head) に固定
   # している。自宅 LAN の mDNS 名は使わない。vLLM が認証を要求しないので API キーは
