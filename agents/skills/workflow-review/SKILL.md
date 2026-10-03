@@ -33,17 +33,14 @@ git リポジトリでない場合は「git リポジトリではありません
 
 ### Step 2: review-impl の起動
 
-```javascript
-Agent({
-  description: "working tree のレビュー",
-  subagent_type: "review-impl",
-  model: "opus",   // 実行器 ≤ 検証器
-  prompt: `repo_dir: <git rev-parse --show-toplevel の結果>
+「working tree のレビュー」として、サブエージェント `review-impl` を起動する (モデル: opus (実行器 ≤ 検証器)、同期実行)。次の内容を渡す:
+
+```
+repo_dir: <git rev-parse --show-toplevel の結果>
 base_sha: <BASE_SHA>
 docs_hint: <docs/design/DESIGN.md や docs/design/features/ が存在すればそのパス。無ければ「なし (設計 docs の無いリポジトリ)」>
 focus: all
-report_path: <scratchpad>/workflow-review-<timestamp>.json`
-})
+report_path: <scratchpad>/workflow-review-<timestamp>.json
 ```
 
 `--staged` のときは prompt に `diff_scope: staged` を追加する (review-impl の入力契約のキー)。report JSON が生成されない・パース不能の場合は 1 回だけ再試行し、再失敗ならその旨を伝えて手動レビューを案内する。
@@ -64,7 +61,7 @@ findings 0 件なら `checked` の内容とともに「指摘なし」と報告�
 
 ### Step 4: 修正アクション選択
 
-findings があれば AskUserQuestion で確認する: 「high/medium をメインループで直営修正 (推奨) / 指摘の詳細を表示 / 何もしない」。修正を選んだら、指摘箇所だけを直してテストを再実行し、必要なら Step 2 から再レビューする (`report_path` は別名にする)。
+findings があれば、次の 3 択から 1 つだけ選ばせてユーザーに確認する: 「high/medium をメインループで直営修正 (推奨) / 指摘の詳細を表示 / 何もしない」。修正を選んだら、指摘箇所だけを直してテストを再実行し、必要なら Step 2 から再レビューする (`report_path` は別名にする)。
 
 ## 関連
 
