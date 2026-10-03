@@ -4,20 +4,20 @@ description: "スキルを作成し、レビュー・自動修正まで行う"
 argument-hint: "[スキル名] [スキルの説明]"
 ---
 
-# /create-skill - スキル作成コマンド
+# /utility-create-skill - スキル作成コマンド
 
-このコマンドは、skill-creatorスキルを使って新しいスキルを作成し、reviewing-skillsスキルでレビュー・自動修正を行います。
+このコマンドは、`skill-creator:skill-creator` スキルを使って新しいスキルを作成し、utility-reviewing-skillsスキルでレビュー・自動修正を行います。
 
 ## 使い方
 
 ### 引数付き起動
 ```
-/create-skill pdf-converter PDFファイルを画像に変換するスキル
+/utility-create-skill pdf-converter PDFファイルを画像に変換するスキル
 ```
 
 ### 引数なし起動（対話的）
 ```
-/create-skill
+/utility-create-skill
 ```
 
 ---
@@ -38,11 +38,7 @@ $ARGUMENTSが空の場合、ユーザーに以下を質問してください：
 - code-review
 - data-analyzer
 
-選択肢は次の 1 つだけで、1 つ選ばせる。
-
-| 選択肢 | 意味 |
-| --- | --- |
-| 名前を入力 | スキル名を直接入力 |
+自由入力で答えてもらう。
 
 スキル名取得後、説明が空の場合も質問してください：
 
@@ -52,11 +48,7 @@ $ARGUMENTSが空の場合、ユーザーに以下を質問してください：
 - コードレビューを自動化し、改善点を提案する
 - データを分析してレポートを生成する
 
-選択肢は次の 1 つだけで、1 つ選ばせる。
-
-| 選択肢 | 意味 |
-| --- | --- |
-| 説明を入力 | スキルの説明を直接入力 |
+自由入力で答えてもらう。
 
 ---
 
@@ -69,12 +61,12 @@ $ARGUMENTSが空の場合、ユーザーに以下を質問してください：
 | タスク | 進行中の表示 | 状態 |
 | --- | --- | --- |
 | skill-creatorでスキルを作成 | スキルを作成している | 進行中 |
-| reviewing-skillsでスキルをレビュー | スキルをレビューしている | 未着手 |
+| utility-reviewing-skillsでスキルをレビュー | スキルをレビューしている | 未着手 |
 | レビュー結果に基づいて自動修正 | スキルを自動修正している | 未着手 |
 
 ### skill-creatorの実行
 
-スキル `example-skills:skill-creator` を起動する（引数に `[スキル名] [スキルの説明]` を渡す）。
+スキル `skill-creator:skill-creator` を起動する（引数に `[スキル名] [スキルの説明]` を渡す）。
 
 **重要**: skill-creatorが対話的に質問してくる場合は、ユーザーから取得した情報を元に回答してください。
 
@@ -95,10 +87,10 @@ $ARGUMENTSが空の場合、ユーザーに以下を質問してください：
 | タスク | 進行中の表示 | 状態 |
 | --- | --- | --- |
 | skill-creatorでスキルを作成 | スキルを作成している | 完了 |
-| reviewing-skillsでスキルをレビュー | スキルをレビューしている | 進行中 |
+| utility-reviewing-skillsでスキルをレビュー | スキルをレビューしている | 進行中 |
 | レビュー結果に基づいて自動修正 | スキルを自動修正している | 未着手 |
 
-### reviewing-skillsの実行
+### utility-reviewing-skillsの実行
 
 スキル `utility-reviewing-skills` を起動する。
 
@@ -111,12 +103,12 @@ $ARGUMENTSが空の場合、ユーザーに以下を質問してください：
 **問題がある場合**：
 1. タスクリストを更新して自動修正フェーズに移行
 2. 指摘された問題を自動的に修正
-3. 再度reviewing-skillsを実行して確認
+3. 再度utility-reviewing-skillsを実行して確認
 4. 問題がなくなるまで繰り返す（最大3回）
 
 ### 自動修正のルール
 
-reviewing-skillsから指摘された問題を自動修正する際：
+utility-reviewing-skillsから指摘された問題を自動修正する際：
 
 1. **構造的な問題**: ディレクトリ構造やファイル配置を修正
 2. **内容の問題**: SKILL.mdの内容を修正・改善
@@ -157,5 +149,5 @@ reviewing-skillsから指摘された問題を自動修正する際：
 ### エラーハンドリング
 
 - skill-creatorの実行エラー時は明確なエラーメッセージを表示
-- reviewing-skillsの実行エラー時はリトライオプションを提供
+- utility-reviewing-skillsの実行エラー時はリトライオプションを提供
 - 修正不可能な問題はユーザーに報告
