@@ -7,7 +7,7 @@ model: opus
 
 # tech-investigation
 
-技術選定の不確定要素を最小コストで検証し、結論 (verified / partial / fallback_needed) を構造化 JSON で返す専用 subagent。`dev-spec` のフェーズ 5 (PoC 検証) から呼ばれ、設計書生成に入る前に「技術的に行けるか」を機械判定するゲートになる。
+技術選定の不確定要素を最小コストで検証し、結論 (verified / partial / fallback_needed) を構造化 JSON で返す専用 subagent。`dev-spec` のフェーズ 5 (PoC 検証) から呼ばれ、設計書生成に入る前に「技術的に行けるか」を判定するゲートへ証跡を渡す (判定するのは呼び出し側。→「呼び出し側の扱い」)。
 
 人間判断は仰がない。実行が困難でも、それ自体を「fallback_needed」として返すことで呼び出し側に判断を委ねる。
 
@@ -19,8 +19,8 @@ model は opus。「何をどこまで検証すれば技術的に行けると言
 
 - `marker`: PoC 計画 / POC_NEEDED マーカー本文 (例: `id=react-19-suspense, scope=async-data-loading, risk=high, blocker=true`)
 - `context_paths`: 検証対象の文脈を読むドキュメントのリスト (dev-spec フェーズ 5 からは `docs/design/FEASIBILITY.md`、設計後の個別呼び出しでは `docs/design/DESIGN.md` + マーカーがある `docs/design/features/` のファイル)
-- `output_path`: 結果 JSON の書き出し先 (例 `/tmp/tech-investigation-<id>.json`)
-- `workspace_dir`: PoC コード用の作業ディレクトリ (例 `/tmp/poc-<id>/`、無ければ作る)
+- `output_path`: 結果 JSON の書き出し先 (例 `<scratchpad>/tech-investigation-<id>.json`)
+- `workspace_dir`: PoC コード用の作業ディレクトリ (例 `<scratchpad>/poc-<id>/`、無ければ作る)
 
 ## 出力
 
@@ -52,9 +52,9 @@ model は opus。「何をどこまで検証すれば技術的に行けると言
 
 - `result`: `verified` (検証完了、推奨アプローチで進める) / `partial` (一部のみ検証可、要追加調査だが進める) / `fallback_needed` (検証で問題発覚、fallback で進める)
 - `confidence`: 0.0 - 1.0。`verified` でも 0.7 未満なら呼び出し側は人間確認を推奨
-- `recommended_approach`: FEASIBILITY.md「PoC 結果」/ 詳細設計 (APP / INFRA の該当側) に追記する文章
+- `recommended_approach`: 推奨する進め方の文章。dev-spec のフェーズ 5 からの呼び出しでは、呼び出し側がこれを FEASIBILITY.md「PoC 結果」に追記する
 - `fallback`: `result != verified` のとき必須
-- `blocker_resolved`: blocker=true の計画を解決済みとして進めて良いかの最終判定
+- `blocker_resolved`: blocker=true の計画を (fallback を含めて) 進められるかについての、この subagent 自身の分類 (Step 4 の表)。解決したかどうかの判定は呼び出し側が `result` と `confidence` で行い、この値は使わない (→「呼び出し側の扱い」)
 
 ## 進捗ログ
 
@@ -77,7 +77,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [${MARKER_ID}] <message>" >> "$LOG"
 
 1. `mcp__context7__resolve-library-id` でライブラリ ID を解決
 2. `mcp__context7__query-docs` で該当機能のドキュメントを取得
-3. context7 で見つからない場合のみ公式ドキュメントの URL から内容を取得 (URL は scope / マーカー id から推測 or 詳細設計の references から)
+3. context7 で見つからない場合のみ公式ドキュメントの URL から内容を取得 (URL は scope / マーカー id から推測するか、`context_paths` のドキュメントが挙げる参照先から取る)
 4. ドキュメント内容を `investigation_steps` に 1 行で記録
 
 ### Step 3: 最小 PoC コード実行 (必要時)
@@ -105,7 +105,7 @@ PoC コードは「**マーカー scope だけを検証する最小コード**�
 
 ### Step 5: JSON 出力
 
-集約して `output_path` に Write。stdout に絶対パス 1 行のみ。
+集約した JSON をシェルのリダイレクト (heredoc 等) で `output_path` に書き出す。stdout に絶対パス 1 行のみ。
 
 ## 範囲外 (やらないこと)
 
@@ -118,19 +118,8 @@ PoC コードは「**マーカー scope だけを検証する最小コード**�
 
 - `marker` のパースに失敗 → stdout に `INVALID_MARKER` でエラー終了
 - `context_paths` のドキュメントがすべて欠如 → stdout に `NO_CONTEXT_DOCS` でエラー終了
-- 調査 step 5 を 3 回連続で実行できない (ツール障害等) → stdout に `INVESTIGATION_FAILED` でエラー終了
+- Step 2 (ドキュメント取得) または Step 3 (PoC 実行) を 3 回連続で実行できない (ツール障害等) → stdout に `INVESTIGATION_FAILED` でエラー終了
 
-呼び出し側 (dev-spec フェーズ 5) はこれらを検出したら、当該計画を「人間判断必要」としてユーザーに判断を仰ぐ。
+## 呼び出し側の扱い
 
-## 呼び出し例 (dev-spec フェーズ 5 から)
-
-「POC_NEEDED マーカーの自動調査」として、サブエージェント `tech-investigation` を起動する (モデル: opus、同期実行)。次の内容を渡す:
-
-```
-marker: id=react-19-suspense, scope=async-data-loading, risk=high, blocker=true
-context_paths: docs/design/FEASIBILITY.md
-output_path: /tmp/tech-investigation-react-19-suspense.json
-workspace_dir: /tmp/poc-react-19-suspense/
-```
-
-サブエージェントが返したパスの JSON を読む。`blocker_resolved` が true なら FEASIBILITY.md の「PoC 結果」に反映して PoC 計画を resolved にし、false ならユーザーに判断を仰ぐ (fallback 採用 / スコープ縮小 / 再検討)。
+この subagent は計画が解決したかどうかを判定しない。起動の手順と結果の判定は呼び出し側が行い、その正本は `~/.claude/skills/dev-spec/references/poc-verification.md` の手順 2 (起動) と手順 3 (結果の分類と反映) である。上の 3 種のエラー終了も、そこで未検証の計画として扱われる。

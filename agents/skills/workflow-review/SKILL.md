@@ -33,7 +33,10 @@ git リポジトリでない場合は「git リポジトリではありません
 
 ### Step 2: review-impl の起動
 
-「working tree のレビュー」として、サブエージェント `review-impl` を起動する (モデル: opus (実行器 ≤ 検証器)、同期実行)。次の内容を渡す:
+サブエージェント `review-impl` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む。opus を明示するのは、検証器のモデルを実行器 (差分を書いたセッション) のモデル以上に保つためである (`~/.claude/rules/core/orchestration.md`)。
+
+- 説明: `working tree のレビュー`
+- 次の内容を渡す:
 
 ```
 repo_dir: <git rev-parse --show-toplevel の結果>
@@ -43,7 +46,7 @@ focus: all
 report_path: <scratchpad>/workflow-review-<timestamp>.json
 ```
 
-`--staged` のときは prompt に `diff_scope: staged` を追加する (review-impl の入力契約のキー)。report JSON が生成されない・パース不能の場合は 1 回だけ再試行し、再失敗ならその旨を伝えて手動レビューを案内する。
+`--staged` のときは渡す内容に `diff_scope: staged` の行を足す (review-impl の入力契約のキー)。report JSON が生成されない・パース不能の場合は 1 回だけ再試行し、再失敗ならその旨を伝えて手動レビューを案内する。
 
 ### Step 3: 結果の整形表示
 
