@@ -17,7 +17,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 
 ## 入力
 
-親から prompt で受け取る:
+親から渡された内容で受け取る:
 
 | キー | 内容 |
 | --- | --- |
@@ -26,11 +26,12 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 | `issue_number` | 実装対象の issue 番号 |
 | `report_path` | 報告 JSON の書き出し先**絶対パス** |
 | `findings_path` | `mode: fix` のみ。修正対象 findings の JSON 絶対パス |
+| `port` | (任意) dev server・E2E に使うポート。dev-impl の並列実行のときだけ渡される。渡されたら `docs/design/DESIGN.md`「開発・検証コマンド」に書かれた指定方法でこのポートを使い、既定のポートでは起動しない |
 
 ## 事前に必ず Read するもの
 
 1. **issue 本文**: `gh issue view <issue_number> --json title,body` で取得する。`## ゴール` / `## 設計` / `## DoD` / `## 非スコープ` / `## 依存` の節構成
-2. **issue の `## 設計` が参照する docs**: `docs/design/features/<機能名>.md` と、言及があれば `docs/design/DESIGN.md` の該当節。**契約 (入出力・API・エッジケースの決定) はここが正本**
+2. **issue の `## 設計` が参照する docs**: 通常は `docs/design/features/<機能名>.md` と、言及があれば `docs/design/DESIGN.md` の該当節。webapp のアプリシェルの子は機能設計書を持たず、`docs/design/DESIGN.md`「横断規約」のアプリシェルの項を指す。**契約 (入出力・API・エッジケースの決定) はここが正本**。以下で「設計文書」と書くときは、この 2. で読んだ文書を指す
 3. **`docs/design/DESIGN.md`「開発・検証コマンド」**: セットアップ・テスト実行・lint の方法はここに従う (DESIGN.md が無い構成では issue の DoD に書かれたコマンドから読み取る)
 4. **rules**: `$HOME/.claude/rules/core/` の tdd.md / design.md / testing.md / implementation.md / verification.md と、あれば言語別 rules。**親の hooks も CLAUDE.md も継承されないため、これを読まずに実装しない**
 
@@ -45,8 +46,8 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
    - **GREEN**: そのテストを通す最小限の実装のみ
    - **REFACTOR**: green のときだけ。重複排除と命名
    - `## 非スコープ` に書かれたことには触れない
-   - 機能設計書「テスト方針」の表の行を、表が割り当てたレベル (単体 / 結合) のテストで 1 行ずつ pin する。対象は issue の `## ゴール` に「担う受け入れ基準」行があればその行だけ、無ければ参照する機能設計書の表の全行。レベルが E2E の行は手順 2 で扱う
-2. **UI に触れる issue** (docs/design/DESIGN.md のスタンプが `webapp` で、画面の振る舞いを変える場合) は、機能設計書「テスト方針」の `E2E 対象動線:` 行が指定する golden path の **Playwright E2E** を書く (資産として残す。golden path のみ — E2E を増やしすぎない)
+   - 設計文書の「テスト方針」の表の行を、表が割り当てたレベル (単体 / 結合) のテストで 1 行ずつ pin する。対象は issue の `## ゴール` に「担う受け入れ基準」行があればその行だけ、無ければ設計文書の表の全行。レベルが E2E の行は手順 2 で扱う
+2. **UI に触れる issue** (docs/design/DESIGN.md のスタンプが `webapp` で、画面の振る舞いを変える場合) は、設計文書の「テスト方針」にある `E2E 対象動線:` 行が指定する golden path の **Playwright E2E** を書く (資産として残す。golden path のみ — E2E を増やしすぎない)
 3. **UI に触れる issue で、プロジェクトが視覚テストを持つ場合** (`package.json` に `test:visual` 相当があり `*.visual.test.tsx` が存在する) は、該当画面の視覚テストを追加/更新して実行し、**生成された png を `Read` で自分で見る**。E2E とは役割が違う — E2E は振る舞い、視覚テストは見た目を受け持つ。**幅を変えて撮る** (崩れは幅に依存することが多く、1 つの幅だけでは見逃す)
 4. `## DoD` のコマンドと、変更範囲のテスト・lint を実行し、exit code 0 を確認する (自己申告ではなく実行結果で判定)
 5. 報告する (下記「報告」)

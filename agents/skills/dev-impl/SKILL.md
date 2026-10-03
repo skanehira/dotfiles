@@ -16,16 +16,20 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
 
 | 役割 | 実行 | モデル |
 | --- | --- | --- |
-| オーケストレーション (本ループ) | メインセッション | opus (frontmatter 指定。ユーザーが `/dev-impl` を直接入力して起動した場合以外 (エージェントが自分の判断で起動した場合を含む) は効かないため、ユーザーが直接起動する) |
+| オーケストレーション (本ループ) | メインセッション | opus (frontmatter 指定) |
 | 実装 | `dev-impl-implementer` subagent | opus を明示 |
 | レビュー | `review-impl` subagent | opus を明示 |
 | コミット実行・巨大出力のテスト実行 (E2E 等) | `general-purpose` subagent | haiku を明示 (下記「Haiku への委譲」) |
+
+frontmatter の `model` が効くのは、ユーザーが `/dev-impl` を直接入力して起動した場合だけである。エージェントが自分の判断で起動した場合には効かないので、本スキルはユーザーが直接起動する。
+
+以下の起動手順に出てくる「説明」は、サブエージェントを起動するときに付ける表示用の短いラベルである。起動の可否や渡す内容には影響しない。
 
 ### Haiku への委譲
 
 `~/.claude/rules/core/orchestration.md`「委譲の判断」に従い、コミットの実行と、出力が巨大になるテスト実行 (E2E 等) だけを Haiku に委譲してよい。委譲するのはコマンドの実行だけで、コミットメッセージの起草・ステージ対象の決定・結果の判定は親が行う。委譲先にはファイルを編集させない。
 
-コミットの実行 (2.4 手順 1) は、サブエージェント `general-purpose` を起動する (モデル: haiku を明示)。完了を待ってから次の手順へ進む。
+コミットの実行 (2.4 手順 1) は、**コミット 1 件につき 1 回**、サブエージェント `general-purpose` を起動する (モデル: haiku を明示)。完了を待ってから次の手順 (次のコミットの起動を含む) へ進む。1 issue のコミット列が複数のコミットになるときは、この起動をコミットの数だけ順に繰り返す。
 
 - 説明: `issue #<N> のコミット`
 - 次の内容を渡す:
@@ -34,10 +38,13 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
 repo_dir: <WORK_DIR> (すべてのコマンドを cd <WORK_DIR> && ... の形で実行する)
 ステージするファイル: <親が決めたパスの列挙>
 コミットメッセージ: <親が起草した全文。改行を含むので HEREDOC でそのまま渡す>
-ファイルを編集しない。メッセージを書き換えない。コミット後に git log -1 --pretty=%s の出力とコミットの SHA を返す
+ファイルを編集しない。メッセージを書き換えない。コミット後に git log -1 --pretty=%s の出力とコミットの SHA を返す。コミットが失敗したら、失敗したコマンドと出力をそのまま返す
 ```
 
-返ってきた subject を `~/.claude/rules/core/commit.md` の形式と照合するのは親である (委譲先は照合者にならない)。
+返ってきた結果は親が次のように扱う (委譲先は照合者にならない):
+
+- subject を `~/.claude/rules/core/commit.md` の形式と照合する。合わなければ、push 前に親が `git -C "$WORK_DIR" commit --amend` で直す
+- コミットが失敗した (pre-commit hook の失敗・ステージ対象が空など) ときは、返された出力を親が読んで原因を直し、もう一度委譲する。直せなければ 2.6 へ
 
 巨大出力のテスト実行 (2.4 手順 2) は、サブエージェント `general-purpose` を起動する (モデル: haiku を明示)。完了を待ってから次の手順へ進む。
 
@@ -48,6 +55,8 @@ repo_dir: <WORK_DIR> (すべてのコマンドを cd <WORK_DIR> && ... の形で
 実行するコマンド: cd <WORK_DIR> && <コマンド> (複数あれば 1 行ずつ)
 ファイルを編集しない。コマンドごとに exit code と pass/fail 件数を返し、失敗があればテスト名と原因が分かる最小限のエラー引用を添える
 ```
+
+- 並列実行 (2.0) では、コマンドにスロットのポートを、プロジェクトの worktree セットアップ手順が定める形で含める (例: 環境変数の前置)。ポートを含めないと、並列で走る別の issue の検証とポートが衝突する
 
 ## Step 0: 前提チェック
 
@@ -79,7 +88,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 - `needs-human` の issue は着手しない
 - `$ARGUMENTS` で issue 番号が指定されていれば、その issue (と未完了の依存先) だけを対象にする
 - `tracking` ラベルの親 issue (ユースケース単位のトラッキング) は実装対象にしない
-- あわせて**依存レベル**を求める。依存が無い issue を L0、それ以外は「依存先のレベルの最大値 + 1」とする。同じレベルの issue は互いに依存しないので同時に着手してよい (2.0 の並列実行が使う)。**着手順はトポロジカル順のまま**で、レベルは「どこまで同時に走らせてよいか」の判定にだけ使う (レベルを優先度に読み替えて順序を組み替えない)
+- あわせて**依存レベル**を求める。依存が無い issue を L0、それ以外は「依存先のレベルの最大値 + 1」とする。同じレベルの issue は互いに依存しないので同時に着手してよい (2.0 の並列実行が使う)。**着手順はトポロジカル順のまま**で、レベルは「どこまで同時に走らせてよいか」の判定にだけ使う (レベルを優先度に読み替えて順序を組み替えない)。Step 2 の起動手順にある「同じ段の複数起動は並列でよい」の**段**は、この依存レベルを指す
 
 **`in-progress` が残っている、または対象 issue に残置ブランチ `issue-<N>` がある場合は前回の中断・駐車からの復帰。** その issue の状態を確認して再開位置を決める (needs-human から `ready` に戻された issue はラベルでは区別できないため、ブランチの有無で検出する):
 
@@ -123,7 +132,7 @@ worktree には git 管理外のファイル (`.env` 系・ローカル設定) �
 依存ディレクトリ (`node_modules` 等) は容量が大きいのでここに列挙せず、前提 1 のセットアップ手順でインストールする。
 
 - **`.claude/worktrees/` が `.gitignore` に無いプロジェクトでは並列にしない**。worktree を作った時点で親の作業ツリーが dirty になり、2.1 の clean チェックが全 issue で失敗する。並列を使うなら先に `.gitignore` へ追加する (それ自体を 1 コミットにしてよい)
-- ポートは**スロット番号から決めて implementer に渡す** (例: 基準ポート + s × 10)。渡し方はプロジェクトの worktree セットアップ手順に従う
+- ポートは**スロット番号から決めて渡す** (例: 基準ポート + s × 10)。implementer と review-impl には起動時の `port` の行で渡し (2.2・2.3)、Haiku に委譲する検証ではプロジェクトの worktree セットアップ手順が定める形でコマンドに含める (モデル方針「Haiku への委譲」)
 - issue が終わったら `git -C "$REPO_DIR" worktree remove "$WT"` で片付ける。駐車 (2.6) した issue の worktree は、WIP を push したうえで削除する (残すと次回の clean チェックに掛かる)
 
 ### 2.1 着手
@@ -148,7 +157,7 @@ gh issue comment "$N" --repo "$REPO_SLUG" --body "実装を開始します (dev-
 
 ### 2.2 実装 (implementer subagent)
 
-サブエージェント `dev-impl-implementer` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (同じ段の複数起動は並列でよい。2.0 の並列実行では、同じ依存レベルの issue の起動がこれに当たる)。
+サブエージェント `dev-impl-implementer` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (同じ段の複数起動は並列でよい)。待つのはその issue の subagent だけで、並列で走る他の issue の進行は待たない (2.0)。
 
 - 説明: `issue #<N> の実装`
 - 次の内容を渡す:
@@ -157,10 +166,23 @@ gh issue comment "$N" --repo "$REPO_SLUG" --body "実装を開始します (dev-
 mode: implement
 repo_dir: <WORK_DIR>
 issue_number: <N>
+port: <スロットのポート>
 report_path: <SCRATCH>/impl-<N>.json
 ```
 
-**検収**: report JSON を読み、`status: done` は `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true` を満たすときだけ done と扱う(UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でなく、**その画像を親が `Read` で実際に開いて**同じ行の下端・幅の決まり方・ラベル位置が揃っていることを確かめる — exit code は見た目を守らないため、ここを飛ばすと崩れは利用者が指摘するまで残る) (満たさない報告は**同じ `mode: implement` で 1 回だけ再起動する**。渡す内容に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」の行を足す。`mode: fix` は使わない — `findings_path` の JSON から high を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる)。**この再起動は 2.3 の fix ラウンドに数えない** — 実装の検収であって、レビュー指摘の修正ではない。**2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)。
+- `port` の行は並列実行 (2.0) のときだけ渡し、直列実行では行ごと省く
+
+**検収**: report JSON を読み、次をすべて満たすときだけ `status: done` を done と扱う。
+
+- `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true`
+- UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でないこと。**その画像を親が `Read` で実際に開いて**、同じ行の下端・幅の決まり方・ラベル位置が揃っていることを確かめる。exit code は見た目を守らないので、ここを飛ばすと崩れは利用者が指摘するまで残る
+
+検収に落ちた報告の扱い:
+
+- **同じ `mode: implement` で 1 回だけ再起動する**。渡す内容に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」の行を足す
+- `mode: fix` は使わない。`mode: fix` は `findings_path` の JSON から high を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる
+- **この再起動は 2.3 の fix ラウンドに数えない**。実装の検収であって、レビュー指摘の修正ではないため
+- **2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)
 
 分岐:
 
@@ -170,7 +192,7 @@ report_path: <SCRATCH>/impl-<N>.json
 
 ### 2.3 レビュー (review-impl subagent、修正 ≤ 1 ラウンド)
 
-サブエージェント `review-impl` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (同じ段の複数起動は並列でよい。2.0 の並列実行では、同じ依存レベルの issue の起動がこれに当たる)。
+サブエージェント `review-impl` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (同じ段の複数起動は並列でよい)。待つのはその issue の subagent だけで、並列で走る他の issue の進行は待たない (2.0)。
 
 - 説明: `issue #<N> のレビュー`
 - 次の内容を渡す:
@@ -180,14 +202,16 @@ repo_dir: <WORK_DIR>
 base_sha: <BASE_SHA>
 issue_number: <N>
 focus: all
+port: <スロットのポート>
 previous_findings_path: <SCRATCH>/review-<N>-r1.json
 report_path: <SCRATCH>/review-<N>-r<ラウンド>.json
 ```
 
 - `base_sha` は 2.1 で控えた値を渡す
+- `port` の行は並列実行 (2.0) のときだけ渡し、直列実行では行ごと省く
 - `previous_findings_path` の行は r2 でだけ渡し、r1 (初回) では行ごと省く
 
-**レビューと修正の回数はこう数える。初回レビューを r1 とし、レビューのたびに 1 ずつ増やす** (この採番が `findings_path` のファイル名に出るので、あとから何周したかを人も自分も数えられる。r0 から始めると 1 周ぶん過少に数えることになる)。レビューは r1 (実装直後) と r2 (fix の後の確認) の**最大 2 回**、`mode: fix` は r1 の findings に対する**最大 1 回**。`previous_findings_path` は r2 の 1 回だけ渡る。
+**レビューと修正の回数はこう数える。初回レビューを r1 とし、レビューのたびに 1 ずつ増やす** (この採番が review JSON (`report_path` と `previous_findings_path`) のファイル名に出るので、あとから何周したかを人も自分も数えられる。r0 から始めると 1 周ぶん過少に数えることになる)。レビューは r1 (実装直後) と r2 (fix の後の確認) の**最大 2 回**、`mode: fix` は r1 の findings に対する**最大 1 回**。`previous_findings_path` は r2 の 1 回だけ渡る。
 
 `previous_findings_path` を渡すと、レビュワーは「前ラウンドの指摘が閉じたか」に加えて「同じ壊れ方が別の箇所へ転移していないか」を検査する (review-impl の検査項目 6)。渡さないと fresh context のレビュワーは前ラウンドの存在を知らないため、修正が作った同型の穴を見逃す。**再開 run で前 run の review JSON が SCRATCH に無い場合は渡さない** (SCRATCH は run ごとに新規作成されるため)。その場合は項目 6 が働かないことを完了コメントに記す。
 
@@ -208,7 +232,7 @@ r1 の findings による分岐:
 - **high が 0 件** → 2.4 へ。medium は保留リストに記録し (下記「保留レビュー項目の記録」)、low は完了コメントに「報告のみ」として記載する
 - **high がある** → **先に `category: test-weakening` の finding を下記の裁定で処理し** (implementer に渡すと `test_weakening_suspected` で escalate が返り、2.2 の分岐で 2.6 へ落ちて裁定経路が迂回される)、残った high について implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して **high だけ**を直させ、r2 を回す。**fix はこの 1 回だけ (固定)**。裁定の結果 high が 0 件になったら fix を起動せず 2.4 へ進む
 
-fix は、サブエージェント `dev-impl-implementer` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (同じ段の複数起動は並列でよい。2.0 の並列実行では、同じ依存レベルの issue の起動がこれに当たる)。
+fix は、サブエージェント `dev-impl-implementer` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (同じ段の複数起動は並列でよい)。待つのはその issue の subagent だけで、並列で走る他の issue の進行は待たない (2.0)。
 
 - 説明: `issue #<N> の修正`
 - 次の内容を渡す:
@@ -217,13 +241,20 @@ fix は、サブエージェント `dev-impl-implementer` を起動する (モ�
 mode: fix
 repo_dir: <WORK_DIR>
 issue_number: <N>
+port: <スロットのポート>
 findings_path: <SCRATCH>/review-<N>-r1.json
 report_path: <SCRATCH>/impl-<N>-fix.json
 ```
 
+- `port` の行は並列実行 (2.0) のときだけ渡し、直列実行では行ごと省く
 - `findings_path` は、`test-weakening` の裁定の印 (`adjudication`) を書き足した後の r1 の review JSON を指す
 - `report_path` は 2.2 の `impl-<N>.json` と別名にする (実装時の報告を上書きしない)
-- 返った report が `done` なら r2 を回す。`escalate` / `failed` と、subagent のエラー・report の欠落は 2.2 の分岐に従う
+
+返った report には 2.2 と同じ検収 (`test_result` / `dod_result` の exit code と `self_review`、UI に触れる issue では `ui_evidence`) を当てる。
+
+- 検収を通った `done` → r2 を回す
+- `escalate` / `failed` → 2.6 へ
+- 検収落ち・subagent のエラー・report JSON が無い・パース不能 → 同じ `mode: fix` で 1 回だけ再起動する。渡す内容と `findings_path` は変えず、検収落ちのときは 2.2 と同じく満たさなかった項目の行を足す。**この再起動は fix ラウンドに数えない** (「fix はこの 1 回だけ」の 1 回は、r1 の findings に対する修正の機会を数える)。再起動後も検収を通った `done` にならなければ 2.6 へ
 
 **r2 に high が無ければ 2.4 へ進む** (medium は保留リストに記録する)。r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わない) は、その high の `category` で分岐する。**契約・証跡・検証器が壊れているものだけを駐車し、成果物の内部品質は記録して先へ進む**:
 
@@ -239,7 +270,7 @@ report_path: <SCRATCH>/impl-<N>-fix.json
 
 `test-quality` の high を保留して merge するのは、no-op に置き換えても通るテスト (`~/.claude/rules/core/testing.md` のリトマス試験 B に落ちるもの) を抱えたまま先へ進むことを意味する。**これは意図した受容**なので、保留リストと完了コメントでは high を medium と分けて先に出し、ユーザーが気付ける状態にする。
 
-**3 周目に入りたくなったら、それは「収束していない」という信号**なので、上の表に従う。**この上限を強制する機械ゲートは無い。自律遵守する。** 上限は機械ゲートが無い状態で実際に破られる (セッション e6b5eb50 の実測: 22 issue 中 6 件が 3 周目以降に入り、規定超過分だけで 5.7h を消費した)。破らないための手立ては `findings_path` のラウンド番号を毎回自分で読むことだけである。3 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)。
+**3 周目に入りたくなったら、それは「収束していない」という信号**なので、上の表に従う。**この上限を強制する機械ゲートは無い。自律遵守する。** 上限は機械ゲートが無い状態で実際に破られる (セッション e6b5eb50 の実測: 22 issue 中 6 件が 3 周目以降に入り、規定超過分だけで 5.7h を消費した)。破らないための手立ては、review JSON のファイル名にあるラウンド番号を毎回自分で読むことだけである。3 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)。
 
 **`category: test-weakening` の finding** は、ラウンドを問わず implementer に直させず親が裁定する: 弱体化が事実なら該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要 — 2.4 の検証が確かめる。ラウンド数にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む。**基準時点の強度に戻すとテストが red になる場合は裁定不能**で、実装が元の契約を満たしていないということなので 2.6 へ駐車する。
 
@@ -259,7 +290,7 @@ report_path: <SCRATCH>/impl-<N>-fix.json
 
    コミットが手順 2 の検証より前に来るのは、検証対象を「積み終えた差分」に固定するためである。`~/.claude/rules/core/commit.md` のコミット条件 (全テスト green) は、implementer の `test_result` / `dod_result` が exit 0 であること (2.2 の検収で確認済み) を根拠に満たす。**手順 2 が red だった場合、このコミットは merge されない駐車ブランチ上の記録として扱う** (2.6 の WIP 退避と同じ例外)。
 
-2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する (CI は使わない — 判定はこのローカル実行が兼ねる)。**実行は `$WORK_DIR` で行う** (並列実行では worktree の中。Haiku subagent に委譲する場合は `cd <WORK_DIR> && ...` の形でコマンドを渡さないと別の作業ツリーを検証することになる)。巨大出力になる場合は実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る (起動と渡す内容はモデル方針「Haiku への委譲」)。
+2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する (CI は使わない — 判定はこのローカル実行が兼ねる)。**実行は `$WORK_DIR` で行う** (並列実行では worktree の中。Haiku subagent に委譲する場合は `cd <WORK_DIR> && ...` の形でコマンドを渡さないと別の作業ツリーを検証することになる)。出力が巨大になると実行前に分かっているもの (E2E と、出力が数千行を超えると分かっているスイート) は実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る (起動と渡す内容はモデル方針「Haiku への委譲」)。
 
    **同じコマンドを二度走らせない。** issue の `## DoD` に並ぶコマンドが `docs/design/DESIGN.md`「開発・検証コマンド」の全体テスト・lint と重複する場合は 1 回だけ実行する。**重複と見なすのは前後の空白を除いた文字列が完全一致するときだけ**で、包含関係 (`deno test src/export/` と `deno test`)・オプション違い・言い換えは重複と見なさず両方実行する (部分集合を「同じ」と読むと DoD の検証をしないまま green を宣言できる)。DESIGN.md が無い構成と、DESIGN.md はあるが「開発・検証コマンド」節が無い構成では、同一性を判定できないので重複排除せず両方実行する。
 
@@ -356,7 +387,7 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ### 2.6 エスカレーション (needs-human 駐車)
 
-解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / push の失敗と、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
+解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / 直せないコミットの失敗 / push の失敗と、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human

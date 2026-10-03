@@ -9,7 +9,7 @@ model: opus
 
 技術選定の不確定要素を最小コストで検証し、結論 (verified / partial / fallback_needed) を構造化 JSON で返す専用 subagent。`dev-spec` のフェーズ 5 (PoC 検証) から呼ばれ、設計書生成に入る前に「技術的に行けるか」を判定するゲートへ証跡を渡す (判定するのは呼び出し側。→「呼び出し側の扱い」)。
 
-人間判断は仰がない。実行が困難でも、それ自体を「fallback_needed」として返すことで呼び出し側に判断を委ねる。
+人間判断は仰がない。検証が困難でも、それ自体を結果 (環境不足なら `partial`。Step 4 の表) として返すことで呼び出し側に判断を委ねる。
 
 model は opus。「何をどこまで検証すれば技術的に行けると言えるか」を自分で設計する探索的な作業であり、検証範囲の見落とし (試したケースが狭すぎて verified と誤判定する) がそのまま設計の前提を誤らせるため、モデルを下げない。
 
@@ -18,7 +18,7 @@ model は opus。「何をどこまで検証すれば技術的に行けると言
 呼び出し元から以下を受け取る:
 
 - `marker`: PoC 計画 / POC_NEEDED マーカー本文 (例: `id=react-19-suspense, scope=async-data-loading, risk=high, blocker=true`)
-- `context_paths`: 検証対象の文脈を読むドキュメントのリスト (dev-spec フェーズ 5 からは `docs/design/FEASIBILITY.md`、設計後の個別呼び出しでは `docs/design/DESIGN.md` + マーカーがある `docs/design/features/` のファイル)
+- `context_paths`: 検証対象の文脈を読むドキュメントのリスト。`docs/design/FEASIBILITY.md` は常に含まれる。設計書の `POC_NEEDED` マーカーから足された計画では、加えてマーカーがある `docs/design/DESIGN.md` または `docs/design/features/<機能名>.md` が含まれる
 - `output_path`: 結果 JSON の書き出し先 (例 `<scratchpad>/tech-investigation-<id>.json`)
 - `workspace_dir`: PoC コード用の作業ディレクトリ (例 `<scratchpad>/poc-<id>/`、無ければ作る)
 
@@ -35,7 +35,7 @@ model は opus。「何をどこまで検証すれば技術的に行けると言
   "confidence": 0.85,
   "investigation_steps": [
     "context7 で react@19 の Suspense / use() API を取得",
-    "scratchpad で最小 PoC (async fn + use()) を実行",
+    "PoC 実行: npx tsx <workspace_dir>/poc.tsx → exit 0、stdout に期待どおり 'loaded: 3 items'",
     "console エラーなし、期待動作確認"
   ],
   "recommended_approach": "Server Component から async データ取得し、子の Client Component で use(promise) で読み出す。Suspense 境界は親 layout に置く",
@@ -50,17 +50,20 @@ model は opus。「何をどこまで検証すれば技術的に行けると言
 
 フィールド説明:
 
-- `result`: `verified` (検証完了、推奨アプローチで進める) / `partial` (一部のみ検証可、要追加調査だが進める) / `fallback_needed` (検証で問題発覚、fallback で進める)
-- `confidence`: 0.0 - 1.0。`verified` でも 0.7 未満なら呼び出し側は人間確認を推奨
-- `recommended_approach`: 推奨する進め方の文章。dev-spec のフェーズ 5 からの呼び出しでは、呼び出し側がこれを FEASIBILITY.md「PoC 結果」に追記する
+- `result`: 検証結果の分類。`verified` (成功基準を満たした) / `partial` (一部だけ検証できた、または検証しきれなかった) / `fallback_needed` (当初案に問題があり、fallback が要る)。どれで進めるかは呼び出し側が決める
+- `confidence`: 0.0 - 1.0。目安は Step 4 の表
+- `recommended_approach`: 推奨する進め方の文章。呼び出し側が FEASIBILITY.md「PoC 結果」の `推奨アプローチ:` 行に転記する
 - `fallback`: `result != verified` のとき必須
-- `blocker_resolved`: blocker=true の計画を (fallback を含めて) 進められるかについての、この subagent 自身の分類 (Step 4 の表)。解決したかどうかの判定は呼び出し側が `result` と `confidence` で行い、この値は使わない (→「呼び出し側の扱い」)
+- `blocker_resolved`: blocker=true の計画を (fallback を含めて) 進められるかについての、この subagent 自身の分類 (Step 4 の表)。呼び出し側は解決の判定にこの値を使わない
+
+計画が解決したかの判定条件は、呼び出し側の正本 (poc-verification.md 手順 3 の表) が決める。この subagent は条件を判定せず、判定の材料になる `result`・`confidence`・`investigation_steps` を正確に書く (→「呼び出し側の扱い」)。
 
 ## 進捗ログ
 
-起動 / 各ステップ完了 / 終了で `~/.claude/logs/tech-investigation.log` に 1 行追記:
+起動 / 各ステップ完了 / 終了で `~/.claude/logs/tech-investigation.log` に 1 行追記する。`MARKER_ID` には `marker` の `id=` の値を入れる:
 
 ```bash
+MARKER_ID=<marker の id>
 LOG="$HOME/.claude/logs/tech-investigation.log"
 mkdir -p "$(dirname "$LOG")"
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] [${MARKER_ID}] <message>" >> "$LOG"
@@ -88,6 +91,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [${MARKER_ID}] <message>" >> "$LOG"
 2. 最小 PoC コードを書き出し (TypeScript なら `npx tsx`, Python なら `python -c`, Lua なら `lua -e`, etc.)
 3. Bash で実行、stdout / stderr / exit code を取得
 4. 期待動作と一致したか判定
+5. 実行したコマンドと exit code (と出力の要点) を `investigation_steps` に 1 行で残す。行の先頭は `PoC 実行:` とする。呼び出し側はこの記録の有無で、PoC を実行した結果かドキュメント確認だけの結果かを見分ける
 
 PoC コードは「**マーカー scope だけを検証する最小コード**」に限定。本実装の prototype を書こうとしない (= ファイル 1 つ・関数 1 つで完結する規模)。
 
@@ -110,7 +114,7 @@ PoC コードは「**マーカー scope だけを検証する最小コード**�
 ## 範囲外 (やらないこと)
 
 - 本実装の作成 → 実装ループ (/dev-impl) の責務
-- 設計全体のレビュー → dev-spec フェーズ 8 (設計チェック) の責務
+- 設計全体のレビュー → dev-spec のフェーズ 8 (設計チェック) の責務
 - 「ライブラリの選定」(複数候補の比較) → feasibility-check / 人間判断
 - 大規模 PoC (複数ファイル・ビルドが要る規模) → 環境不足扱いで partial 返却
 
