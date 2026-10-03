@@ -34,7 +34,7 @@
 | ルール | `~/.claude/rules/` を絶対パスで直接 Read する (OpenCode 側に複製は無い) | `agents/rules/` | 即反映 (symlink) |
 | Spark の provider 設定 | `~/.config/opencode/opencode.json` | `agents/bindings/opencode/opencode.json` | 即反映 (symlink。常駐サービスが変更を検知して読み直す) |
 | 配信中モデルの選択 (プラグイン) | `~/.config/opencode/plugins/spark-served.ts` | `agents/bindings/opencode/plugins/spark-served.ts` | 即反映 (symlink) |
-| TUI のキーバインドとテーマ | `~/.config/opencode/cli.json` | `agents/bindings/opencode/cli.json` | **無いときだけコピーされる** (`drs` / `hms` の activation)。TUI での変更はローカルに残り repo には戻らない |
+| TUI のキーバインドとテーマ | `~/.config/opencode/cli.json` | `agents/bindings/opencode/cli.json` | 即反映 (symlink)。**TUI でテーマなどを変えると symlink が実ファイルに置き換わり repo との同期が切れる**ので、変えるときは repo 側を編集する |
 
 **hooks はこの表に無い。** OpenCode はシェルコマンドを hook として登録する仕組みを持たない
 (拡張手段は TypeScript のプラグインだけである)。そもそもこのハーネスは機械ゲートを 1 本も
