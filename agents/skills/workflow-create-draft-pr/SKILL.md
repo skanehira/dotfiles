@@ -1,6 +1,6 @@
 ---
 name: workflow-create-draft-pr
-description: "ローカルのコミット履歴と差分からDraft PRを作成する。ブランチ未作成・コミット未作成の状態でも、必要に応じてブランチ作成とコミットを行ってからPRを作成する。`.github/` にPRテンプレートがあれば内容を埋めて、なければ作業内容から本文を生成し、`AskUserQuestion`で作成可否を確認してから `gh pr create --draft` を実行する。「PRを出したい」「draft PRを作成」「プルリクを作って」「PR本文を生成」などのリクエストで起動。"
+description: "ローカルのコミット履歴と差分からDraft PRを作成する。ブランチ未作成・コミット未作成の状態でも、必要に応じてブランチ作成とコミットを行ってからPRを作成する。`.github/` にPRテンプレートがあれば内容を埋めて、なければ作業内容から本文を生成し、作成してよいかをユーザーに確認してから `gh pr create --draft` を実行する。「PRを出したい」「draft PRを作成」「プルリクを作って」「PR本文を生成」などのリクエストで起動。"
 argument-hint: "[--base <branch>]"
 model: haiku
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git symbolic-ref:*), Bash(git branch:*), Bash(git switch:*), Bash(git remote:*), Bash(git push:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh repo view:*), Bash(gh auth status:*), Read, Glob, AskUserQuestion, Skill
@@ -12,7 +12,7 @@ allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git r
 `.github/` に Pull Request テンプレートがある場合は内容を埋め、なければ作業内容から本文を生成します。
 
 ブランチが未作成（ベースブランチ上）の場合や、未コミットの変更がある場合も、必要な作業を提案・実行してからPRを作成します。
-PR本文は作成前に必ず提示し、`AskUserQuestion` でユーザーの作成指示を受け取ります。
+PR本文は作成前に必ず提示し、ユーザーの作成指示を受け取ります。
 
 ## 使い方
 
@@ -68,7 +68,7 @@ git status --porcelain               # 未コミット/未追跡変更
 1. `--base <branch>` 引数で明示指定
 2. `gh repo view --json defaultBranchRef -q .defaultBranchRef.name` でデフォルトブランチ取得
 3. 取得失敗時は `git symbolic-ref refs/remotes/origin/HEAD` から推測（`refs/remotes/origin/<branch>` の末尾）
-4. それでも決まらない場合は `AskUserQuestion` で確認
+4. それでも決まらない場合はユーザーに確認
 
 ---
 
@@ -120,7 +120,7 @@ git switch -c <generated-branch-name>
 `workflow-commit` は push を行わないスキルなので、push は本スキルの [6/6] でまとめて行う。
 
 完了後、`git status --porcelain` で未コミット変更が残っていないことを確認する。
-残っている場合は `workflow-commit` が意図的にスキップした可能性があるため、ユーザーに状況を報告して `AskUserQuestion` で続行/中止を確認。
+残っている場合は `workflow-commit` が意図的にスキップした可能性があるため、ユーザーに状況を報告し、続行するか中止するかを確認する。
 
 ---
 
@@ -175,7 +175,7 @@ Glob ツールで以下を以下の優先順位で検索（大文字小文字を
 5. `docs/pull_request_template.md`
 6. `PULL_REQUEST_TEMPLATE.md`（リポジトリルート）
 
-複数テンプレートディレクトリの場合は、`AskUserQuestion` で使用するテンプレートを選択させる。
+複数テンプレートディレクトリの場合は、使用するテンプレートをユーザーに選ばせる。
 
 ### テンプレートがある場合
 
@@ -252,40 +252,19 @@ Body:
 ==========================================================
 ```
 
-### AskUserQuestionで作成指示を受け取る
+### 作成指示を受け取る
 
-```javascript
-AskUserQuestion({
-  questions: [
-    {
-      question: "上記の内容で Draft PR を作成しますか？",
-      header: "PR作成",
-      options: [
-        {
-          label: "この内容で作成",
-          description: "提示した内容のまま Draft PR を作成する"
-        },
-        {
-          label: "タイトルを編集",
-          description: "タイトルだけ修正してから作成"
-        },
-        {
-          label: "本文を編集",
-          description: "本文を修正してから作成（修正指示を入力）"
-        },
-        {
-          label: "キャンセル",
-          description: "PR作成を中止"
-        }
-      ],
-      multiSelect: false
-    }
-  ]
-})
-```
+「上記の内容で Draft PR を作成しますか？」と聞き、次の 4 択から 1 つだけ選ばせる。
+
+| 選択肢 | 意味 |
+| --- | --- |
+| この内容で作成 | 提示した内容のまま Draft PR を作成する |
+| タイトルを編集 | タイトルだけ修正してから作成 |
+| 本文を編集 | 本文を修正してから作成 (修正指示を入力) |
+| キャンセル | PR 作成を中止 |
 
 **「タイトルを編集」「本文を編集」選択時**:
-- 続けて `AskUserQuestion` で修正内容を受け取り、再度プレビューを表示して再確認
+- 続けて修正内容をユーザーに聞き、再度プレビューを表示して再確認
 - 「この内容で作成」が選ばれるまで繰り返す
 
 **「キャンセル」選択時**:
@@ -323,9 +302,9 @@ git push
 
 | エラー内容 | 対応 |
 | ---------- | ---- |
-| `non-fast-forward`（リモートが先行） | 状況を表示し、`AskUserQuestion` で「`git pull --rebase` 後に再push / 中止」を確認 |
+| `non-fast-forward`（リモートが先行） | 状況を表示し、「`git pull --rebase` 後に再push / 中止」のどちらにするかをユーザーに確認 |
 | 認証エラー                           | `gh auth refresh` の実行を促して終了 |
-| その他                                | エラー出力を表示して `AskUserQuestion` で再実行/中止を確認 |
+| その他                                | エラー出力を表示し、再実行するか中止するかをユーザーに確認 |
 
 ### gh pr create の実行
 
@@ -365,7 +344,7 @@ EOF
 | ----------------------------------------- | ------------------------------------------------------------------- |
 | `a pull request for branch ... already exists` | 既存PRの URL を `gh pr view --json url -q .url` で取得して表示 |
 | `Resource not accessible by integration`       | 権限不足。`gh auth refresh -s repo` の実行を促す                |
-| その他                                          | エラー出力を表示し、再実行 / 中止を `AskUserQuestion` で確認    |
+| その他                                          | エラー出力を表示し、再実行するか中止するかをユーザーに確認    |
 
 ---
 
