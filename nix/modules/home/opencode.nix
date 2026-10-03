@@ -12,7 +12,7 @@
   # 変更を自動で再読み込みする。
   #
   # symlink するのはファイル単位にする。~/.config/opencode/ には opencode 自身が書く領域
-  # (cli.json / service.json / node_modules など) が同居しており、ディレクトリごと貼ると
+  # (service.json / node_modules など) が同居しており、ディレクトリごと貼ると
   # dotfiles に流れ込むため。
   #
   # OpenCode は DGX Spark 専用で、接続先は Tailscale の MagicDNS 名 (spark-head) に固定
@@ -27,17 +27,11 @@
   home.file.".config/opencode/plugins/spark-served.ts".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/plugins/spark-served.ts";
 
-  # cli.json (keybinds / theme) は symlink にできない。V2 は TUI でテーマ等を変えると
-  # 一時ファイルを書いて rename で置き換えるので、symlink が実ファイルに化ける。
-  # そこで、無いときだけ repo の内容をコピーする (以後の TUI での変更はローカルに残る)。
-  # repo 側を変えたときは ~/.config/opencode/cli.json を消してから drs / hms する。
-  home.activation.seedOpencodeCliConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    if [ ! -e "$HOME/.config/opencode/cli.json" ]; then
-      run mkdir -p "$HOME/.config/opencode"
-      run install -m 644 "${dotfilesRoot}/agents/bindings/opencode/cli.json" \
-        "$HOME/.config/opencode/cli.json"
-    fi
-  '';
+  # cli.json (keybinds / theme) も symlink で配る。起動しただけでは V2 は書き換えない。
+  # ただし TUI でテーマ等を変えると、V2 は一時ファイルを書いて rename で置き換えるので
+  # symlink が実ファイルに化け、repo との同期が黙って切れる。設定は repo 側を編集して変える。
+  home.file.".config/opencode/cli.json".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/cli.json";
 
   # グローバル指示は OpenCode 専用の文書を symlink で配る。共通の正本 agents/AGENTS.md を
   # 参照し、Claude 綴りの語彙を OpenCode の語彙へ読み替える規約を書いてある。
