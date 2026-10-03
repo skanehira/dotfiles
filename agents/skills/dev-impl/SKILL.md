@@ -16,7 +16,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
 
 | 役割 | 実行 | モデル |
 | --- | --- | --- |
-| オーケストレーション (本ループ) | メインセッション | opus (frontmatter 指定。Skill ツール経由起動では効かないため、ユーザーが直接起動する) |
+| オーケストレーション (本ループ) | メインセッション | opus (frontmatter 指定。別のスキルから自動で起動した場合は効かないため、ユーザーが直接起動する) |
 | 実装 | `dev-impl-implementer` subagent | `model: "opus"` 明示 |
 | レビュー | `review-impl` subagent | `model: "opus"` 明示 |
 | コミット実行・巨大出力のテスト実行 (E2E 等) | subagent | `model: "haiku"` (`~/.claude/rules/core/orchestration.md`「委譲の判断」。メッセージ起草・対象ファイルの判断は親が行い、実行だけを委譲する) |
@@ -120,16 +120,13 @@ gh issue comment "$N" --repo "$REPO_SLUG" --body "実装を開始します (dev-
 
 ### 2.2 実装 (implementer subagent)
 
-```javascript
-Agent({
-  description: "issue #<N> の実装",
-  subagent_type: "dev-impl-implementer",
-  model: "opus",
-  prompt: `mode: implement
+「issue #<N> の実装」として、サブエージェント `dev-impl-implementer` を起動する (モデル: opus、同期実行)。次の内容を渡す:
+
+```
+mode: implement
 repo_dir: <WORK_DIR>
 issue_number: <N>
-report_path: <SCRATCH>/impl-<N>.json`
-})
+report_path: <SCRATCH>/impl-<N>.json
 ```
 
 **検収**: report JSON を読み、`status: done` は `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true` を満たすときだけ done と扱う(UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でなく、**その画像を親が `Read` で実際に開いて**同じ行の下端・幅の決まり方・ラベル位置が揃っていることを確かめる — exit code は見た目を守らないため、ここを飛ばすと崩れは利用者が指摘するまで残る) (満たさない報告は**同じ `mode: implement` で 1 回だけ再起動する**。prompt に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」を足す。`mode: fix` は使わない — `findings_path` の JSON から high を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる)。**この再起動は 2.3 の fix ラウンドに数えない** — 実装の検収であって、レビュー指摘の修正ではない。**2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)。
@@ -142,18 +139,15 @@ report_path: <SCRATCH>/impl-<N>.json`
 
 ### 2.3 レビュー (review-impl subagent、修正 ≤ 1 ラウンド)
 
-```javascript
-Agent({
-  description: "issue #<N> のレビュー",
-  subagent_type: "review-impl",
-  model: "opus",
-  prompt: `repo_dir: <WORK_DIR>
+「issue #<N> のレビュー」として、サブエージェント `review-impl` を起動する (モデル: opus、同期実行)。次の内容を渡す:
+
+```
+repo_dir: <WORK_DIR>
 base_sha: <BASE_SHA>       // 2.1 で控えた値
 issue_number: <N>
 focus: all
 previous_findings_path: <SCRATCH>/review-<N>-r1.json   // r2 のみ。初回は行ごと省く
-report_path: <SCRATCH>/review-<N>-r<ラウンド>.json`
-})
+report_path: <SCRATCH>/review-<N>-r<ラウンド>.json
 ```
 
 **レビューと修正の回数はこう数える。初回レビューを r1 とし、レビューのたびに 1 ずつ増やす** (この採番が `findings_path` のファイル名に出るので、あとから何周したかを人も自分も数えられる。r0 から始めると 1 周ぶん過少に数えることになる)。レビューは r1 (実装直後) と r2 (fix の後の確認) の**最大 2 回**、`mode: fix` は r1 の findings に対する**最大 1 回**。`previous_findings_path` は r2 の 1 回だけ渡る。

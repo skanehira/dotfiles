@@ -33,12 +33,13 @@ docs/design/FEASIBILITY.md を Read し、`status=unresolved` の POC_STATUS 行
 
 対象の PoC 計画ごとに `tech-investigation` subagent を起動する。**互いに独立な調査なので、同一ターンで全件並列に起動する**こと。
 
-```javascript
-Agent({
-  description: "PoC: <id>",
-  subagent_type: "tech-investigation",
-  model: "opus",   // 調査 fan-out は opus 明示 (~/.claude/rules/core/orchestration.md の割当表)。agent 側 frontmatter も opus だが、明示忘れで無音にセッションモデル継承へ落ちないよう二重に指定する
-  prompt: `
+PoC 計画 1 件につきサブエージェント `tech-investigation` を 1 本起動する (モデル: opus、全件を並列に起動)。
+
+- 説明: `PoC: <id>`
+- モデルは opus を明示する。調査 fan-out は opus 明示 (~/.claude/rules/core/orchestration.md の割当表)。agent 側 frontmatter も opus だが、明示忘れで無音にセッションモデル継承へ落ちないよう二重に指定する
+- 次の指示文を渡す:
+
+```
 以下の PoC 計画を検証してください。
 
 - marker: id=<id>, scope=<スコープ1行>, risk=<risk>, blocker=<blocker>
@@ -47,8 +48,6 @@ Agent({
 - workspace_dir: /tmp/poc-<id>/
 
 成功基準は FEASIBILITY.md の該当 PoC 計画に記載のものを使うこと。
-`
-})
 ```
 
 ### 3. 結果の分類と反映
@@ -78,21 +77,23 @@ Agent({
 
 自動解決できなかった計画ごとに、**勝手に設計を曲げず**ユーザーに判断を仰ぐ:
 
-```javascript
-AskUserQuestion({
-  questions: [{
-    question: "PoC「<id>」が自動解決できませんでした。\n\n理由: <verified だが confidence 0.6 / fallback_needed / agent 失敗 など>\n観測した事実: <要点>\n\nどうしますか?",
-    header: "PoC 判断",
-    options: [
-      { label: "この結果で採用", description: "verified 扱いにする (POC_STATUS を verified に更新)" },
-      { label: "fallback 採用", description: "<tech-investigation が提示した代替案の要点>" },
-      { label: "スコープ縮小", description: "この機能要素を今回のスコープから外す" },
-      { label: "再試行 / 再検討", description: "PoC を追加指示付きで再実行する、またはフェーズ 4 に戻って前提から見直す" }
-    ],
-    multiSelect: false
-  }]
-})
+次のように聞き、4 択から 1 つだけ選ばせる。
+
 ```
+PoC「<id>」が自動解決できませんでした。
+
+理由: <verified だが confidence 0.6 / fallback_needed / agent 失敗 など>
+観測した事実: <要点>
+
+どうしますか?
+```
+
+| 選択肢 | 意味 |
+| --- | --- |
+| この結果で採用 | verified 扱いにする (POC_STATUS を verified に更新) |
+| fallback 採用 | <tech-investigation が提示した代替案の要点> |
+| スコープ縮小 | この機能要素を今回のスコープから外す |
+| 再試行 / 再検討 | PoC を追加指示付きで再実行する、またはフェーズ 4 に戻って前提から見直す |
 
 ユーザーの決定に従って POC_STATUS を更新し、「PoC 結果」に「**採用した判断**: ...」として記録する。「再試行」の場合は status を unresolved のまま残してステップ 2 に戻る。
 

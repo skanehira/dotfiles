@@ -30,79 +30,51 @@ argument-hint: "[スキル名] [スキルの説明]"
 - `$ARGUMENTS`の最初の単語: スキル名
 - `$ARGUMENTS`の残りの部分: スキルの説明
 
-$ARGUMENTSが空の場合、AskUserQuestionツールを使用して以下を質問してください：
+$ARGUMENTSが空の場合、ユーザーに以下を質問してください：
 
-```javascript
-AskUserQuestion({
-  questions: [
-    {
-      question: "作成するスキルの名前を入力してください。\n\n例：\n- pdf-converter\n- code-review\n- data-analyzer",
-      header: "スキル名",
-      options: [
-        {
-          label: "名前を入力",
-          description: "スキル名を直接入力"
-        }
-      ],
-      multiSelect: false
-    }
-  ]
-})
-```
+「作成するスキルの名前を入力してください。」と聞き、例として次を示す。
+
+- pdf-converter
+- code-review
+- data-analyzer
+
+選択肢は次の 1 つだけで、1 つ選ばせる。
+
+| 選択肢 | 意味 |
+| --- | --- |
+| 名前を入力 | スキル名を直接入力 |
 
 スキル名取得後、説明が空の場合も質問してください：
 
-```javascript
-AskUserQuestion({
-  questions: [
-    {
-      question: "スキルの説明を入力してください。何を行うスキルですか？\n\n例：\n- PDFファイルを画像に変換し、OCR処理を行う\n- コードレビューを自動化し、改善点を提案する\n- データを分析してレポートを生成する",
-      header: "スキル説明",
-      options: [
-        {
-          label: "説明を入力",
-          description: "スキルの説明を直接入力"
-        }
-      ],
-      multiSelect: false
-    }
-  ]
-})
-```
+「スキルの説明を入力してください。何を行うスキルですか？」と聞き、例として次を示す。
+
+- PDFファイルを画像に変換し、OCR処理を行う
+- コードレビューを自動化し、改善点を提案する
+- データを分析してレポートを生成する
+
+選択肢は次の 1 つだけで、1 つ選ばせる。
+
+| 選択肢 | 意味 |
+| --- | --- |
+| 説明を入力 | スキルの説明を直接入力 |
 
 ---
 
 ## [2/3] スキルの作成
 
-### TodoWriteでタスク管理
+### タスクリストへの登録
 
-TodoWriteツールを使用してタスクを作成：
+次の 3 件をタスクリストに登録する：
 
-```javascript
-TodoWrite({
-  todos: [
-    {
-      content: "skill-creatorでスキルを作成",
-      activeForm: "スキルを作成している",
-      status: "in_progress"
-    },
-    {
-      content: "reviewing-skillsでスキルをレビュー",
-      activeForm: "スキルをレビューしている",
-      status: "pending"
-    },
-    {
-      content: "レビュー結果に基づいて自動修正",
-      activeForm: "スキルを自動修正している",
-      status: "pending"
-    }
-  ]
-})
-```
+| タスク | 進行中の表示 | 状態 |
+| --- | --- | --- |
+| skill-creatorでスキルを作成 | スキルを作成している | 進行中 |
+| reviewing-skillsでスキルをレビュー | スキルをレビューしている | 未着手 |
+| レビュー結果に基づいて自動修正 | スキルを自動修正している | 未着手 |
 
 ### skill-creatorの実行
 
-`example-skills:skill-creator` スキルを Skill ツールで実行する（引数に `[スキル名] [スキルの説明]` を渡す）。
+スキル `example-skills:skill-creator` を起動する（引数に `[スキル名] [スキルの説明]` を渡す）。
 
 **重要**: skill-creatorが対話的に質問してくる場合は、ユーザーから取得した情報を元に回答してください。
 
@@ -116,42 +88,28 @@ TodoWrite({
 
 ## [3/3] レビューと自動修正
 
-### TodoWrite更新
+### タスクリストの更新
 
-```javascript
-TodoWrite({
-  todos: [
-    {
-      content: "skill-creatorでスキルを作成",
-      activeForm: "スキルを作成している",
-      status: "completed"
-    },
-    {
-      content: "reviewing-skillsでスキルをレビュー",
-      activeForm: "スキルをレビューしている",
-      status: "in_progress"
-    },
-    {
-      content: "レビュー結果に基づいて自動修正",
-      activeForm: "スキルを自動修正している",
-      status: "pending"
-    }
-  ]
-})
-```
+タスクリストを次の状態に更新する：
+
+| タスク | 進行中の表示 | 状態 |
+| --- | --- | --- |
+| skill-creatorでスキルを作成 | スキルを作成している | 完了 |
+| reviewing-skillsでスキルをレビュー | スキルをレビューしている | 進行中 |
+| レビュー結果に基づいて自動修正 | スキルを自動修正している | 未着手 |
 
 ### reviewing-skillsの実行
 
-`utility-reviewing-skills` スキルを Skill ツールで実行する。
+スキル `utility-reviewing-skills` を起動する。
 
 ### レビュー結果の処理
 
 **問題がない場合**：
-1. TodoWriteですべてのタスクを完了にする
+1. タスクリストのすべてのタスクを完了にする
 2. 完了サマリーを表示して終了
 
 **問題がある場合**：
-1. TodoWriteを更新して自動修正フェーズに移行
+1. タスクリストを更新して自動修正フェーズに移行
 2. 指摘された問題を自動的に修正
 3. 再度reviewing-skillsを実行して確認
 4. 問題がなくなるまで繰り返す（最大3回）

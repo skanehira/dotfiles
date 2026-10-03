@@ -48,7 +48,7 @@ argument-hint: "[project-name] [プロダクト概要]"
 ## ワークフロー (8 ステップ)
 
 1. **プロジェクトの確認** — 名前 (kebab-case) と概要を確定。静的で足りるなら `demo-site-builder` へ振り分ける
-2. **ヒアリング** — **Stripe 決済と Cognito 認証の要否を `AskUserQuestion` で確認する (リポジトリ作成前に必ず行う)**
+2. **ヒアリング** — **Stripe 決済と Cognito 認証の要否をユーザーに選択式で確認する (リポジトリ作成前に必ず行う)**
 3. **scaffold** — clone → rename → 依存インストール → **rename の後始末 4 箇所** → D1 作成
 4. **取捨適用** — Step 2 の回答に従って Stripe / 認証を削除する
 5. **ローカル環境検証** — moto 起動・`vp dev`・`/api/health` 疎通・ログイン確認・テスト チェック 4 コマンド
@@ -100,9 +100,9 @@ argument-hint: "[project-name] [プロダクト概要]"
 
 ## Step 2: ヒアリング (Stripe / 認証)
 
-**リポジトリを作る前に**、`AskUserQuestion` で 2 問まとめて確認する。ここでの回答が Step 4 の削除範囲・Step 5 の検証範囲・Step 8 の PRODUCT_SPEC.md の内容をすべて決める。
+**リポジトリを作る前に**、ユーザーに 2 問まとめて選択式で確認する。各問とも次の 2 択から 1 つだけ選ばせる。ここでの回答が Step 4 の削除範囲・Step 5 の検証範囲・Step 8 の PRODUCT_SPEC.md の内容をすべて決める。
 
-質問 1 — ヘッダー `Stripe`:
+質問 1 (Stripe):
 
 > Stripe 決済は使いますか? テンプレートには SDK 3 依存 (`stripe` / `@stripe/stripe-js` / `@stripe/react-stripe-js`) が同梱されていますが、決済コードは未実装です
 
@@ -111,7 +111,7 @@ argument-hint: "[project-name] [プロダクト概要]"
 | 使う | 3 依存を残す。実装フェーズで `references/stripe.md` (Checkout Session + Webhook 署名検証の定石) を読む導線を PRODUCT_SPEC.md に記録する |
 | 使わない | `package.json` から 3 依存を削除して `vp install` で lockfile を更新する (コード・設定の変更は不要) |
 
-質問 2 — ヘッダー `認証`:
+質問 2 (認証):
 
 > Cognito 認証 (ログイン機能) は使いますか? ローカルは moto + Terraform でエミュレートするため Docker と Terraform CLI 1.15+ が必要です
 
@@ -155,7 +155,7 @@ moto はパスワード署名を検証しない (誤ったパスワードでも�
 
 ## Step 6: デプロイ設定
 
-`AskUserQuestion` でタイミングを確認する — ヘッダー `デプロイ`:
+ユーザーにタイミングを確認する。次の 2 択から 1 つだけ選ばせる:
 
 > Cloudflare へのデプロイ設定 (GitHub Secrets) を今行いますか? 設定すると main への push のたびに deploy.yml がリモート D1 のマイグレーション適用と本番デプロイを実行します
 
