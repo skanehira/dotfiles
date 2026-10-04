@@ -3,6 +3,9 @@
   "theme": {
     "name": "synthwave84"
   },
+  "session": {
+    "sidebar": "hide"
+  },
   "keybinds": {
     "command.palette.show": "alt+p,super+p",
     "input.backspace": "backspace,shift+backspace,ctrl+h",
