@@ -4,7 +4,7 @@
 
 - 種別: プロジェクト運用ガイド
 - 対象読者: このリポジトリで作業する Claude / Codex / OpenCode
-- 最終確認: 2026-10-03。**本書の件数 (スキル 44 本・subagent 4 本・`enabledPlugins` 22 件で有効 19 本・`settings.json` の hooks 13 件・`packages-android.nix` 19 エントリ) は実環境に依存するので、疑わしいときは数え直す**
+- 最終確認: 2026-10-04。**本書の件数 (スキル 44 本・subagent 4 本・`enabledPlugins` 22 件で有効 19 本・`settings.json` の hooks 1 件・`packages-android.nix` 19 エントリ) は実環境に依存するので、疑わしいときは数え直す**
 
 ## Repository Overview
 
@@ -485,7 +485,7 @@ hook を追加したくなったときの置き場は次のとおり。
 | Codex | `agents/bindings/codex/config.toml`。レイヤーごとの発火差は `agents/bindings/codex/AGENTS.md` の「hooks を追加するときの置き場」節にある |
 | OpenCode | **置けない**。シェル hooks を持たず、JS プラグイン API はコマンドに stdin を渡さず stdout も解釈しないので deny するゲートにならない |
 
-`settings.json` の登録は全 13 件で、上表の 1 本以外は**外部ツール orca が書き込んだ 12 件**である (12 イベントに 1 件ずつ)。orca の分は `~/.orca/agent-hooks/claude-hook.sh` を呼び、スクリプトが無ければ空の `{}` を返すだけである。スクリプトがあっても最初に `{}` を出力し、orca 用の環境変数 (`ORCA_PANE_KEY` などの `ORCA_*`) が無ければ、それ以上何もせずに終わる。したがって orca の外で起動したセッションでは、どの 12 件も Claude Code の動作を変えない。
+`settings.json` の `hooks` に登録しているのは上表の herdr 連携 1 件だけである。`settings.json` は正本への symlink なので、外部ツールが `~/.claude/settings.json` へ hook を書き込むと、その変更は dotfiles の git 作業ツリーに差分として現れる。見覚えのない登録が増えていたら、commit する前に書き込んだツールを特定して残すかを決める。
 
 #### 機械ゲートを置いていない規律
 
