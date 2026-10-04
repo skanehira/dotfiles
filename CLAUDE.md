@@ -186,12 +186,12 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `plugins/spark-served.ts` — 配信中のモデルだけを有効にして既定に据える V2 のローカルプラグイン。`~/.config/opencode/plugins/` へ symlink され、起動時と 30 秒ごとに `/v1/models` を引く。接続先 URL を `opencode.json` と 2 か所に持ち (setup の時点で設定の provider を読めないため)、一致は同じディレクトリの `spark-served_test.ts` が検査する。**選ぶのは `opencode.json` に宣言済みのモデルだけ**なので、Spark で配信するモデルを増やしたら `opencode.json` に宣言を足す (→ `agents/rules/infra/dgx-spark.md`「モデルの追加と切り替え」)
   - `cli.json` — TUI のキーバインドとテーマ (V2 書式)。`~/.config/opencode/cli.json` へ symlink される。**起動しただけでは V2 は書き換えないが、TUI でテーマなどを変えると一時ファイルの rename で書き換えるので symlink が実ファイルに化け、repo との同期が黙って切れる。設定は repo 側を編集して変え、TUI では変えない**。化けたら、まず `diff ~/.config/opencode/cli.json ~/dev/github.com/skanehira/dotfiles/agents/bindings/opencode/cli.json` で差分を見て残したい変更を repo 側へ写し、それから実ファイルを消して `drs` / `hms` で張り直す。消さずに `drs` すると mac は `cli.json.hm-backup` へ退避して進む。このとき TUI で変えた値は `cli.json.hm-backup` 側に移るので、差分はそちらと取る。`.hm-backup` が既にあると次の退避で止まる (Linux の `hms` は退避せずに止まる。→「配布方式の移行 (生成方式 → symlink)」節)
   - グローバル指示の確認と同居物: `readlink -f ~/.config/opencode/AGENTS.md` が dotfiles の `agents/bindings/opencode/AGENTS.md` に解決すること。**`~/.config/opencode/` には dotfiles の symlink 以外のものが同居する**ので、ディレクトリごとではなくファイル単位で symlink する。同居するのは次のものである
-    - opencode の常駐サービスが書く `service.json`。**中身はサービスのパスワードを平文で持つので、表示も共有もしない**
+    - 常駐サービスの設定 `service.json` (キーは `hostname` と `password`)。**`password` は `opencode service set` が生成した値を平文で持つので、表示も共有もしない**。repo に置けず、`opencode service set` が一時ファイルの rename で書き換えるので symlink でも配れない。そのため `opencode.nix` の activation `opencodeServiceConfig` が `drs` / `hms` のたびに既存ファイルを jq で読み、`hostname` だけを `0.0.0.0` に上書きする (`password` など他のキーは残す)。ファイルが無いか JSON として読めないときは警告を出し、`hostname` だけのファイルを作り直す。書き換えた値はサービスを `opencode service restart` するまで効かない
     - subagent の生成物 `agents/` (→「subagent の書式変換」節) と、ある場合は `skills/`
     - V1 のプラグイン SDK (`@opencode-ai/plugin` 1.18.18) を入れた `node_modules` / `package.json` / `package-lock.json` / `.gitignore`。2026-09-07 (V1 の時期) に置かれたまま更新されていない
     - `drs` が退避した `*.hm-backup` (例: `cli.json.hm-backup`)。2026-10-03 のこのマシンには `cli.json.hm-backup` があり、中身は repo の `cli.json` と一致した。残っていると次に `cli.json` が実ファイルに化けたときの `drs` が止まるので、差分を見たうえで消す
   - 本体は `nix/pkgs/opencode.nix` の自前 derivation (nixpkgs の `opencode` は V1)。npm の `@opencode/cli-<platform>` に入っている bun コンパイル済みの単一バイナリを展開するだけで、ローカルビルドは走らない。更新手順はファイル冒頭のコメントにある
-  - 素の `opencode` は常駐サービス (`opencode serve --service`、`127.0.0.1:49374`) を起動して接続し、TUI を閉じてもサービスは残る。**`nix/pkgs/opencode.nix` の版を上げても、常駐サービスは古いバイナリのまま動き続ける**ので、版を上げたら `drs` / `hms` の後に必ず `opencode service restart` する。切り替わったかは、`ps -axo command | rg '[o]pencode serve'` に出るストアパスと `readlink -f "$(command -v opencode)"` が一致することで確かめる (2026-10-03 のこのマシンでは両方が `opencode-2.0.22` のストアパスだった)。設定ファイルとプラグインの変更はサービスが検知して読み直す実装がソースにあるが、反映を実際に確かめてはおらず、読み直しを外から観測する手段も確かめていない。変更が効いていないように見えたら同じく `opencode service restart` する。止めるときは `opencode service stop`
+  - 素の `opencode` は常駐サービス (`opencode serve --service`) を起動して接続し、TUI を閉じてもサービスは残る。**待ち受けは全インターフェースの 49374 番で、外からの接続を防ぐのは `service.json` のパスワードだけである** (`hostname` が `0.0.0.0` のため。2026-10-04 のこのマシンで `lsof -nP -iTCP:49374 -sTCP:LISTEN` が `*:49374` を返した)。**`nix/pkgs/opencode.nix` の版を上げても、常駐サービスは古いバイナリのまま動き続ける**ので、版を上げたら `drs` / `hms` の後に必ず `opencode service restart` する。切り替わったかは、`ps -axo command | rg '[o]pencode serve'` に出るストアパスと `readlink -f "$(command -v opencode)"` が一致することで確かめる (2026-10-03 のこのマシンでは両方が `opencode-2.0.22` のストアパスだった)。設定ファイルとプラグインの変更はサービスが検知して読み直す実装がソースにあるが、反映を実際に確かめてはおらず、読み直しを外から観測する手段も確かめていない。変更が効いていないように見えたら同じく `opencode service restart` する。止めるときは `opencode service stop`
 - **vim/** — Neovim 設定 (`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能)
   - `init.lua` / `lua/` / `after/` — 編集即反映、`drs` 不要
   - `.luarc.json` — lua_ls の dotfiles 内 lua 編集用設定 (track 対象)
@@ -246,7 +246,7 @@ nix/
     │   ├── karabiner.nix ← goku で karabiner.edn → karabiner.json (mac only。home-darwin.nix からのみ import)
     │   ├── mac-app-util-icons.nix ← .app の trampoline アイコン調整 (mac only)
     │   ├── neovim.nix    ← vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
-    │   ├── opencode.nix  ← OpenCode 向けの symlink (opencode.json / cli.json / plugins/spark-served.ts / ~/.config/opencode/AGENTS.md) + subagent の Markdown 変換 (syncOpencodeSubagents)
+    │   ├── opencode.nix  ← OpenCode 向けの symlink (opencode.json / cli.json / plugins/spark-served.ts / ~/.config/opencode/AGENTS.md) + subagent の Markdown 変換 (syncOpencodeSubagents) + service.json の hostname 上書き (opencodeServiceConfig)
     │   ├── packages.nix  ← home.packages 群 (言語ランタイム / LSP / CLI を 13 カテゴリで宣言、約 100 件。vite-plus / nvtop / libreoffice-bin / scrcpy / android-tools / terminal-notifier / screen-capture-mcp-server / kanary の 8 件は darwin only)
     │   ├── packages-android.nix ← Android 用の明示リスト (19 エントリ。binary cache から取れる軽量なものと、ビルド済みバイナリを展開するだけの opencode)
     │   ├── rustup.nix    ← bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
@@ -522,9 +522,9 @@ hook を追加したくなったときの置き場は次のとおり。
 
 ### 配布
 
-`drs` (mac) / `hms` (Linux) が `nix/modules/home/{claude,codex,opencode}.nix` を適用する。専用のインストールスクリプトは無い。`claude.nix` が Claude Code 向けの symlink を、`codex.nix` が Codex 向けの symlink と activation (`linkAgentSkills` / `syncCodexSubagents` / `installCodexPlugins`、Linux では加えて `linkCodexSystemConfig`) を、`opencode.nix` が OpenCode 向けの symlink と activation (`syncOpencodeSubagents`) を持つ。
+`drs` (mac) / `hms` (Linux) が `nix/modules/home/{claude,codex,opencode}.nix` を適用する。専用のインストールスクリプトは無い。`claude.nix` が Claude Code 向けの symlink を、`codex.nix` が Codex 向けの symlink と activation (`linkAgentSkills` / `syncCodexSubagents` / `installCodexPlugins`、Linux では加えて `linkCodexSystemConfig`) を、`opencode.nix` が OpenCode 向けの symlink と activation (`syncOpencodeSubagents` / `opencodeServiceConfig`) を持つ。
 
-Android (`home-android.nix`) は `codex.nix` を import しないので Codex 向けだけが行われない。`opencode.nix` は import するため、Android でも OpenCode のグローバル指示と subagent は配られる。ただし `linkAgentSkills` が走らないので `~/.agents/skills` は埋まらず、OpenCode は `~/.claude/skills` からだけスキルを読む (→「配布先」節)。
+Android (`home-android.nix`) は `codex.nix` を import しないので Codex 向けだけが行われない。`opencode.nix` は import するため、Android でも OpenCode のグローバル指示と subagent は配られ、`service.json` の `hostname` も `0.0.0.0` に上書きされる。ただし `linkAgentSkills` が走らないので `~/.agents/skills` は埋まらず、OpenCode は `~/.claude/skills` からだけスキルを読む (→「配布先」節)。
 
 **配布の確認**:
 
@@ -560,7 +560,7 @@ opencode --version                                # opencode v2.0.22 (nix/pkgs/o
 | 種別 | 対象 |
 | --- | --- |
 | モジュールの import | `nix/home.nix` / `nix/home-android.nix` の `./modules/home/opencode.nix` |
-| モジュール本体 | `nix/modules/home/opencode.nix` (symlink 4 本 + `syncOpencodeSubagents`) |
+| モジュール本体 | `nix/modules/home/opencode.nix` (symlink 4 本 + `syncOpencodeSubagents` + `opencodeServiceConfig`) |
 | パッケージ | `nix/pkgs/opencode.nix` と、それを呼ぶ `nix/modules/home/packages.nix` / `packages-android.nix` のエントリ |
 | binding | `agents/bindings/opencode/` 一式 (プラグインとそのテストを含む) |
 | Neovim | `vim/lua/modules/ai/init.lua` の `TOOL_CONFIG` / コマンド / キーマップ、`comments.lua` の `TOOLS` |
@@ -570,7 +570,7 @@ opencode --version                                # opencode v2.0.22 (nix/pkgs/o
 
 **binding の削除とモジュールの削除は同じコミットに入れる。** 分けると `home.file` や activation の参照先が消えた状態で評価が走り `drs` が失敗する。
 
-**`drs` / `hms` は生成物を片付けない。** activation ごと消えるので `~/.config/opencode/agents/*.md` は prune されず残る。**手で消す**: `rm -rf ~/.config/opencode/agents`。常駐サービス (`opencode serve --service`) が動いていれば、パッケージを外す前に `opencode service stop` で止める。HM が張った symlink 4 本は activation が撤去するが、過去に退避された `*.hm-backup` や `*.bak` は残るので同様に判断する。
+**`drs` / `hms` は生成物を片付けない。** activation ごと消えるので `~/.config/opencode/agents/*.md` は prune されず残る。**手で消す**: `rm -rf ~/.config/opencode/agents`。`~/.config/opencode/service.json` も `hostname` が `0.0.0.0` のまま残るので、OpenCode を使わないなら同じく消す。常駐サービス (`opencode serve --service`) が動いていれば、パッケージを外す前に `opencode service stop` で止める。HM が張った symlink 4 本は activation が撤去するが、過去に退避された `*.hm-backup` や `*.bak` は残るので同様に判断する。
 
 ### 配布方式の移行 (生成方式 → symlink)
 
