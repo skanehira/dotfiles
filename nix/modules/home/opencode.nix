@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   dotfilesRoot,
   ...
 }:
@@ -12,8 +13,9 @@
   # 反映を実際に確かめてはいない (変更が効いていないように見えたら opencode service restart)。
   #
   # symlink するのはファイル単位にする。~/.config/opencode/ には dotfiles 以外のもの
-  # (常駐サービスが書く service.json、V1 のプラグイン SDK を入れた node_modules など) が
-  # 同居しており、ディレクトリごと貼ると dotfiles に流れ込むため。
+  # (常駐サービスの service.json、V1 のプラグイン SDK を入れた node_modules など) が
+  # 同居しており、ディレクトリごと貼ると dotfiles に流れ込むため。service.json は
+  # symlink ではなく下の opencodeServiceConfig activation で hostname だけ管理する。
   #
   # OpenCode は DGX Spark 専用で、接続先は Tailscale の MagicDNS 名 (spark-head) に固定
   # している。自宅 LAN の mDNS 名は使わない。vLLM が認証を要求しないので API キーは
@@ -54,5 +56,24 @@
     else
       warnEcho "deno が無いので ~/.config/opencode/agents の同期をスキップした"
     fi
+  '';
+
+  # 常駐サービスの service.json (hostname / password) は宣言ファイルにせず、hostname だけを
+  # ここで上書きする。理由は 2 つ。(1) このファイルには opencode service set が生成した
+  # パスワードが入る。repo は PUBLIC なので dotfiles 側に置けない。(2) opencode は
+  # service set 時に一時ファイルの rename で書き換える (cli.json と同じ) ので、symlink で
+  # 配ると同期が切れる。サーバー起動自体は設定ディレクトリに書かない (serve を隔離した
+  # 設定ディレクトリで起動して確認)。既存ファイルを jq で merge し、password など他の
+  # キーは温存する。反映に opencode service restart が要る点は cli.json と同じ。
+  home.activation.opencodeServiceConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    cfg="$HOME/.config/opencode/service.json"
+    mkdir -p "$HOME/.config/opencode"
+    if ${pkgs.jq}/bin/jq -e 'type == "object"' "$cfg" >/dev/null 2>&1; then
+      run "${pkgs.jq}/bin/jq" '.hostname = "0.0.0.0"' "$cfg" > "$cfg.tmp"
+    else
+      warnEcho "$cfg が読めないので service.json を新規作成した"
+      echo '{"hostname":"0.0.0.0"}' > "$cfg.tmp"
+    fi
+    run mv "$cfg.tmp" "$cfg"
   '';
 }
