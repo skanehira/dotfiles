@@ -76,7 +76,8 @@
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "claude-security@claude-plugins-official": true,
     "stripe@claude-plugins-official": true,
-    "session-brief@claude-session-brief": true
+    "session-brief@claude-session-brief": true,
+    "qa-guide@claude-qamods": true
   },
   "extraKnownMarketplaces": {
     "agent-plugins-for-aws": {
@@ -139,6 +140,12 @@
         "source": "github",
         "repo": "skanehira/claude-session-brief"
       }
+    },
+    "claude-qamods": {
+      "source": {
+        "source": "github",
+        "repo": "aieo-product/claude_qamods"
+      }
     }
   },
   "outputStyle": "concise",
@@ -161,5 +168,12 @@
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "pluginConfigs": {
+    "qa-guide@claude-qamods": {
+      "options": {
+        "language": "ja"
+      }
+    }
+  }
 }
