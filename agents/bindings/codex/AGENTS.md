@@ -104,10 +104,10 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 
 ## hooks は Codex には配られていない
 
-**このハーネスが自分で書いた hook は 0 本である。** そもそも deny する hook を 1 本も持っていない (Claude Code 向けにも無い) ので、移植すべきものが無い。**ただし Codex 環境に hook が 1 件も無いという意味ではない。** 登録の所在は 2 か所に分かれる (件数は 2026-10-03 にこのマシンで数えた値)。
+**このハーネスが自分で書いた hook は 0 本である。** そもそも deny する hook を 1 本も持っていない (Claude Code 向けにも無い) ので、移植すべきものが無い。**ただし Codex 環境に hook が 1 件も無いという意味ではない。** 登録の所在は 2 か所に分かれる (件数はこのマシンで数えた値)。
 
-- **`~/.codex/hooks.json` (user レイヤー) の 9 件**: herdr 連携の SessionStart hook が 1 件と、外部ツール orca が書き込んだ 8 件 (8 イベントに 1 件ずつ。`~/.orca/agent-hooks/codex-hook.sh` があればそれを起動し、無ければ入力を読み捨てる)
-- **compact-plus プラグインが持つ 7 件** (compact-plus 1.3.2 の場合): `~/.codex/hooks.json` には無く、プラグインに同梱の `hooks/hooks.json` から登録される。プラグインは `nix/modules/home/codex.nix` の activation が入れる
+- **`~/.codex/hooks.json` (user レイヤー) の 1 件**: herdr 連携の SessionStart hook (2026-10-04 に確認)。このファイルは dotfiles の管理外なので、外部ツールが hook を書き足すとここに増える
+- **compact-plus プラグインが持つ 7 件** (compact-plus 1.3.2 の場合、2026-10-03 に確認): `~/.codex/hooks.json` には無く、プラグインに同梱の `hooks/hooks.json` から登録される。プラグインは `nix/modules/home/codex.nix` の activation が入れる
 
 どちらも承認状態は `~/.codex/config.toml` の `[hooks.state]` に残る。いずれもこのハーネスが書いたゲートではない。dev-impl 系のスキルを Codex で回すときは、修正ラウンド上限を自律遵守する。
 
