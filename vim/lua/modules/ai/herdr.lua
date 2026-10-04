@@ -119,7 +119,7 @@ function M.pane_exists(pane_id)
 end
 
 -- 現在のタブ内で指定エージェントが動いているペインを alias で検索
--- @param pattern string エージェント名（"claude" / "claude-spark" / "codex" / "opencode"）
+-- @param pattern string エージェント名（"claude" / "codex" / "opencode"）
 -- @return string|nil ペインID、見つからない場合はnil
 function M.find_pane_by_command(pattern)
   local tab_id = vim.env.HERDR_TAB_ID

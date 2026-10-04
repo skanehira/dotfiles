@@ -15,9 +15,6 @@ local M = {}
 --   }
 local store = {
   claude = {},
-  -- 既定の Claude Code と Spark 向けは同じ CLI だが別のペインに送るので、スタックも分ける
-  -- (ハイフンは識別子に使えないためブラケットで書く)
-  ["claude-spark"] = {},
   codex = {},
   opencode = {},
 }
@@ -25,7 +22,7 @@ local store = {
 -- ツール別の extmark namespace（setup() が TOOLS から機械的に作る）
 local ns = {}
 
-local TOOLS = { "claude", "claude-spark", "codex", "opencode" }
+local TOOLS = { "claude", "codex", "opencode" }
 
 -- コメント絵文字（U+1F4AC, speech balloon）。emoji は 2 セル幅で sign_text 制約を満たす
 local SIGN_ICON = "💬"
