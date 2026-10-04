@@ -9,7 +9,7 @@ paths:
 
 - 種別: 環境リファレンス
 - 対象読者: 別セッション・別マシンで作業するエージェント (Claude Code / Codex / OpenCode)
-- 最終確認: 2026-10-03 (OpenCode (V2 2.0.22) の節と、OpenCode に関わる記述)。GLM 系の節は 2026-10-02 (vLLM 版から TensorFold 版のレシピへの置き換え)
+- 最終確認: 2026-10-04 (GLM 系のレシピを v1.5 へ上げてチェックポイントを差し替え、GLM 系の節と GLM に関わる記述を実測で取り直した)。OpenCode (V2 2.0.22) の節と OpenCode に関わる記述は 2026-10-03
 - 他の節の確認日: 値ごとに表のセルか本文に書いてある (確認コマンドと組にした一覧は「依拠する外部事実」)。**OpenCode を通した疎通・速度の値のうち 2026-10-03 より前の日付のものは opencode 1.18.18 (V1) で取ったもので、V2 では測り直していない** (各箇所に版を書いてある)
 
 自宅に NVIDIA DGX Spark (GB10) が 2 台あり、TP=2 (tensor parallel、2 台に重みを分割する並列方式) でローカル LLM を常時サービングしている。推論エンジンは GLM 系だけが TensorFold で、他の 3 系統は vLLM である。Mac の Claude Code (`ccsp`) / OpenCode (素の `opencode`) / Codex (`cxsp`) の 3 つからバックエンドとして使える。
@@ -80,14 +80,14 @@ paths:
 | `vllm-fn` | Qwen レシピのコンテナ名。**head と worker で同名** | Qwen レシピの `start.sh` | `start.sh` | `docker` |
 | DeepSeek-V4.1-Flash EXL3 | `deepseek-ai/DeepSeek-V4.1-Flash` を EXL3 2.9 bpw に量子化した `Mia-AiLab/DeepSeek-V4.1-Flash-EXL3-2.9bpw` の略。配信名は `DeepSeek-v4.1-Flash-EXL3`、短縮名は `v41`。画像入力が使える (量子化せずに残した vision tower をチェックポイントが持つ) | 「DeepSeek-V4.1-Flash EXL3」 | 上流のチェックポイント | vLLM |
 | EXL3 | 推論ライブラリ ExLlamaV3 の量子化形式 (Cornell RelaxML の QTIP を簡略化した変種)。テンソルごとにビット数を変えられるので平均が 2.9 bpw のような端数になる。vLLM 本家は非対応で、V4.1 EXL3 レシピはイメージに後付けしている。GLM レシピは TensorFold の EXL3 対応を使う | 「DeepSeek-V4.1-Flash EXL3」の表 | 上流 | vLLM (V4.1 EXL3 レシピの overlay) / TensorFold |
-| GLM-5.3-Flash EXL3 | `GLM-5.3-Flash` を EXL3 4 bpw に量子化した `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` の略。配信名は `GLM-5.3-Flash-EXL3`、短縮名は `glm`。画像入力が使える | 「GLM-5.3-Flash EXL3」 | 上流のチェックポイント | TensorFold |
+| GLM-5.3-Flash EXL3 | `GLM-5.3-Flash` を EXL3 4 bpw に量子化した `Mia-AiLab/GLM-5.3-Flash-EXL3-4bpw-TensorFold` の略。配信名は `GLM-5.3-Flash-EXL3`、短縮名は `glm`。画像入力が使える | 「GLM-5.3-Flash EXL3」 | 上流のチェックポイント | TensorFold |
 | GLM レシピ | GLM-5.3-Flash の EXL3 4bpw 量子化版を TensorFold の TP=2 で配信する別系統のレシピ。起動は `start.sh`、停止は `stop.sh` で行う | head の `~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold/` | 上流 (`git clone`) | 人 |
-| TensorFold | GLM 系だけが使う推論エンジン ([ashhart/TensorFold](https://github.com/ashhart/TensorFold))。GLM レシピは v0.5.0 に 53 本のパッチを当てたものをイメージに焼き込んで配る。OpenAI 互換の API を持つが、vLLM とは別実装で、`/v1/messages` と `vllm:` のメトリクスを持たない | 「GLM-5.3-Flash EXL3」 | 上流 | GLM レシピの `start.sh` |
+| TensorFold | GLM 系だけが使う推論エンジン ([ashhart/TensorFold](https://github.com/ashhart/TensorFold))。GLM レシピは v0.6.0 に 70 本のパッチを当てたものをイメージに焼き込んで配る。OpenAI 互換の API を持つが、vLLM とは別実装で、`/v1/messages` と `vllm:` のメトリクスを持たない | 「GLM-5.3-Flash EXL3」 | 上流 | GLM レシピの `start.sh` |
 | `scripts/local.sh` | GLM レシピの手元設定 1 枚。`WORKER` (worker の ssh 先) だけを書く。**`.gitignore` に入っておらず、`git status` に未追跡として出る** | head の `~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold/scripts/local.sh` | 人 (`scripts/local.sh.example` から作る) | GLM レシピの `scripts/config.sh` |
 | `glm53-flash-tf` | GLM レシピのコンテナ名。**head と worker で同名** | GLM レシピの `scripts/config.sh` の `CONTAINER_NAME` | `start.sh` | `docker` |
 | DFlash2 | GLM レシピの投機デコードが使う**別モデルのドラフタ** (`incoai/GLM-5.3-Flash-DFlash2`、2.2 GiB)。チェックポイント内蔵の DSpark / MTP と違い、重みを別に取って配る必要がある | GLM レシピの `scripts/config.sh` の `DRAFTER` / `DFLASH2_ID` / `DFLASH2_REVISION` | 上流のチェックポイント | TensorFold |
 | recipe stamp | V4.1 EXL3 レシピの入力ファイル群のハッシュ。イメージのラベル `dsv41.recipe.stamp` と比べて、ずれていれば起動時にビルドが走る。GLM レシピは代わりにパッチのハッシュをラベル `tf.patches` に持つ | V4.1 EXL3 レシピの `start.sh` の `overlay_recipe_hash` | `start.sh` | `start.sh` の起動前判定 |
-| `~/.cache/glm53-tf-image` | GLM 系のイメージを手で取ったときの blob 置き場 (11 GiB)。読み込み済みなので消してよいが、再読み込み用に残してある | 両ノードの `~/.cache/glm53-tf-image/` | GLM 系の「導入手順」3 | なし (再読み込みのときだけ) |
+| `~/.cache/glm53-tf-image` | GLM レシピ v1.2 のイメージ `tensorfold-glm53:v0.5.0` を手で取ったときの blob 置き場 (11 GiB)。現行の導入手順では作らない。v0.5.0 は両ノードに読み込み済みなので消してよい | 両ノードの `~/.cache/glm53-tf-image/` | 人 (v1.2 の導入時) | なし (v0.5.0 を読み込み直すときだけ) |
 | V4.1 EXL3 レシピ | DeepSeek-V4.1-Flash の EXL3 2.9bpw 量子化版を TP=2 で配信する別系統のレシピ。起動・停止・pack は `start.sh` のサブコマンドで行う | head の `~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks/` | 上流 (`git clone`) | 人 |
 | `dsv41-exl3-head` / `dsv41-exl3-worker` | V4.1 EXL3 レシピのコンテナ名。**head と worker で名前が違う** | V4.1 EXL3 レシピの `start.sh` | `start.sh` | `docker` |
 | Engram | DeepSeek-V4.1 の n-gram 埋め込み表 (layer 1 と 14)。**量子化されておらず、元チェックポイントの shard 47/48 から取る**。メモリには載せず、ファイルから行を読む | 「DeepSeek-V4.1-Flash EXL3」 | 上流のチェックポイント | vLLM (file-backed lookup) |
@@ -115,7 +115,7 @@ paths:
 | OS | Ubuntu 24.04.4 LTS / aarch64 |
 | カーネル | `6.17.0-1032-nvidia` |
 | ドライバ | `580.173.02` |
-| ディスク | 3.7 TiB (使用 1.2 TiB / 空き 2.4 TiB。重み 5 チェックポイント分と V4.1 EXL3 系の pack を置いた状態。両ノードとも同じ。`df -h /` の実測、2026-09-20) |
+| ディスク | 3.7 TiB (使用 1.4 TiB / 空き 2.2 TiB。重み 6 チェックポイント分 (GLM 系の新旧 2 つを含む) と V4.1 EXL3 系の pack を置いた状態。両ノードとも同じ。`df -h /` の実測、2026-10-04) |
 
 ## 接続する
 
@@ -206,7 +206,7 @@ LAN は 2.4 GHz の WiFi (両ノードとも freq 2437) で、リンク速度は
 | 推論サーバ (4 系統のどれでも) | `http://spark-head.local:8888` | `http://spark-head:8888` | **なし** |
 | sparkDash | `http://spark-head.local:5555` | `http://spark-head:5555` | **なし** |
 
-**8888 はどの系統でも無認証である。** Qwen 系はレシピが `--api-key` を渡さない。GLM 系は TensorFold に API キーの設定項目が無く、ヘッダ無しの `/v1/models` が 200 を返す (2026-10-02)。V4.1 EXL3 系はレシピの `.env` の `VLLM_API_KEY` がコメントアウトされたままで、起動ログの `auth` 行も `none (VLLM_API_KEY empty)` と出す (2026-09-15)。DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` を `docker-compose.dspark.yml` がコンテナの環境変数に渡すしくみだが、**`VLLM_API_KEY` を空にしてある**ので素の無認証で上がる (2026-09-06 に確認)。Qwen 配信中の 8888 は、ヘッダ無しでも出まかせの Bearer でも `/v1/models` が 200 を返すことを実測した (同じ日に存在しないパスが 404 を返すことも確かめてある)。`/health` は `ccsp` と `cxsp` の到達判定 (起動時と `status`) が、`/v1/models` は `ccsp` と `cxsp` の配信前検査と `status`、および OpenCode のプラグイン `spark-served.ts` (起動時と 30 秒ごと) が、`/metrics` は sparkDash と `~/spark-bench/snap.py` がポーリングして消費する。**生成に使うパスはクライアントごとに違う**: `ccsp` が `/v1/messages`、OpenCode が `/v1/chat/completions`、`cxsp` が `/v1/responses` である。**`/v1/responses` は V4.1 EXL3 系でだけサーバ側にパッチが要る** (→「既知の制約」12)。DeepSeek 系と GLM 系は素で通り (2026-09-23 / 2026-10-02 実測)、Qwen 系は未試行である。**GLM 系 (TensorFold) は `/v1/messages` を持たないので `ccsp` から使えない** (→「GLM-5.3-Flash EXL3」の「使える API」)。**接続先を強制した起動 (`ccsp lan` / `cxsp ts` など) はプローブを飛ばして `/v1/models` に直行する。`status` は接続先の選択とは無関係に両経路の `/health` を叩く。**
+**8888 はどの系統でも無認証である。** Qwen 系はレシピが `--api-key` を渡さない。GLM 系は TensorFold に API キーの設定項目が無く、ヘッダ無しの `/v1/models` が 200 を返す (2026-10-04)。V4.1 EXL3 系はレシピの `.env` の `VLLM_API_KEY` がコメントアウトされたままで、起動ログの `auth` 行も `none (VLLM_API_KEY empty)` と出す (2026-09-15)。DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` を `docker-compose.dspark.yml` がコンテナの環境変数に渡すしくみだが、**`VLLM_API_KEY` を空にしてある**ので素の無認証で上がる (2026-09-06 に確認)。Qwen 配信中の 8888 は、ヘッダ無しでも出まかせの Bearer でも `/v1/models` が 200 を返すことを実測した (同じ日に存在しないパスが 404 を返すことも確かめてある)。`/health` は `ccsp` と `cxsp` の到達判定 (起動時と `status`) が、`/v1/models` は `ccsp` と `cxsp` の配信前検査と `status`、および OpenCode のプラグイン `spark-served.ts` (起動時と 30 秒ごと) が、`/metrics` は sparkDash と `~/spark-bench/snap.py` がポーリングして消費する。**生成に使うパスはクライアントごとに違う**: `ccsp` が `/v1/messages`、OpenCode が `/v1/chat/completions`、`cxsp` が `/v1/responses` である。**`/v1/responses` は V4.1 EXL3 系でだけサーバ側にパッチが要る** (→「既知の制約」12)。DeepSeek 系と GLM 系は素で通り (2026-09-23 / 2026-10-02 実測)、Qwen 系は未試行である。**GLM 系 (TensorFold) は `/v1/messages` を持たないので `ccsp` から使えない** (→「GLM-5.3-Flash EXL3」の「使える API」)。**接続先を強制した起動 (`ccsp lan` / `cxsp ts` など) はプローブを飛ばして `/v1/models` に直行する。`status` は接続先の選択とは無関係に両経路の `/health` を叩く。**
 
 **したがってポート 8888 を信頼できないネットワークへ出さない。** sparkDash のポート 5555 と同じ扱いにする。
 
@@ -223,7 +223,8 @@ sparkDash は head の `~/sparkDash` に clone した [MiaAI-Lab/sparkDash](http
 1. サーバ側 — 系統ごとに置き場所が違う。値は正本の 1Password 項目から取り、人が書き込む。どのファイルも公開リポジトリの clone の中にあるが追跡外である
    - DeepSeek 系 — `.env.dspark` の `VLLM_API_KEY` に値を入れて `stop` → `start`。**`.env.dspark` は Vision-Exp 版 (`~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark`) と 0731 版 (`~/dspark-0731`) に 1 枚ずつあるので、両方に入れる**
    - Qwen 系 — Qwen レシピの `.env` の `EXTRA_VLLM_ARGS="--api-key <値>"` (未検証 →「Qwen3.8-Flash-Next」の「認証」)
-   - V4.1 EXL3 系・GLM 系 — レシピの `.env` の `VLLM_API_KEY` (コメントアウトされたままの行) に値を入れて停止 → 起動する。GLM の `start.sh` は環境変数の `VLLM_API_KEY` も拾う (→「動いているもの」)。**この 2 系統を認証付きで起動したことは無い (未検証)**
+   - V4.1 EXL3 系 — レシピの `.env` の `VLLM_API_KEY` (コメントアウトされたままの行) に値を入れて停止 → 起動する。**認証付きで起動したことは無い (未検証)**
+   - GLM 系 — **レシピに API キーの設定項目が無い** (→「GLM-5.3-Flash EXL3」)。認証付きにする手段は確かめていない
 2. クライアント側 — 3 つとも直す。**いまは無認証で運用しているので、`cxsp` と OpenCode の改修はどれも行っていない (未実装・未検証)。**
    - `ccsp` — 打つ前に `export ANTHROPIC_AUTH_TOKEN="$(op read 'op://Personal/DGX Spark vLLM API Key/credential')"` で正本の値を入れる。配信前検査と `status` はこの値を `_spark_models` の第 2 引数に渡す実装なので、関数の改修は要らない。**`ccsp off` はこの変数も消す**ので、`off` の後に Spark を使うときは export し直す (「系統の切り替え」の手順 1 と「既知の制約」7 の退避のたびに消える)。**`ccds` へ移る前に必ず `ccsp off` を打つ。** `ccds` は `ANTHROPIC_AUTH_TOKEN` が空でないと 1Password からの取得を飛ばすので、残っていると Spark のキーが DeepSeek 本家へ送られる
    - `cxsp` — 改修が 2 つ要る。(a) `_cxsp_config_args` に `model_providers.spark.env_key="SPARK_API_KEY"` の `-c` を 1 本足し、人が `export SPARK_API_KEY="$(op read 'op://Personal/DGX Spark vLLM API Key/credential')"` で正本の値を入れる (現在はこのキーを持たない → 「Codex (`cxsp`)」)。(b) `zsh/functions/codex-spark.zsh` の `_spark_models` 呼び出し 2 か所 (配信前検査と `status`) は第 2 引数が常に空なので、`"$SPARK_API_KEY"` を渡すように変える。(b) を忘れると、生成のリクエストにはキーが載っても配信前検査が 401 で止まる
@@ -265,14 +266,14 @@ op read 'op://Personal/DGX Spark vLLM API Key/credential' | ssh spark-head 'cat 
 
 ### 重みの置き場所 (4 系統)
 
-DeepSeek 系・Qwen 系・GLM 系の重みは両ノードの `~/.cache/huggingface/hub/` にある。V4.1 EXL3 系だけは HF キャッシュを使わず、レシピのディレクトリに実ファイルで置く (置き場所は「DeepSeek-V4.1-Flash EXL3」節)。worker は NFS ではなくローカルコピーを持つ。値は `du -sh` の実測 (GLM 系の行は 2026-10-02、V4.1 EXL3 系の行は 2026-09-15、それ以外は 2026-09-06)。ディスク全体の使用量は「ハードウェアと OS」の表にある (GLM 系を TensorFold 版にした 2026-10-02 時点では head が 1.3 TiB 使用 / 2.3 TiB 空き)。
+DeepSeek 系・Qwen 系・GLM 系の重みは両ノードの `~/.cache/huggingface/hub/` にある。V4.1 EXL3 系だけは HF キャッシュを使わず、レシピのディレクトリに実ファイルで置く (置き場所は「DeepSeek-V4.1-Flash EXL3」節)。worker は NFS ではなくローカルコピーを持つ。値は `du -sh` の実測 (GLM 系の行は 2026-10-04、V4.1 EXL3 系の行は 2026-09-15、それ以外は 2026-09-06)。ディスク全体の使用量は「ハードウェアと OS」の表にある。
 
 | チェックポイント | head | worker | 備考 |
 | --- | --- | --- | --- |
 | Vision-Exp | 158 GiB | 157 GiB | DeepSeek 系 |
 | Qwen3.8-Flash-Next | 124 GiB | 124 GiB | Qwen 系 (「Qwen3.8-Flash-Next」節) |
 | DeepSeek-V4.1-Flash EXL3 | 197 GiB (EXL3) + 190 GiB (Engram) + 95 GiB (pack) | 同じ | V4.1 EXL3 系。ほかにイメージの blob 9.1 GiB が両ノードの `~/.cache/dsv41-image/` に残っている (→ 用語表の `~/.cache/dsv41-image`) |
-| GLM-5.3-Flash EXL3 | 164 GiB + DFlash2 4.4 GiB | 同じ | GLM 系。ドラフタ (`models--incoai--GLM-5.3-Flash-DFlash2`) が別リポジトリなので 2 つに分かれる。DFlash2 の 4.4 GiB には使っていない旧 revision `dc77ff1c` の 2.2 GiB を含む。ほかにイメージの blob 11 GiB が両ノードの `~/.cache/glm53-tf-image/` にある |
+| GLM-5.3-Flash EXL3 | 164 GiB + DFlash2 2.2 GiB | 同じ | GLM 系 (`models--Mia-AiLab--GLM-5.3-Flash-EXL3-4bpw-TensorFold`)。ドラフタ (`models--incoai--GLM-5.3-Flash-DFlash2`) が別リポジトリなので 2 つに分かれる。ほかに、レシピ v1.2 へ戻す用の TR3 (`models--Mia-AiLab--GLM-5.3-Flash-EXL3-TR3-4bpw`、164 GiB) と、v0.5.0 のイメージの blob 11 GiB (`~/.cache/glm53-tf-image/`) が両ノードにある |
 | DeepSeek-V4-Flash-0731 | 156 GiB | 156 GiB | DeepSeek 系の 0731 版 (revision `9e165c30e2704aec5d9d593cce3eebd58bbef1cb`、両ノードで同一。2026-09-23 確認) |
 
 **配信の候補は Vision-Exp、0731、Qwen3.8-Flash-Next、DeepSeek-V4.1-Flash EXL3、GLM-5.3-Flash EXL3 の 5 つで、どれか 1 つだけが動く。** Vision-Exp と 0731 は同じ DeepSeek 系のレシピで動き、コンテナ名も同じなので、どちらが配信中かは `/v1/models` の配信名で見分ける。5 つともポート 8888 と GPU を共有するので同時に起動できない。
@@ -281,14 +282,14 @@ DeepSeek 系・Qwen 系・GLM 系の重みは両ノードの `~/.cache/huggingfa
 
 GB10 は CPU と GPU が同じ物理メモリを共有する統合メモリ構成である。**`GPU_MEMORY_UTILIZATION_TEXT=0.835` は通常の GPU なら VRAM の 83.5% を指すが、ここではシステムメモリ全体の 83.5% を意味する。** 起動直後から 100 GiB 超が vLLM に確保されて `free` の残りが数 GiB になる (DeepSeek 系で 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB) が、これは設定どおりの先取りであって、リークでも不足でもない。**V4.1 EXL3 系は仕組みが違う。** 確保率のキーを予算に使わず、重み (起動ログで 99.8 GiB。vision tower を含む) と KV プール (`KV_CACHE_MEMORY_BYTES` で固定した 2.5 GiB) を確保する。head の残りは 4.8 GiB になる。これは先取りではなく実際の余裕の少なさなので、扱いは「既知の制約」11 に従う。
 
-**値は配信中の系統で変わる。** DeepSeek 系の列は 2026-09-23 に起動 15 分後の無負荷で採った値、Qwen 系の列は 2026-09-09 の再起動後に無負荷で採った値 (`MemAvailable` だけは 2026-09-06 の高負荷時からの幅)、V4.1 EXL3 系の列は 2026-09-30 に画像入力を有効にして起動し、smoke と画像 2 件を流した後の値、GLM 系の列は 2026-10-02 の起動後に判定用の生成を 20 件ほど流した後の値である。
+**値は配信中の系統で変わる。** DeepSeek 系の列は 2026-09-23 に起動 15 分後の無負荷で採った値、Qwen 系の列は 2026-09-09 の再起動後に無負荷で採った値 (`MemAvailable` だけは 2026-09-06 の高負荷時からの幅)、V4.1 EXL3 系の列は 2026-09-30 に画像入力を有効にして起動し、smoke と画像 2 件を流した後の値、GLM 系の列は 2026-10-04 にレシピ v1.5 で起動し、検証の生成を 20 件ほどと OpenCode の 1 往復を流した後の値である。
 
 | 項目 | DeepSeek 系 head / worker | Qwen 系 head / worker | V4.1 EXL3 系 head / worker | GLM 系 head / worker |
 | --- | --- | --- | --- | --- |
 | 物理メモリ合計 | 121.7 / 121.7 GiB | 121.7 / 121.7 GiB | 121.7 / 121.7 GiB | 121.7 / 121.7 GiB |
-| 推論サーバの確保 | 101.1 / 101.1 GiB (`nvidia-smi` の 103,540 / 103,530 MiB) | 100.7 / 100.8 GiB | 104.4 / 104.4 GiB (`nvidia-smi` の 106,907 MiB) | 98.9 / 97.8 GiB (`nvidia-smi` の 101,262 / 100,122 MiB) |
-| `MemAvailable` | 6.8 / 7.1 GiB | 1.3〜5.7 / 5.6〜10.1 GiB | 4.8 / 5.9 GiB | 7.2 / 6.5 GiB |
-| swap 使用 | 4.3 / 5.4 GiB | 5.0 / 4.1 GiB | 4 / 7 GiB | 1.6 / 4.6 GiB |
+| 推論サーバの確保 | 101.1 / 101.1 GiB (`nvidia-smi` の 103,540 / 103,530 MiB) | 100.7 / 100.8 GiB | 104.4 / 104.4 GiB (`nvidia-smi` の 106,907 MiB) | 91.1 / 90.1 GiB (`nvidia-smi` の 93,318 / 92,240 MiB) |
+| `MemAvailable` | 6.8 / 7.1 GiB | 1.3〜5.7 / 5.6〜10.1 GiB | 4.8 / 5.9 GiB | 14.3 / 12.8 GiB |
+| swap 使用 | 4.3 / 5.4 GiB | 5.0 / 4.1 GiB | 4 / 7 GiB | 1.6 / 3.5 GiB |
 
 **DeepSeek 系の swap は直前に何を配信していたかで動く。** 上の値は 44 時間 Qwen 系を配信した直後に切り替えたときのもので、前の系統が押し出したページを含む。**swap の量を系統の特性として読まない。**
 
@@ -787,32 +788,34 @@ git pull --ff-only
 
 ### GLM-5.3-Flash EXL3
 
-**他の 3 系統とは推論エンジンから違う。** vLLM ではなく TensorFold ([ashhart/TensorFold](https://github.com/ashhart/TensorFold) v0.5.0 に、レシピが 53 本のパッチを当てたもの) で配信する。2026-10-02 に導入し、起動、生成、OpenCode (opencode 1.18.18、V1) からのツール呼び出し、`/v1/chat/completions` と `/v1/responses` の reasoning effort の語彙を確認した。**この系統で使えるクライアントは OpenCode だけである。`ccsp` は使えず、`cxsp` は起動前に止まる** (→ 下の「使える API」)。
+**他の 3 系統とは推論エンジンから違う。** vLLM ではなく TensorFold ([ashhart/TensorFold](https://github.com/ashhart/TensorFold) v0.6.0 に、レシピが 70 本のパッチを当てたもの) で配信する。レシピの v1.5 (`1576746`) で 2026-10-04 に確かめたのは次のとおりである。起動、生成、OpenCode (opencode 2.0.22、V2) からのツール呼び出し、`/v1/chat/completions` と `/v1/responses` の reasoning effort の語彙、`/v1/messages` が 404 を返すこと、`/v1/models` が `max_model_len` を返さないこと。**この系統で使えるクライアントは OpenCode だけである。`ccsp` は使えず、`cxsp` は起動前に止まる** (→ 下の「使える API」)。
 
-**この構成には認証が無い。** レシピに API キーの設定項目が無く、ヘッダ無しの `/v1/models` が 200 を返す (2026-10-02 実測)。
+**この構成には認証が無い。** レシピに API キーの設定項目が無く (`scripts/config.sh` と `start.sh` に `API_KEY` の文字列が無い)、ヘッダ無しの `/v1/models` が 200 を返す (2026-10-04 実測)。
 
 値の出所はレシピの `scripts/config.sh` の既定値と起動ログである。「重み」「コンテナイメージ」の 3 行は HF API と `docker image inspect` で確かめた。
 
 | 項目 | 値 |
 | --- | --- |
-| レシピ | head の `~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold` @ `1f3d909` (上流の v1.2) |
-| 推論エンジン | TensorFold v0.5.0 + レシピの `patches/*.patch` 53 本。パッチはイメージに焼き込み済み |
+| レシピ | head の `~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold` @ `1576746` (上流の v1.5、2026-10-03 リリース) |
+| 推論エンジン | TensorFold v0.6.0 (イメージ内の `tensorfold --version` が `0.6.0`) + レシピの `patches/*.patch` 70 本。パッチはイメージに焼き込み済み |
 | 量子化 | routed experts が EXL3 (→ 用語表) の 4 bpw。それ以外の BF16 の重みは起動時に 4 bit へ量子化する (`DENSE=q4`) |
-| 重み (本体) | `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` @ `9eaebb7c4e96d983dcd538e18624622ba5b820a8` (`scripts/config.sh` が `MODEL_REVISION` で固定)。safetensors 120 本 / 164 GiB。両ノードの `~/.cache/huggingface/hub/` に置く |
+| 重み (本体) | `Mia-AiLab/GLM-5.3-Flash-EXL3-4bpw-TensorFold` @ `078455ffe6472f9a52fbc1139f58b9db2881b25c` (`scripts/config.sh` がこの `MODEL_ID` に対してだけ `MODEL_REVISION` を固定する)。snapshot は 97 ファイル (うち safetensors 83 本) / 175.6 GB (163.6 GiB)。ライセンスは Apache-2.0。両ノードの `~/.cache/huggingface/hub/` に置く |
 | 重み (ドラフタ) | `incoai/GLM-5.3-Flash-DFlash2` @ `bf582e4eacc1810f76656d1811693ff6c6737d2a` (`DFLASH2_REVISION`)、2.2 GiB。**本体とは別リポジトリなので、取得も配布も別に要る。** ライセンスは CC BY-NC-ND 4.0 (非商用) |
+| 戻す用に残している重み | `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` @ `9eaebb7c4e96d983dcd538e18624622ba5b820a8` (164 GiB、両ノード)。レシピ v1.2 が使っていたチェックポイントで、**HF から消えている** (API が 401 を返す。2026-10-03 確認)。消すと取り直せない (→「レシピを更新する (GLM 系)」の「戻すとき」) |
 | API 上のモデル名 (`SERVED_NAME`) | `GLM-5.3-Flash-EXL3` (大文字を含む。短縮名は `glm`) |
-| コンテキスト上限 (`CONTEXT`) | 1 リクエスト 1,048,576 トークン (チェックポイントのネイティブ値)。**`/v1/models` は `max_model_len` を返さない** (→「使える API」)。`opencode.json` の `limit.context` は 500,000 のままにしてある |
-| 同時リクエスト上限 (`PARALLEL`) | 4 リクエスト。4 本は 1 つの KV プールを共有し、プールは起動時の空きメモリで決まる (2026-10-02 の起動で 2,883,584 トークン)。プールに入りきらないリクエストはエラーにならず待つ |
+| コンテキスト上限 (`CONTEXT`) | 1 リクエスト 1,048,576 トークン (チェックポイントのネイティブ値)。**`/v1/models` は `max_model_len` を返さない**ので、`/health` の `context_length` で見る (→「使える API」)。`opencode.json` の `limit.context` は 500,000 のままにしてある |
+| 同時リクエスト上限 (`PARALLEL`) | 4 リクエスト。v1.5 から 8 まで指定できるが、2 台での既定は 4 のままである。4 本は 1 つの KV プールを共有し、プールの大きさは起動ごとに変わる (→ 下の「KV プールの大きさは起動時の空きで決まる」)。プールに入りきらないリクエストはエラーにならず待つ |
 | 投機デコード | DFlash2 (別モデルのドラフタ) と copy drafts。`DRAFT_POLICY=fnc7:0.3`、`COPY_MAX=15`。チェックポイントの MTP ヘッドは読まない |
 | KV キャッシュ (`KV`) | `fp8` |
-| メモリの予算 | 起動時の `MemAvailable` から `MEMORY_RESERVE_GIB` (14.5 GiB) を引いた量。KV プールの上積みは `KV_POOL_GIB` (12.5 GiB) まで。**vLLM の確保率に当たるキーは無い** |
+| メモリの予算 | 起動時の `MemAvailable` から `MEMORY_RESERVE_GIB` を引いた量。予備は `PARALLEL=4` では 14.5 GiB で、5 本以上にすると 1 本ごとに約 0.95 GiB 増える。KV プールの上積みは `KV_POOL_GIB` (12.5 GiB) まで。**vLLM の確保率に当たるキーは無い** |
 | 画像・動画入力 | 使える (`VISION=1`。1 リクエストに画像 50 枚、動画 4 本まで)。**当方では未実測** |
-| ツール呼び出し / reasoning | 使える。thinking は既定で ON (`THINKING=1`)。思考は `reasoning_content` に返る |
-| ノード間通信 | 512 KiB までの all-gather は RoCE の one-shot RDMA write (`COMM=roce`) で送り、それより大きいものは NCCL で送る。**RoCE は 1 本しか使わない** (→ 下の「RoCE は 1 本で動く」) |
-| コンテナイメージ | `tensorfold-glm53:v0.5.0` (展開後 24.6 GB)。中身は `ghcr.io/miaai-lab/glm-5.3-flash-exl3-2x-dgx-sparks-tensorfold@sha256:6ee3c6e0430040b69ddcb0c96c7fbbcb94a5bed47d48a8ba092626369ae533b9` (`scripts/config.sh` の `IMAGE_DIGEST`) で、ラベル `tf.patches` は `cb7c56f7f921`。両ノードに配置済み |
+| ツール呼び出し / reasoning | 使える。thinking は既定で ON (`THINKING=1`)。思考は `reasoning_content` に返る。上流の CHANGELOG によれば、v1.4 から前のターンの思考もプロンプトに残す (`TF_GLM_CLEAR_THINKING=1` で残さない描き方に戻る) |
+| ノード間通信 | 512 KiB までの all-gather は RoCE の one-shot RDMA write (`COMM=roce`) で送り、それより大きいものは NCCL で送る。**RoCE は 2 本とも使う** (→ 下の「RoCE は 2 本とも使う」) |
+| コンテナイメージ | `tensorfold-glm53:v0.6.0` (展開後 24.6 GB、ID `e97db95dd4b3`)。中身は `ghcr.io/miaai-lab/glm-5.3-flash-exl3-2x-dgx-sparks-tensorfold@sha256:ef83797d791fef96c4605e8d37367aca6de5aeac7bb672792cb682e2e55d4237` (`scripts/config.sh` の `IMAGE_DIGEST`、タグは `IMAGE_TAG` の `v0.6.0-9f73cca659a1`) で、ラベル `tf.patches` は `9f73cca659a1`。両ノードに配置済み。v1.2 のイメージ `tensorfold-glm53:v0.5.0` (ラベル `cb7c56f7f921`) も戻す用に両ノードに残してある |
 | コンテナ名 | `glm53-flash-tf` (**head と worker で同名**)。restart policy は `no` |
 | 上流既定からの差分 | `scripts/local.sh` の 1 行 `WORKER=skanehira@<worker の RoCE アドレス>` だけ (値は `.env.dspark` の `WORKER_HOST` と同じ)。WORKER がリンク上のアドレスなので `FABRIC_PEER` は要らない。`.env` は置いていない |
-| CUDA 拡張のキャッシュ | 両ノードの `~/.cache/tensorfold-glm53/` (121 MiB)。初回の起動でビルドされ、以降は再利用される |
+| CUDA 拡張のキャッシュ | 両ノードの `~/.cache/tensorfold-glm53/` (約 250 MiB)。ビルド結果はイメージのパッチのハッシュごとのディレクトリ (`9f73cca659a1/`) に分かれる。新しいイメージの初回の起動でビルドされ、以降は再利用される |
+| サーバのログ | `stop.sh` が両ランクのログを gzip で保存してからコンテナを消す。置き場は各ノードの `~/.cache/tensorfold-glm53/logs/<日付>-<時刻>-rank<N>.log.gz` (head に rank 0、worker に rank 1) で、新しいものから 10 本を残す。start.sh も、前回の停止済みコンテナを消す前に同じように保存する |
 
 #### 起動と判定 (GLM 系)
 
@@ -820,13 +823,14 @@ git pull --ff-only
 ssh spark-head
 cd ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold
 ./start.sh                      # 両ランクの起動。準備が要れば scripts/prepare.sh を自動で流し、スモークテストまで行う
-./start.sh restart              # 設定を変えた後の再起動
-./stop.sh                       # 両ランクの停止 (コンテナも消える)
+./start.sh restart              # 設定を変えた後の再起動 (下の注意を読む)
+./stop.sh                       # 両ランクの停止 (ログを保存してからコンテナを消す)
 docker logs -f glm53-flash-tf   # rank 0 のログ。rank 1 は worker で同じものを打つ
 ```
 
-- **エージェントのシェル実行から打つときはログインシェルを通す。** `ssh -n spark-head 'bash -lc "cd ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold && setsid nohup ./start.sh > ~/glm53-tf-start.log 2>&1 < /dev/null &"'` の形で起動し、ログを読む。`hf` は `~/.local/bin` にあり、非ログインシェルの PATH には入っていない。`hf` が見えないと prepare.sh は重みの取得をコンテナの中 (root) で行い、HF キャッシュに root 所有のファイルを残す
+- **エージェントのシェル実行から打つときはログインシェルを通す。** `ssh -n spark-head 'bash -lc "cd ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold && setsid nohup ./start.sh > ~/glm53-tf-start.log 2>&1 < /dev/null &"'` の形で起動し、ログを読む。`hf` は `~/.local/bin` にあり、非ログインシェルの PATH には入っていない。`hf` が見えないと、prepare.sh は重みの取得をコンテナの中の python に回す。**この ssh は start.sh が終わるまで戻らないことがある** (2026-10-04 に 7 分戻らなかった)。バックグラウンドで打ち、ログは別の ssh で読む
 - **状態表示のサブコマンドは無い。** 状態は `docker ps` と `/health` で見る
+- **`./start.sh restart` は prepare.sh を流してから止める。** 引数なしの `./start.sh` は、両ランクが動いていれば prepare.sh の前に `already running` と出して exit 0 する。準備が要る状態 (pin を動かした `git pull` の後など) で `restart` を打つと、配信中に prepare.sh の取得 (WiFi と dockerd) が走る
 - **メモリの事前検査は警告だけで止まらない。** 両ノードの `MemAvailable` が 110 GiB 未満だと警告を出して進む。予算が足りなければ rank 0 が窓を拒否し、start.sh は収まる窓で 1 回だけ起動し直す。そのときログに `this start's memory budget holds a N-token window` が出るので、これが出たら合格扱いにしない
 - **ポートの事前検査は止まる。** 8888 が使用中なら `port 8888 is already in use` で終了する
 - **準備済みかどうかは start.sh が判定する。** 状態を `~/.local/state/glm53-tensorfold/prepared` に記録し、イメージ・重みの revision・パッチ・worker のどれかが変わっていれば prepare.sh を流す。`PREPARE=0` で飛ばせる
@@ -835,101 +839,122 @@ docker logs -f glm53-flash-tf   # rank 0 のログ。rank 1 は worker で同じ
 
 ```bash
 curl -fs -o /dev/null http://spark-head.local:8888/health && echo health-ok   # 1. API が生きている
-curl -s http://spark-head.local:8888/v1/models | python3 -c 'import json,sys; ids=[m["id"] for m in json.load(sys.stdin)["data"]]; print(ids); sys.exit(0 if "GLM-5.3-Flash-EXL3" in ids else 1)'   # 2. 配信名 (max_model_len は返らないので見ない)
+curl -s http://spark-head.local:8888/v1/models | python3 -c 'import json,sys; ids=[m["id"] for m in json.load(sys.stdin)["data"]]; print(ids); sys.exit(0 if "GLM-5.3-Flash-EXL3" in ids else 1)'   # 2. 配信名
+curl -s http://spark-head.local:8888/health | python3 -c 'import json,sys; c=json.load(sys.stdin)["context_length"]; print(c); sys.exit(0 if c==1048576 else 1)'   # 2. 文脈長 (/v1/models は返さない)
 curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: application/json' \
   -d '{"model":"GLM-5.3-Flash-EXL3","messages":[{"role":"user","content":"17*19 を計算して、答えの数値だけを出力してください。説明や単位は不要です。"}],"temperature":0,"max_tokens":2048,"chat_template_kwargs":{"enable_thinking":false}}' \
   | python3 -c 'import json,sys; c=json.load(sys.stdin)["choices"][0]["message"]["content"].strip(); print(repr(c)); sys.exit(0 if c=="323" else 1)'   # 3. 生成が通る
 ```
 
-**起動の実測値 (2026-10-02、重み・イメージ・CUDA 拡張のキャッシュがそろった 2 回目の起動)。**
+**起動の実測値 (2026-10-04、v1.5 の新しいイメージでの初回の起動)。** CUDA 拡張のビルドを含む。prepare.sh はイメージも重みも取り直さず、照合だけで終わった。初回の起動は 1 回で通った。後ろ 3 行は、検証の生成を 20 件ほどと OpenCode の 1 往復を流した後の値である。
 
 | 項目 | 値 |
 | --- | --- |
-| 起動全体 (start.sh の開始から LIVE まで) | 約 5 分 (`Server answered after 304s`、サーバ側は `loaded in 302.3s`) |
-| KV プール | 2,883,584 トークン (1 リクエストは最大 1,048,576) |
-| GPU の確保 (head / worker) | 101,262 / 100,122 MiB |
-| `MemAvailable` (head / worker) | 7.2 / 6.5 GiB |
-| swap 使用 (head / worker) | 1.6 / 4.6 GiB |
+| 起動全体 (start.sh の開始から LIVE まで) | 約 7 分 (`Server answered after 422s`、サーバ側は `loaded in 417.9s`) |
+| KV プール | 1,562,624 トークン (1 リクエストは最大 1,048,576) |
+| GPU の確保 (head / worker) | 93,318 / 92,240 MiB |
+| `MemAvailable` (head / worker) | 14.3 / 12.8 GiB |
+| swap 使用 (head / worker) | 1.6 / 3.5 GiB |
 
-#### 初回の起動は RoCE の待ちで落ちる
+#### KV プールの大きさは起動時の空きで決まる
 
-**1 回目の起動はこれで失敗した (2026-10-02 実測)。** 初回は各ランクが CUDA 拡張を 5 本ビルドし、その所要がランクごとにずれる。先にビルドを終えた rank 0 は最初の all-gather で相手を待つが、RoCE の待ちには約 20 秒の上限がある (TensorFold の `cuda/roce.py` の `SPIN_LIMIT` = 20,000,000 回のポーリング)。rank 1 は最後の拡張 `tensorfold_roce_v1` のビルドを rank 0 より 16 秒遅れて始めており、その間に上限を超えた。
+**プールは起動のたびに変わる。** 各ランクは起動時に「予算」(その時点の `MemAvailable` − 14.5 GiB) と、重みと 1 リクエスト分の窓に要る「見積り」をログに出す。プールに回るのはその差 (上限 12.5 GiB) である。
 
-```text
-RuntimeError: RoCE all-gather failed (sequence 1, peer 1, hca 0)
-```
+| 起動 | rank 0 の予算 / 見積り | rank 1 の予算 / 見積り | プール |
+| --- | --- | --- | --- |
+| 2026-10-01 (レシピ v1.2) | 100.53 / 88.09 GiB | 98.53 / 86.29 GiB | 2,883,584 トークン |
+| 2026-10-04 (レシピ v1.5) | 98.26 / 88.09 GiB | 92.37 / 86.29 GiB | 1,562,624 トークン |
 
-**worker 側のログに出る `RDMA write to rank 0 failed: transport retry counter exceeded` は、rank 0 が落ちた後の二次症状である。** 原因は rank 0 側のログで読む。
+2026-10-04 の起動では、worker の空きが起動時に 108 GiB しかなかった (start.sh が 110 GiB 未満の警告を出した)。そのため rank 1 の差は 6.1 GiB にとどまった。**プールは差の小さいランクに合わせて決まると見ている。** 根拠は上の 2 回の起動ログだけで、ソースでは確かめていない。プールが小さくても 1 リクエストの上限 1,048,576 は変わらないが、長い会話を同時に抱えられる量が減る。プールを上限近くまで戻したいときは、両ノードの空きが大きいとき (この推定では head 115 GiB・worker 113 GiB 以上) に起動し直す。
 
-**対処はもう一度 `./start.sh` を打つことだけである。** ビルド結果は両ノードの `~/.cache/tensorfold-glm53/` に残るので、2 回目はずれが出ずに通る。失敗したコンテナは次の start.sh が消す。
+#### RoCE は 2 本とも使う
 
-#### RoCE は 1 本で動く
+**起動ログの `Link:` 行は `RoCE rocep1s0f1,roceP2p1s0f1 / rocep1s0f1,roceP2p1s0f1` と出る** (2026-10-04)。レシピの `scripts/nodes.sh` の `rails()` は、リンクと同じサブネットにある port に加えて、名前の末尾 (`f1np1`) が同じ PCIe の双子を拾う。当方の 2 本目は別サブネットにあるが、この規則で足される。
 
-**起動ログの `Link:` 行は `RoCE rocep1s0f1 / rocep1s0f1` と出る。** 2 本目の `roceP2p1s0f1` は使われない。レシピの `scripts/nodes.sh` の `rails()` は、リンクと同じサブネットにある port しか足さない。当方の 2 本目は別サブネットに置いてあるので外れる。
-
-**アドレスは変えない。** 2 本を同じサブネットに置くと、vLLM の 3 系統が `no usable RoCEv2 GID` で起動しなくなる (→「ネットワーク」)。上流は 2 本使うと prompt chunk の all-gather が約 1.8 倍速いと書いている。当方の prefill がそのぶん遅いかは測っていない。
+**アドレスは変えない。** 2 本を同じサブネットに置くと、vLLM の 3 系統が `no usable RoCEv2 GID` で起動しなくなる (→「ネットワーク」)。上流は 2 本使うと prompt chunk の all-gather が約 1.8 倍速いと書いている。当方では prefill の速さを 1 本のときと比べていない。
 
 #### GLM の reasoning effort の語彙
 
-**検査は TensorFold のサーバが行い、テンプレートが深さを決める。** サーバ (`server/request_options.py` の `thinking_fields`) は 7 語を受理し、それ以外を 400 で弾く。受理した値はテンプレートに渡り、テンプレート (チェックポイントの `chat_template.jinja`) は `low` と `high` 以外をすべて `max` として扱う。
+**検査はサーバが行い、深さはサーバの読み替えとテンプレートで決まる。** サーバ (TensorFold の `server/request_options.py`) は 7 語を受理し、それ以外を 400 で弾く。受理した値はサーバの `coerce_effort` がテンプレートの語に読み替える。テンプレート (チェックポイントの `chat_template.jinja`) は `low` と `high` 以外をすべて `max` として描く。
 
 | 値 | `/v1/chat/completions` (OpenCode の経路) | `/v1/responses` (`cxsp` の経路) | 実際に効く深さ |
 | --- | --- | --- | --- |
-| `low` / `high` / `max` | 200 | 200 | そのまま |
-| `medium` / `xhigh` | 200 | 200 | `max` (テンプレートの読み替え) |
+| `low` / `minimal` | 200 | 200 | `low` (`minimal` はサーバが `low` に読み替える) |
+| `medium` / `high` | 200 | 200 | `high` (`medium` はサーバが `high` に読み替える) |
+| `xhigh` / `max` | 200 | 200 | `max` (`xhigh` はテンプレートが `max` として描く) |
 | `none` | 200 | 200 | thinking なし |
 | 指定なし | — | — | `max` |
 | 語彙外 (`bogus` など) | 400 | 400 | — |
 
 - **400 の本文は受理語彙を名乗る**: `reasoning_effort must be none, minimal, low, medium, high, xhigh or max`。弾いているのは TensorFold のサーバで、vLLM のスキーマ検証ではない
-- **`minimal` は送っていない。** コード上は、テンプレートが `minimal` を持たないので `low` に読み替えられる
+- **「実際に効く深さ」の列はソースとテンプレートから読んだものである。** 応答の思考の量では確かめていない。テンプレートは新旧 2 つのチェックポイントでバイト一致する
 - **`none` の扱いが vLLM 版と違う。** TensorFold は `none` を thinking の無効化として扱う
-- **3 つのクライアントには `max` を送らせている** (`ccsp` と `cxsp` は `_spark_effort`、OpenCode は `opencode.json`)。両経路とも 200 を確かめた。指定なしと同じ結果になるが、テンプレート既定が変わったときに黙って浅くならないように明示している
-- 2026-10-02 実測。陽性対照は `bogus` (400)、陰性対照は `max` (200)
+- **3 つのクライアントには `max` を送らせている** (`ccsp` と `cxsp` は `_spark_effort`、OpenCode は `opencode.json`)。指定なしと同じ結果になるが、テンプレート既定が変わったときに黙って浅くならないように明示している
+- 2026-10-04 に 8 値すべてを両経路で実測した。陽性対照は `bogus` (400)、陰性対照は `max` (200)
 
 #### 使える API
 
-| API | クライアント | 状態 (2026-10-02) |
+| API | クライアント | 状態 (2026-10-04) |
 | --- | --- | --- |
-| `/v1/chat/completions` | OpenCode | 使える。opencode 1.18.18 (V1) で、ファイルを読ませる指示が Glob → Read のツール呼び出しを経て正答した。2026-10-03 に opencode 2.0.22 (V2) から Tailscale 経由で生成が通ることを実測した (V2 でのツール呼び出しは確かめていない) |
-| `/v1/responses` | `cxsp` | サーバは使える。`input_text` のパーツが 200 で通り、V4.1 EXL3 系のようなパッチは要らない。**ただし `cxsp` は起動前に止まる** (下記) |
+| `/v1/chat/completions` | OpenCode | 使える。opencode 2.0.22 (V2) の `opencode run --standalone` で、ファイルを読ませる指示が Bash (`ls`) → Read のツール呼び出しを経て正答した |
+| `/v1/responses` | `cxsp` | サーバは使える。effort の 7 語がすべて 200 で通る。**ただし `cxsp` は起動前に止まる** (下記) |
 | `/v1/messages` | `ccsp` | **無い (404)。** `ccsp` は配信前検査を通過し、最初のリクエストで落ちる |
-| `/health` | 3 クライアントの到達判定、`stop.sh` | `busy` / `requests_running` / `streams` / `pool_tokens` / `pool_free_tokens` などを返す |
+| `/health` | `ccsp` と `cxsp` の到達判定、`stop.sh` | `busy` / `requests_running` / `streams` / `pool_tokens` / `pool_free_tokens` / `context_length` などを返す |
 | `/metrics` | — | `tensorfold:` と `tensorfold_health:` の系列だけを出す。**`vllm:` の系列は無い** |
 
-**`cxsp` は `cxsp: コンテキスト上限が 0 です (… の /v1/models が max_model_len を返していない)` で exit 1 になる。** TensorFold の `/v1/models` は `id` / `object` / `owned_by` の 3 キーしか返さない。`cxsp` はコンテキスト上限を `max_model_len` から決める作りなので、値が取れない時点で止まる。OpenCode は `opencode.json` の静的値を使うので影響を受けない。
+**`cxsp` は `cxsp: コンテキスト上限が 0 です (… の /v1/models が max_model_len を返していない)` で exit 1 になる。** TensorFold の `/v1/models` は `id` / `object` / `owned_by` の 3 キーしか返さない (2026-10-04 再確認)。`cxsp` はコンテキスト上限を `max_model_len` から決める作りなので、値が取れない時点で止まる。OpenCode は `opencode.json` の静的値を使うので影響を受けない。
 
-**上限の取り方を直しても `cxsp` は通らないので、GLM 系は OpenCode 専用にしてある。** 2026-10-02 に codex 0.159.3 で、上限の代わりに `CXSP_CONTEXT_MAX` を使う修正を試した。codex の送信本文を写し取って TensorFold へ再送すると、次の 2 段で 400 になった。修正は採らずに戻してある。
+**上限の取り方を直しても `cxsp` は通らないので、GLM 系は OpenCode 専用にしてある。** 2026-10-02 に、レシピ v1.2 (TensorFold v0.5.0) と codex 0.159.3 の組で、上限の代わりに `CXSP_CONTEXT_MAX` を使う修正を試した。codex の送信本文を写し取って TensorFold へ再送すると、次の 2 段で 400 になった。修正は採らずに戻してある。**v1.5 (TensorFold v0.6.0) では試し直していない。**
 
 1. `include is not supported (reasoning.encrypted_content)` — codex は effort を `none` にしてもこの `include` を必ず付ける。TensorFold の `server/responses_translate.py` が意図して拒否している
 2. `tools of type 'custom' are not supported: this server runs function tools only` — `include` を外して再送するとこれが出る。`custom` 型は catalog の `tool_mode` を外すと消えるが、MCP サーバと ChatGPT アプリ連携が `namespace` 型で 20 個近く残る
 
 通すにはサーバ側で両方を受けさせる必要がある。上流が追跡している `start.sh` に `docker run -v` の差分を足す保守が要るので、見送った。
 
-**この系統のサーバは配信していないモデル名で要求しても応答を返す** (2026-10-03 実測)。クライアントが古いモデル名を送り続けても `model not found` にならず、GLM がそのまま答えるので気づきにくい。`/v1/models` の `owned_by` は `tensorfold` である (OpenCode 組み込みの vLLM 自動発見を使わない理由 →「OpenCode」)。
+**この系統のサーバは配信していないモデル名で要求しても応答を返す** (2026-10-04 再確認)。クライアントが古いモデル名を送り続けても `model not found` にならず、GLM がそのまま答えるので気づきにくい。`/v1/models` の `owned_by` は `tensorfold` である (OpenCode 組み込みの vLLM 自動発見を使わない理由 →「OpenCode」)。
 
 **手元の sparkDash (`cc44d35`) は GLM 配信中に LLM のメトリクスを表示できない。** `vllm:` の系列しか読まないためである。上流の `main` には TensorFold の `/health` を読む変更が入っている。
 
 #### 導入手順
 
-初回に踏んだ順序と各段の完了判定である。**8888 を止めずに進められるのは 1〜4 まで**で、5 からは配信が止まる。配信中のノードで流す操作には上限を付ける (→「既知の制約」11)。**dockerd を通る操作 (`docker pull` / `docker load` / prepare.sh) は上限が効かないので、配信を止めてから流す。**
+初回の導入と、イメージや重みの pin が動く更新とで同じ手順を使う。2026-10-04 にレシピ v1.2 から v1.5 への更新で踏んだ順序と、各段の完了判定である。**8888 を止めずに進められるのは 1〜4 まで**で、5 からは配信が止まる。**dockerd を通る操作 (`docker pull` / `docker load` / prepare.sh の取得) は配信を止めてから流す。** 配信中のノードで流す取得はメモリ上限付きのコンテナで行う (→「既知の制約」11)。
 
-1. **clone と `scripts/local.sh`** — `git clone https://github.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold` → `scripts/local.sh` に `WORKER=skanehira@<worker の RoCE アドレス>` の 1 行を書く。**完了判定**: `bash -c 'source scripts/config.sh; echo $WORKER; image_hash'` が WORKER とパッチのハッシュを出す
-2. **重みの取得** — ログインシェルで、上の表の 2 つの revision を `hf download <repo> --revision <rev> --cache-dir ~/.cache/huggingface/hub` で取る。`systemd-run --user --scope -p MemoryMax=2G` と `HF_HUB_DISABLE_XET=1 HF_MAX_WORKERS=2` を付ける。**完了判定**: 本体の snapshot が 144 ファイル (うち safetensors 120 本)、DFlash2 の snapshot が 5 ファイル
-3. **イメージの blob の取得 (約 25 分)** — V4.1 EXL3 系の「イメージを手で取る」のブロックを 3 点だけ変えて使う。manifest を tag ではなく `IMAGE_DIGEST` で取り、manifest のバイト列の sha256 がその digest と一致しなければ止める。`RepoTags` を `tensorfold-glm53:v0.5.0` にする。置き場を `~/.cache/glm53-tf-image` にし、全体を `MemoryMax=2G` の scope で流す。**完了判定**: 71 層と config の 72 blob がすべて sha256 で一致する
-4. **worker への事前コピー** — 重みは prepare.sh と同じ方式 (snapshot が指す blob の一覧を `--files-from` で rsync し、続けて snapshot ディレクトリを rsync) で送る。イメージの blob は `~/.cache/glm53-tf-image/` ごと rsync する。**完了判定**: worker の snapshot の `find -L … -type f -printf '%P %s\n'` が head と一致し、worker で blob の `sha256sum -c` が通る
-5. **配信中の系統を止める** — 「系統の切り替え」の手順 1〜3
-6. **イメージの読み込み** — 両ノードで `cd ~/.cache/glm53-tf-image && tar -C oci -cf - manifest.json blobs | docker load`。**完了判定**: `docker image inspect -f '{{.Id}} {{index .Config.Labels "tf.patches"}}' tensorfold-glm53:v0.5.0` が両ノードで同じ ID を返し、ラベルが手順 1 の `image_hash` と一致する。一致していれば prepare.sh はイメージの取得を飛ばす
-7. **起動** — 「起動と判定 (GLM 系)」の形で `./start.sh` を打つ。**初回は RoCE の待ちで落ちるので、もう一度打つ** (→「初回の起動は RoCE の待ちで落ちる」)
-8. **判定** — 「起動と判定 (GLM 系)」の 3 段がすべて exit 0
-9. **クライアント側と表示** — 変更は要らない。配信名、短縮名、`_spark_effort`、`opencode.json` の宣言は vLLM 版の GLM 系と同じものがそのまま効く。sparkDash の `workerLabel` も同じ値 (`GLM-5.3-Flash-EXL3`) でよい
+1. **レシピを用意する** — 初回は `git clone https://github.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold` のあと、`scripts/local.sh` に `WORKER=skanehira@<worker の RoCE アドレス>` の 1 行を書く。更新は「レシピを更新する (GLM 系)」の `git pull --ff-only`。**完了判定**: `bash -c 'source scripts/config.sh >/dev/null 2>&1; echo "$MODEL_ID@$MODEL_REVISION $IMAGE $IMAGE_TAG"; image_hash'` を打ち、`image_hash` が `IMAGE_TAG` の末尾と一致すること。一致していれば prepare.sh は pin した digest のイメージを使う
+2. **本体の重みを head だけで取る (配信中、約 6 時間)** — `utility-spark-model-fetch` スキルの手順 1・2 に従う。head のホスト側 python には `huggingface_hub` が無いので、手元にある `tensorfold-glm53` のイメージの python で取る。ssh を切っても止まらないようにコンテナで流す (`systemd-run --user --scope` は、ユーザーの linger が無効 (`Linger=no`) なので ssh を切ると止まる)
+
+   ```bash
+   docker run -d --name glm53-dl --memory 2g --user 1000:1000 --network host \
+     -v ~/.cache/huggingface:/hf -e HF_HOME=/hf -e HOME=/tmp -e HF_HUB_DISABLE_XET=1 \
+     --entrypoint python tensorfold-glm53:v0.6.0 -c \
+     'from huggingface_hub import snapshot_download; print(snapshot_download("<MODEL_ID>", revision="<MODEL_REVISION>", max_workers=2))'
+   ```
+
+   - 速度は約 8 MB/s で、進捗は `du -sb` の差分で見る
+   - 途中で止めて同じコマンドで再開すると、完了した blob は再利用される。**取得途中の blob は続きからではなく、新しい `.incomplete` を作って最初から取り直す** (2026-10-03 実測)。古い `.incomplete` は 3 のスキル手順 6 で消える
+   - **手元に `tensorfold-glm53` のイメージが 1 つも無い初回は、この形が使えない。** 代わりの手段は確かめていない
+   - **完了判定**: コンテナが exit 0 で終わり、`verify_shards.py` が「必要 N / 揃い N / 欠落 0」で exit 0 を返すこと (N は index に載る shard 数。v1.5 の本体では 83)。`find <モデルのディレクトリ> -user root` が 0 件であること。**index が届く前の `verify_shards.py` は手元にある shard だけを必要分と数えるので、取得途中では欠落を検出できない**
+3. **worker へ rsync する (配信中、約 8 分)** — スキルの手順 3〜6 に従う (所有権の確認、`rsync -a --delete --info=progress2 --no-inc-recursive`、ログの `denied` が 0、両ノードの `verify_shards.py` の一致、`.incomplete` の削除と再検証)。`-L` は付けない。付けると snapshot の symlink が実体になり、worker が重みを二重に持つ。**完了判定**: 加えて、prepare.sh と同じ照合が一致すること。照合は snapshot で `find -L . -type f -printf '%P %s\n' | LC_ALL=C sort` を両ノードで取って `cmp` する (v1.5 の本体で 97 行)。一致していれば prepare.sh は `Worker has …` と出してコピーを飛ばす
+4. **ドラフタ** — `DFLASH2_REVISION` が動いていなければ何もしない。動いたら DFlash2 でも 2〜3 を行う
+5. **配信中の系統を止める** — 「系統の切り替え」の手順 1〜3。GLM 系の配信中なら `/health` の `requests_running` が 0 であることを見てから `./stop.sh`
+6. **イメージを head に取り、worker へ送る (約 25 分)** — head は GHCR から WiFi で取り、worker へは RoCE で送る。prepare.sh に任せると worker も WiFi で取る。**Mac からの ssh 1 本で流すと、出力の無い転送中に Mac 側の ssh がタイムアウトする** (2026-10-04)。head 上の転送は続くので、`docker save` と `docker load` の PID を `kill -0` で待つ
+
+   ```bash
+   bash -lc 'cd ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold && source scripts/config.sh &&
+     docker pull "$GHCR_IMAGE@$IMAGE_DIGEST" && docker tag "$GHCR_IMAGE@$IMAGE_DIGEST" "$IMAGE" &&
+     docker save "$IMAGE" | ssh -o BatchMode=yes "$WORKER" docker load'
+   ```
+
+   **完了判定**: 両ノードで `docker image inspect -f '{{.Id}} {{index .Config.Labels "tf.patches"}}' tensorfold-glm53:<TF_VERSION>` が同じ ID を返し、ラベルが 1 の `image_hash` と一致すること
+7. **起動** — 「起動と判定 (GLM 系)」の形で `./start.sh` を打つ。prepare.sh が流れ、照合だけで終わる (ログに `already built with patches` / `identical on both Sparks` / `Worker has` が出る)。新しいイメージの初回は CUDA 拡張のビルドが入るので約 7 分かかる。**失敗したら** head のログを先に読む。worker 側の `RDMA write to rank 0 failed: transport retry counter exceeded` は、rank 0 が落ちた後の二次症状である
+8. **判定** — 「起動と判定 (GLM 系)」の 3 段と、「GLM の reasoning effort の語彙」の陽性対照・陰性対照を両経路で流し、すべて期待どおりであること
+9. **クライアント側と表示** — 変更は要らない。配信名、短縮名、`_spark_effort`、`opencode.json` の宣言はそのまま効く。sparkDash の `workerLabel` も同じ値 (`GLM-5.3-Flash-EXL3`) でよい
 
 #### 導入の落とし穴
 
-1. **初回の起動は必ず落ちる** (→ 上の専用節)。もう一度打てば通る
-2. **`hf` が非ログインシェルの PATH に無い。** `ssh -n spark-head '…'` で直接 prepare.sh や start.sh を打つと、重みの取得がコンテナ内 (root) に回り、HF キャッシュに root 所有のファイルが残る。必ず `bash -lc` を通す
-3. **`scripts/local.sh` は `.gitignore` に入っていない。** `git status` に `?? scripts/local.sh` と出るが、追跡ファイルではないので `git pull` は通る
-4. **ドラフタの revision を上げると重みが変わる。** `dc77ff1c` (vLLM 版で使っていた revision) から `bf582e4e` では `model.safetensors` の sha256 が変わっていた。本体の `25a44fdb` から `9eaebb7c` の差は README だけだった。pin が動いたら HF の tree API でファイルの差を見てから取る
+1. **`hf` が非ログインシェルの PATH に無い。** `ssh -n spark-head '…'` で直接 prepare.sh や start.sh を打つと、重みの取得が `hf` ではなくコンテナ内の python に回る。必ず `bash -lc` を通す
+2. **`./start.sh restart` で更新を始めない。** prepare.sh が配信を止める前に走り、配信中に WiFi と dockerd を使う (→「起動と判定 (GLM 系)」)
+3. **`scripts/local.sh` は無視されていない。** レシピは `.gitignore` を持たないので、`git status` に `?? scripts/local.sh` と出る。追跡ファイルではないので `git pull` は通る
+4. **ドラフタの revision を上げると重みが変わる。** `dc77ff1c` から `bf582e4e` では `model.safetensors` の sha256 が変わっていた。pin が動いたら HF の tree API でファイルの差を見てから取る
 
 #### レシピを更新する (GLM 系)
 
@@ -941,10 +966,10 @@ git diff HEAD..origin/main -- CHANGELOG.md scripts/config.sh   # イメージと
 git pull --ff-only
 ```
 
-- **`scripts/config.sh` の `IMAGE_TAG` / `IMAGE_DIGEST` / `MODEL_REVISION` / `DFLASH2_REVISION` が動いたら、次の start.sh が prepare.sh を流して取り直す。** prepare.sh の取得は dockerd の `docker pull` と WiFi を通るので、配信中には流さない。停止を短くしたいときは導入手順の 2〜4 と 6 を手で先に済ませる
+- **`scripts/config.sh` の `IMAGE_TAG` / `IMAGE_DIGEST` / `MODEL_ID` / `MODEL_REVISION` / `DFLASH2_REVISION` が動いたら、「導入手順」の 2〜8 を流す。** pull しただけでは配信に影響しない。引数なしの `./start.sh` も、配信中なら何もせずに終わる
 - **`patches/` だけが変わって新しいイメージが公開されていない場合、prepare.sh はイメージをローカルでビルドする。** 公開済みかは CHANGELOG.md の「Image」の行で見る
-- **更新後の悪化確認**は「起動と判定 (GLM 系)」の 3 段と「GLM の reasoning effort の語彙」の 2 経路で行う
-- **戻すとき**は `git checkout 1f3d909` してから `./stop.sh` → `./start.sh`
+- **更新後の悪化確認**は「導入手順」の 8 で行う
+- **戻すとき**は `./stop.sh` → `git checkout 1f3d909` → `./start.sh` と打つ。`1f3d909` は v1.2 で、TR3 の重みと `tensorfold-glm53:v0.5.0` を使う。どちらも両ノードに残してあるので、取り直しは起きない。TR3 は HF から消えているが、v1.2 の prepare.sh は取得に失敗しても手元の snapshot で続行する (ソースから読んだ挙動で、実行しては確かめていない)。**TR3 か v0.5.0 を消すと v1.2 へは戻せない。** 消してよいかは、v1.5 で困ることが無いと判断してから決める
 
 ## モデルの追加と切り替え
 
@@ -1157,7 +1182,7 @@ cxsp -- --version          # 解釈を打ち切り (-- 自体を消費して) �
 - **API キーを扱わない。** `model_providers.<id>.env_key` を省くと codex は Authorization ヘッダ自体を送らず、**ChatGPT のトークンも流用しない** (`requires_openai_auth` の既定が false のため、ログイン画面も出ない)。`ccsp` のような資格情報の漏れ経路が無い
 - **`/v1/responses` を使うのは `cxsp` だけである。** codex は 0.154.0 以降 Responses API しか話さないため。この経路には**サーバ側にパッチが要る** (→「既知の制約」12)。パッチが当たっていないサーバへ向けると、最初のリクエストが `DeepSeek V4.1 supports text and image content only; got 'input_text'` の 400 で落ちる
 - **モデル名とコンテキスト上限は `/v1/models` から取る。** 表を持たないので配信側のモデルを変えても Mac 側の編集は要らない。短縮名 (`qwen` / `vision` / `v41` / `glm`) を渡した場合はそれが配信されているかを起動前に検査し、載っていなければ配信中の一覧を出して exit 1 で止まる。短縮名に無いモデルは `CXSP_MODEL=<配信名> cxsp` で渡す
-- **reasoning effort は `ccsp` と同じ `_spark_effort` を引く。** V4.1 EXL3 については `/v1/responses` の全値を実測した (`low` / `high` / `xhigh` / `max` / `none` が 200、`medium` が 400。2026-09-17 →「V4.1 EXL3 の reasoning effort の語彙」)。DeepSeek 系は `/v1/responses` の全値を curl で実測した (2026-09-23 →「DeepSeek 系の reasoning effort の語彙」。`cxsp` を通しては未実測)。GLM 系もサーバ側は全値を実測したが (2026-10-02 →「GLM の reasoning effort の語彙」)、`cxsp` 自体が起動前に止まる。**Qwen 系についてこの経路の語彙は未実測である** (実測済みなのは `/v1/messages` と `/v1/chat/completions` だけ → 「Qwen の reasoning effort の語彙」)
+- **reasoning effort は `ccsp` と同じ `_spark_effort` を引く。** V4.1 EXL3 については `/v1/responses` の全値を実測した (`low` / `high` / `xhigh` / `max` / `none` が 200、`medium` が 400。2026-09-17 →「V4.1 EXL3 の reasoning effort の語彙」)。DeepSeek 系は `/v1/responses` の全値を curl で実測した (2026-09-23 →「DeepSeek 系の reasoning effort の語彙」。`cxsp` を通しては未実測)。GLM 系もサーバ側は全値を実測したが (2026-10-04 →「GLM の reasoning effort の語彙」)、`cxsp` 自体が起動前に止まる。**Qwen 系についてこの経路の語彙は未実測である** (実測済みなのは `/v1/messages` と `/v1/chat/completions` だけ → 「Qwen の reasoning effort の語彙」)
 - **コンテキスト上限は catalog で宣言する。** `-c model_context_window` だけでは効かない (上の表)。`cxsp` は起動ごとに codex 同梱の catalog へ配信名を 1 件 append して `~/.cache/cxsp/model-catalog.json` に書き、`-c model_catalog_json` で渡す。**全置換にしない**のは、codex がその一覧を全世界として扱い `/model` から OpenAI のモデルが消えるため。**`use_responses_lite` は `false` に落とす** — 土台 (`codex debug models --bundled` の先頭エントリ。2026-09-17 時点は `gpt-6-astra` だが、上流の並び順が変われば黙って別モデルになる) の `true` のままだと codex がツール定義を `tools` パラメータではなく `input` の先頭の `{"type": "additional_tools"}` item として送り、vLLM が `'AdditionalTools' object has no attribute 'get'` の 500 を返す (2026-09-17 実測)。`effective_context_window_percent` は土台の 95 のまま使う (100 にすると強制コンパクションの上限にも 100% が使われ、出力用の余白が消える)
 - **呼び出し側が `-c` を渡しても安全にしてある。** codex は **subcommand 側に `-c` を 1 つでも置くと root 側の `-c` をすべて捨てる** (実測: `codex -c 'model_provider="nonexistent"' debug prompt-input "hi"` は exit 1、同じものに subcommand 側の `-c` を足すと exit 0 になる)。素直に `cxsp exec -c … ` と書くと Spark 向けの注入が丸ごと消えて**素の codex (ChatGPT ログイン) で走る**ので、`cxsp` は残り引数から `-c` / `--config` / `--config=` を拾って root 位置へ移す。cxsp の既定より後ろに積むので、渡した値が既定を上書きする
 - **`/status` の分母は 1 回目と 2 回目で変わる。** 1 リクエストも送っていない間は `-c model_context_window` の生値 (500K)、最初の応答の後は catalog 由来の実効値 (500,000 × 95% = 475K) になる。**catalog を渡していないと 2 回目以降が 258K** (= 272,000 × 95%) に落ちるので、これが効いているかの判定に使える (2026-09-17 実測)
@@ -1287,7 +1312,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | --- | --- | --- |
 | 応答しない | 下の待ち行列コマンド | コンテナは生きていて過負荷。同時リクエスト上限 (DeepSeek 系 6 / Qwen 系 8 / V4.1 EXL3 系 2 / GLM 系 4) を超えた分が待つので、待ち行列が 0 でなければ過負荷。**V4.1 EXL3 系は 2 本しか並ばないので、subagent を並列に投げると待ちやすい** |
 | コンテナが無い | 両ノードで「系統の切り替え」の手順 3 のコマンド (4 系統すべてを拾う。表のセルに書くと `\|` のエスケープが混ざってそのまま打てないので、そちらをコピーする) | 停止コマンドで止めたまま、またはノードの再起動 (Qwen 系・V4.1 EXL3 系・GLM 系は再起動で上がらない。DeepSeek 系は上がる → 「既知の制約」8)。起動し直す |
-| 起動に失敗する | `./logs-deepseek-v4-flash-dspark.sh` (Qwen 系は `docker logs vllm-fn`、V4.1 EXL3 系は `./start.sh logs` / `./start.sh logs worker` と、レシピの `logs/head.log` / `logs/worker.log` / `logs/overlay-verify.log`、GLM 系は `docker logs glm53-flash-tf`) | DeepSeek 系の `no usable RoCEv2 GID` は RoCE 2 本目の IP か MTU (Qwen 系は `IB_HCA` が 1 本なのでこの形では出ない)。Qwen 系は相手系統が GPU を掴んだままだと `REQUIRE_IDLE_GPU` で拒否される。V4.1 EXL3 系は `not enough free unified memory` (相手系統が動いている → 「系統の切り替え」の手順 3)、`FileNotFoundError: /models/config.json` (→「導入と再導入の落とし穴」4)、`logs/hang-*-pyspy.txt` (head のログが 420 秒止まると書かれる)。**V4.1 EXL3 系は失敗してもコンテナが残るので、`./start.sh stop` してから起動し直す。** GLM 系は `docker logs glm53-flash-tf` (start.sh も失敗時に両ランクの末尾を出す)。初回の `RoCE all-gather failed` はもう一度 `./start.sh` を打てば通る (→「初回の起動は RoCE の待ちで落ちる」) |
+| 起動に失敗する | `./logs-deepseek-v4-flash-dspark.sh` (Qwen 系は `docker logs vllm-fn`、V4.1 EXL3 系は `./start.sh logs` / `./start.sh logs worker` と、レシピの `logs/head.log` / `logs/worker.log` / `logs/overlay-verify.log`、GLM 系は `docker logs glm53-flash-tf`) | DeepSeek 系の `no usable RoCEv2 GID` は RoCE 2 本目の IP か MTU (Qwen 系は `IB_HCA` が 1 本なのでこの形では出ない)。Qwen 系は相手系統が GPU を掴んだままだと `REQUIRE_IDLE_GPU` で拒否される。V4.1 EXL3 系は `not enough free unified memory` (相手系統が動いている → 「系統の切り替え」の手順 3)、`FileNotFoundError: /models/config.json` (→「導入と再導入の落とし穴」4)、`logs/hang-*-pyspy.txt` (head のログが 420 秒止まると書かれる)。**V4.1 EXL3 系は失敗してもコンテナが残るので、`./start.sh stop` してから起動し直す。** GLM 系は `docker logs glm53-flash-tf` (start.sh も失敗時に両ランクの末尾を出す。停止済みのランクのログは `~/.cache/tensorfold-glm53/logs/` に残る)。worker 側の `transport retry counter exceeded` は rank 0 が落ちた後の二次症状なので、head 側から読む |
 | Qwen 系がコンテナを作らずに `Checkpoint snapshot is incomplete` で止まる | `python3 files/resolve_snapshot.py <hub の repo ディレクトリ>` の exit code (0 以外) | シャードの欠落。`start.sh` が起動前に検査して止める (→「重みの検証」)。**コンテナが 1 つも作られないので `docker logs vllm-fn` は空振りする。`start.sh` の標準出力を見る。** 復旧は Qwen レシピ同梱の `./download.sh` (HuggingFace から重みを取り直すスクリプト。`--launch` を付けない素の `./start.sh` が内部で呼ぶのと同じもの) での再取得だが、**revision を指定しないと配信 revision が動く** |
 | `model not found` が出る | `curl .../v1/models` で配信名を見る | セッション起動後にサーバ側で切り替えた。`ccsp` / `cxsp` は起動時のモデル名を送り続けるので起動し直す。OpenCode はプラグインの再取得で 40 秒以内に追従する (→「sparkDash の `workerLabel` を直す」の末尾)。**GLM 系は配信していないモデル名でも応答を返すので、このエラーにならず GLM がそのまま答える** (→「GLM-5.3-Flash EXL3」の「使える API」) |
 | `ccsp` / `cxsp` が「取得できません」で止まる | `ccsp status` / `cxsp status` でサーバの生死を見る。メッセージが出す URL も見る | **`ccsp` と `cxsp` はこの 1 文言に 2 つの原因を束ねている。** 要求したモデルが配信されていない場合と、サーバに届かない場合の両方。メッセージが続けて出す「配信中: …」が空 (`ccsp`) または `(取得できず)` (`cxsp`) なら後者。認証を復活させた場合も 401 でこうなる (→「API キーの流れ」)。**接続先を誤った側に強制した場合 (出先で `lan`、自宅で `ts`) もプローブを飛ばしてここに落ちる** |
@@ -1360,7 +1385,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^tensorfold:requests_(ru
 
 6. **温度センサーは ACPI の 7 つで、履歴はどこにも残っていない。** `/sys/class/thermal/thermal_zone{0..6}/temp` がミリ °C を返す。名前は起動ログ (`journalctl -b -q -o cat | grep 'Thermal Zone \['`) が登録順に出す。zone0 = `TSOC` (SoC 全体) / zone1 = `TS0E` / zone2 = `TS0P` / zone3 = `TS1E` / zone4 = `TS1P` / zone5 = `TGPU` / zone6 = `TUNC`。**`TS<n>E` / `TS<n>P` が効率コアと性能コアに対応するという読み方は本書の推測で、NVIDIA の公表資料では裏を取っていない** (X925 の制限で `TS0P` が 14.3 °C 下がった実測とは整合する)。トリップ点は全 zone とも 104.8 °C、`policy` は `step_wise` である。`TSOC` の 3 文字目は英字の O、`TS0P` / `TS0E` の 3 文字目は数字のゼロで、grep するとき紛らわしい。**サーバ側に残る履歴は無い。** sparkDash は CPU 温度も採るが (head の `~/sparkDash/server/collectors/SystemCollector.js` が hwmon の `acpitz` と thermal zone を読む)、履歴はブラウザのメモリ (`~/sparkDash/src/hooks/metricsStore.ts` の `HISTORY_MAX` = 1,800 サンプル。sparkDash の `docker-compose.override.yml` が `POLL_INTERVAL_CPU` を 15 秒にしているので約 7.5 時間分) にしか無く、ページを閉じれば消える。journald に出るのは起動時の 1 回だけ (7 zone 分 7 行)。`collectd` / `netdata` / prometheus exporter の類は両ノードとも動いていない (2026-09-10 実測)。**したがって過去に遡った統計は取れない。** 必要になったら記録の仕組みを先に用意する
 7. **停止と再起動はユーザーの作業を止める。** 打つ前に `curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_running\{'` で稼働中リクエストの有無を確認し、Mac 側では先に `claude` を終了して `ccsp off` で退避する (OpenCode と `cxsp` は環境変数を残さないので退避操作が要らない。`CCSP_EFFORT` / `CXSP_EFFORT` と `CCSP_MODEL` / `CXSP_MODEL` を export していたら `unset` する → 「系統の切り替え」の手順 1)
-8. **推論サーバの自動復帰は系統で違う。** DeepSeek 系コンテナの restart policy は `unless-stopped` だが、**Qwen 系 `vllm-fn`、V4.1 EXL3 系 `dsv41-exl3-head` / `dsv41-exl3-worker`、GLM 系 `glm53-flash-tf` は両ノードとも `no` なので、ノードを再起動すると上がってこない** (Qwen 系は 2026-09-06、V4.1 EXL3 系は 2026-09-15、GLM 系は 2026-10-02 に実測)。手で Qwen 系は `./start.sh --launch`、V4.1 EXL3 系と GLM 系は `./start.sh` を打ち直す (重みの同期はマーカーで省略されるので速い)。sparkDash は `always`、`docker` と (head の) `tailscaled` は enabled、RoCE は NetworkManager の autoconnect、GPU と CPU のクロック制限は 2 つの unit がどちらも enabled である (→ 制約 4・5)。どの系統も停止スクリプトで止めた後はコンテナ自体が消えるので再起動しても復帰しない。**cold boot での復帰は未確認なので、電源断の後は `docker ps` で確かめる**
+8. **推論サーバの自動復帰は系統で違う。** DeepSeek 系コンテナの restart policy は `unless-stopped` だが、**Qwen 系 `vllm-fn`、V4.1 EXL3 系 `dsv41-exl3-head` / `dsv41-exl3-worker`、GLM 系 `glm53-flash-tf` は両ノードとも `no` なので、ノードを再起動すると上がってこない** (Qwen 系は 2026-09-06、V4.1 EXL3 系は 2026-09-15、GLM 系は 2026-10-04 に実測)。手で Qwen 系は `./start.sh --launch`、V4.1 EXL3 系と GLM 系は `./start.sh` を打ち直す (重みの同期はマーカーで省略されるので速い)。sparkDash は `always`、`docker` と (head の) `tailscaled` は enabled、RoCE は NetworkManager の autoconnect、GPU と CPU のクロック制限は 2 つの unit がどちらも enabled である (→ 制約 4・5)。どの系統も停止スクリプトで止めた後はコンテナ自体が消えるので再起動しても復帰しない。**cold boot での復帰は未確認なので、電源断の後は `docker ps` で確かめる**
 9. **`~/spark-bench` は再作成手段が無い。** dotfiles にも上流にも無い手書きのハーネスなので、head を作り直すと失われる
 10. **4 系統の推論サーバは同時に起動できない。** ポート 8888 と GPU を共有し、Qwen 側は `REQUIRE_IDLE_GPU=true`、V4.1 EXL3 側はメモリの事前検査、GLM 側はポートの事前検査が明示的に拒否する。切り替えは必ず「相手を停止 → 起動」の順で行う (→「系統の切り替え」)
 11. **V4.1 EXL3 系はメモリの余裕が薄い。** 配信中の head の `MemAvailable` は 5 GiB 前後である (画像入力を有効にした 2026-09-30 の実測で 4.8 GiB)。上流は `MAX_MODEL_LEN` 614,400 の構成で 601k トークンの prefill 中に 2.1 GiB まで下がったと書いている (当方の 600,000 では同じ入力は入らないが、長い prefill ほど下がる傾向は同じと見ている。未検証)。**上流の報告では、GB10 は統合メモリが尽きるとエラーではなくノードごと固まり、ハード再起動まで戻らなかった。** 当方では起きていないので、固まったときの兆候と復旧は未確認である。想定される兆候は、ssh も sparkDash も応答しないことと、worker だけが固まった場合に head の `/health` が応答しなくなることである。その場合は人が電源を入れ直す (sparkDash の Wake-on-LAN は電源断からの起動用で、固まったノードに効くかは未確認)。**配信中のノードで重い処理 (ダウンロード・ビルド・大きなファイルの展開) を流すときは `systemd-run --user --scope -p MemoryMax=<上限>` で上限を付ける** (`ssh -n` 経由では `XDG_RUNTIME_DIR=/run/user/$(id -u)` を前置する。head では 2026-09-15 に効くことを確かめた。worker では未確認)。**memguard (→ 用語表) は上流既定のまま無効にしている。** 上流によれば、有効にして唯一発動したときは無関係なホストのプロセスがメモリを取った場面で、原因ではない vLLM を kill しただけだった。代わりに両コンテナは `--oom-score-adj 1000` で起動されていて、カーネルの OOM killer が動けばデスクトップより先に vLLM が落ちる
@@ -1459,11 +1484,11 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^tensorfold:requests_(ru
 | V4.1 EXL3 レシピの commit | `ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && git log --oneline -1'` (2026-09-30 時点 `b9c49e9`)。上流が先行していたら `git log --stat HEAD..origin/main` で `Dockerfile` / `overlay/` / `files/` / `tests/` に変更があるかを見る (あればイメージの stamp がずれる →「導入と再導入の落とし穴」6) | 2026-09-30 |
 | V4.1 EXL3 の重みがそろっているか | 下のコードブロック 7 (本体 49 ファイルのサイズを revision 固定の HF API と比べる。`OFF=1` にすると期待値を 1 本だけ 1 バイトずらす陽性対照になり、exit 1 を返す)。両ノードで exit 0、`OFF=1` で exit 1 を確認した。Engram の 2 本は「導入手順」の Engram のコードブロック末尾の `sha256sum -c` で照合し、`engram-src/` に `config.json` と `model.safetensors.index.json` があることも見る | 2026-09-15 |
 | V4.1 EXL3 系の上流既定からの差分 | 下のコードブロック 6 | 2026-09-30 |
-| GLM 系の上流既定からの差分 | レシピのディレクトリで `cat scripts/local.sh; ls .env 2>/dev/null; git status --short`。**`WORKER=` の 1 行だけで、`.env` が無く、`git status` が `?? scripts/local.sh` だけなら合格** | 2026-10-02 |
-| GLM 系のイメージと clone のずれ | レシピのディレクトリで `docker image inspect -f '{{index .Config.Labels "tf.patches"}}' tensorfold-glm53:v0.5.0` と `bash -c 'source scripts/config.sh; image_hash'` を比べる。**一致すれば prepare.sh はイメージを取り直さない** (2026-10-02 は両方 `cb7c56f7f921`) | 2026-10-02 |
+| GLM 系の上流既定からの差分 | レシピのディレクトリで `cat scripts/local.sh; ls .env 2>/dev/null; git status --short`。**`WORKER=` の 1 行だけで、`.env` が無く、`git status` が `?? scripts/local.sh` だけなら合格** | 2026-10-04 |
+| GLM 系のイメージと clone のずれ | レシピのディレクトリで `docker image inspect -f '{{index .Config.Labels "tf.patches"}}' tensorfold-glm53:v0.6.0` と `bash -c 'source scripts/config.sh; image_hash'` を比べる。**一致すれば prepare.sh はイメージを取り直さない** (2026-10-04 は両方 `9f73cca659a1`) | 2026-10-04 |
 | HF 側の `main` が動いていないか | 下のコードブロック 9。**`fab0aecb` 以外を返すならキャッシュより先に進んでいる** (2026-09-09 時点は `fc694b54`。意味は → 「重みの検証」) | 2026-09-09 |
 | Qwen 系の重みが完全か | `ssh -n spark-head 'cd ~/Qwen3.8-Flash-Next-Dual-DGX-Sparks && python3 files/resolve_snapshot.py ~/.cache/huggingface/hub/models--nvidia--Qwen3.8-Flash-Next-NVFP4; echo $?'` (0 で合格)。**陽性対照は存在しないディレクトリを渡して 2 が返ること。** head 1 ノードを manifest と突き合わせるなら「重みの検証」節の `verify-weights.py --revision`、両ノードなら同節の `--save-manifest` + `check-weights.sh --manifest` を使う (revision を省くと HF の `main` と比べて必ず 2 件不一致になる) | 2026-09-09 |
-| 両ノードのイメージ | `ssh -n spark-head 'docker images --format "{{.Repository}}:{{.Tag}} {{.ID}} {{.Size}}"'` (worker は「worker に入る」節経由で同じもの) | 2026-09-06 (V4.1 EXL3 系は 2026-09-15、GLM 系は 2026-10-02) |
+| 両ノードのイメージ | `ssh -n spark-head 'docker images --format "{{.Repository}}:{{.Tag}} {{.ID}} {{.Size}}"'` (worker は「worker に入る」節経由で同じもの) | 2026-09-06 (V4.1 EXL3 系は 2026-09-15、GLM 系は 2026-10-04) |
 | worker 側の同じ確認 | 「worker に入る」節のコマンドの `<worker で実行するコマンド>` に上記を入れる | — |
 | 稼働中のモデル名と上限 | `curl http://spark-head.local:8888/v1/models` | 2026-09-06 |
 | 8888 が無認証のままか | `curl -s -o /dev/null -w "%{http_code}\n" http://spark-head.local:8888/v1/models` (200 なら無認証。対照に `/v1/nope` が 404 を返すことも見る) | 2026-09-06 |
@@ -1475,7 +1500,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^tensorfold:requests_(ru
 | X925 の実効クロック (**`scaling_cur_freq` は見ない**) | **`scaling_cur_freq` は `cppc_cpufreq` では要求値のエコーで、負荷と無関係に `scaling_max_freq` と同じ値を返すため検査に使えない** (これで「上限以下」を確認しても、原理的に不合格になりえない)。実効値は `cpuinfo_avg_freq` (直近区間の delivered performance) を **busy なコアに限って**読む。手順は下のコードブロック 5。**陰性対照は busy な A725 で、要求値 2808000 と実効値がほぼ一致する。** X925 が同時に 3.8〜3.9 GHz を返せば、エコーではなく実効値を見られている。**idle のコアに打つと値が動かないか `Resource temporarily unavailable` を返すので、busy 判定と必ず組で使う。** | 2026-09-10 |
 | 推論中に CPU を使っているのが誰か (「既知の制約」5 の因果の根拠) | 4 値をそれぞれ別の手段で採る。**(a) decode 1 ステップの時間** = 推論 1 本の前後で `curl -s http://spark-head.local:8888/metrics` を取り、`vllm:iteration_tokens_total_count` の行の増分でその間の所要秒を割る (「実測値」節の「decode の分解」はステップ数を別のカウンタ `vllm:spec_decode_num_drafts_total` で数え、時間も初回トークンからの区間で測るので、両者の値 (63 ms と約 70 ms) は直接比べない)。**(b) 同区間の GPU 使用率** = 負荷中に `ssh -n spark-head 'nvidia-smi --query-gpu=utilization.gpu,clocks.sm,power.draw --format=csv'`。**(c) スレッドごとの CPU 時間** = 負荷の前後で `/proc/<tid>/stat` の 14・15 列 (user / sys、単位は 10 ms) の増分を取る。**(d) 自発的にブロックした回数** = 同じ区間で `/proc/<tid>/status` の `voluntary_ctxt_switches` の増分を (a) のステップ数で割る。**tid は `ps -eLo tid,pcpu,comm` で `VLLM` を含むものを拾う** (`docker exec` は要らない。コンテナのスレッドもホストの `/proc` に見える)。2026-09-10 に (a) 63 ms / (b) 93% / (c) 3 本が 91〜99% / (d) 2〜5 回を実測。**スタックまでは追っていないので、スピンの出所が CUDA の同期待ちか NCCL かは未確認である** (コンテナに `py-spy` が無く、`perf` / `strace` は sudo が要る) | 2026-09-10 |
 | CPU / SoC の温度 | `ssh -n spark-head 'for z in 0 1 2 3 4 5 6; do awk "{printf \"zone%s=%.1f \", $z, \$1/1000}" /sys/class/thermal/thermal_zone$z/temp; done; echo'` (worker は「worker に入る」節経由)。**zone の名前と読み方は「既知の制約」6。** 単位は °C。**履歴は残らないので、比較したいときは負荷の前後で自分で採る** | 2026-09-10 |
-| 再起動後の復帰条件 | `ssh -n spark-head 'docker inspect <コンテナ名> --format "{{.HostConfig.RestartPolicy.Name}}"'` (DeepSeek 系は `deepseek-v4-flash-vllm-dspark-1`、Qwen 系は `vllm-fn`、V4.1 EXL3 系は `dsv41-exl3-head` (worker 側は `dsv41-exl3-worker`)、GLM 系は `glm53-flash-tf` (両ノードとも同名)) | 2026-09-06 (V4.1 EXL3 系は 2026-09-15、GLM 系は 2026-10-02) |
+| 再起動後の復帰条件 | `ssh -n spark-head 'docker inspect <コンテナ名> --format "{{.HostConfig.RestartPolicy.Name}}"'` (DeepSeek 系は `deepseek-v4-flash-vllm-dspark-1`、Qwen 系は `vllm-fn`、V4.1 EXL3 系は `dsv41-exl3-head` (worker 側は `dsv41-exl3-worker`)、GLM 系は `glm53-flash-tf` (両ノードとも同名)) | 2026-09-06 (V4.1 EXL3 系は 2026-09-15、GLM 系は 2026-10-04) |
 | `/v1/responses` が `input_text` を受けるか (`cxsp` の前提) | 下のコードブロック 8。**200 で合格。** パッチ前は 400 を返すことを 2026-09-17 に実測してあり、それがこの検査の陰性対照である | 2026-09-17 |
 | head のパッチが走ったか | 下のコードブロック 11。最後の行が `patched:` か `already patched:` なら適用済み、`FATAL` なら当たっていない (→「既知の制約」12)。**レシピの `logs/` には出ない** — パッチはコンテナ内で走るので docker のログに入る | 2026-09-17 |
 | `start.sh` のローカル差分が残っているか | `ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && git diff --stat start.sh'` (2 insertions が出れば残っている。空なら `git pull` で消えている) | 2026-09-17 |
@@ -1489,7 +1514,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^tensorfold:requests_(ru
 | OpenCode が配信中のモデルを選んでいるか | Mac 側で `opencode models` が `spark/<配信名>` の 1 行だけを返して exit 0 になること (配信名は `/v1/models` と比べる)。**常駐サービスの起動直後は空を返しうる**ので、1 行が出るまで 2 秒間隔で最大 10 回打ち直し、10 回で出なければ失敗として扱う。プラグインを外した対照は取っていないので、1 行に絞られていることがプラグインの効果だという点は未確認である。既定に選ばれたモデルは TUI の入力欄の下の `Plan · <モデル名>` か `opencode run "1+1 は?"` の出力で見る (→「OpenCode」) | 2026-10-03 |
 | zsh 関数が配布済みか | Mac 側で `for f in claude-deepseek spark-common codex-spark; do diff -q "$(readlink -f ~/.config/zsh/functions/$f.zsh)" zsh/functions/$f.zsh; done` (dotfiles で実行。`ccsp` と `cxsp` は 3 ファイルすべてに依存する)。**こちらは store の実コピーなので `readlink -f` も常に `/nix/store/…` を返す。** パスではなく内容を比べる。1 行でも出力があれば `drs` 待ち | 2026-10-03 |
 | 3 つのクライアントの疎通 | Mac 側で `ccsp status` / `cxsp status`。OpenCode は `curl -fs -o /dev/null http://spark-head:8888/health` (接続先が Tailscale 側に固定なので、その経路だけを見る)。**`drs` を当てて新しいシェルを開くまで関数は `command not found` になる** (配布済みかは上の `diff -q` の行で判る)。**Claude Code の場合、Bash ツールのシェルスナップショットには `_spark_*` ヘルパーが入らないため、そこから打つと `command not found` と「に届かない」の誤判定になる (2026-09-09 実測。他のランタイムでは確かめていない)。切り分けは `curl -fs -o /dev/null http://spark-head.local:8888/health` で行う** | 2026-09-09 (`ccsp status`) / 2026-10-03 (OpenCode) |
-| 配信中のモデルが受ける reasoning effort と既定値 | **経路ごとに 3 本打つ** (語彙が違う → 「Qwen の reasoning effort の語彙」)。**`/v1/responses` (`cxsp` の経路) は下のコードブロック 8 に `"reasoning":{"effort":"<値>"}` を足した形で打つ**。OpenCode 側は `curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: application/json' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"reasoning_effort":"high","max_tokens":1}'`、`ccsp` 側は `curl -s http://spark-head.local:8888/v1/messages -H 'Content-Type: application/json' -H 'anthropic-version: 2023-06-01' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"max_tokens":1,"output_config":{"effort":"high"}}'`。**語彙外の値を投げて 400 のエラー本文を読むのが陽性対照** (対応値を列挙する)。**陰性対照として受理される値でも打ち、200 が返ることを確かめる** (常に 400 を返す壊れた検出でないことの確認)。値は系統で変える。Qwen 系は陽性対照 `high` / 陰性対照 `xhigh`、V4.1 EXL3 系は陽性対照 `medium` / 陰性対照 `max` (`high` は受理されるので陽性対照にならない)、DeepSeek 系は陽性対照 `bogus` / 陰性対照 `high` (`medium` も受理されるので既存 2 系統の陽性対照は使えない)。**Qwen 系 (2026-09-06)・V4.1 EXL3 系 (2026-09-15)・DeepSeek 系 (2026-09-23) は全値で実測済み。GLM 系は `/v1/chat/completions` と `/v1/responses` で実測済みで、`/v1/messages` は持たない** | 系統ごとに行の中の日付 (GLM 系は 2026-10-02) |
+| 配信中のモデルが受ける reasoning effort と既定値 | **経路ごとに 3 本打つ** (語彙が違う → 「Qwen の reasoning effort の語彙」)。**`/v1/responses` (`cxsp` の経路) は下のコードブロック 8 に `"reasoning":{"effort":"<値>"}` を足した形で打つ**。OpenCode 側は `curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: application/json' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"reasoning_effort":"high","max_tokens":1}'`、`ccsp` 側は `curl -s http://spark-head.local:8888/v1/messages -H 'Content-Type: application/json' -H 'anthropic-version: 2023-06-01' -d '{"model":"<配信名>","messages":[{"role":"user","content":"x"}],"max_tokens":1,"output_config":{"effort":"high"}}'`。**語彙外の値を投げて 400 のエラー本文を読むのが陽性対照** (対応値を列挙する)。**陰性対照として受理される値でも打ち、200 が返ることを確かめる** (常に 400 を返す壊れた検出でないことの確認)。値は系統で変える。Qwen 系は陽性対照 `high` / 陰性対照 `xhigh`、V4.1 EXL3 系は陽性対照 `medium` / 陰性対照 `max` (`high` は受理されるので陽性対照にならない)、DeepSeek 系は陽性対照 `bogus` / 陰性対照 `high` (`medium` も受理されるので既存 2 系統の陽性対照は使えない)。**Qwen 系 (2026-09-06)・V4.1 EXL3 系 (2026-09-15)・DeepSeek 系 (2026-09-23) は全値で実測済み。GLM 系は `/v1/chat/completions` と `/v1/responses` で実測済みで、`/v1/messages` は持たない** | 系統ごとに行の中の日付 (GLM 系は 2026-10-04) |
 | 3 つのクライアントが実際に送る effort | **設定値**は Mac 側で `python3 -c "import json;print({k:v.get('options') for k,v in json.load(open('$HOME/.config/opencode/opencode.json'))['provider']['spark']['models'].items()})"` (OpenCode が読むのはこの実体。live edit が効いていれば dotfiles 側と同じものだが、`readlink -f` で解決先を確かめてから読む) と、`ccsp` / `cxsp` の起動時の 1 行 (`cxsp` は `cxsp: Spark モード (… / effort <値>)`)。**送信値そのものを見るには記録プロキシを挟む** (下のコードブロック 4。`ccsp` と `cxsp` が対象で、OpenCode をプロキシへ向ける手順は用意していない。`cxsp` を通すときは `CCSP_LAN_HOST=127.0.0.1 cxsp lan exec --skip-git-repo-check "1+1 は?"` と打ち、プロキシが写し取るキーに `reasoning` を足す — `/v1/responses` は effort を `reasoning.effort` に載せる。ただし `cxsp` をプロキシに通す経路は未検証である → コードブロック 4 の後の注記)。**`ccsp` / `cxsp` は `drs` と新しいシェルを経ないと、dotfiles で編集した定義が動かない**ので、起動時の 1 行を読む前に「zsh 関数が配布済みか」の行で配布を確かめる | 2026-10-03 (OpenCode の設定値のみ。`ccsp` / `cxsp` の起動時の 1 行とプロキシは記録なし) |
 | DeepSeek 系の上流既定からの差分 | 下のコードブロック 1 (**キー行と RoCE 側の IP を持つ 4 行が出るので画面外に出さない**) | 2026-09-23 |
 | Qwen 系の上流既定からの差分 | 下のコードブロック 2 | 2026-09-06 |
