@@ -62,10 +62,11 @@ _spark_served_name() {
 #
 # GLM-5.3-Flash-EXL3 は他と構造が違う。配信している TensorFold のサーバは
 # none / minimal / low / medium / high / xhigh / max の 7 語を通し、それ以外を 400 で
-# 弾く。チャットテンプレートが見るのは low と high だけで、medium と xhigh は max に
-# 落ち、none は thinking を切る (/v1/chat/completions と /v1/responses の両方で
-# 2026-10-02 実測)。したがって実効的な語彙は low / high / max の 3 つで、max は指定
-# なしと同じ。明示するのは、上流がテンプレート既定を変えたときに黙って浅くならないため。
+# 弾く (/v1/chat/completions と /v1/responses の両方で 2026-10-04 実測)。受理した値は
+# サーバが minimal を low に、medium を high に読み替え、チャットテンプレートは low と
+# high 以外を max として描く (xhigh も max になる)。none は thinking を切る。読み替えは
+# TensorFold v0.6.0 のソースから読んだもの。したがって実効的な語彙は low / high / max の
+# 3 つで、max は指定なしと同じ。明示するのは、上流がテンプレート既定を変えたときに黙って浅くならないため。
 _spark_effort() {
   case "$1" in
     qwen3.8-flash-next) echo "xhigh" ;;
