@@ -76,8 +76,8 @@
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "claude-security@claude-plugins-official": true,
     "stripe@claude-plugins-official": true,
-    "session-brief@claude-session-brief": true,
-    "qa-guide@claude-qamods": true
+    "qa-guide@claude-qamods": true,
+    "recap-plus@claude-recap-plus": true
   },
   "extraKnownMarketplaces": {
     "agent-plugins-for-aws": {
@@ -135,16 +135,16 @@
         "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
       }
     },
-    "claude-session-brief": {
-      "source": {
-        "source": "github",
-        "repo": "skanehira/claude-session-brief"
-      }
-    },
     "claude-qamods": {
       "source": {
         "source": "github",
         "repo": "aieo-product/claude_qamods"
+      }
+    },
+    "claude-recap-plus": {
+      "source": {
+        "source": "github",
+        "repo": "skanehira/claude-recap-plus"
       }
     }
   },
@@ -159,6 +159,13 @@
     }
   },
   "advisorModel": "fable",
+  "pluginConfigs": {
+    "qa-guide@claude-qamods": {
+      "options": {
+        "language": "ja"
+      }
+    }
+  },
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
@@ -168,12 +175,5 @@
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": true,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": true,
-  "pluginConfigs": {
-    "qa-guide@claude-qamods": {
-      "options": {
-        "language": "ja"
-      }
-    }
-  }
+  "voiceEnabled": true
 }
