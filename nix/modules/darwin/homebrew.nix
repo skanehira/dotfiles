@@ -76,7 +76,6 @@
       "zoom"
       "claude"
       "codex-app"
-      "stablyai/orca/orca"
     ];
   };
 }
