@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+- 種別: グローバル指示
+
 プロジェクト固有の指示はプロジェクト直下の CLAUDE.md を優先し、そこに定めた環境固有の規範 (featureflag 要否・互換性ポリシー等) も品質の評価軸に含める。
 
 ## 評価関数 (全作業の判定フレーム)
@@ -41,7 +43,7 @@
 ## エスカレーション (停止と前進の判断)
 
 - **対話モード**: ゴール / 検証手段が依頼から自明でなければ着手前に確認し、不明点は止まって質問する (1 行の typo 修正や宣言的な設定変更など、ゴールも検証手段も自明なタスクでは確認不要)。前提は明示し、複数解釈があるなら勝手に選ばず提示する
-- **自律モード** (autopilot・一括委任「全部やって」「のこりを実装して」・headless `claude -p`): 停止してよいのは (1) 概要設計の破綻 (autopilot の P3 相当) (2) 破壊的・不可逆な操作 (force push / 削除 / 外部公開) (3) ゴール達成が原理的に不可能と判明 (不変則 5 で切り替え候補が尽きた場合を含む) の 3 つだけ。それ以外は選択と根拠を出力・ログに明示して前進する (事後にユーザーがレビューで乖離に気付ける状態を保つ)
+- **自律モード** (一括委任「全部やって」「のこりを実装して」・headless `claude -p`): 停止してよいのは (1) 概要設計の破綻 (2) 破壊的・不可逆な操作 (force push / 削除 / 外部公開) (3) ゴール達成が原理的に不可能と判明 (不変則 5 で切り替え候補が尽きた場合を含む) の 3 つだけ。それ以外は選択と根拠を出力・ログに明示して前進する (事後にユーザーがレビューで乖離に気付ける状態を保つ)
 
 ## 実装時
 
@@ -66,4 +68,16 @@
 
 ## ローカル LLM バックエンド (DGX Spark)
 
-自宅に DGX Spark 2 台のローカル LLM クラスタ (`spark-head` / `spark-worker`) がある。Spark・ローカル LLM・`ccsp` に関わる作業では、着手前に `~/.claude/rules/infra/dgx-spark.md` を Read する (接続先 / 起動停止 / 性能特性 / 既知の制約)。
+自宅に DGX Spark 2 台のローカル LLM クラスタ (`spark-head` / `spark-worker`) がある。Spark・ローカル LLM に関わる作業では、着手前に `~/.claude/rules/infra/dgx-spark.md` を Read する (接続先 / 起動停止 / 性能特性 / 既知の制約)。
+
+## 依拠する外部事実
+
+本書の評価・停止・実装手順は運用規約である。規約を実現する配布方式や検証手段は、次の確認元と実環境を照合する。本文の「機械ゲートが無い」はハーネス自身の実装についての記述であり、外部プラグインやプロジェクト固有のゲートまで無いという意味ではない。
+
+| 確認するもの | 確認元 | 確認方法 |
+| --- | --- | --- |
+| 共通の正本・ルール・スキルの配布と subagent の生成 | dotfiles の `CLAUDE.md`「配布」「live edit の範囲」、`nix/modules/home/claude.nix` / `codex.nix` / `opencode.nix` | 同ガイドの「配布の確認」で symlink と生成物を照合する。Codex / OpenCode の subagent 本文は書式変換後の生成物と比べる |
+| ランタイムごとのツール・パスの読み替え | `agents/bindings/codex/AGENTS.md` / `agents/bindings/opencode/AGENTS.md` | 実行中のランタイムに対応する binding の読み替え表と制約を読む |
+| モデル割当と subagent のモデル継承 | `agents/rules/core/orchestration.md`、各 binding の `AGENTS.md`、`agents/scripts/subagent-format.ts`、`agents/bindings/codex/config.toml` | 割当規約、生成物に出すキー、ランタイム側のモデル設定を分けて確認する。実際の起動でモデルを確認していなければ、継承の規定だけからモデル名を断定しない |
+| テスト・レビュー・コミットの検証手段 | `agents/rules/core/implementation.md` / `verification.md` / `commit.md`、各プロジェクトの指示・CI、使用するスキル | 規定元と実行コマンド・結果を対応づける。dotfiles の CI 対象とハーネスのゲート一覧は同リポジトリの `CLAUDE.md` にある |
+| Spark の接続先・配信系統・検証コマンド | `agents/rules/infra/dgx-spark.md`「依拠する外部事実」 | 同表の確認方法で現在値を取得し、日付付きの過去の実測値と区別する。認証情報を出力しない |

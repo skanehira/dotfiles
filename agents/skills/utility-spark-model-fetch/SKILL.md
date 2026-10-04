@@ -83,11 +83,20 @@ rsync -a --delete --info=progress2 --no-inc-recursive "$SRC" "$W:.cache/huggingf
 
 ### 5. 検証する
 
-サイズ一致では不十分。`scripts/verify_shards.py` を両ノードで実行して突き合わせる。
+サイズ一致では不十分。スキル同梱の `scripts/verify_shards.py` を毎回両ノードへ配置してから実行し、結果を突き合わせる。`/tmp/vs.py` はノードの再起動で消えるため、以前配置したものが残っている前提にしない。
+
+まず Mac から head へ配置する (`$GHQ_ROOT` は ghq のルート)。
 
 ```bash
-scp scripts/verify_shards.py spark-head:/tmp/vs.py
-ssh spark-head 'python3 /tmp/vs.py '"$D"'; ssh '"$W"' "python3 /tmp/vs.py '"$D"'"'
+scp "$GHQ_ROOT/github.com/skanehira/dotfiles/agents/skills/utility-spark-model-fetch/scripts/verify_shards.py" spark-head:/tmp/vs.py
+```
+
+次に、手順 3・4 で `D` と `W` を設定した head のシェルで、worker へ配置して両ノードを検証する。`D` は HF キャッシュのディレクトリ名、`W` は worker の RoCE 側接続先である。
+
+```bash
+scp /tmp/vs.py "$W:/tmp/vs.py" &&
+  python3 /tmp/vs.py "$D" &&
+  ssh "$W" "python3 /tmp/vs.py '$D'"
 ```
 
 必要シャード数・揃い数・重み合計 GB・ファイル数が両ノードで一致すること。欠落があれば exit 1 を返す。

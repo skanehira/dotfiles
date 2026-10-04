@@ -144,7 +144,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
 
 - **zsh/** — `zsh.nix` が 2 つの経路で取り込む zsh の設定
   - `zshrc` — bindkey 群 + 関数 source loop。`programs.zsh.initContent` が `builtins.readFile` で取り込む
-  - `functions/*.zsh` — カスタム zsh 関数 7 本。`zsh.nix` の `home.file` が `~/.config/zsh/functions/` に 1 本ずつ置き、`zshrc` の source loop が読み込む。`ghq-fzf` / `gss` / `tmuxpopup` の 3 本と、DGX Spark 系 (接続先・運用は `agents/rules/infra/dgx-spark.md`) の `claude-deepseek` (`ccsp` / `ccds`) / `codex-spark` (`cxsp`) / `spark-common` の 3 本、mac 専用の `sleepctl`。OpenCode はラッパー関数を持たず、素の `opencode` が Spark に繋がる (→ Directory Structure の `agents/bindings/opencode/` 項)
+  - `functions/*.zsh` — カスタム zsh 関数は macOS で 5 本、Linux で 4 本。`zsh.nix` の `home.file` が `~/.config/zsh/functions/` に 1 本ずつ置き、`zshrc` の source loop が読み込む。`ghq-fzf` / `gss` / `tmuxpopup` / `claude-deepseek` (`ccds`: DeepSeek 本家 API) と、mac 専用の `sleepctl`。OpenCode はラッパー関数を持たず、素の `opencode` が Spark に繋がる (接続先・運用は `agents/rules/infra/dgx-spark.md`)
 - **karabiner/** — Karabiner-Elements 設定 (Goku DSL)
   - `karabiner.edn` — EDN で書いたルール、switch 時に goku が `~/.config/karabiner/karabiner.json` を生成
 - **wezterm/** — WezTerm 設定 (`mkOutOfStoreSymlink` で dotfiles 直接 symlink、live edit 可能)
@@ -153,8 +153,8 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `tmux.conf` — 編集即反映、`prefix + r` で reload。`drs` 不要
   - プラグインの run-shell だけは nix store path 解決のため Nix 生成の `~/.config/tmux/plugins.conf` 経由
 - **agents/** — AI エージェント共通のハーネス正本 (3 ランタイムが同じ実体を読む。配布は正本への symlink が基本で live edit 可能)
-  - `AGENTS.md` / `rules/` / `skills/` / `subagents/` は正本への symlink なので編集即反映。例外は **Codex と OpenCode 側の配布に限り**、スキルの追加・削除と subagent の変更で `drs` / `hms` が要る (どれがどれかは「live edit の範囲」の表を参照)
-  - `hooks/` / `scripts/` / `knowledge-profile.md` と `bindings/claude/settings.json` / `keybindings.json` / `bindings/codex/AGENTS.md` / `config.toml` / `bindings/opencode/AGENTS.md` / `opencode.json` / `plugins/spark-served.ts` / `cli.json` も直 symlink。`bindings/claude/settings.{deepseek,spark}.json` は配布せず、`ccsp` / `ccds` が `$GHQ_ROOT` (ghq のルート。`nix/modules/home/env.nix` が `$HOME/dev` に設定する) 経由で直接読む
+  - `AGENTS.md` / `rules/` / `skills/` の本文は正本への symlink なので編集即反映。`subagents/` は Claude Code にだけ symlink で配り、Codex と OpenCode は本文の変更も `drs` / `hms` による再変換が要る。スキルの追加・削除時も Codex では `drs` / `hms` が要る (→「live edit の範囲」)
+  - `hooks/` / `scripts/` / `knowledge-profile.md` と `bindings/claude/settings.json` / `keybindings.json` / `bindings/codex/AGENTS.md` / `config.toml` / `bindings/opencode/AGENTS.md` / `opencode.json` / `plugins/spark-served.ts` / `cli.json` も直 symlink。`bindings/claude/settings.deepseek.json` は配布せず、`ccds` が `$GHQ_ROOT` (ghq のルート。`nix/modules/home/env.nix` が `$HOME/dev` に設定する) 経由で直接読む
   - 配布先と構成は「AI エージェントのハーネス (agents/)」節を参照
 - **agents/bindings/codex/** — Codex 固有の設定 (ハーネス本体は `agents/` 直下)
   - `config.toml` — git 管理する Codex 共通設定。Codex の system レイヤー `/etc/codex/config.toml` として dotfiles 直接 symlink され、CLI / ChatGPT.app 内 Codex を含む全クライアントに読まれる (live edit 可能)
@@ -284,17 +284,17 @@ nix/
 
 ### `sudo -n` (`--non-interactive`) は使わない
 
-`-n` フラグは PAM 認証を**完全にスキップ**する。Touch ID プロンプトすら出ない。代わりに「a password is required」エラーで即終了する。
+`-n` フラグは対話入力を禁止する。この環境で新たな Touch ID 認証が必要な場面では、認証を開始できず「a password is required」で失敗する。資格情報キャッシュが有効な場合など、認証が不要なら成功することもある。認証が必要な操作も実行できるよう、`sudo` に `-n` は付けない。
 
 ```bash
-# ❌ Touch ID が呼ばれず失敗する
+# ❌ 新たな Touch ID 認証が必要な場合に失敗する
 sudo -n darwin-rebuild switch ...
 
-# ✅ Touch ID ダイアログが出て指紋で通せる (TTY なし環境でも OK)
+# ✅ 認証が必要な場合は Touch ID ダイアログで認証できる
 sudo darwin-rebuild switch ...
 ```
 
-スクリプトや Claude Code の Bash ツールから `sudo` を呼ぶときも同様。`-n` を付けないことで PAM が GUI 認証ダイアログを発火させ、ユーザの指紋で認証できる。
+スクリプトや Claude Code の Bash ツールから `sudo` を呼ぶときも同様。`-n` を付けなければ、認証が必要なときに、このマシンの PAM 設定が Touch ID ダイアログを表示できる。
 
 ## Nix daemon のトラブルシュート (macOS)
 
@@ -350,6 +350,22 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 
 Android プロファイルだけは `pkgs.neovim` (nixpkgs-unstable の **stable release**、`cache.nixos.org` 経由でビルド済) を使う。proot で nightly をビルドできないため。こちらのアップデートは `nix flake update nixpkgs`。
 
+## Claude Code を DeepSeek 本家 API で使う (`ccds`)
+
+`zsh/functions/claude-deepseek.zsh` の `ccds` は、`agents/bindings/claude/settings.deepseek.json` を `--settings` で渡して `claude` を起動する。接続先は `https://api.deepseek.com/anthropic`、effort は `max` である。設定ファイルは `$GHQ_ROOT/github.com/skanehira/dotfiles` から直接読むため、編集は次の起動から効く。関数本体の編集は `drs` / `hms` と新しいシェルが要る。
+
+```bash
+ccds                     # DeepSeek 本家 API で Claude Code を起動
+ccds -p "README を要約して"  # 引数をそのまま claude へ渡す
+ccds off                 # Anthropic 用へ戻す
+```
+
+トークンが未設定のときは、1Password の `op://Personal/DeepSeek API Key/credential` から取得して `ANTHROPIC_AUTH_TOKEN` に export する (`op signin` 済みであること)。空でない値が既にあれば取得を飛ばすため、別の API のトークンを残したシェルでは先に解除する。設定ファイルが無い、またはキー取得が失敗した場合は起動せず終了する。
+
+同じシェルで再起動できるよう `claude` の alias が残る。alias とトークンの変更は他の既存シェルに影響しない。export したトークンは子プロセスへ渡るが alias は渡らないため、子シェルからも `ccds` を使う。`ccds off` は `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_BASE_URL` と alias を解除するが、実行中の Claude Code は停止しない。第 1 引数の `off` 以外は Claude Code に渡り、`off` の後ろの引数は使わない。
+
+`settings.deepseek.json` は `security-guidance@claude-plugins-official` を無効にしている。Stop hook が DeepSeek 本家で配信していない Opus を要求するためである。
+
 ## AI エージェントのハーネス (agents/)
 
 グローバル指示・ルール・スキル・subagent の正本は `agents/` に 1 セットだけ置き、**3 ランタイムが同じ実体を読む**。Claude Code は正本への symlink を読む。Codex と OpenCode も同じ symlink 先を読み、Claude 綴りの語彙を自分の語彙へ**読み替える** (`agents/bindings/codex/AGENTS.md` / `agents/bindings/opencode/AGENTS.md` の読み替え表)。例外は subagent だけで、Codex は TOML を、OpenCode は別スキーマの Markdown を要求するため、書式変換したものを配る。
@@ -364,7 +380,7 @@ agents/
 ├── scripts/             ← sync-subagents.ts (Codex / OpenCode への書式変換) / subagent-format.ts / mutate-check.ts ほか
 ├── knowledge-profile.md ← utility-doc-reading が読み書きする
 └── bindings/            ← ランタイム固有
-    ├── claude/          ← settings.json / keybindings.json / settings.{deepseek,spark}.json
+    ├── claude/          ← settings.json / keybindings.json / settings.deepseek.json
     ├── codex/           ← AGENTS.md (Codex のグローバル指示) / config.toml
     └── opencode/        ← AGENTS.md (OpenCode のグローバル指示) / opencode.json (Spark provider) / plugins/spark-served.ts (配信中モデルの選択) / cli.json (TUI 設定)
 ```
@@ -438,15 +454,15 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 
 ### live edit の範囲
 
-**本文の編集は `drs` / `hms` を待たずに反映される。** `drs` / `hms` が要るのは **Codex / OpenCode 側の配布だけ**で、Claude Code はどの場合も即反映される。
+**正本への symlink で配る本文は、`drs` / `hms` を待たずに反映される。** subagent の本文は Codex / OpenCode 向けに書式変換しているため、変更後に `drs` / `hms` が要る。スキルの追加・削除も Codex 向けの個別 symlink の更新が要る。Claude Code はどちらも正本のディレクトリを直接参照する。
 
 | 対象 | 反映 | 理由 |
 | --- | --- | --- |
-| `AGENTS.md` / `rules/` / `skills/` / `subagents/` の本文 | 即反映 (3 ランタイムとも) | 正本への symlink |
+| `AGENTS.md` / `rules/` / `skills/` の本文 | 即反映 (3 ランタイムとも) | 正本への symlink |
 | `hooks/` `scripts/` `knowledge-profile.md` | 即反映 | 正本への symlink (`knowledge-profile.md` は `utility-doc-reading` が書き込む) |
 | `bindings/claude/settings.json` `keybindings.json` / `bindings/codex/AGENTS.md` `config.toml` / `bindings/opencode/AGENTS.md` `opencode.json` `cli.json` `plugins/spark-served.ts` | 即反映 | 正本への symlink。OpenCode の常駐サービスが設定とプラグインの変更を検知して読み直す実装はソースにあるが、反映を実際に確かめてはおらず、読み直しを外から観測する手段も確かめていない (変更が効いていないように見えたら `opencode service restart`)。`cli.json` は TUI で設定を変えると symlink が切れる (→ Directory Structure の `agents/bindings/opencode/` 項) |
 | スキルの追加・削除 | Claude と OpenCode は即反映 / **Codex は `drs` / `hms`** | `~/.claude/skills` がディレクトリごとの symlink で、OpenCode もここを読む。Codex は `~/.agents/skills/<name>` を 1 本ずつ張り直す activation (`linkAgentSkills`) が要る |
-| subagent の変更・追加 | Claude は即反映 / **Codex と OpenCode は `drs` / `hms`** | Claude は `~/.claude/agents` がディレクトリごとの symlink。Codex は `~/.codex/agents/*.toml`、OpenCode は `~/.config/opencode/agents/*.md` の再変換 (`syncCodexSubagents` / `syncOpencodeSubagents`) が要る |
+| subagent の本文・frontmatter の変更、追加・削除 | Claude は即反映 / **Codex と OpenCode は `drs` / `hms`** | Claude は `~/.claude/agents` がディレクトリごとの symlink。Codex は `~/.codex/agents/*.toml`、OpenCode は `~/.config/opencode/agents/*.md` の再変換・prune (`syncCodexSubagents` / `syncOpencodeSubagents`) が要る |
 | `~/.claude/skills/` への第三者の書き込み | 即反映 (副作用あり) | 正本への symlink なので、他ツールが置いたディレクトリは dotfiles の `agents/skills/` (git 作業ツリー) に落ちる。**新たに増えたら sink を 2 つとも判断する**: commit するか (`.gitignore`) と `~/.agents/skills` へ配るか (`claude_only_skills`)。Claude Code の同期キャッシュ `synced` は両方で外してある |
 
 ### 開発ワークフローのスキル
@@ -555,7 +571,7 @@ opencode --version                                # opencode v2.0.22 (nix/pkgs/o
 
 ### ランタイムを 1 つ外すとき
 
-追加より撤去のほうが漏れやすい。OpenCode を例に、**触る 10 箇所**を挙げる (Codex を外す場合もほぼ同型で、加えて `/etc/codex/config.toml` の `environment.etc` と activation 4 本と Spark 用の zsh 関数 `codex-spark.zsh` が要る)。
+追加より撤去のほうが漏れやすい。OpenCode を例に、**触る 10 箇所**を挙げる (Codex を外す場合もほぼ同型で、加えて `/etc/codex/config.toml` の `environment.etc` と activation 4 本が要る)。
 
 | 種別 | 対象 |
 | --- | --- |
@@ -675,6 +691,37 @@ done
 - **選択式の質問の形**も揃わない。Codex の `request_user_input` は 2〜3 択の単一選択で (codex 0.159.2 のバイナリに含まれる文字列が根拠で、公式のスキーマは未確認)、OpenCode の `question` は選択肢の数と複数選択の可否を確かめていない。両 binding とも同じ線を引き、4 択以上や複数選択の質問は、選択肢を番号付きでメッセージに並べて番号で答えてもらうと書いてある
 - **rules の自動展開**は Claude Code 固有。`paths:` frontmatter による条件付きロードも Claude Code だけの機構で、Codex と OpenCode はグローバル指示から「Read せよ」と指示された分しかコンテキストに入らない。3 者で「同じルールが同じタイミングで効く」ことまでは保証していない
 - **共通の正本の自動読み込み**は Claude Code だけが持つ。Codex と OpenCode は自分の AGENTS.md (`~/.codex/AGENTS.md` / `~/.config/opencode/AGENTS.md`) しか自動では読まず、`~/.claude/CLAUDE.md` へのフォールバックも無い。共通の正本は binding 内の Read 指示で届ける。指示を守るかはモデル任せで、Claude Code の自動展開のような機械的な保証は無い
+
+## 依拠する外部事実
+
+本文の日付付きの件数・実測値は、その確認日の記録である。現在の配置や件数を判断するときは、次の確認元と方法で調べ直す。以下は確認方法の一覧であり、全マシンで同じ状態であることを保証しない。
+
+| 確認するもの | 確認元 | 確認方法 |
+| --- | --- | --- |
+| Nix のプロファイル・OS 別の import | `nix/flake.nix` / `home-darwin.nix` / `home-linux.nix` / `home-android.nix` | 各 output の system と module の import 一覧を読む |
+| ハーネスの symlink と subagent の生成 | `nix/modules/home/claude.nix` / `codex.nix` / `opencode.nix`、`agents/scripts/sync-subagents.ts` | 「配布の確認」のコマンドで symlink の解決先と生成物を確認する。変換結果は正本の本文と生成物の本文を照合する |
+| スキル・subagent の本数と配布除外 | `agents/skills/` / `agents/subagents/`、`codex.nix` の `claude_only_skills` | 下のコードブロックで git 管理分を数え、「スキルの配布先の限定」と実際の配布先を照合する |
+| Claude のプラグイン・hook の件数 | `agents/bindings/claude/settings.json` | 下のコードブロックで件数だけを出す。プラグインの実際の導入状態は設定上の有効件数と分け、Codex 側は専用の 6 本を確認する既載のコマンドを使う |
+| Nix の CI と agent 関連の手動テスト | `.github/workflows/nix-check.yml`、`agents/scripts/` と `agents/bindings/opencode/` のテスト | CI の対象パスと実行コマンドを読む。agent 関連は「subagent の書式変換」の `deno test` を手で実行する |
+| subagent のモデル指定・継承とゲートの有無 | `agents/scripts/subagent-format.ts`、`agents/bindings/codex/config.toml`、各 binding の `AGENTS.md`、各スキル・ルール | 生成するキーとランタイム側の設定を確認する。検出手段の有無は「機械検証が無い規律」と規定元を照合し、ログから未確認の順序を実施済みとしない |
+| sudo の認証方式 | `nix/modules/darwin/system.nix`、`/etc/pam.d/sudo_local`、導入済みの `man sudo` | Touch ID / reattach の設定と `-n` の説明を読む。資格情報キャッシュの有無で挙動が変わるため、非対話指定を認証全体の無効化と解釈しない |
+
+git 管理分の件数と、設定上のプラグイン・hook 件数はリポジトリ直下で次のように確認する。認証ファイル・履歴・キャッシュは読まない。
+
+```bash
+python3 - <<'PY'
+import json, subprocess
+from pathlib import Path
+
+files = subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0")
+print("skills:", sum(p.startswith("agents/skills/") and p.endswith("/SKILL.md") for p in files))
+print("subagents:", sum(p.startswith("agents/subagents/") and p.endswith(".md") for p in files))
+settings = json.loads(Path("agents/bindings/claude/settings.json").read_text())
+plugins = settings.get("enabledPlugins", {})
+print("plugins:", len(plugins), "enabled:", sum(v is True for v in plugins.values()))
+print("hooks:", sum(len(group.get("hooks", [])) for groups in settings.get("hooks", {}).values() for group in groups))
+PY
+```
 
 ## Working with This Repository
 
