@@ -30,6 +30,21 @@ local keys = {
   -- opencode の command list ( Cmd+p )。CMD 修飾は pty へ送れないため alt+p に変換して
   -- 送出する (opencode 側 cli.json で alt+p を command.palette.show に紐付け)
   { key = "p", mods = "CMD",         action = action.SendKey { key = "p", mods = "ALT" } },
+  -- claude-vime の前候補 (shift+space)。WezTerm は kitty keyboard 無効では shift+space を
+  -- 普通の空白で送るため、herdr / claude が前面のときだけ CSI u (\x1b[32;2u) を送出する。
+  -- herdr はこれを解析し、kitty モードのペイン (claude) には CSI u、それ以外には空白で渡す
+  {
+    key = " ",
+    mods = "SHIFT",
+    action = wezterm.action_callback(function(window, pane)
+      local name = pane:get_foreground_process_name() or ""
+      if name:find("herdr", 1, true) or name:find("claude", 1, true) then
+        window:perform_action(action.SendString "\x1b[32;2u", pane)
+      else
+        window:perform_action(action.SendString " ", pane)
+      end
+    end),
+  },
   -- { key = "¥", mods = "CMD", action=action{SplitHorizontal={domain="CurrentPaneDomain"}}},
   -- { key = "-", mods = "CMD", action=action{SplitVertical={domain="CurrentPaneDomain"}}},
   -- { key = "h", mods = "LEADER", action=action{AdjustPaneSize={"Left", 5}}},
