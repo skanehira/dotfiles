@@ -11,7 +11,13 @@
     "input.backspace": "backspace,shift+backspace,ctrl+h",
     "input.move.up": "up,ctrl+p",
     "input.move.down": "down,ctrl+n",
+    "input.move.left": "left,ctrl+b",
+    "input.move.right": "right,ctrl+f",
+    "session.background": "ctrl+shift+b",
     "prompt.history.previous": "up,ctrl+p",
     "prompt.history.next": "down,ctrl+n"
-  }
+  },
+  "plugins": [
+    "./herdr-opencode"
+  ]
 }
