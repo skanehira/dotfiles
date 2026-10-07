@@ -176,7 +176,7 @@
         ]) linuxUsers
       );
 
-      # 自前 derivation (nixpkgs 未収録 LSP)。`packages.nix` からも callPackage で
+      # 自前 derivation (nixpkgs 未収録ツール)。`packages.nix` からも callPackage で
       # 参照されるが、ここに出すことで `nix build .#tsp-server` 等で個別 build できる
       packages = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ] (
         system:
@@ -186,6 +186,7 @@
         {
           tsp-server = pkgs.callPackage ./pkgs/tsp-server.nix { };
           gh-actions-language-server = pkgs.callPackage ./pkgs/gh-actions-language-server.nix { };
+          claude-recall = pkgs.callPackage ./pkgs/claude-recall.nix { };
         }
         // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
           kanary = pkgs.callPackage ./pkgs/kanary.nix { };
