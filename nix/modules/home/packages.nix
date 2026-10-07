@@ -173,6 +173,7 @@ let
     [
       ollama
       (pkgs.callPackage ../../pkgs/opencode.nix { }) # OpenCode V2 (nixpkgs は V1 のため自前)。DGX Spark 専用
+      (pkgs.callPackage ../../pkgs/claude-recall.nix { }) # claude-recall (Claude Code セッションのアーカイブ + MCP。nixpkgs 未収録)
     ]
     ++ [
       inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.default # AI agent multiplexer TUI (flake input)
