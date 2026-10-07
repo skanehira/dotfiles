@@ -138,7 +138,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `modules/overlays.nix` — nix-darwin 用 overlays モジュール (overlays-list.nix を消費)
   - `modules/overlays-list.nix` — overlay の素のリスト (mac/Linux 両側で共有)
   - `install.sh` — mac bootstrap 用 (一度限り)
-  - `pkgs/` — nixpkgs 未収録ツールの自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode)
+  - `pkgs/` — nixpkgs 未収録ツールの自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode / claude-recall)
 
 ### Nix 補助
 
@@ -228,7 +228,7 @@ nix/
 ├── home-android.nix       ← home-core.nix + 軽量 module + homeDirectory=/home/...
 ├── darwin.nix             ← imports modules/darwin/
 ├── install.sh             ← mac bootstrap
-├── pkgs/                  ← 自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode)
+├── pkgs/                  ← 自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode / claude-recall)
 └── modules/
     ├── overlays.nix       ← nix-darwin 用 module (overlays-list.nix を nixpkgs.overlays に流す)
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
