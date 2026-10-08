@@ -26,11 +26,12 @@ MODEL_IDS = {
     "opus": "claude-opus-5-5",
     "sonnet": "claude-sonnet-5-5",
     "haiku": "claude-haiku-5-5",
-    "fable": "claude-fable-5-1",
 }
 DEFAULT_MODEL = MODEL_IDS["opus"]
-COST_PER_RUN_USD = (3, 6)
-RANK = {"haiku": 1, "sonnet": 2, "opus": 3, "fable": 4, "mythos": 4}
+# 計測には実行・助言・採点のどこにも使わない
+FORBIDDEN_FAMILIES = ("fable", "mythos")
+COST_PER_RUN_USD = (1, 2)
+RANK = {"haiku": 1, "sonnet": 2, "opus": 3}
 USAGE_LIMIT_MARKERS = ("hit your session limit", "usage limit")
 # 子に渡す環境変数。認証は HOME 経由 (キーチェーン) で通るので、トークン類は渡さない
 CHILD_ENV_KEYS = ("PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL", "TMPDIR", "TERM")
@@ -42,6 +43,10 @@ def child_env(environ):
 
 def normalize_model(name):
     return re.sub(r"\[[^\]]*\]$", "", name)
+
+
+def is_forbidden(model_id):
+    return any(family in model_id for family in FORBIDDEN_FAMILIES)
 
 
 def model_rank(model_id):
@@ -106,6 +111,9 @@ def check_run(events, exec_model, allowed):
     if last.get("is_error"):
         return (False, f"エラーで終了: {text[:80]}")
     used = {normalize_model(m) for r in results for m in (r.get("modelUsage") or {})}
+    forbidden = sorted(m for m in used if is_forbidden(m))
+    if forbidden:
+        return (False, f"計測に使わないモデル: {', '.join(forbidden)}")
     unexpected = sorted(used - allowed)
     if unexpected:
         return (False, f"想定外のモデル: {', '.join(unexpected)}")
@@ -397,6 +405,8 @@ def main():
     s.add_argument("--allow-weaker-grader", action="store_true")
     args = p.parse_args()
     if args.cmd in ("run", "grade"):
+        if is_forbidden(args.model):
+            sys.exit(f"{args.model} は計測に使わない (Fable と Mythos のモデルは実行・採点とも禁止)")
         require_claude()
     {"estimate": cmd_estimate, "run": cmd_run, "check": cmd_check, "grade": cmd_grade}[args.cmd](args)
 
