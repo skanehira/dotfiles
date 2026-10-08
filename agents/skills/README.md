@@ -182,6 +182,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [utility-reviewing-skills](./utility-reviewing-skills/) | スキルをベストプラクティスに基づいてレビュー |
 | [utility-doc-reading](./utility-doc-reading/) | 知識プロファイルを参照しながらドキュメント読解を支援 |
 | [utility-doc-audit](./utility-doc-audit/) | ドキュメントの整合性・フォーマット適合を fresh context の fan-out で監査。**ユーザー起動専用** — 普段の作業では起動せず、`/workflow-design-notes` の落とし込みフェーズからのみ自動起動する |
+| [utility-harness-measure](./utility-harness-measure/) | ハーネスの改訂が振る舞いを変えたかを `claude -p` で計測。モデルを正式 ID で固定して実モデルを照合し、対照つきの匿名採点で改訂前後を比べる |
 | [utility-session-profile](./utility-session-profile/) | Claude Code のセッションログから所要時間の内訳を集計し HTML レポートを作る (Codex への配布から除外) |
 | [utility-pdf-compress](./utility-pdf-compress/) | PDF のロスレス圧縮 |
 | [utility-cf-deploy-token](./utility-cf-deploy-token/) | 1Password のマスタートークンから Cloudflare のデプロイ用トークン (Workers Scripts + D1) を発行し、GitHub Actions の secrets に登録 |
