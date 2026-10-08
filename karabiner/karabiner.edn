@@ -26,4 +26,8 @@
    :rules [[:!T##b :left_arrow  [:!terminals]]
            [:!T##n :down_arrow  [:!terminals]]
            [:!T##p :up_arrow    [:!terminals]]
-           [:!T##f :right_arrow [:!terminals]]]}]}
+           [:!T##f :right_arrow [:!terminals]]]}
+
+  {:des   "CMD-u/d to scroll in wezterm (vim-like)"
+   :rules [[:!Cu {:mkey {:vwheel -300}} [:wezterm]]
+           [:!Cd {:mkey {:vwheel 300}}  [:wezterm]]]}]}
