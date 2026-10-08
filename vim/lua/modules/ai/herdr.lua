@@ -118,8 +118,9 @@ function M.pane_exists(pane_id)
   return err == nil
 end
 
--- 現在のタブ内で指定エージェントが動いているペインを alias で検索
--- @param pattern string エージェント名（"claude" / "codex" / "opencode"）
+-- 現在のタブ内で指定エージェントが動いているペインを、herdr が検出したエージェント種別で検索
+-- エージェント名（agent rename で付ける名前）は手動起動や再起動で消えるため判定に使わない
+-- @param pattern string エージェント種別（"claude" / "codex" / "opencode"）
 -- @return string|nil ペインID、見つからない場合はnil
 function M.find_pane_by_command(pattern)
   local tab_id = vim.env.HERDR_TAB_ID
@@ -137,9 +138,8 @@ function M.find_pane_by_command(pattern)
     return nil
   end
 
-  local expected_name = string.format("%s-%s", pattern, tab_id:gsub(":", "-"):lower())
   for _, agent in ipairs(decoded.result.agents) do
-    if agent.tab_id == tab_id and agent.name == expected_name then
+    if agent.tab_id == tab_id and agent.agent == pattern then
       return agent.pane_id
     end
   end
