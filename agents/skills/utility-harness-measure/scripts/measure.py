@@ -61,6 +61,9 @@ def pinned_settings(exec_model):
     return {
         "sandbox": {"enabled": True, "autoAllowBashIfSandboxed": True,
                     "allowUnsandboxedCommands": False},
+        # 空文字で advisor ツールを無効にする。ユーザー設定の advisorModel が生きていると、
+        # 子が advisor を呼んだ回に別モデルが modelUsage へ混ざり、実行モデルを照合できなくなる
+        "advisorModel": "",
         "env": {
             "ANTHROPIC_MODEL": exec_model,
             "ANTHROPIC_DEFAULT_OPUS_MODEL": MODEL_IDS["opus"],

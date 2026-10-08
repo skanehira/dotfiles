@@ -39,6 +39,13 @@ class CheckRunTest(unittest.TestCase):
             (False, "想定外のモデル: claude-fable-5-1"),
         )
 
+    def test_run_that_consulted_fable_advisor_is_invalid(self):
+        events = [result_event(["claude-opus-5-5", "claude-fable-5-1"])]
+        self.assertEqual(
+            measure.check_run(events, "claude-opus-5-5", measure.allowed_models("claude-opus-5-5")),
+            (False, "想定外のモデル: claude-fable-5-1"),
+        )
+
     def test_run_that_never_used_executor_model_is_invalid(self):
         events = [result_event(["claude-haiku-5-5"])]
         self.assertEqual(
