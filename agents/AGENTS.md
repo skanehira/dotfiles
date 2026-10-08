@@ -50,7 +50,7 @@
 実装系ルールは即時展開しない (セッション・subagent spawn ごとのコンテキスト固定費削減のため遅延参照)。**着手前に下記の必要なものを Read する** (機械的なリマインドは無いので自律遵守する):
 
 - TDD 手順 (RED→GREEN→REFACTOR / バグ修正プロセス / Tidy First) → `~/.claude/rules/core/tdd.md`
-- 実装手続き (TDD 適用判断 / 動作検証の手段 / 外科的変更 / 多段タスクの DoD) → `~/.claude/rules/core/implementation.md`
+- 実装手続き (TDD 適用判断 / 動作検証の手段 / 外科的変更 / コードコメント / 多段タスクの DoD) → `~/.claude/rules/core/implementation.md`
 - 検証コマンドの規律 (不変則 4 の陽性・陰性対照) → `~/.claude/rules/core/verification.md`
 - 設計原則 (SOLID / YAGNI / 凝集度・結合度・コロケーション / 外界 DI) → `~/.claude/rules/core/design.md`
 - テスト方針 (戦略 / ピラミッド / シナリオ網羅) → `~/.claude/rules/core/testing.md`
