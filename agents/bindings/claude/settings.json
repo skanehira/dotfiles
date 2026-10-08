@@ -76,8 +76,8 @@
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "claude-security@claude-plugins-official": true,
     "stripe@claude-plugins-official": true,
-    "qa-guide@claude-qamods": true,
-    "recap-plus@claude-recap-plus": true
+    "recap-plus@claude-recap-plus": true,
+    "html-plan@claude-community": true
   },
   "extraKnownMarketplaces": {
     "agent-plugins-for-aws": {
@@ -146,6 +146,12 @@
         "source": "github",
         "repo": "skanehira/claude-recap-plus"
       }
+    },
+    "claude-community": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-community"
+      }
     }
   },
   "outputStyle": "concise",
@@ -159,13 +165,6 @@
     }
   },
   "advisorModel": "fable",
-  "pluginConfigs": {
-    "qa-guide@claude-qamods": {
-      "options": {
-        "language": "ja"
-      }
-    }
-  },
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
