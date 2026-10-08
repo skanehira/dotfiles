@@ -1,0 +1,1 @@
+`~/.codex/config.toml` の `model` を消して良いですか?
