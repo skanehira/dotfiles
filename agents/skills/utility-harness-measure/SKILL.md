@@ -25,7 +25,8 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 
 - **依存**: python3 (標準ライブラリのみ)、Claude Code の `claude` CLI (ログイン済み)、`git`。`claude` が PATH に無いと `run` と `grade` は起動前に止まる
 - **権限**: 子の `claude -p` は bypassPermissions で動かす。許可リスト方式だと `&&` やパイプでつないだコマンドが拒否され、「規定に従って止まったのか、権限で止まったのか」が区別できなくなるため。親のセッションが auto mode だと、`claude -p` の起動そのものが分類器に拒否される。その場合は、ユーザーに bypass permissions へ切り替えてもらうか、下の手順のコマンドをユーザーが `!` を付けて実行する
-- **費用**: 1 回あたり 3〜6 USD かかる (2026-10 の実測。Opus と Fable の場合)。実行前に `estimate` で総額を出し、ユーザーの了承を得てから `run` する
+- **使わないモデル**: Fable と Mythos は、実行・advisor・採点のどこにも使わない。`run` と `grade` は `--model` にこれらの ID を渡されると起動前に止まる。`check` は、これらが `modelUsage` に現れた回を「計測に使わないモデル」で無効にする。判定の範囲は子の `modelUsage` に載る呼び出しだけで、子が別プロセスで起こす呼び出し (hook が自前で API を呼ぶ等) は検出できない
+- **費用**: 1 回あたり 0.6〜1.6 USD かかる (2026-10-09 の実測。Opus で advisor を無効にした 12 回)。`estimate` はこれを丸めた 1〜2 USD で見積もる。実行前に `estimate` で総額を出し、ユーザーの了承を得てから `run` する
 - **外部への影響と隔離**: シナリオのリポジトリは毎回複製した使い捨てで、push 先は実在しないパスにする。子は bypassPermissions で動くので、`measure.py` は次の 2 つで被害の範囲を絞る
   - Claude Code のサンドボックスを有効にする。子の Bash は作業ディレクトリと一時ディレクトリにしか書き込めず、HOME 配下 (`~/.claude` や dotfiles の正本) への書き込みは拒否される (2026-10-08 に `~/.cache` への書き込みが `Operation not permitted` になることを確認)。子が自分でサンドボックスを外す抜け道は `allowUnsandboxedCommands: false` で閉じているが、これが効くかは確かめていない
   - 子に渡す環境変数を `CHILD_ENV_KEYS` (PATH / HOME / USER など) だけに絞り、トークン類を渡さない。認証は HOME 経由で通る
@@ -61,7 +62,7 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 `M=~/.claude/skills/utility-harness-measure/scripts/measure.py`、`T=~/.local/share/harness-measure/<トピック名>` とする。
 
 1. **見積もる**: `python3 $M estimate --topic $T --n 3`。総額をユーザーに示して了承を得る
-2. **改訂前を測る**: ルールを編集する前に `python3 $M run --topic $T --label before-<dotfiles の短縮コミット> --n 3`。既定のモデルは `claude-opus-5-5` で、`--model` で正式 ID を渡せる。同じラベルの結果が既にあると上書きせずに止まる
+2. **改訂前を測る**: ルールを編集する前に `python3 $M run --topic $T --label before-<dotfiles の短縮コミット> --n 3`。既定のモデルは `claude-opus-5-5` で、`--model` で正式 ID を渡せる (Fable と Mythos は拒否する)。同じラベルの結果が既にあると上書きせずに止まる
 3. **有効性を判定する**: `python3 $M check --topic $T --label <ラベル>`。無効な回は理由が出る (次節)。有効な回が足りなければ、別のラベルで追加分を測る
 4. **改訂してコミットする**: 計測と無関係な変更を混ぜない
 5. **改訂後を測る**: `run` と `check` を `--label after-<短縮コミット>` で繰り返す。モデルと回数は改訂前と揃える
@@ -74,6 +75,7 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 
 | 出力 | 意味 | 対処 |
 | --- | --- | --- |
+| `計測に使わないモデル: <ID>` | Fable か Mythos が使われた (実行モデル・advisor・subagent のいずれか) | `advisorModel` の無効化と別名の固定が効いているかを `pinned_settings` で見直す。この回は比較に使わない |
 | `想定外のモデル: <ID>` | 別名の解決などで、指定外のモデルが使われた | `--settings` の固定が効いていない。`pinned_settings` と、ユーザー設定の env を見直す |
 | `実行モデル <ID> が使われていない` | 指定したモデルが 1 度も呼ばれていない | `--model` の ID の綴りを確かめる |
 | `使用量の上限で停止` | アカウントの使用量の上限に達した | 上限が戻ってから、別のラベルで追加分を測る |

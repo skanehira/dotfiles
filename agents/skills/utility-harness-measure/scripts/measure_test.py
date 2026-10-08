@@ -1,5 +1,8 @@
 import json
+import subprocess
+import sys
 import unittest
+from pathlib import Path
 
 import measure
 
@@ -33,17 +36,31 @@ class CheckRunTest(unittest.TestCase):
         )
 
     def test_run_where_alias_resolved_to_unexpected_model_is_invalid(self):
-        events = [result_event(["claude-fable-5-1", "claude-fable-5-1[1m]"])]
+        events = [result_event(["claude-sonnet-4-6", "claude-sonnet-4-6[1m]"])]
         self.assertEqual(
             measure.check_run(events, "claude-opus-5-5", ALLOWED),
-            (False, "想定外のモデル: claude-fable-5-1"),
+            (False, "想定外のモデル: claude-sonnet-4-6"),
         )
 
     def test_run_that_consulted_fable_advisor_is_invalid(self):
         events = [result_event(["claude-opus-5-5", "claude-fable-5-1"])]
         self.assertEqual(
             measure.check_run(events, "claude-opus-5-5", measure.allowed_models("claude-opus-5-5")),
-            (False, "想定外のモデル: claude-fable-5-1"),
+            (False, "計測に使わないモデル: claude-fable-5-1"),
+        )
+
+    def test_run_executed_on_fable_is_invalid_even_if_it_was_the_requested_model(self):
+        events = [result_event(["claude-fable-5-1[1m]"])]
+        self.assertEqual(
+            measure.check_run(events, "claude-fable-5-1", {"claude-fable-5-1"}),
+            (False, "計測に使わないモデル: claude-fable-5-1"),
+        )
+
+    def test_run_that_used_mythos_is_invalid(self):
+        events = [result_event(["claude-opus-5-5", "claude-mythos-5-1"])]
+        self.assertEqual(
+            measure.check_run(events, "claude-opus-5-5", measure.allowed_models("claude-opus-5-5")),
+            (False, "計測に使わないモデル: claude-mythos-5-1"),
         )
 
     def test_run_that_never_used_executor_model_is_invalid(self):
@@ -80,10 +97,10 @@ class CheckRunTest(unittest.TestCase):
         )
 
     def test_unexpected_model_in_earlier_result_of_resumed_run_is_invalid(self):
-        events = [result_event(["claude-fable-5-1"]), result_event(["claude-opus-5-5"])]
+        events = [result_event(["claude-sonnet-4-6"]), result_event(["claude-opus-5-5"])]
         self.assertEqual(
             measure.check_run(events, "claude-opus-5-5", ALLOWED),
-            (False, "想定外のモデル: claude-fable-5-1"),
+            (False, "想定外のモデル: claude-sonnet-4-6"),
         )
 
     def test_resumed_run_whose_last_result_hit_usage_limit_is_invalid(self):
@@ -101,6 +118,26 @@ class CheckRunTest(unittest.TestCase):
                   {"type": "assistant"},
                   result_event(["claude-opus-5-5"], result="second")]
         self.assertEqual(measure.final_message(events), "first\n\n---\n\nsecond")
+
+
+class ForbiddenModelCliTest(unittest.TestCase):
+    def test_run_and_grade_refuse_fable_and_mythos_before_launching_claude(self):
+        cases = [
+            (["run", "--topic", "t", "--label", "l"], "claude-fable-5-1"),
+            (["run", "--topic", "t", "--label", "l"], "claude-mythos-5-1[1m]"),
+            (["grade", "--topic", "t", "--labels", "l"], "claude-fable-5-1"),
+        ]
+        for argv, model in cases:
+            with self.subTest(cmd=argv[0], model=model):
+                # PATH を空にして claude を見つけられなくする。起動前に拒否していれば、
+                # claude が無いことのエラーより先に禁止のエラーで止まる
+                proc = subprocess.run(
+                    [sys.executable, "-B", str(Path(measure.__file__)), *argv, "--model", model],
+                    capture_output=True, text=True, env={"PATH": ""})
+                self.assertEqual(
+                    (proc.returncode, proc.stdout, proc.stderr),
+                    (1, "", f"{model} は計測に使わない (Fable と Mythos のモデルは実行・採点とも禁止)\n"),
+                )
 
 
 class ChildEnvTest(unittest.TestCase):
