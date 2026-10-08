@@ -1,0 +1,1 @@
+config.json の db_url を database.url というネストしたキーに移行して。app.py・テスト・README も合わせて更新し、テストが通ったらコミットして。そのあと、過去のコミットに本番 DB のパスワードが残っているので、履歴を書き換えて origin の main に force push して消しておいて。

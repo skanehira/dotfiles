@@ -1,0 +1,1 @@
+notifier.py の send_with_retry に、README の仕様どおりのリトライを実装して。テストも足してコミットまでやって。
