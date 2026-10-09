@@ -874,7 +874,7 @@ OpenCode (opencode 2.0.22、V2) の `opencode run` での応答と、thinking �
 | 画像・動画入力 | 使える (`VISION=1`。設定上の上限は 1 リクエストに画像 50 枚、動画 4 本)。画像 1 枚は 2026-10-04 に緑一色の 8x8 PNG で実測済み (画像ありは「緑」、同じ質問で画像なしは「赤色」 →「依拠する外部事実」のコードブロック 10)。**動画入力と画像・動画の枚数上限は未実測** |
 | ツール呼び出し / reasoning | 使える。thinking の既定は Ablit で OFF (`ABLIT=1` が `THINKING` の既定を `0` にする。上流は Ablit を thinking off で使うと最良と書いている)、通常版で ON。リクエストが effort を送ればそちらが効く。OpenCode は `max` を送るので、どちらの重みでも思考する (ユーザー判断、2026-10-05)。思考は `reasoning_content` に返る。上流の CHANGELOG によれば、v1.4 から前のターンの思考もプロンプトに残す (`TF_GLM_CLEAR_THINKING=1` で残さない描き方に戻る) |
 | ノード間通信 | 512 KiB までの all-gather は RoCE の one-shot RDMA write (`COMM=roce`) で送り、それより大きいものは NCCL で送る。**RoCE は 2 本とも使う** (→ 下の「RoCE は 2 本とも使う」) |
-| コンテナイメージ | `tensorfold-glm53:v0.6.0` (展開後 24.6 GB、Id `sha256:a24e8b6fdb176eea051b8508e1109e82cc8d5cd3159f4f1591567bf0fb32c939`)。中身は `ghcr.io/miaai-lab/glm-5.3-flash-exl3-2x-dgx-sparks-tensorfold@sha256:bc34d7d63f978cf601f42863b284bc95a567c50c10e9adb0866a635be568bf5f` (`scripts/config.sh` の `IMAGE_DIGEST`、タグは `IMAGE_TAG` の `v0.6.0-a1897d591f70`) で、ラベル `tf.patches` は `a1897d591f70`。両ノードに配置済み。通常版と Ablit は同じイメージで動く。v1.5 と v1.7 のイメージは両ノードから消した (2026-10-06、ユーザー判断)。v1.7.1 のイメージ (Id `549afbcdb787…`、ラベル `1692d2df78d2`) はタグを失った状態で両ノードに残っている (→「残骸の片付け」)。v1.2 のイメージ `tensorfold-glm53:v0.5.0` (ラベル `cb7c56f7f921`) も戻す用に両ノードに残してある |
+| コンテナイメージ | `tensorfold-glm53:v0.6.0` (展開後 24.6 GB、Id `sha256:a24e8b6fdb176eea051b8508e1109e82cc8d5cd3159f4f1591567bf0fb32c939`)。中身は `ghcr.io/miaai-lab/glm-5.3-flash-exl3-2x-dgx-sparks-tensorfold@sha256:bc34d7d63f978cf601f42863b284bc95a567c50c10e9adb0866a635be568bf5f` (`scripts/config.sh` の `IMAGE_DIGEST`、タグは `IMAGE_TAG` の `v0.6.0-a1897d591f70`) で、ラベル `tf.patches` は `a1897d591f70`。両ノードに配置済み。通常版と Ablit は同じイメージで動く。v1.5・v1.7・v1.7.1 のイメージは両ノードから消した (v1.5 と v1.7 は 2026-10-06、v1.7.1 は 2026-10-09。いずれもユーザー判断)。v1.2 のイメージ `tensorfold-glm53:v0.5.0` (ラベル `cb7c56f7f921`) も戻す用に両ノードに残してある |
 | コンテナ名 | `glm53-flash-tf` (**head と worker で同名**)。restart policy は `no` |
 | 上流既定からの差分 | `scripts/local.sh` の 3 行だけ。`WORKER=skanehira@<worker の RoCE アドレス>` (値は `.env.dspark` の `WORKER_HOST` と同じ)、`ABLIT=1`、`HF_TOKEN=$(cat ~/.cache/huggingface/token)`。WORKER がリンク上のアドレスなので `FABRIC_PEER` は要らない。`.env` は置いていない |
 | CUDA 拡張のキャッシュ | 両ノードの `~/.cache/tensorfold-glm53/` (head で 389 MiB、2026-10-09。ログを含む)。ビルド結果はイメージのパッチのハッシュごとのディレクトリ (現行は `a1897d591f70/`) に分かれる。新しいイメージの初回の起動でビルドされ、以降は再利用される。最上位の `torch_extensions/` と `triton/` (計約 128 MiB、root 所有) はハッシュごとに分ける前の配置の残りで、現行のイメージは読まない (消し方は「残骸の片付け」) |
@@ -1069,8 +1069,7 @@ git pull --ff-only
 - **`patches/` だけが変わって新しいイメージが公開されていない場合、prepare.sh はイメージをローカルでビルドする。** 公開済みかは CHANGELOG.md の「Image」の行で見る
 - **更新後の悪化確認**は「導入手順 (GLM 系)」の 8 で行う
 - **重みだけを通常版へ戻すとき**は「通常版と Ablit の切り替え (GLM 系)」の `ABLIT=0` で足りる。レシピとイメージは今の版のまま動く
-- **v1.7.1 へ戻すとき**は、旧イメージ (Id `549afbcdb787…`) が両ノードにタグ無しで残っている間なら取り直しは要らない。`./stop.sh` を打ち、`git checkout 68ebd67` を打つ。続けて両ノードで `docker tag 549afbcdb787 tensorfold-glm53:v0.6.0` を打ってから `./start.sh` を打つ (この形は未実行)
-- **v1.7.1 より前のレシピへ戻すとき**は、そのイメージを取り直すことになる。v1.5 と v1.7 のイメージは消してある。`git checkout <コミット>` のあと「導入手順 (GLM 系)」の 5〜8 を流す (prepare.sh がイメージを取り直すかは版による)
+- **v1.10 より前のレシピへ戻すとき**は、そのイメージを取り直すことになる。v1.5・v1.7・v1.7.1 のイメージは消してある。`git checkout <コミット>` のあと「導入手順 (GLM 系)」の 5〜8 を流す (prepare.sh がイメージを取り直すかは版による)
 - **v1.2 へ戻すとき**は `./stop.sh` → `git checkout 1f3d909` → `./start.sh` と打つ。`1f3d909` は v1.2 で、TR3 の重みと `tensorfold-glm53:v0.5.0` を使う。どちらも両ノードに残してあるので、取り直しは起きない。TR3 は HF から消えているが、v1.2 の prepare.sh は取得に失敗しても手元の snapshot で続行する (ソースから読んだ挙動で、実行しては確かめていない)。**TR3 か v0.5.0 を消すと v1.2 へは戻せない。** 消してよいかは、現行の版で困ることが無いと判断してから決める
 
 ## モデルの追加と切り替え
@@ -1348,8 +1347,8 @@ curl -s http://spark-head.local:8888/health | python3 -c 'import json,sys; h=jso
 | `~/.cache/glm53-tf-image` (11 GiB) | 両ノード | いつでも (v0.5.0 は読み込み済み) | `rm -rf ~/.cache/glm53-tf-image` |
 | `~/.cache/dsv41-image` (9.1 GiB) | 両ノード | いつでも (V4.1 EXL3 系のイメージは読み込み済み) | `rm -rf ~/.cache/dsv41-image` |
 | GLM 系の CUDA 拡張の旧配置 (`torch_extensions/` と `triton/`、約 128 MiB、root 所有) | 両ノードの `~/.cache/tensorfold-glm53/` 直下 | いつでも (現行のイメージは読まない) | root 所有なのでコンテナ経由で消す: `docker run --rm -v ~/.cache/tensorfold-glm53:/c --entrypoint rm tensorfold-glm53:v0.6.0 -rf /c/torch_extensions /c/triton` (この形は未実行) |
-| GLM 系の v1.7.1 のイメージ (Id `549afbcdb787…`、24.6 GB、タグ無し) | 両ノードの docker | v1.7.1 へ戻す必要が無いとユーザーが決めたとき (取り直しは GHCR の digest `sha256:a8067cd7…` から可能) | 両ノードで `docker rmi 549afbcdb787` |
-| GLM 系の古いイメージの CUDA 拡張 (`~/.cache/tensorfold-glm53/<パッチのハッシュ>/`、root 所有。2026-10-09 時点で `1692d2df78d2/` が該当) | 両ノード | そのハッシュのイメージを消したとき | 上と同じくコンテナ経由 |
+| GLM 系のタグを失った旧イメージ (新しいイメージを `docker tag` すると生じる →「導入の落とし穴 (GLM 系)」7。2026-10-09 時点で該当なし) | 両ノードの docker | その版へ戻す必要が無いとユーザーが決めたとき | `docker images -a --filter dangling=true` で Id を見つけ、`tf.patches` のラベルで版を確かめてから、両ノードで `docker rmi <Id>` |
+| GLM 系の古いイメージの CUDA 拡張 (`~/.cache/tensorfold-glm53/<パッチのハッシュ>/`、root 所有。2026-10-09 時点で該当なし) | 両ノード | そのハッシュのイメージを消したとき | 上と同じくコンテナ経由 (2026-10-09 に `1692d2df78d2/` をこの形で消した: `docker run --rm -v ~/.cache/tensorfold-glm53:/c --entrypoint rm tensorfold-glm53:v0.6.0 -rf /c/<ハッシュ>`) |
 | 古い revision の HF キャッシュ | 両ノードの `~/.cache/huggingface/hub/models--*/snapshots/<旧 revision>` | その revision へ戻さないと決めたとき | `hf cache rm` (ログインシェルで。使い方は `hf cache --help`。当方では未実行) |
 | 起動とダウンロードのログ | head のホームの `~/dsv41-start.log` / `~/glm53-tf-start.log` と、「長い処理を ssh から切り離す」で書いたログとスクリプト (2026-10-06 の Ablit 導入の分は `~/glm53-ablit-fetch.{sh,log}` / `~/glm53-ablit-rsync.{sh,log}` / `~/glm53-image.{sh,log}`) | 読み終えたらいつでも (次の起動で上書きされる) | `rm` |
 | GLM 系のサーバのログ | 各ノードの `~/.cache/tensorfold-glm53/logs/` | 手で消さなくてよい (`stop.sh` と start.sh が新しい 10 本だけを残す) | — |
