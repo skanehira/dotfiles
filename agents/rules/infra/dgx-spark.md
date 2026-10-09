@@ -9,7 +9,7 @@ paths:
 
 - 種別: 環境リファレンス
 - 対象読者: 別セッション・別マシンで作業するエージェント (Claude Code / Codex / OpenCode)
-- 最終確認: 2026-10-06 (GLM 系の節と GLM に関わる記述)。監査で指摘を受けた各節の記述は 2026-10-04。OpenCode (V2 2.0.22) の節と OpenCode に関わる記述は 2026-10-03
+- 最終確認: 2026-10-09 (GLM 系の節と GLM に関わる記述)。監査で指摘を受けた各節の記述は 2026-10-04。OpenCode (V2 2.0.22) の節と OpenCode に関わる記述は 2026-10-03
 - 他の節の確認日: 値ごとに表のセルか本文に書いてある (確認コマンドと組にした一覧は「依拠する外部事実」)。**OpenCode を通した疎通・速度の値のうち 2026-10-03 より前の日付のものは opencode 1.18.18 (V1) で取ったもので、V2 では測り直していない** (各箇所に版を書いてある)
 
 自宅に NVIDIA DGX Spark (GB10) が 2 台あり、TP=2 (tensor parallel、2 台に重みを分割する並列方式) でローカル LLM を常時サービングしている。推論エンジンは GLM 系だけが TensorFold で、他の 3 系統は vLLM である。Mac の OpenCode (素の `opencode`) からバックエンドとして使える。
@@ -64,7 +64,7 @@ paths:
 | Ablit | `Mia-AiLab/GLM-5.3-Flash-EXL3-4bpw-TensorFold-Ablit` の略。通常版の層 15〜43 と MTP 層 45 の `self_attn.o_proj` 30 本を、拒否を外した重みに差し替えたもの。他のテンソルは通常版とバイト一致する。**HF で gated** なので、取得には規約に同意したアカウントのトークンが要る。配信名は通常版と同じ `GLM-5.3-Flash-EXL3` | 「GLM-5.3-Flash EXL3」 | 上流のチェックポイント | TensorFold (GLM レシピの `ABLIT=1`) |
 | `ABLIT` / `HF_TOKEN` | GLM レシピの設定 2 つ。`ABLIT=1` で通常版の代わりに Ablit を配信し、thinking の既定を off にする。`HF_TOKEN` は gated の取得と事前確認に使うトークンで、`ABLIT=1` のとき必須 | GLM レシピの `scripts/config.sh` | 人 (`scripts/local.sh` か環境変数) | GLM レシピの `start.sh` / `scripts/prepare.sh` |
 | GLM レシピ | GLM-5.3-Flash の EXL3 4bpw 量子化版を TensorFold の TP=2 で配信する別系統のレシピ。起動は `start.sh`、停止は `stop.sh` で行う | head の `~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold/` | 上流 (`git clone`) | 人 |
-| TensorFold | GLM 系だけが使う推論エンジン ([ashhart/TensorFold](https://github.com/ashhart/TensorFold))。GLM レシピは v0.6.0 に 76 本のパッチ (レシピ v1.7.1) を当てたものをイメージに焼き込んで配る。OpenAI 互換の API を持つが、vLLM とは別実装で、`/v1/messages` と `vllm:` のメトリクスを持たない | 「GLM-5.3-Flash EXL3」 | 上流 | GLM レシピの `start.sh` |
+| TensorFold | GLM 系だけが使う推論エンジン ([ashhart/TensorFold](https://github.com/ashhart/TensorFold))。GLM レシピは v0.6.0 に 96 本のパッチ (レシピ v1.10) を当てたものをイメージに焼き込んで配る。OpenAI 互換の API と、パッチで足した Anthropic Messages API (`/v1/messages`) を持つ。vLLM とは別実装で、`vllm:` のメトリクスを持たない | 「GLM-5.3-Flash EXL3」 | 上流 | GLM レシピの `start.sh` |
 | TR3 | `Mia-AiLab/GLM-5.3-Flash-EXL3-TR3-4bpw` の略。GLM レシピ v1.2 が使っていたチェックポイントで、HF から消えている。v1.2 へ戻す用に両ノードの HF キャッシュに残してある | 「GLM-5.3-Flash EXL3」の表の「戻す用に残している重み」 | 上流のチェックポイント (取り直せない) | GLM レシピ v1.2 (`1f3d909`) |
 | `prepare.sh` | GLM レシピの準備スクリプト (`scripts/prepare.sh`)。イメージの取得・重みの取得・worker への配布を行い、終わると準備済みの状態を `~/.local/state/glm53-tensorfold/prepared` に書く。start.sh がこの状態と現在の構成を比べ、違えば自動で流す (`PREPARE=0` で飛ばす) | 「起動と判定 (GLM 系)」 | 上流 | GLM レシピの `start.sh` |
 | `scripts/local.sh` | GLM レシピの手元設定 1 枚。bash として source される。`WORKER` (worker の ssh 先)・`ABLIT=1`・`HF_TOKEN=$(cat ~/.cache/huggingface/token)` の 3 行を書く。**`.gitignore` に入っておらず、`git status` に未追跡として出る**。トークンを平文で書かずにファイルから読ませているのはこのためである | head の `~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold/scripts/local.sh` | 人 (`scripts/local.sh.example` から作る) | GLM レシピの `scripts/config.sh` |
@@ -214,7 +214,7 @@ LAN は 2.4 GHz の WiFi (両ノードとも freq 2437) で、リンク速度は
 | 推論サーバ (4 系統のどれでも) | `http://spark-head.local:8888` | `http://spark-head:8888` | **なし** |
 | sparkDash | `http://spark-head.local:5555` | `http://spark-head:5555` | **なし** |
 
-**8888 はどの系統でも無認証である。** Qwen 系はレシピが `--api-key` を渡さない。GLM 系は TensorFold に API キーの設定項目が無く、ヘッダ無しの `/v1/models` が 200 を返す (2026-10-04)。V4.1 EXL3 系はレシピの `.env` の `VLLM_API_KEY` がコメントアウトされたままで、起動ログの `auth` 行も `none (VLLM_API_KEY empty)` と出す (2026-09-15)。DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` を `docker-compose.dspark.yml` がコンテナの環境変数に渡すしくみだが、**`VLLM_API_KEY` を空にしてある**ので素の無認証で上がる (2026-09-06 に確認)。Qwen 配信中の 8888 は、ヘッダ無しでも出まかせの Bearer でも `/v1/models` が 200 を返すことを実測した (同じ日に存在しないパスが 404 を返すことも確かめてある)。`/health` は手動の到達判定とレシピの起動・停止が、`/v1/models` は OpenCode のプラグイン `spark-served.ts` (起動時と 30 秒ごと) が、`/metrics` は sparkDash と `~/spark-bench/snap.py` が使う。OpenCode が生成に使う経路は `/v1/chat/completions` である。**`/v1/responses` は V4.1 EXL3 系でだけサーバ側にパッチが要る** (→「既知の制約」12)。DeepSeek 系と GLM 系は素で通り (2026-09-23 / 2026-10-02 実測)、Qwen 系は未試行である。GLM 系 (TensorFold) は `/v1/messages` を持たない (→「使える API (GLM 系)」)。
+**8888 はどの系統でも無認証である。** Qwen 系はレシピが `--api-key` を渡さない。GLM 系は TensorFold に API キーの設定項目が無く、ヘッダ無しの `/v1/models` が 200 を返す (2026-10-04)。V4.1 EXL3 系はレシピの `.env` の `VLLM_API_KEY` がコメントアウトされたままで、起動ログの `auth` 行も `none (VLLM_API_KEY empty)` と出す (2026-09-15)。DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` を `docker-compose.dspark.yml` がコンテナの環境変数に渡すしくみだが、**`VLLM_API_KEY` を空にしてある**ので素の無認証で上がる (2026-09-06 に確認)。Qwen 配信中の 8888 は、ヘッダ無しでも出まかせの Bearer でも `/v1/models` が 200 を返すことを実測した (同じ日に存在しないパスが 404 を返すことも確かめてある)。`/health` は手動の到達判定とレシピの起動・停止が、`/v1/models` は OpenCode のプラグイン `spark-served.ts` (起動時と 30 秒ごと) が、`/metrics` は sparkDash と `~/spark-bench/snap.py` が使う。OpenCode が生成に使う経路は `/v1/chat/completions` である。**`/v1/responses` は V4.1 EXL3 系でだけサーバ側にパッチが要る** (→「既知の制約」12)。DeepSeek 系と GLM 系は素で通り (2026-09-23 / 2026-10-02 実測)、Qwen 系は未試行である。GLM 系 (TensorFold) の `/v1/messages` はレシピ v1.9 からパッチで使える (→「使える API (GLM 系)」)。
 
 **したがってポート 8888 を信頼できないネットワークへ出さない。** sparkDash のポート 5555 と同じ扱いにする。
 
@@ -268,14 +268,14 @@ DeepSeek 系・Qwen 系・GLM 系の重みは両ノードの `~/.cache/huggingfa
 
 GB10 は CPU と GPU が同じ物理メモリを共有する統合メモリ構成である。**`GPU_MEMORY_UTILIZATION_TEXT=0.835` は通常の GPU なら VRAM の 83.5% を指すが、ここではシステムメモリ全体の 83.5% を意味する。** 起動直後から 100 GiB 超が vLLM に確保されて `free` の残りが数 GiB になる (DeepSeek 系で 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB) が、これは設定どおりの先取りであって、リークでも不足でもない。**V4.1 EXL3 系は仕組みが違う。** 確保率のキーを予算に使わず、重み (起動ログで 99.8 GiB。vision tower を含む) と KV プール (`KV_CACHE_MEMORY_BYTES` で固定した 2.5 GiB) を確保する。head の残りは 4.8 GiB になる。これは先取りではなく実際の余裕の少なさなので、扱いは「既知の制約」11 に従う。
 
-**値は配信中の系統で変わる。** DeepSeek 系の列は 2026-09-23 に起動 15 分後の無負荷で採った値、Qwen 系の列は 2026-09-09 の再起動後に無負荷で採った値 (`MemAvailable` だけは 2026-09-06 の高負荷時からの幅)、V4.1 EXL3 系の列は 2026-09-30 に画像入力を有効にして起動し、smoke と画像 2 件を流した後の値、GLM 系の列は 2026-10-06 にレシピ v1.7.1 (Ablit) で起動し、判定の生成を 10 件ほどと OpenCode の 1 往復を流した後の値である。
+**値は配信中の系統で変わる。** DeepSeek 系の列は 2026-09-23 に起動 15 分後の無負荷で採った値、Qwen 系の列は 2026-09-09 の再起動後に無負荷で採った値 (`MemAvailable` だけは 2026-09-06 の高負荷時からの幅)、V4.1 EXL3 系の列は 2026-09-30 に画像入力を有効にして起動し、smoke と画像 2 件を流した後の値、GLM 系の列は 2026-10-09 にレシピ v1.10 (Ablit) で起動し、判定の生成を 10 件ほど流した後の値である。
 
 | 項目 | DeepSeek 系 head / worker | Qwen 系 head / worker | V4.1 EXL3 系 head / worker | GLM 系 head / worker |
 | --- | --- | --- | --- | --- |
 | 物理メモリ合計 | 121.7 / 121.7 GiB | 121.7 / 121.7 GiB | 121.7 / 121.7 GiB | 121.7 / 121.7 GiB |
-| 推論サーバの確保 | 101.1 / 101.1 GiB (`nvidia-smi` の 103,540 / 103,530 MiB) | 100.7 / 100.8 GiB | 104.4 / 104.4 GiB (`nvidia-smi` の 106,907 MiB) | 90.0 / 88.9 GiB (`nvidia-smi` の 92,200 / 91,066 MiB) |
-| `MemAvailable` | 6.8 / 7.1 GiB | 1.3〜5.7 / 5.6〜10.1 GiB | 4.8 / 5.9 GiB | 15.3 / 13.2 GiB |
-| swap 使用 | 4.3 / 5.4 GiB | 5.0 / 4.1 GiB | 4 / 7 GiB | 1.5 / 3.5 GiB |
+| 推論サーバの確保 | 101.1 / 101.1 GiB (`nvidia-smi` の 103,540 / 103,530 MiB) | 100.7 / 100.8 GiB | 104.4 / 104.4 GiB (`nvidia-smi` の 106,907 MiB) | 89.6 / 88.5 GiB (`nvidia-smi` の 91,754 / 90,600 MiB) |
+| `MemAvailable` | 6.8 / 7.1 GiB | 1.3〜5.7 / 5.6〜10.1 GiB | 4.8 / 5.9 GiB | 16.9 / 13.7 GiB |
+| swap 使用 | 4.3 / 5.4 GiB | 5.0 / 4.1 GiB | 4 / 7 GiB | 2.7 / 3.7 GiB |
 
 **DeepSeek 系の swap は直前に何を配信していたかで動く。** 上の値は 44 時間 Qwen 系を配信した直後に切り替えたときのもので、前の系統が押し出したページを含む。**swap の量を系統の特性として読まない。**
 
@@ -843,7 +843,14 @@ fi
 
 ### GLM-5.3-Flash EXL3
 
-**他の 3 系統とは推論エンジンから違う。** vLLM ではなく TensorFold ([ashhart/TensorFold](https://github.com/ashhart/TensorFold) v0.6.0 に、レシピが 76 本のパッチを当てたもの) で配信する。**重みは Ablit を配信している** (`scripts/local.sh` の `ABLIT=1`)。通常版も両ノードに残してあり、起動し直せば切り替えられる (→「通常版と Ablit の切り替え (GLM 系)」)。レシピの v1.7.1 (`68ebd67`) と Ablit で 2026-10-06 に確かめたのは次のとおりである。起動、生成、OpenCode (opencode 2.0.22、V2) の `opencode run` での応答、`/v1/chat/completions` と `/v1/responses` の reasoning effort の陽性・陰性対照、thinking の既定が off で `max` を送ると思考が返ること。ツール呼び出し、`/v1/messages` が 404 を返すこと、`/v1/models` が `max_model_len` を返さないことは、2026-10-04 に v1.5 と通常版で確かめたものである。
+**他の 3 系統とは推論エンジンから違う。** vLLM ではなく TensorFold ([ashhart/TensorFold](https://github.com/ashhart/TensorFold) v0.6.0 に、レシピが 96 本のパッチを当てたもの) で配信する。**重みは Ablit を配信している** (`scripts/local.sh` の `ABLIT=1`)。通常版も両ノードに残してあり、起動し直せば切り替えられる (→「通常版と Ablit の切り替え (GLM 系)」)。レシピの v1.10 (`7d42f90`) と Ablit で 2026-10-09 に確かめたことは次のとおりである。
+- 起動と生成が通る
+- `/v1/chat/completions` と `/v1/responses` で、reasoning effort の陽性対照と陰性対照が期待どおりになる
+- `/v1/messages` が生成を返し、`output_config.effort` の陽性対照と陰性対照が期待どおりになる
+- `/v1/models` が `max_model_len` を返さない
+- サンプリングあり (`temperature` 1、`top_p` 0.95、thinking off) の 512 トークンが 42.1 tok/s で出る
+
+OpenCode (opencode 2.0.22、V2) の `opencode run` での応答と、thinking の既定が off で `max` を送ると思考が返ることは、2026-10-06 に v1.7.1 で確かめたものである。ツール呼び出しは 2026-10-04 に v1.5 と通常版で確かめた。どれも v1.10 では打ち直していない。
 
 **この構成には認証が無い。** レシピに API キーの設定項目が無く (`scripts/config.sh` と `start.sh` に `API_KEY` の文字列が無い)、ヘッダ無しの `/v1/models` が 200 を返す (2026-10-04 実測)。
 
@@ -851,8 +858,8 @@ fi
 
 | 項目 | 値 |
 | --- | --- |
-| レシピ | head の `~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold` @ `68ebd67` (上流の v1.7.1、2026-10-05 リリース。Ablit の対応は v1.7 から) |
-| 推論エンジン | TensorFold v0.6.0 (イメージ内の `tensorfold --version` が `0.6.0`) + レシピの `patches/*.patch` 76 本。パッチはイメージに焼き込み済み |
+| レシピ | head の `~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold` @ `7d42f90` (上流の v1.10、2026-10-08 リリース。Ablit の対応は v1.7 から) |
+| 推論エンジン | TensorFold v0.6.0 (イメージ内の `tensorfold --version` が `0.6.0`) + レシピの `patches/*.patch` 96 本。パッチはイメージに焼き込み済み。v1.9 からは `NUCLEUS_UNION=1` が既定になった。これはサンプリング時の nucleus を両ランクの候補を合わせて検査する設定で、上流は同じ draw になると書いている |
 | 量子化 | routed experts が EXL3 (→ 用語表) の 4 bpw。それ以外の BF16 の重みは起動時に 4 bit へ量子化する (`DENSE=q4`) |
 | 重み (Ablit) | `Mia-AiLab/GLM-5.3-Flash-EXL3-4bpw-TensorFold-Ablit` @ `57edefd2f5d9b371c8345883304d5af68b52fa24` (`ABLIT=1` のときの `MODEL_ID` と `MODEL_REVISION`)。snapshot は 100 ファイル (うち safetensors 83 本) / 175.7 GB (164 GiB)。通常版との差は `o_proj` 30 本だけで、元の重みに対する変化量は 4.2〜18.7% (中央値 11.5%。モデルカードの値)。ライセンスは MIT。**HF で gated** で、取得には規約に同意したアカウントのトークンが要る (同意前は 403)。両ノードの `~/.cache/huggingface/hub/` に置く。**通常版との品質・速度の比較は上流にも当方にも無い** |
 | 重み (通常版) | `Mia-AiLab/GLM-5.3-Flash-EXL3-4bpw-TensorFold` @ `078455ffe6472f9a52fbc1139f58b9db2881b25c` (`ABLIT=0` のときの `MODEL_ID` と `MODEL_REVISION`)。snapshot は 97 ファイル (うち safetensors 83 本) / 175.7 GB (163.6 GiB)。ライセンスは MIT (HF のモデルカード。イメージのラベルにある Apache-2.0 はレシピ側のライセンス)。両ノードの `~/.cache/huggingface/hub/` に置く。**HF の `main` は pin より先へ進んでいる** (2026-10-04 時点で `76c0b517…`)。`MODEL_REVISION` が動かない限り何もしない |
@@ -867,10 +874,10 @@ fi
 | 画像・動画入力 | 使える (`VISION=1`。設定上の上限は 1 リクエストに画像 50 枚、動画 4 本)。画像 1 枚は 2026-10-04 に緑一色の 8x8 PNG で実測済み (画像ありは「緑」、同じ質問で画像なしは「赤色」 →「依拠する外部事実」のコードブロック 10)。**動画入力と画像・動画の枚数上限は未実測** |
 | ツール呼び出し / reasoning | 使える。thinking の既定は Ablit で OFF (`ABLIT=1` が `THINKING` の既定を `0` にする。上流は Ablit を thinking off で使うと最良と書いている)、通常版で ON。リクエストが effort を送ればそちらが効く。OpenCode は `max` を送るので、どちらの重みでも思考する (ユーザー判断、2026-10-05)。思考は `reasoning_content` に返る。上流の CHANGELOG によれば、v1.4 から前のターンの思考もプロンプトに残す (`TF_GLM_CLEAR_THINKING=1` で残さない描き方に戻る) |
 | ノード間通信 | 512 KiB までの all-gather は RoCE の one-shot RDMA write (`COMM=roce`) で送り、それより大きいものは NCCL で送る。**RoCE は 2 本とも使う** (→ 下の「RoCE は 2 本とも使う」) |
-| コンテナイメージ | `tensorfold-glm53:v0.6.0` (展開後 24.6 GB、Id `sha256:549afbcdb787fec95446c207e572acb2791488670061054cc01f526db2fe6f28`)。中身は `ghcr.io/miaai-lab/glm-5.3-flash-exl3-2x-dgx-sparks-tensorfold@sha256:a8067cd7e14c14fa83d1dbed60261428f6d1737cec4554445573354af040dd7c` (`scripts/config.sh` の `IMAGE_DIGEST`、タグは `IMAGE_TAG` の `v0.6.0-1692d2df78d2`) で、ラベル `tf.patches` は `1692d2df78d2`。両ノードに配置済み。通常版と Ablit は同じイメージで動く。v1.5 と v1.7 のイメージは両ノードから消した (2026-10-06、ユーザー判断)。v1.2 のイメージ `tensorfold-glm53:v0.5.0` (ラベル `cb7c56f7f921`) も戻す用に両ノードに残してある |
+| コンテナイメージ | `tensorfold-glm53:v0.6.0` (展開後 24.6 GB、Id `sha256:a24e8b6fdb176eea051b8508e1109e82cc8d5cd3159f4f1591567bf0fb32c939`)。中身は `ghcr.io/miaai-lab/glm-5.3-flash-exl3-2x-dgx-sparks-tensorfold@sha256:bc34d7d63f978cf601f42863b284bc95a567c50c10e9adb0866a635be568bf5f` (`scripts/config.sh` の `IMAGE_DIGEST`、タグは `IMAGE_TAG` の `v0.6.0-a1897d591f70`) で、ラベル `tf.patches` は `a1897d591f70`。両ノードに配置済み。通常版と Ablit は同じイメージで動く。v1.5 と v1.7 のイメージは両ノードから消した (2026-10-06、ユーザー判断)。v1.7.1 のイメージ (Id `549afbcdb787…`、ラベル `1692d2df78d2`) はタグを失った状態で両ノードに残っている (→「残骸の片付け」)。v1.2 のイメージ `tensorfold-glm53:v0.5.0` (ラベル `cb7c56f7f921`) も戻す用に両ノードに残してある |
 | コンテナ名 | `glm53-flash-tf` (**head と worker で同名**)。restart policy は `no` |
 | 上流既定からの差分 | `scripts/local.sh` の 3 行だけ。`WORKER=skanehira@<worker の RoCE アドレス>` (値は `.env.dspark` の `WORKER_HOST` と同じ)、`ABLIT=1`、`HF_TOKEN=$(cat ~/.cache/huggingface/token)`。WORKER がリンク上のアドレスなので `FABRIC_PEER` は要らない。`.env` は置いていない |
-| CUDA 拡張のキャッシュ | 両ノードの `~/.cache/tensorfold-glm53/` (head で 248 MiB、2026-10-06。ログを含む)。ビルド結果はイメージのパッチのハッシュごとのディレクトリ (現行は `1692d2df78d2/`) に分かれる。新しいイメージの初回の起動でビルドされ、以降は再利用される。最上位の `torch_extensions/` と `triton/` (計約 128 MiB、root 所有) はハッシュごとに分ける前の配置の残りで、現行のイメージは読まない (消し方は「残骸の片付け」) |
+| CUDA 拡張のキャッシュ | 両ノードの `~/.cache/tensorfold-glm53/` (head で 389 MiB、2026-10-09。ログを含む)。ビルド結果はイメージのパッチのハッシュごとのディレクトリ (現行は `a1897d591f70/`) に分かれる。新しいイメージの初回の起動でビルドされ、以降は再利用される。最上位の `torch_extensions/` と `triton/` (計約 128 MiB、root 所有) はハッシュごとに分ける前の配置の残りで、現行のイメージは読まない (消し方は「残骸の片付け」) |
 | サーバのログ | `stop.sh` が両ランクのログを gzip で保存してからコンテナを消す。置き場は各ノードの `~/.cache/tensorfold-glm53/logs/<日付>-<時刻>-rank<N>.log.gz` (head に rank 0、worker に rank 1) で、新しいものから 10 本を残す。start.sh も、前回の停止済みコンテナを消す前に同じように保存する |
 
 #### 起動と判定 (GLM 系)
@@ -889,6 +896,7 @@ docker logs -f glm53-flash-tf   # rank 0 のログ。rank 1 は worker で同じ
 - **`./start.sh restart` は prepare.sh を流してから止める。** 引数なしの `./start.sh` は、両ランクが動いていれば prepare.sh の前に `already running` と出して exit 0 する。準備が要る状態 (pin を動かした `git pull` の後など) で `restart` を打つと、配信中に prepare.sh の取得 (WiFi と dockerd) が走る
 - **メモリの事前検査は警告だけで止まらない。** 両ノードの `MemAvailable` が 110 GiB 未満だと警告を出して進む。予算が足りなければ rank 0 が窓を拒否し、start.sh は収まる窓で 1 回だけ起動し直す。そのときログに `this start's memory budget holds a N-token window` が出るので、これが出たら合格扱いにしない
 - **ポートの事前検査は止まる。** 8888 が使用中なら `port 8888 is already in use` で終了する
+- **v1.9 から、start.sh のスモークテストは同じ文字を繰り返すだけの応答を失敗として扱う。** モデルが崩れて `!!!!` のような応答を返すと、起動が失敗する。ランクは動いたまま残り、エラーは README の Ablit の節を指す。通常版で起動し直すなら「通常版と Ablit の切り替え (GLM 系)」の `ABLIT=0` を使う。2026-10-09 の Ablit での起動は `OK: 'OK'` で通った
 - **準備済みかどうかは start.sh が判定する。** 状態を `~/.local/state/glm53-tensorfold/prepared` に記録し、イメージ・重みの revision・パッチ・worker のどれかが変わっていれば prepare.sh を流す。`PREPARE=0` で飛ばせる
 
 **起動できたかは 3 段で判定する。** どれも exit code で合否が出る。start.sh 自身もスモークテストを流すので、ログの `GLM-5.3-Flash-EXL3 is now LIVE!` も合格の条件に入れる。
@@ -908,15 +916,15 @@ curl -s http://spark-head.local:8888/v1/chat/completions -H 'Content-Type: appli
 ssh -n spark-head 'grep -o "model=[^ ]*" ~/.local/state/glm53-tensorfold/prepared'   # Ablit なら …-TensorFold-Ablit@57edefd2…
 ```
 
-**起動の実測値 (2026-10-06、v1.7.1 の新しいイメージと Ablit での初回の起動)。** CUDA 拡張のビルドを含む。prepare.sh はイメージも重みも取り直さず、照合だけで終わった (`HF_TOKEN reaches the gated` / `already built with patches 1692d2df78d2` / `identical on both Sparks` / `Worker has … Ablit @ 57edefd2`)。初回の起動は 1 回で通った。後ろ 3 行は、判定の生成を 10 件ほどと OpenCode の 1 往復を流した後の値である。
+**起動の実測値 (2026-10-09、v1.10 の新しいイメージと Ablit での初回の起動)。** CUDA 拡張のビルドを含む。prepare.sh はイメージも重みも取り直さず、照合だけで終わった。ログには `already built with patches a1897d591f70`、`identical on both Sparks`、`Worker has … Ablit @ 57edefd2` が出た。初回の起動は 1 回で通った。v1.10 で入った 2 本目の rail の疎通確認 (`probe_rails`) は `Rail roceP2p1s0f1 <-> roceP2p1s0f1: … reaches the peer (MTU 9000): used` と出し、`Link:` 行は `2 rail(s)` だった。後ろ 3 行は、判定の生成を 10 件ほど流した後の値である。
 
 | 項目 | 値 |
 | --- | --- |
-| 起動全体 (start.sh の開始から LIVE まで) | 約 7 分 (`Server answered after 437s`、サーバ側は `loaded in 432.8s`) |
-| KV プール | 1,443,840 トークン (1 リクエストは最大 1,048,576) |
-| GPU の確保 (head / worker) | 92,200 / 91,066 MiB |
-| `MemAvailable` (head / worker) | 15.3 / 13.2 GiB |
-| swap 使用 (head / worker) | 1.5 / 3.5 GiB |
+| 起動全体 (start.sh の開始から LIVE まで) | 約 7.5 分 (`Server answered after 452s`、サーバ側は `loaded in 449.6s`) |
+| KV プール | 1,419,264 トークン (1 リクエストは最大 1,048,576) |
+| GPU の確保 (head / worker) | 91,754 / 90,600 MiB |
+| `MemAvailable` (head / worker) | 16.9 / 13.7 GiB |
+| swap 使用 (head / worker) | 2.7 / 3.7 GiB |
 
 #### 通常版と Ablit の切り替え (GLM 系)
 
@@ -942,12 +950,15 @@ ssh -n spark-head 'grep -o "model=[^ ]*" ~/.local/state/glm53-tensorfold/prepare
 | 2026-10-04 (レシピ v1.5) | 98.26 / 88.09 GiB | 92.37 / 86.29 GiB | 1,562,624 トークン |
 | 2026-10-06 (レシピ v1.7、Ablit) | 96.96 / 88.09 GiB | 92.92 / 86.29 GiB | 1,650,688 トークン |
 | 2026-10-06 (レシピ v1.7.1、Ablit) | 96.98 / 88.09 GiB | 91.62 / 86.29 GiB | 1,443,840 トークン |
+| 2026-10-09 (レシピ v1.10、Ablit) | 96.26 / 88.09 GiB | 91.48 / 86.29 GiB | 1,419,264 トークン |
 
-2026-10-04 と 2026-10-06 の起動では、worker の空きが起動時に 106〜108 GiB しかなかった (start.sh が 110 GiB 未満の警告を出した)。そのため rank 1 の差は 5.3〜6.6 GiB にとどまった。**プールは差の小さいランクに合わせて決まると見ている。** 根拠は上の 4 回の起動ログだけで、ソースでは確かめていない。見積りは通常版と Ablit で同じである (重みの形が同じため)。プールが小さくても 1 リクエストの上限 1,048,576 は変わらないが、長い会話を同時に抱えられる量が減る。プールを上限近くまで戻したいときは、両ノードの空きが大きいとき (この推定では head 115 GiB・worker 113 GiB 以上) に起動し直す。
+2026-10-04 以降の起動では、worker の空きが起動時に 106〜108 GiB しかなかった (start.sh が 110 GiB 未満の警告を出した)。そのため rank 1 の差は 5.2〜6.6 GiB にとどまった。**プールは差の小さいランクに合わせて決まると見ている。** 根拠は上の 5 回の起動ログだけで、ソースでは確かめていない。見積りは通常版と Ablit で同じである (重みの形が同じため)。プールが小さくても 1 リクエストの上限 1,048,576 は変わらないが、長い会話を同時に抱えられる量が減る。プールを上限近くまで戻したいときは、両ノードの空きが大きいとき (この推定では head 115 GiB・worker 113 GiB 以上) に起動し直す。
 
 #### RoCE は 2 本とも使う
 
 **起動ログの `Link:` 行は `RoCE rocep1s0f1,roceP2p1s0f1 / rocep1s0f1,roceP2p1s0f1` と出る** (2026-10-04)。レシピの `scripts/nodes.sh` の `rails()` は、リンクと同じサブネットにある port に加えて、名前の末尾 (`f1np1`) が同じ PCIe の双子を拾う。当方の 2 本目は別サブネットにあるが、この規則で足される。
+
+**レシピ v1.10 からは、2 本目を使う前に start.sh が疎通を確かめる** (`probe_rails`)。head と worker の同じ位置の rail どうしで、互いの rail のアドレスへ MTU いっぱいの断片化禁止 ping を打つ。通らなかった rail は `second rail … does not reach the peer: NOT used` の WARN を出して外し、1 本で起動する。**この WARN が出ても起動は成功する**ので、ログで見落とさない。2026-10-09 の起動では `Rail roceP2p1s0f1 <-> roceP2p1s0f1: … reaches the peer (MTU 9000): used` と出て、`Link:` 行は `2 rail(s)` だった。
 
 **アドレスは変えない。** 2 本を同じサブネットに置くと、vLLM の 3 系統が `no usable RoCEv2 GID` で起動しなくなる (→「ネットワーク」)。上流は 2 本使うと prompt chunk の all-gather が約 1.8 倍速いと書いている。当方では prefill の速さを 1 本のときと比べていない。
 
@@ -968,20 +979,22 @@ ssh -n spark-head 'grep -o "model=[^ ]*" ~/.local/state/glm53-tensorfold/prepare
 - **「実際に効く深さ」の列はソースとテンプレートから読んだものである。** 応答の思考の量では確かめていない。テンプレートは新旧 2 つのチェックポイントでバイト一致する
 - **`none` の扱いが vLLM 版と違う。** TensorFold は `none` を thinking の無効化として扱う
 - **OpenCode は `opencode.json` で `max` を明示する。** テンプレート既定が変わっても推論が浅くならないようにしている
-- 2026-10-04 に通常版で 8 値すべてを両経路で実測した。陽性対照は `bogus` (400)、陰性対照は `max` (200)。2026-10-06 に Ablit で `bogus` / `max` / `none` を両経路で打ち直し、400 / 200 / 200 だった
-- **Ablit で「指定なし」と `max` の差を実測した** (2026-10-06、「2+3 は?」、`temperature` 0)。指定なしは `reasoning_content` が 0 文字、`max` は 462 文字だった
+- 2026-10-04 に通常版で 8 値すべてを両経路で実測した。陽性対照は `bogus` (400)、陰性対照は `max` (200)。2026-10-06 (v1.7.1) と 2026-10-09 (v1.10) に Ablit で `bogus` / `max` / `none` を両経路で打ち直し、どちらも 400 / 200 / 200 だった
+- **Ablit で「指定なし」と `max` の差を実測した** (2026-10-06、「2+3 は?」、`temperature` 0)。指定なしは `reasoning_content` が 0 文字、`max` は 462 文字だった。2026-10-09 (v1.10) の `max` も 462 文字だった
+- **`/v1/messages` の effort は `output_config.effort` で渡す** (レシピのパッチ `0084-anthropic-messages.patch`)。2026-10-09 に Ablit で実測した。`bogus` は 400 (`unsupported output_config.effort`) になり、`none` / `low` / `max` は 200 を返す
+- **`/v1/messages` では effort だけでは thinking が入らない。** Ablit に `output_config.effort: max` だけを送ると thinking ブロックは返らない。`thinking: {"type": "enabled", "budget_tokens": …}` を足すと、`/v1/chat/completions` の `max` と同じ 462 文字の思考が返る (2026-10-09、「2+3 は?」、`temperature` 0)
 
 #### 使える API (GLM 系)
 
-| API | 用途 | 状態 (2026-10-04) |
+| API | 用途 | 状態 |
 | --- | --- | --- |
-| `/v1/chat/completions` | OpenCode | 使える。opencode 2.0.22 (V2) の `opencode run --standalone` で、ファイルを読ませる指示が Bash (`ls`) → Read のツール呼び出しを経て正答した |
-| `/v1/responses` | Responses API | 使える。effort の 7 語がすべて 200 で通る |
-| `/v1/messages` | Anthropic Messages API | **無い (404)** |
+| `/v1/chat/completions` | OpenCode | 使える。opencode 2.0.22 (V2) の `opencode run --standalone` で、ファイルを読ませる指示が Bash (`ls`) → Read のツール呼び出しを経て正答した (2026-10-04、v1.5) |
+| `/v1/responses` | Responses API | 使える。effort の 7 語がすべて 200 で通る (2026-10-04、v1.5) |
+| `/v1/messages` | Anthropic Messages API | 使える。レシピ v1.9 のパッチ `0084` が足した。`17*19` に `323` を `stop_reason: end_turn` で返した (2026-10-09、v1.10)。v1.8 までは 404 だった |
 | `/health` | `stop.sh` と手動の状態確認 | `busy` / `requests_running` / `streams` / `pool_tokens` / `pool_free_tokens` / `context_length` などを返す |
-| `/metrics` | — | `tensorfold:` と `tensorfold_health:` の系列だけを出す。**`vllm:` の系列は無い** |
+| `/metrics` | — | `tensorfold:` と `tensorfold_health:` の系列だけを出す。**`vllm:` の系列は無い** (2026-10-09 も 0 行) |
 
-**TensorFold の `/v1/models` は `id` / `object` / `owned_by` の 3 キーしか返さず、`max_model_len` は無い** (2026-10-04)。コンテキスト上限は `/health` の `context_length` で確認する。OpenCode は `opencode.json` の静的値を使う。
+**TensorFold の `/v1/models` は `id` / `object` / `owned_by` の 3 キーしか返さず、`max_model_len` は無い** (2026-10-09 再確認)。コンテキスト上限は `/health` の `context_length` で確認する。OpenCode は `opencode.json` の静的値を使う。
 
 **この系統のサーバは配信していないモデル名で要求しても応答を返す** (2026-10-04 再確認)。クライアントが古いモデル名を送り続けても `model not found` にならず、GLM がそのまま答えるので気づきにくい。`/v1/models` の `owned_by` は `tensorfold` である (OpenCode 組み込みの vLLM 自動発見を使わない理由 →「OpenCode」)。
 
@@ -989,7 +1002,7 @@ ssh -n spark-head 'grep -o "model=[^ ]*" ~/.local/state/glm53-tensorfold/prepare
 
 #### 導入手順 (GLM 系)
 
-初回の導入と、イメージや重みの pin が動く更新とで同じ手順を使う。2026-10-04 にレシピ v1.2 から v1.5 への更新で、2026-10-06 に v1.5 から v1.7 (Ablit)、v1.7 から v1.7.1 への更新で踏んだ順序と、各段の完了判定である。**既存イメージで上限付きの取得ができる場合、8888 を止めずに進められるのは 1〜4 まで**で、5 からは配信が止まる。手元にイメージが無い初回は手順 5 の停止確認を先に行ってから取得する。**dockerd を通る `docker pull` / `docker load` と prepare.sh の取得は、配信を止めてから流す** (dockerd の側にはメモリの上限が掛からないため)。例外は手順 2 の `docker run --memory 2g` で、取得はコンテナの中で上限付きで走る (→「既知の制約」11)。コマンドはすべて head のレシピのディレクトリで打つ。
+初回の導入と、イメージや重みの pin が動く更新とで同じ手順を使う。2026-10-04 にレシピ v1.2 から v1.5 への更新で、2026-10-06 に v1.5 から v1.7 (Ablit)、v1.7 から v1.7.1 への更新で、2026-10-09 に v1.7.1 から v1.10 への更新で踏んだ順序と、各段の完了判定である。v1.10 への更新では重みとドラフタの pin が動かなかったので 2〜4 を飛ばした。停止 (11:17) から LIVE (11:30) まではおよそ 13 分だった。イメージの層の多くが手元にあったので、手順 6 は 5 分ほどで終わった。**既存イメージで上限付きの取得ができる場合、8888 を止めずに進められるのは 1〜4 まで**で、5 からは配信が止まる。手元にイメージが無い初回は手順 5 の停止確認を先に行ってから取得する。**dockerd を通る `docker pull` / `docker load` と prepare.sh の取得は、配信を止めてから流す** (dockerd の側にはメモリの上限が掛からないため)。例外は手順 2 の `docker run --memory 2g` で、取得はコンテナの中で上限付きで走る (→「既知の制約」11)。コマンドはすべて head のレシピのディレクトリで打つ。
 
 1. **レシピを用意する** — 初回は `git clone https://github.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold` のあと、`scripts/local.sh` に `WORKER=skanehira@<worker の RoCE アドレス>`・`ABLIT=1`・`HF_TOKEN=$(cat ~/.cache/huggingface/token)` の 3 行を書く (通常版だけを使うなら後ろ 2 行は要らない)。更新は「レシピを更新する (GLM 系)」の `git pull --ff-only`。**完了判定**: `bash -c 'source scripts/config.sh >/dev/null 2>&1; echo "$MODEL_ID@$MODEL_REVISION $IMAGE $IMAGE_TAG"; image_hash'` を打ち、`image_hash` が `IMAGE_TAG` の末尾と一致すること。一致していれば prepare.sh は pin した digest のイメージを使う
 2. **本体の重みを head だけで取る (配信中、約 6 時間)** — `utility-spark-model-fetch` スキルの手順 1・2 に従う。head のホスト側 python には `huggingface_hub` が無いので、手元にある `tensorfold-glm53` のイメージの python で取る。`<イメージ>` は `docker images` に出る `tensorfold-glm53:*` のどれでもよい (更新のときは旧版。2026-10-04 は `v0.5.0`、2026-10-06 は v1.5 の `v0.6.0` を使った。旧イメージは取得が終わるまで消さない)。**Ablit は gated なので、先に HF のモデルページで規約に同意する。** 同意したかは head で `curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" https://huggingface.co/<MODEL_ID>/resolve/<MODEL_REVISION>/config.json` が 200 を返すことで見る (同意前は 403)。コンテナは `~/.cache/huggingface` を `/hf` に mount するので、トークンファイルがそのまま使われる。`<MODEL_ID>` と `<MODEL_REVISION>` は手順 1 の完了判定の出力 (`<MODEL_ID>@<MODEL_REVISION>`) から取る。ssh を切っても止まらないように dockerd の管理するコンテナで流す (`systemd-run --user --scope` は使わない。ユーザーの linger が無効 (`Linger=no`) なので、最後のセッションが閉じると user manager ごと scope が止まりうる。systemd の仕様からの推定で、実際に止まるかは確かめていない)
@@ -1055,7 +1068,8 @@ git pull --ff-only
 - **HF 側の `main` が pin より先へ進んでいても何もしない。** レシピが revision を固定しているので、`MODEL_REVISION` が動くまで配信には効かない
 - **`patches/` だけが変わって新しいイメージが公開されていない場合、prepare.sh はイメージをローカルでビルドする。** 公開済みかは CHANGELOG.md の「Image」の行で見る
 - **更新後の悪化確認**は「導入手順 (GLM 系)」の 8 で行う
-- **重みだけを通常版へ戻すとき**は「通常版と Ablit の切り替え (GLM 系)」の `ABLIT=0` で足りる。レシピとイメージは v1.7 のまま動く
+- **重みだけを通常版へ戻すとき**は「通常版と Ablit の切り替え (GLM 系)」の `ABLIT=0` で足りる。レシピとイメージは今の版のまま動く
+- **v1.7.1 へ戻すとき**は、旧イメージ (Id `549afbcdb787…`) が両ノードにタグ無しで残っている間なら取り直しは要らない。`./stop.sh` を打ち、`git checkout 68ebd67` を打つ。続けて両ノードで `docker tag 549afbcdb787 tensorfold-glm53:v0.6.0` を打ってから `./start.sh` を打つ (この形は未実行)
 - **v1.7.1 より前のレシピへ戻すとき**は、そのイメージを取り直すことになる。v1.5 と v1.7 のイメージは消してある。`git checkout <コミット>` のあと「導入手順 (GLM 系)」の 5〜8 を流す (prepare.sh がイメージを取り直すかは版による)
 - **v1.2 へ戻すとき**は `./stop.sh` → `git checkout 1f3d909` → `./start.sh` と打つ。`1f3d909` は v1.2 で、TR3 の重みと `tensorfold-glm53:v0.5.0` を使う。どちらも両ノードに残してあるので、取り直しは起きない。TR3 は HF から消えているが、v1.2 の prepare.sh は取得に失敗しても手元の snapshot で続行する (ソースから読んだ挙動で、実行しては確かめていない)。**TR3 か v0.5.0 を消すと v1.2 へは戻せない。** 消してよいかは、現行の版で困ることが無いと判断してから決める
 
@@ -1289,7 +1303,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | 前置した環境変数が OpenCode に効かない | `opencode service status` | 素の `opencode` は常駐サービスに繋ぐので、サービスを起動した最初の TUI の環境変数が使われ続ける (v2.0.22 のソースで確認)。その起動専用のサーバで動かすなら `--standalone` を付ける (それで前置した環境変数が効くことは確かめていない) |
 | `Unexpected reasoning effort <値>` の 400 | `opencode.json` の `options.reasoningEffort` | Qwen は `low` / `medium` / `xhigh` を受理し、語彙外をチャットテンプレートが弾く。V4.1 EXL3 は `medium` を vLLM が弾く。DeepSeek 系はスキーマ検証、GLM 系は TensorFold のサーバが検査する。各系統の reasoning effort の語彙を確認する |
 | `Input should be 'low', 'medium', ...` の 400 | 送っている effort の値 | `/v1/messages` に `none` を渡した。スキーマが `none` を持たないため、テンプレートより手前で弾かれる。**OpenCode の経路 (`/v1/chat/completions`) では `none` が通る**という非対称がある (→「Qwen の reasoning effort の語彙」) |
-| 起動待ちが長すぎる | head は `docker logs <コンテナ名>`、worker は「worker に入る」節のコマンドで同じものを打つ | 正常な所要は DeepSeek 系が約 7〜8 分、Qwen 系が約 13〜14 分、V4.1 EXL3 系がコンテナ起動から health まで約 8 分、GLM 系が約 5〜7 分 (いずれも実測。GLM 系は 2026-10-02 のビルド済みの起動 (レシピ v1.2) で 304 秒、2026-10-04 の新しいイメージの初回 (CUDA 拡張のビルド込み、v1.5) で 422 秒、2026-10-06 の同じ条件 (v1.7 と v1.7.1、Ablit) で 425 秒と 437 秒)。DeepSeek 系は 12 分、Qwen 系は 20 分を超えたら worker 側だけ落ちていることがあるので両ランクを見る。V4.1 EXL3 系は 15 分を超えたら `./start.sh logs worker` で worker 側を見る。V4.1 EXL3 系の `start.sh` は health を 1,500 秒待って諦め、そのときもコンテナは残る (→「起動に失敗する」の行)。GLM 系の `start.sh` は `WAIT_TIMEOUT` (既定 1,800 秒) で諦める |
+| 起動待ちが長すぎる | head は `docker logs <コンテナ名>`、worker は「worker に入る」節のコマンドで同じものを打つ | 正常な所要は DeepSeek 系が約 7〜8 分、Qwen 系が約 13〜14 分、V4.1 EXL3 系がコンテナ起動から health まで約 8 分、GLM 系が約 5〜7 分 (いずれも実測。GLM 系は 2026-10-02 のビルド済みの起動 (レシピ v1.2) で 304 秒、2026-10-04 の新しいイメージの初回 (CUDA 拡張のビルド込み、v1.5) で 422 秒、2026-10-06 の同じ条件 (v1.7 と v1.7.1、Ablit) で 425 秒と 437 秒、2026-10-09 の同じ条件 (v1.10、Ablit) で 452 秒)。DeepSeek 系は 12 分、Qwen 系は 20 分を超えたら worker 側だけ落ちていることがあるので両ランクを見る。V4.1 EXL3 系は 15 分を超えたら `./start.sh logs worker` で worker 側を見る。V4.1 EXL3 系の `start.sh` は health を 1,500 秒待って諦め、そのときもコンテナは残る (→「起動に失敗する」の行)。GLM 系の `start.sh` は `WAIT_TIMEOUT` (既定 1,800 秒) で諦める |
 | 推論中に CPU が熱い・ファンがうるさい | 「依拠する外部事実」の温度の行と、同節のコードブロック 3 | 正常。vLLM のスレッドが GPU / NCCL の完了をビジーポーリングで待ち、100% の使用率で回る (→ 「既知の制約」5)。計算しているわけではないので、`nvidia-smi` の GPU 使用率が高いこととは独立に CPU 側センサーが上がる。X925 の `scaling_max_freq` を下げる対処は既に入れてあり (制約 5)、それでも高いなら室温か吸気を疑う |
 | 起動直後から空きメモリが少ない | `free -h` | DeepSeek 系と Qwen 系なら正常。確保率 0.835 の先取りで、残る量は DeepSeek 系 6〜8 GiB、Qwen 系の head は 1.3〜5.7 GiB。**V4.1 EXL3 系の head の 4.8 GiB は先取りではなく実際の余裕** (vision tower を含む重み 99.8 GiB + 固定の KV プール 2.5 GiB) で、配信中はこれ以上減らさない (→「既知の制約」11)。GLM 系は起動時の空きから 14.5 GiB を残して予算を組むので、無負荷で 12〜15 GiB 残る (2026-10-04 の実測で 14.3 / 12.8 GiB)。上流は 1M トークンの prompt で head の空きが約 4.5〜5.6 GiB まで下がると書いている (`scripts/config.sh` のコメントと CHANGELOG) |
 | 配信中に応答が止まった (V4.1 EXL3 系) | `curl -fs -o /dev/null http://spark-head.local:8888/health`、待ち行列コマンド、両ノードの `docker ps` | 起動中の hang 検知 (420 秒) は配信中には働かない。health が返らない、または `num_requests_running` が動かないまま時間が経つなら、`./start.sh stop` → 「系統の切り替え」の手順 3 → `./start.sh`。片方のノードに ssh も通らない場合は「既知の制約」11 |
@@ -1334,7 +1348,8 @@ curl -s http://spark-head.local:8888/health | python3 -c 'import json,sys; h=jso
 | `~/.cache/glm53-tf-image` (11 GiB) | 両ノード | いつでも (v0.5.0 は読み込み済み) | `rm -rf ~/.cache/glm53-tf-image` |
 | `~/.cache/dsv41-image` (9.1 GiB) | 両ノード | いつでも (V4.1 EXL3 系のイメージは読み込み済み) | `rm -rf ~/.cache/dsv41-image` |
 | GLM 系の CUDA 拡張の旧配置 (`torch_extensions/` と `triton/`、約 128 MiB、root 所有) | 両ノードの `~/.cache/tensorfold-glm53/` 直下 | いつでも (現行のイメージは読まない) | root 所有なのでコンテナ経由で消す: `docker run --rm -v ~/.cache/tensorfold-glm53:/c --entrypoint rm tensorfold-glm53:v0.6.0 -rf /c/torch_extensions /c/triton` (この形は未実行) |
-| GLM 系の古いイメージの CUDA 拡張 (`~/.cache/tensorfold-glm53/<パッチのハッシュ>/`、root 所有。2026-10-06 時点で該当なし) | 両ノード | そのハッシュのイメージを消したとき | 上と同じくコンテナ経由 |
+| GLM 系の v1.7.1 のイメージ (Id `549afbcdb787…`、24.6 GB、タグ無し) | 両ノードの docker | v1.7.1 へ戻す必要が無いとユーザーが決めたとき (取り直しは GHCR の digest `sha256:a8067cd7…` から可能) | 両ノードで `docker rmi 549afbcdb787` |
+| GLM 系の古いイメージの CUDA 拡張 (`~/.cache/tensorfold-glm53/<パッチのハッシュ>/`、root 所有。2026-10-09 時点で `1692d2df78d2/` が該当) | 両ノード | そのハッシュのイメージを消したとき | 上と同じくコンテナ経由 |
 | 古い revision の HF キャッシュ | 両ノードの `~/.cache/huggingface/hub/models--*/snapshots/<旧 revision>` | その revision へ戻さないと決めたとき | `hf cache rm` (ログインシェルで。使い方は `hf cache --help`。当方では未実行) |
 | 起動とダウンロードのログ | head のホームの `~/dsv41-start.log` / `~/glm53-tf-start.log` と、「長い処理を ssh から切り離す」で書いたログとスクリプト (2026-10-06 の Ablit 導入の分は `~/glm53-ablit-fetch.{sh,log}` / `~/glm53-ablit-rsync.{sh,log}` / `~/glm53-image.{sh,log}`) | 読み終えたらいつでも (次の起動で上書きされる) | `rm` |
 | GLM 系のサーバのログ | 各ノードの `~/.cache/tensorfold-glm53/logs/` | 手で消さなくてよい (`stop.sh` と start.sh が新しい 10 本だけを残す) | — |
@@ -1506,9 +1521,9 @@ curl -s http://spark-head.local:8888/health | python3 -c 'import json,sys; h=jso
 | V4.1 EXL3 の重みがそろっているか | 下のコードブロック 5 (本体 49 ファイルのサイズを revision 固定の HF API と比べる。`OFF=1` にすると期待値を 1 本だけ 1 バイトずらす陽性対照になり、exit 1 を返す)。両ノードで exit 0、`OFF=1` で exit 1 を確認した。Engram の 2 本は「導入手順 (V4.1 EXL3 系)」の Engram のコードブロック末尾の `sha256sum -c` で照合し、`engram-src/` に `config.json` と `model.safetensors.index.json` があることも見る | 2026-09-15 |
 | V4.1 EXL3 系の上流既定からの差分 | 下のコードブロック 4 | 2026-09-30 |
 | GLM 系の上流既定からの差分 | レシピのディレクトリで `cat scripts/local.sh; ls .env 2>/dev/null; git status --short` (`local.sh` の行は worker のアドレスを出すので証跡として貼らない)。**`WORKER=`・`ABLIT=1`・`HF_TOKEN=$(cat ~/.cache/huggingface/token)` の 3 行だけで、`.env` が無く、`git status` が `?? scripts/local.sh` だけなら合格** | 2026-10-06 |
-| GLM 系のイメージと clone のずれ | レシピのディレクトリで `docker image inspect -f '{{index .Config.Labels "tf.patches"}}' tensorfold-glm53:v0.6.0` と `bash -c 'source scripts/config.sh; image_hash'` を比べる。**一致すれば prepare.sh はイメージを取り直さない** (2026-10-06 は両方 `1692d2df78d2`) | 2026-10-06 |
-| GLM レシピの commit | `ssh -n spark-head 'cd ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold && git log --oneline -1'` (2026-10-06 時点 `68ebd67`、v1.7.1)。上流の先行分は同じディレクトリで `git fetch -q && git log --oneline --stat HEAD..origin/main` (2026-10-06 時点で先行なし) | 2026-10-06 |
-| TensorFold の API の形 | `curl -s http://spark-head.local:8888/v1/models` の各要素のキーが `id` / `object` / `owned_by` の 3 つで `max_model_len` が無いこと。`/v1/messages` への POST が 404 を返すこと (→「使える API (GLM 系)」) | 2026-10-04 |
+| GLM 系のイメージと clone のずれ | レシピのディレクトリで `docker image inspect -f '{{index .Config.Labels "tf.patches"}}' tensorfold-glm53:v0.6.0` と `bash -c 'source scripts/config.sh; image_hash'` を比べる。**一致すれば prepare.sh はイメージを取り直さない** (2026-10-09 は両方 `a1897d591f70`) | 2026-10-09 |
+| GLM レシピの commit | `ssh -n spark-head 'cd ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold && git log --oneline -1'` (2026-10-09 時点 `7d42f90`、v1.10)。上流の先行分は同じディレクトリで `git fetch -q && git log --oneline --stat HEAD..origin/main` (2026-10-09 時点で先行なし) | 2026-10-09 |
+| TensorFold の API の形 | `curl -s http://spark-head.local:8888/v1/models` の各要素のキーが `id` / `object` / `owned_by` の 3 つで `max_model_len` が無いこと。`/v1/messages` への POST が 200 で生成を返すこと (v1.9 から。陰性対照として存在しないパスは 404 を返す →「使える API (GLM 系)」) | 2026-10-09 |
 | opencode の版 | Mac 側で `opencode --version` (`opencode v2.0.22`)。版が変わったら「OpenCode」節の「v2.0.22 のソースで確認」とした項を確かめ直す | 2026-10-04 |
 | 画像入力が通るか | 下のコードブロック 10 (モデル名を配信名に差し替える) | 2026-10-04 (GLM 系で陽性・陰性の両対照。DeepSeek 系は 2026-09-23、V4.1 EXL3 系は 2026-09-30 に別の画像で実測) |
 | HF 側の `main` が動いていないか | 下のコードブロック 7。**`fab0aecb` 以外を返すならキャッシュより先に進んでいる** (2026-09-09 時点は `fc694b54`。意味は → 「重みの検証」) | 2026-09-09 |
