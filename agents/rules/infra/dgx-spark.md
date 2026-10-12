@@ -9,7 +9,7 @@ paths:
 
 - 種別: 環境リファレンス
 - 対象読者: 別セッション・別マシンで作業するエージェント (Claude Code / Codex / OpenCode)
-- 最終確認: 2026-10-09 (GLM 系の節と GLM に関わる記述)。監査で指摘を受けた各節の記述は 2026-10-04。OpenCode (V2 2.0.22) の節と OpenCode に関わる記述は 2026-10-03
+- 最終確認: 2026-10-12 (sparkDash に関わる記述)。2026-10-09 (GLM 系の節と GLM に関わる記述)。監査で指摘を受けた各節の記述は 2026-10-04。OpenCode (V2 2.0.22) の節と OpenCode に関わる記述は 2026-10-03
 - 他の節の確認日: 値ごとに表のセルか本文に書いてある (確認コマンドと組にした一覧は「依拠する外部事実」)。**OpenCode を通した疎通・速度の値のうち 2026-10-03 より前の日付のものは opencode 1.18.18 (V1) で取ったもので、V2 では測り直していない** (各箇所に版を書いてある)
 
 自宅に NVIDIA DGX Spark (GB10) が 2 台あり、TP=2 (tensor parallel、2 台に重みを分割する並列方式) でローカル LLM を常時サービングしている。推論エンジンは GLM 系だけが TensorFold で、他の 3 系統は vLLM である。Mac の OpenCode (素の `opencode`) からバックエンドとして使える。
@@ -82,9 +82,10 @@ paths:
 | `resolve_snapshot.py` / `check-weights.sh` / `verify-weights.py` | Qwen レシピ**限定**の重み検証ツール 3 種。1 つ目はシャードの完全性だけを見る起動前の門、2 つ目は両ノードを見る入口、3 つ目は 1 ノードを HF の manifest と照合する本体 (2 つ目が各ノードで呼ぶ)。**`utility-spark-model-fetch` 同梱の `verify_shards.py` とは別実装で、配布中はスキル側、起動前はレシピ側を使う** | 「重みの検証」 | 上流 (`git clone`) | `start.sh` (1 つ目) / `check-weights.sh` (3 つ目) / 人 |
 | `~/spark-bench` | 計測ハーネス一式。`bench.py` が「L1: サーバ単体 (2026-09-05)」の表を、`snap.py` が `/metrics` の前後差分で「L3: OpenCode 込み (2026-09-05)」の表を出す。`results/` に出力が溜まる。**`pc_probe.py` は役割を記録していない** (head 上の実物を読むまで何を測るか分からない)。**dotfiles 管理外で再作成手段が無い** | head の `~/spark-bench/` | 人 | 人 / エージェント |
 | `utility-spark-model-fetch` | 新しい重みを head で 1 回落として worker へ rsync するスキル。`scripts/verify_shards.py` を同梱する。使うときは Mac から head の `/tmp/vs.py` へ scp し、head から worker の `/tmp/vs.py` へ scp する (`/tmp` は再起動で消えるので、初回と再起動後は両ノードへ配り直す。手順はスキルの手順 5) | `agents/skills/utility-spark-model-fetch/SKILL.md` | dotfiles | エージェント |
-| sparkDash | 監視・SSH 操作・Wake-on-LAN を持つ Web UI。**認証が無い** | head の `~/sparkDash/` | 上流 (`git clone`) | 人 (ブラウザ) |
-| `workerLabel` | sparkDash が worker 行に表示するモデル名。**手書きの静的文字列で、実機を見ていない** | head の `~/sparkDash/config/sparks.json` | 人 | sparkDash の UI |
-| `docker-compose.override.yml` | sparkDash のポーリング間隔などの上書き。未追跡 | head の `~/sparkDash/` | 人 | `docker compose` |
+| sparkDash | 監視・SSH 操作・Wake-on-LAN・電源断・設定変更を持つ Web UI。版は v2.32.0。**認証を付けずに全インターフェースで待ち受ける** (→「動いているもの」) | head の `~/sparkDash/` (タグ `v2.32.0` に detached) | 上流 (`git clone`) | 人 (ブラウザ) |
+| `sparkdash-sparkdash:latest` | sparkDash のイメージ。compose が `build:` だけを持ち `image:` を持たないので、compose はプロジェクト名から導いたこの名前を使う。**head ではビルドしない** (→「sparkDash を更新する」) | head の docker | 人 (Mac で `docker build` して `docker load`) | `docker compose up -d --no-build` |
+| `workerLabel` | sparkDash の worker の表示名を手で上書きする文字列。**空 (`null`) にしてある。** 空なら sparkDash が head の配信モデル名から導く (→「sparkDash の worker の表示名」) | head の `~/sparkDash/config/sparks.json` | 人 (空のまま保つ) | sparkDash の UI |
+| `docker-compose.override.yml` | sparkDash の上書き。待ち受け (`BIND_HOST=0.0.0.0`)・ポーリング間隔・worker へ入る SSH 鍵の mount を持つ。未追跡 | head の `~/sparkDash/` | 人 | `docker compose` |
 | 上流 | レシピの配布元。DeepSeek 系は [MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)、Qwen 系は [MiaAI-Lab/Qwen3.8-Flash-Next-Dual-DGX-Sparks](https://github.com/MiaAI-Lab/Qwen3.8-Flash-Next-Dual-DGX-Sparks)、V4.1 EXL3 系は [MiaAI-Lab/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks](https://github.com/MiaAI-Lab/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks)、GLM 系は [MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold](https://github.com/MiaAI-Lab/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold) | — | — | — |
 
 ## ハードウェアと OS
@@ -212,13 +213,59 @@ LAN は 2.4 GHz の WiFi (両ノードとも freq 2437) で、リンク速度は
 | サービス | 自宅 LAN | 出先 (Tailscale) | 認証 |
 | --- | --- | --- | --- |
 | 推論サーバ (4 系統のどれでも) | `http://spark-head.local:8888` | `http://spark-head:8888` | **なし** |
-| sparkDash | `http://spark-head.local:5555` | `http://spark-head:5555` | **なし** |
+| sparkDash | `http://spark-head.local:5555` | `http://spark-head:5555` | **なし** (画面に Open access の警告が出る) |
 
 **8888 はどの系統でも無認証である。** Qwen 系はレシピが `--api-key` を渡さない。GLM 系は TensorFold に API キーの設定項目が無く、ヘッダ無しの `/v1/models` が 200 を返す (2026-10-04)。V4.1 EXL3 系はレシピの `.env` の `VLLM_API_KEY` がコメントアウトされたままで、起動ログの `auth` 行も `none (VLLM_API_KEY empty)` と出す (2026-09-15)。DeepSeek 系は `.env.dspark` の `VLLM_API_KEY` を `docker-compose.dspark.yml` がコンテナの環境変数に渡すしくみだが、**`VLLM_API_KEY` を空にしてある**ので素の無認証で上がる (2026-09-06 に確認)。Qwen 配信中の 8888 は、ヘッダ無しでも出まかせの Bearer でも `/v1/models` が 200 を返すことを実測した (同じ日に存在しないパスが 404 を返すことも確かめてある)。`/health` は手動の到達判定とレシピの起動・停止が、`/v1/models` は OpenCode のプラグイン `spark-served.ts` (起動時と 30 秒ごと) が、`/metrics` は sparkDash と `~/spark-bench/snap.py` が使う。OpenCode が生成に使う経路は `/v1/chat/completions` である。**`/v1/responses` は V4.1 EXL3 系でだけサーバ側にパッチが要る** (→「既知の制約」12)。DeepSeek 系と GLM 系は素で通り (2026-09-23 / 2026-10-02 実測)、Qwen 系は未試行である。GLM 系 (TensorFold) の `/v1/messages` はレシピ v1.9 からパッチで使える (→「使える API (GLM 系)」)。
 
 **したがってポート 8888 を信頼できないネットワークへ出さない。** sparkDash のポート 5555 と同じ扱いにする。
 
-sparkDash は head の `~/sparkDash` に clone した [MiaAI-Lab/sparkDash](https://github.com/MiaAI-Lab/sparkDash) である。同梱の `docker-compose.yml` は編集せず、上書きは未追跡の `docker-compose.override.yml` に置く (`git pull` との衝突を避けるため)。反映・停止・更新は `~/sparkDash` で `docker compose up -d` / `down` / `pull` を打つ。**認証が無く tailnet の全端末から SSH 操作と Wake-on-LAN が可能なので、ポート 5555 を信頼できないネットワークへ出さない。**
+sparkDash は head の `~/sparkDash` に clone した [MiaAI-Lab/sparkDash](https://github.com/MiaAI-Lab/sparkDash) で、タグ `v2.32.0` に detached で固定してある。同梱の `docker-compose.yml` は編集せず、上書きは未追跡の `docker-compose.override.yml` に置く (タグの切り替えとの衝突を避けるため)。反映は `~/sparkDash` で `docker compose up -d --no-build`、停止は `docker compose down` を打つ。版の更新は次の小節の手順で行う。
+
+**v2 は既定で `127.0.0.1` にしか bind しない。** Mac から開けるように、override に `BIND_HOST=0.0.0.0` を書いてある。sparkDash はトークン (`SPARKDASH_TOKEN`) を付ければ認証を掛けられるが、付けないと決めた (2026-10-12)。そのため自宅 LAN と tailnet の全端末から、設定変更・SSH 操作・Wake-on-LAN・電源断ができる。**ポート 5555 を信頼できないネットワークへ出さない。** 待ち受けと認証の状態は `curl -s http://spark-head:5555/api/health` の `authMode` で見る。`open-remote` が現状で、トークンを付けると `bearer` になる。
+
+**override の `POLL_INTERVAL_GPU` / `POLL_INTERVAL_CPU` (15 秒) のせいで、Fleet energy は一部の時間しか記録されない。** v2 の Fleet energy は 2 秒ごとに集計し、GPU と CPU の読みが 10 秒以内のノードだけを数える (`server/energy/FleetEnergyRuntime.js` の `MAX_POWER_TELEMETRY_AGE_MS`)。15 秒間隔だと読みが古い時間ができるので、`freshNodeCount` は 0・1・2 を行き来する。2026-10-12 に `curl -s http://spark-head:5555/api/fleet-energy` を 3 秒おきに 10 回引くと、28 秒の間に両ノードがそろって新しかった時間 (`coverage24hMs` の増分) は 10.0 秒で、約 36% だった。画面の電力 (73 W 前後) は出る。間隔を 15 秒にしているのは、worker への SSH ログインと `nvidia-smi` の起動の頻度を抑えるためである (既定間隔での実測値は head の override のコメントにある)。v2 は SSH の接続を 60 秒保持して使い回す (`SSH_CONTROL_PERSIST_SECONDS`) が、間隔を縮めたときの worker の負荷は測っていない。
+
+### sparkDash を更新する
+
+**head ではビルドしない。** head のホストには node と npm が無く、`docker compose up --build` は dockerd の中で `npm ci` とフロントエンドのビルドを上限無しに走らせる。配信中の head は空きが 7 GiB 前後しかなく、メモリが尽きるとノードごと固まるおそれがある (→「既知の制約」11)。そこで Mac (arm64) でビルドして head へ `docker load` する。上流は GHCR にイメージ `ghcr.io/miaai-lab/sparkdash` を出す workflow を持つが、その workflow は v2.32.0 のタグより後に入ったので、v2.32.0 のイメージは無い (2026-10-12 に `docker manifest inspect` が `denied` を返した)。**次の更新では先に `docker manifest inspect ghcr.io/miaai-lab/sparkdash:<タグ>` を打つ。** 解決すれば Mac でのビルドは要らなくなるが、その場合も compose の bind mount との版合わせ (次の段落) は要る。
+
+**head の checkout とイメージのビルド元は同じコミットに揃える。** compose は `./server`・`./src/shared`・`showcasePrompts.ts` を bind mount し、イメージの `node_modules` で `node --watch server/index.js` を走らせるためである。ずれると、サーバのコードと依存の版が食い違う。
+
+**配信中の `docker load` は「既知の制約」11 の例外として扱う。** 同制約は dockerd を通る取得と読み込みを配信停止後に回すと定めているが、sparkDash のイメージは 279 MB で、制約が想定する 20 GB 級のイメージより 2 桁小さい。2026-10-12 に GLM 配信中に読み込み、head の `MemAvailable` は 6.85 GiB から 6.76 GiB に動いただけだった。
+
+```bash
+# 1. head で戻す材料を取る。config/ には root 所有の鍵 .secrets-key が入るので、コンテナ経由で固めて 600 にする
+ssh -n spark-head 'docker tag sparkdash-sparkdash:latest sparkdash-sparkdash:<旧版>'
+ssh -n spark-head 'mkdir -p ~/sparkDash-backup-<旧版> && chmod 700 ~/sparkDash-backup-<旧版> && docker exec sparkDash tar czf - -C /app config > ~/sparkDash-backup-<旧版>/config.tgz && chmod 600 ~/sparkDash-backup-<旧版>/config.tgz && cp ~/sparkDash/docker-compose.override.yml ~/sparkDash-backup-<旧版>/'
+ssh -n spark-head 'git -C ~/sparkDash fetch -q --tags && git -C ~/sparkDash rev-parse "<タグ>^{commit}"'
+
+# 2. Mac でビルドして head へ読み込む。<作業ディレクトリ> は一時領域に取る
+git clone -q --branch <タグ> --depth 1 https://github.com/MiaAI-Lab/sparkDash.git <作業ディレクトリ>
+git -C <作業ディレクトリ> rev-parse HEAD   # 1 の最後の行と一致すること
+docker build --platform linux/arm64 -t sparkdash-sparkdash:<タグ> <作業ディレクトリ>
+docker save sparkdash-sparkdash:<タグ> | ssh spark-head 'docker load'
+
+# 3. head を切り替える
+ssh -n spark-head 'cd ~/sparkDash && git checkout -q --detach <タグ> && mkdir -p dist && docker tag sparkdash-sparkdash:<タグ> sparkdash-sparkdash:latest'
+ssh -n spark-head 'cd ~/sparkDash && docker compose config | grep BIND_HOST'   # 0.0.0.0 であること (override が効いていないと 127.0.0.1)
+ssh -n spark-head 'cd ~/sparkDash && docker compose up -d --no-build'
+```
+
+- **`--no-build`**: compose の `build:` が head でビルドを始めないようにする。
+- **`mkdir -p dist`**: compose はホストの `./dist` を bind mount する。無いと docker が root 所有の空ディレクトリを作る。どちらでもサーバはイメージ内の `dist-baked` を使うが、所有者を揃えておく。
+- **完了判定**: `curl -s http://spark-head:5555/api/health` が `"authMode":"open-remote"` を返す。`docker logs sparkDash` に `bind=0.0.0.0 auth=open-remote` があり、worker について `reachable again` が出る。起動直後は worker が `unreachable (no liveness)` と出るが、liveness の初回が返るまでの表示で、数秒で戻る。`curl -s http://spark-head:5555/api/sparks/spark-head/metrics` の `metrics.llm` に配信中のモデルが出る。`authMode` が `required-missing` で起動を拒んだら、上流がトークン無しの既定を変えている (v2.32.0 の既定は `SPARKDASH_ALLOW_OPEN_REMOTE=1`。上流の `docs/REMOTE-ACCESS.md` は拒む前提で書かれていて、README とずれている)。override に `SPARKDASH_ALLOW_OPEN_REMOTE=1` を足す。
+- **戻すとき**: 次を head で打つ。`config/` は root 所有なので、手元にある旧版のイメージをコンテナとして使って展開する (別のイメージを指定すると配信中に `docker pull` が走る)。新しい版が足した状態ファイル (`gpu-history.json` など) は残るが、旧版は読まない。**v2 は起動時に `sparks.json` を正規化して書き戻すので、`config/` を戻さずに旧版を起動しない。**
+
+  ```bash
+  cd ~/sparkDash && docker compose down && git checkout -q --detach <旧コミット>
+  docker run --rm -v ~/sparkDash/config:/c -v ~/sparkDash-backup-<旧版>:/b --entrypoint sh sparkdash-sparkdash:<旧版> -c 'tar xzf /b/config.tgz -C /c --strip-components=1'
+  docker tag sparkdash-sparkdash:<旧版> sparkdash-sparkdash:latest
+  cp ~/sparkDash-backup-<旧版>/docker-compose.override.yml ~/sparkDash/
+  docker compose up -d --no-build
+  ```
+
+
+2026-10-12 に 1.8.6 (`cc44d35`) から v2.32.0 (`230cdde`) へ上げたときの退避物は、「残骸の片付け」の表にある。
 
 ### API キーの流れ
 
@@ -741,7 +788,7 @@ ssh -n spark-head 'cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && bash tests/tes
 8. **pack** — 停止確認とイメージの照合後に `./start.sh pack` (worker への同期も同時に行う)。**完了判定**: head の `ls -la ~/dsv41-engram` に `engram-l{1,14}-r0of2.bin`、worker に `engram-l{1,14}-r1of2.bin` があり、各 47.2 GiB
 9. **head のパッチ** — 「既知の制約」12 の手順で、上流の公式パッチ・実行ループ・mount が揃っているか確認する。揃っていればローカル差分を足さず、無い版だけ `~/dsv41-local/patch_responses_content_parts.py` と 2 行のローカル差分を用意する。**`/v1/responses` を使わないなら飛ばしてよい。OpenCode には要らない。** **完了判定**: 公式またはローカルのパッチ本体・実行・mount の 3 点が揃っていること。実行の合否は起動後のコードブロック 6 の HTTP 200 で確かめる
 10. **起動と判定** — 上の「起動と判定 (V4.1 EXL3 系)」。**完了判定**: 3 段と `/engram-packed` の確認。`/v1/responses` を使うなら「依拠する外部事実」のコードブロック 6 が 200 を返すことも見る
-11. **クライアント側と表示** — `opencode.json` のモデル宣言と effort を確認し、sparkDash の `workerLabel` を直す。OpenCode の設定は symlink なので `drs` は要らない
+11. **クライアント側** — `opencode.json` のモデル宣言と effort を確認する。OpenCode の設定は symlink なので `drs` は要らない。sparkDash の表示は配信名に追従するので触らない (→「sparkDash の worker の表示名」)
 
 Engram の取得 (手順 3)。HF の resolve URL は Range 指定に 206 を返すので、`curl -C -` で途中から再開できる。サイズを先に見るのは、取り終えたファイルに `-C -` を打つと範囲外の要求になるため。**2 本で約 190 GiB あり 6 時間を超えるので、このブロックを head 上のファイル (例: `~/dsv41-engram-dl.sh`) に保存し、「長い処理を ssh から切り離す」の型で `bash ~/dsv41-engram-dl.sh` として流す。** 結果は末尾の `sha256sum -c` の 2 行 (`OK`) をログで読む。
 
@@ -998,7 +1045,7 @@ ssh -n spark-head 'grep -o "model=[^ ]*" ~/.local/state/glm53-tensorfold/prepare
 
 **この系統のサーバは配信していないモデル名で要求しても応答を返す** (2026-10-04 再確認)。クライアントが古いモデル名を送り続けても `model not found` にならず、GLM がそのまま答えるので気づきにくい。`/v1/models` の `owned_by` は `tensorfold` である (OpenCode 組み込みの vLLM 自動発見を使わない理由 →「OpenCode」)。
 
-**手元の sparkDash (`cc44d35`) は GLM 配信中に LLM のメトリクスを表示できない。** `vllm:` の系列しか読まないためである。上流の `main` には TensorFold の `/health` を読む変更が入っている。
+**sparkDash (v2.32.0) は GLM 配信中も LLM のメトリクスを表示する。** 応答から TensorFold を見分けて読む。2026-10-12 に `curl -s http://spark-head:5555/api/sparks/spark-head/metrics` の `metrics.llm` が `backend: tensorfold`・配信名・`contextLength` 1,048,576・decode と prefill の tok/s を返すことを確かめた。
 
 #### 導入手順 (GLM 系)
 
@@ -1042,7 +1089,7 @@ ssh -n spark-head 'grep -o "model=[^ ]*" ~/.local/state/glm53-tensorfold/prepare
    **完了判定**: ログの最後が `EXIT=0` で、両ノードの `docker image inspect -f '{{.Id}} {{index .Config.Labels "tf.patches"}}' tensorfold-glm53:v0.6.0` (タグは `scripts/config.sh` の `$IMAGE`) が同じ Id を返し、ラベルが 1 の `image_hash` と一致すること
 7. **起動** — 「起動と判定 (GLM 系)」の形で `./start.sh` を打つ。prepare.sh が流れ、照合だけで終わる (ログに `already built with patches` / `identical on both Sparks` / `Worker has` が出る)。新しいイメージの初回は CUDA 拡張のビルドが入るので約 7 分かかる。**失敗したら** head のログを先に読む。worker 側の `RDMA write to rank 0 failed: transport retry counter exceeded` は、rank 0 が落ちた後の二次症状である
 8. **判定** — 「起動と判定 (GLM 系)」の 3 段と、「GLM の reasoning effort の語彙」の陽性対照・陰性対照を両経路で流し、すべて期待どおりであること
-9. **クライアント側と表示** — `opencode.json` の宣言はそのまま効く。sparkDash の `workerLabel` が配信名と違えば「sparkDash の `workerLabel` を直す」で直す
+9. **クライアント側** — `opencode.json` の宣言はそのまま効く。sparkDash の表示は配信名に追従するので触らない (→「sparkDash の worker の表示名」)
 
 #### 導入の落とし穴 (GLM 系)
 
@@ -1074,13 +1121,12 @@ git pull --ff-only
 
 ## モデルの追加と切り替え
 
-**同じレシピの中でモデルを 1 つ足すときは、サーバ設定・OpenCode の宣言・sparkDash の表示の 3 か所を整え、次の 5 段で進める。** 別系統のレシピを足す場合は、clone・設定・イメージ取得も要る。V4.1 EXL3 系は Engram の取得と pack、GLM 系は別リポジトリのドラフタの取得が要る (→ 各系統の導入手順)。
+**同じレシピの中でモデルを 1 つ足すときは、サーバ設定と OpenCode の宣言の 2 か所を整え、次の 4 段で進める。** sparkDash の表示は配信名に追従するので触らない (→「sparkDash の worker の表示名」)。別系統のレシピを足す場合は、clone・設定・イメージ取得も要る。V4.1 EXL3 系は Engram の取得と pack、GLM 系は別リポジトリのドラフタの取得が要る (→ 各系統の導入手順)。
 
 1. **重みを両ノードに配る** — HF キャッシュへ置くモデルは `utility-spark-model-fetch` スキルを使う
 2. **サーバの設定を合わせる** — 対応するレシピのチェックポイント・revision・配信名を設定する。DeepSeek 系は `.env.dspark` の `DSPARK_MODEL_OFFICIAL` / `DSPARK_REVISION` / `SERVED_MODEL_NAME`、Qwen 系は `.env` の `MODEL_ID` / `SERVED_MODEL_NAME` (revision の選択は「重みの検証」)、V4.1 EXL3 系はモデル・Engram の固定 revision と `.env` の `SERVED_MODEL_NAME`、GLM 系は `scripts/config.sh` が解決する `MODEL_ID` / `MODEL_REVISION` / `SERVED_NAME` (ドラフタが変わるなら `DFLASH2_ID` / `DFLASH2_REVISION` も) を確認する。既存レシピが別モデルを受けるかは、そのレシピの起動前検査と設定で確認する
 3. **`agents/bindings/opencode/opencode.json` の `provider.spark.models` に宣言を足す** — `options.reasoningEffort` / `limit` / `tool_call` を書く (値は「OpenCode」)。受理される effort は各系統の API で確かめ、他モデルの値を流用しない。`spark-served.ts` は宣言済みのモデルからしか選ばない。配信中モデルが宣言に無ければプラグインは何もしない (→「OpenCode」の例外 (c))。設定は symlink なので `drs` は要らない
 4. **配信中の系統を止め、目的のモデルを起動して確認する** — 「系統の切り替え」の手順 1〜4。サーバの `/v1/models` の配信名、上限、実際の生成を確認する。GLM 系の上限は `/health` の `context_length` で見る
-5. **sparkDash の `workerLabel` を直す** — 配信を切り替えたら表示を更新する (→「sparkDash の `workerLabel` を直す」)
 
 **HF キャッシュに置く形の新しい open-weight を入れるときは `utility-spark-model-fetch` スキルを使う。** V4.1 EXL3 系はこの対象外で、レシピ直下に実ファイルで取り、worker へのコピーは `start.sh` の rsync が作る (→「導入手順 (V4.1 EXL3 系)」)。素直にレシピ同梱の `prepare-dspark-model-cache.sh` を使うと worker でも HuggingFace から再ダウンロードして同じ重みを 2 回落とすことになる。head で 1 回落として RoCE 経由で rsync すれば転送は 5〜8 分で済む。所有権の修正・シャードの検証・監視コマンドの落とし穴はスキル側に書いてある。
 
@@ -1088,7 +1134,7 @@ git pull --ff-only
 
 **系統を切り替えるときは、配信中の系統を止めてから目的の系統を起動する。** 停止と起動のコマンドは系統ごとに違う。どれも head の上で打つ。
 
-| 系統 | 停止 | 起動 | 起動の判定 | `workerLabel` に入れる値 |
+| 系統 | 停止 | 起動 | 起動の判定 | 配信名 (`/v1/models` の `id`) |
 | --- | --- | --- | --- | --- |
 | DeepSeek 系 (Vision-Exp 版) | `cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && ./stop-deepseek-v4-flash-dspark.sh` | `cd ~/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark && ./start-deepseek-v4-flash-dspark.sh` | 「DeepSeek 系 (Vision-Exp / 0731)」の 2 段 | `deepseek-v4-flash-vision-exp` |
 | DeepSeek 系 (0731 版) | `cd ~/dspark-0731 && ./stop-deepseek-v4-flash-dspark.sh` | `cd ~/dspark-0731 && ./start-deepseek-v4-flash-dspark.sh` | 同上 (smoke は `~/dspark-0731` 側を打つ) | `deepseek-v4-flash-0731` |
@@ -1096,7 +1142,7 @@ git pull --ff-only
 | V4.1 EXL3 系 | `cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && ./start.sh stop` (同じディレクトリの `./stop.sh` も同じ動作) | `cd ~/DeepSeek-v4.1-Flash-EXL3-2x-DGX-Sparks && ./start.sh` (エージェントのシェル実行から打つ形は「起動と判定 (V4.1 EXL3 系)」) | 「起動と判定 (V4.1 EXL3 系)」の 3 段 | `DeepSeek-v4.1-Flash-EXL3` |
 | GLM 系 | `cd ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold && ./stop.sh` | `cd ~/GLM-5.3-Flash-EXL3-2x-DGX-Sparks-TensorFold && ./start.sh` (エージェントのシェル実行から打つときは `bash -lc` を通す →「起動と判定 (GLM 系)」) | 「起動と判定 (GLM 系)」の 3 段 | `GLM-5.3-Flash-EXL3` |
 
-手順は次の 5 段である。
+手順は次の 4 段である。
 
 1. **稼働中のリクエストを確かめる** — `curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:num_requests_(running|waiting)\{'` が両方 0。GLM 系の配信中は `vllm:` の系列が無いので、`curl -s http://spark-head.local:8888/health` の `requests_running` が 0 であることを見る。
 2. **配信中の系統を止める** — 表の「停止」
@@ -1108,27 +1154,32 @@ git pull --ff-only
 
    V4.1 EXL3 系を起動するなら、加えて両ノードの空きメモリが 111.5 GiB 以上であること。`awk '/MemAvailable/{g=$2/1048576; printf "%.1f GiB\n", g; exit !(g>=111.5)}' /proc/meminfo` が exit 0 なら合格である (`/proc/meminfo` は kB で出るので GiB に直して比べる)。GLM 系なら同じ式の閾値を 110 にする (GLM レシピの `start.sh` が警告を出す境目。下回っても止まらず、窓を縮めて起動し直す)
 4. **目的の系統を起動して判定する** — 表の「起動」と「起動の判定」
-5. **sparkDash の `workerLabel` を表の値に直す** — 次の小節。OpenCode は開いたままの TUI もプラグインの再取得で切り替え先のモデルへ移る
+
+**クライアント側と表示の変更は要らない。** OpenCode はプラグインが 30 秒ごとに `/v1/models` を引き直すので、開いたままの TUI も追従する。偽の `/v1/models` サーバで配信モデルを差し替えた実測 (2026-10-03) では 40 秒以内に切り替わり、それまでの 26 秒間は前のモデルのままだった (その間に送ったリクエストは前のモデル名で飛ぶはずだが、確かめていない)。sparkDash も head の配信名を読んで表示する (→ 次の小節)。
 
 **OpenCode が送る effort は、DeepSeek 系が `high`、Qwen 系が `xhigh`、V4.1 EXL3 系と GLM 系が `max` である。** `/v1/chat/completions` は 4 系統ともこの値で 200 を実測済みである (→ 各系統の reasoning effort の語彙)。
 
 **先に相手系統を停止する。** ポート 8888 を共有するうえ、起動側の事前検査が拒否する。Qwen 系は `REQUIRE_IDLE_GPU=true` がどちらかのノードで GPU を掴むプロセスを見つけた時点で止まる。V4.1 EXL3 系は、**どちらか一方のノードでも** `MemAvailable` が 111.5 GiB に届かなければ止まる (閾値は、レシピの `scripts/weight_budget.py` が safetensors の index から見積もる 1 ランク分の重み 99.5 GiB に、余裕 `DSV41_BOOT_MARGIN_GIB` の既定 12 GiB を足した値。見積りが取れないと警告だけ出して検査を飛ばす)。GLM 系のメモリ検査は警告だけで止まらない。代わりに 8888 が使用中なら `port 8888 is already in use` で止まる。**停止コマンドを取り違えると相手系統のコンテナは消えないので、「止めたつもり」で次の起動が拒否される。**
 
-### sparkDash の `workerLabel` を直す
+### sparkDash の worker の表示名
 
-配信モデルを切り替えたら必ず打つ。**実機を見ずに表示するだけの手書き文字列なので、直さないと worker 行が古いモデル名のままになる。** ファイルは root 所有なのでコンテナ経由で書く。`~/sparkDash/config` は `/app/config` に bind mount されているので、編集はコンテナを作り直しても残る。
+**worker の表示名は head の配信モデル名から導かれるので、切り替えのたびに直す必要は無い。** sparkDash v2.32.0 は 2 か所に worker のモデル名を出す。
 
-**ファイルを書き換えただけでは画面は変わらない。** sparkDash のサーバは `sparks.json` を起動時に読んでメモリに持つので (`~/sparkDash/server/sparks/SparkRegistry.js`)、書き換えた後に `docker restart sparkDash` で読み直させる。確認はファイルではなく API の応答で行う (2026-09-15 確認)。
+| 表示 | 何を出すか (優先順) |
+| --- | --- |
+| Overview の worker カード | head が配信中のモデル名 → 手書きの `workerLabel` → 導出名 (`workerDerivedLabel`) |
+| worker のページの見出しのタグ | 手書きの `workerLabel` → 導出名 |
 
-下のコマンドの `DeepSeek-v4.1-Flash-EXL3` を、配信中の `SERVED_MODEL_NAME` に差し替えて使う。
+導出名は、worker の `workerHeadId` が指す head が配信中のモデル名である (`server/sparks/SparkMonitor.js` の `workerDerivedLabel`)。**手書きの `workerLabel` が残っていると worker のページで導出名より優先され、切り替え後に古い名前が出る。** そのため `workerLabel` は空 (`null`) にしてある (2026-10-12)。2026-10-12 に GLM 配信中に `workerDerivedLabel` が `GLM-5.3-Flash-EXL3` を返すことを確かめた。別の系統へ切り替えたときに追従するかは、コード上の導き方からの推論で、実際の切り替えでは確かめていない。
+
+確認と、手書きの値が入ってしまったときの戻し方は次のとおり。`PATCH` は動いているサーバへそのまま効き、`docker restart` は要らない。worker の監視が作り直されるので、数秒だけ worker が `online: false` になる。
 
 ```bash
-ssh -n spark-head "docker exec sparkDash node -e \"const f='/app/config/sparks.json',fs=require('fs');const j=JSON.parse(fs.readFileSync(f));j.sparks.find(s=>s.role==='worker').workerLabel='DeepSeek-v4.1-Flash-EXL3';fs.writeFileSync(f,JSON.stringify(j,null,2))\""
-ssh -n spark-head 'docker restart sparkDash'
-ssh -n spark-head 'curl -s http://127.0.0.1:5555/api/sparks' | python3 -c 'import json,sys; d=json.load(sys.stdin); d=d.get("sparks",d) if isinstance(d,dict) else d; w=[s["workerLabel"] for s in d if s.get("role")=="worker"]; print(w); sys.exit(0 if w==["DeepSeek-v4.1-Flash-EXL3"] else 1)'   # exit 0 で合格。期待値も書き込んだ値に差し替える
+# workerLabel が null で、workerDerivedLabel が /v1/models の配信名と同じなら合格
+curl -s http://spark-head:5555/api/sparks/spark-worker/metrics | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("workerLabel"), d.get("workerDerivedLabel"))'
+# 手書きの値を消す
+curl -s -X PATCH -H 'Content-Type: application/json' -d '{"workerLabel":null}' http://spark-head:5555/api/sparks/spark-worker
 ```
-
-OpenCode の設定変更は要らない。**OpenCode はプラグインが 30 秒ごとに引き直すので、開いたままの TUI も追従する。** 偽の `/v1/models` サーバで配信モデルを差し替えた実測 (2026-10-03) では 40 秒以内に切り替わり、それまでの 26 秒間は前のモデルのままだった (その間に送ったリクエストは前のモデル名で飛ぶはずだが、確かめていない)。
 
 ## Mac から使う
 
@@ -1186,7 +1237,7 @@ opencode --standalone                      # 常駐サービスを使わず、�
   - `enabled_providers: ["spark"]` — 無いと OpenCode Zen の無料モデルが選択肢に混ざり、既定に選ばれうる (2026-10-03 に、起動直後の一瞬だけ `Build · Fledge Alpha Free (OpenCode Zen)` が表示されたのを見ている)
   - 各モデルに `reasoning: true` を書かない — V2 には対応するフィールドが無く、警告ログ (`omitted unsupported legacy setting`) を出して捨てる (2026-10-03 実測)
   - `models` の宣言 (`reasoningEffort` / `limit` / `tool_call`) は要る。**配信しうるモデルを増やしたらここに足す** (足さないとプラグインが選べない →「モデルの追加と切り替え」3)。値の決め方は `limit.context` = `/v1/models` の `max_model_len` (TensorFold は返さないので、GLM 系は `/health` の `context_length`)、`limit.output` = 65536、`tool_call` は `true`、`options.reasoningEffort` はそのモデルで受理を確認済みの採用値である (現在は `qwen3.8-flash-next` = `xhigh` / `deepseek-v4-flash-vision-exp` = `high` / `deepseek-v4-flash-0731` = `high` / `DeepSeek-v4.1-Flash-EXL3` = `max` / `GLM-5.3-Flash-EXL3` = `max`)。`reasoningEffort` を省くと OpenCode は effort を送らず、テンプレート既定 (Qwen なら `xhigh`) が効く。明示してあるのは、既定が変わったときに黙って浅くならないようにするためである
-  - **`limit.context` は人が書く静的値なので、サーバ側の `MAX_MODEL_LEN` を変えると取り残される** (`workerLabel` と同型の乖離経路)。**この乖離は現に起きている** — `deepseek-v4-flash-vision-exp` と `deepseek-v4-flash-0731` は 524,288 で、DeepSeek 系のサーバ上限 1,048,576 (「サービングの構成 (DeepSeek 系)」「0731 版で配信する」) の半分である。`GLM-5.3-Flash-EXL3` も 500,000 で、サーバの 1,048,576 の約半分である。Qwen (524,288) と V4.1 EXL3 (600,000) はサーバと一致している。害は早めに圧縮が走ることだけなので放置してもよいが、直すなら当該エントリを 1048576 にする
+  - **`limit.context` は人が書く静的値なので、サーバ側の `MAX_MODEL_LEN` を変えると取り残される** (実機を見ない手書きの値が取り残される乖離経路)。**この乖離は現に起きている** — `deepseek-v4-flash-vision-exp` と `deepseek-v4-flash-0731` は 524,288 で、DeepSeek 系のサーバ上限 1,048,576 (「サービングの構成 (DeepSeek 系)」「0731 版で配信する」) の半分である。`GLM-5.3-Flash-EXL3` も 500,000 で、サーバの 1,048,576 の約半分である。Qwen (524,288) と V4.1 EXL3 (600,000) はサーバと一致している。害は早めに圧縮が走ることだけなので放置してもよいが、直すなら当該エントリを 1048576 にする
   - `autoupdate: false` — 本体は Nix 管理で store は書き換えられないため。V2 もグローバルの `opencode.json` を直接読んで更新を止める (v2.0.22 のソースで確認)。`provider.spark.npm` (`@ai-sdk/openai-compatible`) は V2 同梱の実装で解決され、実行時の npm install は起きない (同じくソースで確認)。初回起動に npm レジストリへの到達性は要らない
 - **`cli.json` は TUI で設定を変えると symlink が切れる。** 起動しただけでは V2 は書き換えない (2026-10-03 に、V2 書式の `cli.json` を symlink で置いて TUI を 2 回起動し、symlink のままで中身も変わらないことを実測)。一方、旧い名前のキーバインドが入っていると起動時に書き換え、テーマなどを TUI で変えたときも書き換える。書き換えは一時ファイルを書いて rename で置き換えるので、symlink が実ファイルに化けて repo との同期が黙って切れる (旧い名前のキーバインドの場合は 2026-10-03 に実測、テーマ変更の場合は v2.0.22 のソースで確認)。**設定は repo 側を編集して変え、TUI では変えない。** 実ファイルが残る原因はもう 1 つある。`cli.json` を symlink で配る前の dotfiles を適用したマシンでは、activation が初回だけコピーした実ファイルがそのまま残っている。どちらの場合も、消す前に `diff ~/.config/opencode/cli.json agents/bindings/opencode/cli.json` (dotfiles で実行) で差を見て、残したい変更は repo 側へ取り込む。そのうえで実ファイルを消して `drs` / `hms` で張り直す。消さずに `drs` を打つと mac は `cli.json.hm-backup` へ退避して symlink を張るが、`cli.json.hm-backup` が既にあると `would be clobbered by backing up` で止まる (Linux の `hms` は退避の設定が無いので、実ファイルがあるだけで止まる → `CLAUDE.md`「配布方式の移行」)。**`drs` を打つ前に `test -e ~/.config/opencode/cli.json.hm-backup` で古い退避が無いかを見る** (2026-10-04 時点のこの Mac には無い)。あれば、`diff ~/.config/opencode/cli.json.hm-backup agents/bindings/opencode/cli.json` (dotfiles で実行) が何も出さないことを確かめてから消す。wezterm の Cmd+p は alt+p を送り、`cli.json` の `command.palette.show` (`alt+p,super+p`) に当たる
 - **CLI のうち Spark の操作に関わる点。** トップレベルの `--model` は無い。`run` と `mini` にはあり、形式は `run` が `provider/model#variant`、`mini` が `provider/model` (`#variant` を取らない)。`run --dir` は無く、カレントディレクトリで動く (2026-10-03 に `opencode run --help` / `opencode mini --help` で確認)
@@ -1295,7 +1346,7 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | コンテナが無い | 両ノードで「系統の切り替え」の手順 3 のコマンド (4 系統すべてを拾う。表のセルに書くと `\|` のエスケープが混ざってそのまま打てないので、そちらをコピーする) | 停止コマンドで止めたまま、またはノードの再起動 (Qwen 系・V4.1 EXL3 系・GLM 系は再起動で上がらない。DeepSeek 系は上がる → 「既知の制約」8)。起動し直す |
 | 起動に失敗する | `./logs-deepseek-v4-flash-dspark.sh` (Qwen 系は `docker logs vllm-fn`、V4.1 EXL3 系は `./start.sh logs` / `./start.sh logs worker` と、レシピの `logs/head.log` / `logs/worker.log` / `logs/overlay-verify.log`、GLM 系は `docker logs glm53-flash-tf`) | DeepSeek 系の `no usable RoCEv2 GID` は RoCE 2 本目の IP か MTU (Qwen 系は `IB_HCA` が 1 本なのでこの形では出ない)。Qwen 系は相手系統が GPU を掴んだままだと `REQUIRE_IDLE_GPU` で拒否される。V4.1 EXL3 系は `not enough free unified memory` (相手系統が動いている → 「系統の切り替え」の手順 3)、`FileNotFoundError: /models/config.json` (→「導入の落とし穴 (V4.1 EXL3 系)」4)、`logs/hang-*-pyspy.txt` (head のログが 420 秒止まると書かれる)。**V4.1 EXL3 系は失敗してもコンテナが残るので、`./start.sh stop` してから起動し直す。** GLM 系は `docker logs glm53-flash-tf` (start.sh も失敗時に両ランクの末尾を出す。停止済みのランクのログは `~/.cache/tensorfold-glm53/logs/` に残る)。worker 側の `transport retry counter exceeded` は rank 0 が落ちた後の二次症状なので、head 側から読む |
 | Qwen 系がコンテナを作らずに `Checkpoint snapshot is incomplete` で止まる | `python3 files/resolve_snapshot.py <hub の repo ディレクトリ>` の exit code (0 以外) | シャードの欠落。`start.sh` が起動前に検査して止める (→「重みの検証」)。**コンテナが 1 つも作られないので `docker logs vllm-fn` は空振りする。`start.sh` の標準出力を見る。** 復旧は重みの再取得である。Qwen レシピ同梱の `./download.sh` (`--launch` を付けない素の `./start.sh` が内部で呼ぶのと同じもの) は **revision を受けないので、そのまま流すと配信 revision が動く** (→「重みの検証」)。revision を固定して取り直すなら、ログインシェルで `hf download nvidia/Qwen3.8-Flash-Next-NVFP4 --revision fab0aecb760cec45227f6656abcaafa11abca87a --cache-dir ~/.cache/huggingface/hub` を「長い処理を ssh から切り離す」の型で流し、worker へは `utility-spark-model-fetch` の手順 4 で送る (この形は未実行) |
-| `model not found` が出る | `curl .../v1/models` で配信名を見る | セッション起動後にサーバ側で切り替えた。OpenCode はプラグインの再取得で 40 秒以内に追従する (→「sparkDash の `workerLabel` を直す」の末尾)。**GLM 系は配信していないモデル名でも応答を返すので、このエラーにならず GLM がそのまま答える** (→「GLM-5.3-Flash EXL3」の「使える API (GLM 系)」) |
+| `model not found` が出る | `curl .../v1/models` で配信名を見る | セッション起動後にサーバ側で切り替えた。OpenCode はプラグインの再取得で 40 秒以内に追従する (→「系統の切り替え」の手順の後の段落)。**GLM 系は配信していないモデル名でも応答を返すので、このエラーにならず GLM がそのまま答える** (→「GLM-5.3-Flash EXL3」の「使える API (GLM 系)」) |
 | OpenCode が Spark に繋がらない | `tailscale status` に `spark-head` の行があるか (コマンドが無ければ「新しいマシンで手で用意するもの」の Tailscale の行)、`curl -fs -o /dev/null http://spark-head:8888/health` の exit code | OpenCode の接続先は Tailscale 側に固定なので、**自宅でも Tailscale にサインインしていないと届かない**。LAN 経路へ切り替える手段は無い (→「OpenCode」) |
 | OpenCode の選択肢に配信していないモデルが残る・既定が配信外のモデルになる | `opencode models` が配信名の 1 行だけを返すか、`readlink -f ~/.config/opencode/plugins/spark-served.ts` が dotfiles 配下を返すか、`curl -s http://spark-head:8888/v1/models` の配信名が `opencode.json` の `models` にあるか | プラグインが動いていないか、`/v1/models` に届いていないか、配信中のモデルが `opencode.json` に宣言されていない。届かないときは、常駐サービスの起動時からなら全モデルが選べるまま (届けば 30 秒以内に絞り込む)、稼働中に届かなくなったなら直前の状態のまま残る。宣言されていないときはプラグインは何もしない (→「OpenCode」の例外 (a)〜(c))。プラグインはログを出さないので、効いているかは配信外の宣言済みモデルが `opencode models` の一覧から消えていることで見る (起動直後の空振りの扱いと、TUI の `Plan · <モデル名>` の表示だけでは判定にならない理由は「OpenCode」)。読み込まれていないようなら `opencode service restart` |
 | OpenCode Zen のモデルが選択肢に出る | `opencode.json` の `enabled_providers` | `["spark"]` が無いと Zen の無料モデルが混ざり、既定に選ばれうる |
@@ -1308,7 +1359,8 @@ curl -s http://spark-head.local:8888/metrics | grep -E '^vllm:(prefix_cache_(hit
 | 配信中に応答が止まった (V4.1 EXL3 系) | `curl -fs -o /dev/null http://spark-head.local:8888/health`、待ち行列コマンド、両ノードの `docker ps` | 起動中の hang 検知 (420 秒) は配信中には働かない。health が返らない、または `num_requests_running` が動かないまま時間が経つなら、`./start.sh stop` → 「系統の切り替え」の手順 3 → `./start.sh`。片方のノードに ssh も通らない場合は「既知の制約」11 |
 | 画像入力だけが `CUBLAS_STATUS_INTERNAL_ERROR` で失敗する (GLM 系。テキストの生成は通る) | head の `docker logs glm53-flash-tf` で、エラーのトレースが `tensorfold/vision/glm.py` を通っているか。worker のカーネルログ (`journalctl -k`) に `NV_ERR_NO_MEMORY` があるか。worker の `MemAvailable` と `ps -o pid,rss,etimes -C polkitd` | 2026-10-10 に 1 回起きた。worker の polkitd が 35 日の稼働で RSS 5.2 GB (ほかに swap 3.1 GB) まで育ち、配信中の `MemAvailable` が 6.7 GiB (起動直後は 13.7 GiB) まで減っていた。最初のエラーの直前に worker のカーネルが `NV_ERR_NO_MEMORY` を 3 回記録していた (時刻が一致するだけで、因果は確かめていない)。worker で `sudo systemctl restart polkit` (sudo は人が打つ →「既知の制約」1) を打ち、`./stop.sh` →「系統の切り替え」の手順 3 → `./start.sh` で復旧した。復旧の判定は「依拠する外部事実」のコードブロック 10 (画像入力) で行う。テキストの生成は障害中も通るので判定にならない。polkit とコンテナの再起動のどちらが効いたかは切り分けておらず、polkitd が育つ原因も調べていない |
 | 全体的に遅い | 「遅いと感じたときに疑う順序」を上から | クライアント側が大半 |
-| ダッシュボードの worker が古いモデル | `curl -s http://spark-head.local:5555/api/sparks` の worker 行 | `workerLabel` は手書きの静的文字列で、実機とは無関係に表示される。ファイルを直しても `docker restart sparkDash` するまで画面は変わらない。直し方は→「sparkDash の `workerLabel` を直す」 |
+| ダッシュボードの worker が古いモデル | 「sparkDash の worker の表示名」の確認コマンドで `workerLabel` と `workerDerivedLabel` を見る | 手書きの `workerLabel` が入っていると、worker のページで導出名より優先される。同節の `PATCH` で `null` に戻す |
+| ダッシュボードが開けない | `curl -s http://spark-head:5555/api/health` の `authMode` と、`ssh -n spark-head 'docker inspect sparkDash --format "{{range .Config.Env}}{{println .}}{{end}}"'` に出る `BIND_HOST` の行 | override の `BIND_HOST=0.0.0.0` が効いていない。v2 の既定は `127.0.0.1` で、head 以外からは繋がらない (→「動いているもの」) |
 | ssh 出力が途中で切れる | 打ったコマンド | 入れ子の `ssh` が標準入力を飲んでいる。内側に `-n` を付ける |
 | `opencode` が `command not found` | `type opencode` がパスを返すか | Nix の `drs` / `hms` 未実行か、新しいシェルを開いていない |
 
@@ -1333,7 +1385,7 @@ curl -s http://spark-head.local:8888/health | python3 -c 'import json,sys; h=jso
 | `~/dspark-0731` の worktree | head | 「0731 版で配信する」(`70a7cc4` に detached で作る) |
 | `hf` CLI | head の `~/.local/bin/hf` (`~/.venvs/hf/bin/hf` への symlink、1.30.0) | 入れ方の記録は無い。venv に `huggingface_hub` を入れたものと見ている (推測) |
 | `~/spark-bench` | head | 再作成手段が無い (→「既知の制約」9) |
-| sparkDash | head の `~/sparkDash/` と、未追跡の `docker-compose.override.yml`、`.gitignore` 済みの `config/sparks.json` | clone は上流から取れる。上書きの中身はポーリング間隔 (→「既知の制約」6) と `workerLabel` (→「sparkDash の `workerLabel` を直す」) |
+| sparkDash | head の `~/sparkDash/` と、未追跡の `docker-compose.override.yml`、`.gitignore` 済みの `config/` の状態ファイル (`sparks.json`・暗号化した秘密 `sparks-secrets.json` とその鍵 `.secrets-key`・ベンチと電力量の履歴) | clone は上流から取れ、イメージは「sparkDash を更新する」の手順で作り直せる。上書きの中身は待ち受け `BIND_HOST=0.0.0.0` とポーリング間隔 (どちらも →「動いているもの」)、worker 用の鍵の mount `/home/skanehira/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro`。`workerLabel` は空にする (→「sparkDash の worker の表示名」) |
 | RoCE の接続 | 両ノードの NetworkManager の接続 `roce` / `roce2` | 「ネットワーク」(別サブネット・MTU 9000) |
 | Tailscale | head だけ | 「動いているもの」の MagicDNS 名 `spark-head` |
 
@@ -1354,6 +1406,7 @@ curl -s http://spark-head.local:8888/health | python3 -c 'import json,sys; h=jso
 | 起動とダウンロードのログ | head のホームの `~/dsv41-start.log` / `~/glm53-tf-start.log` と、「長い処理を ssh から切り離す」で書いたログとスクリプト (2026-10-06 の Ablit 導入の分は `~/glm53-ablit-fetch.{sh,log}` / `~/glm53-ablit-rsync.{sh,log}` / `~/glm53-image.{sh,log}`) | 読み終えたらいつでも (次の起動で上書きされる) | `rm` |
 | GLM 系のサーバのログ | 各ノードの `~/.cache/tensorfold-glm53/logs/` | 手で消さなくてよい (`stop.sh` と start.sh が新しい 10 本だけを残す) | — |
 | V4.1 EXL3 系の起動失敗のログ | V4.1 EXL3 レシピの `logs/` (`hang-*-pyspy.txt` を含む) | 原因を調べ終えたら | `rm` |
+| sparkDash の旧版のイメージ `sparkdash-sparkdash:1.8.6-cc44d35` と退避物 `~/sparkDash-backup-1.8.6/` (`config.tgz` は `.secrets-key` を含む) | head | v2.32.0 で困らないとユーザーが決めたとき (1.8.6 へ戻す材料。「sparkDash を更新する」の「戻すとき」) | `docker rmi sparkdash-sparkdash:1.8.6-cc44d35` と `rm -rf ~/sparkDash-backup-1.8.6` |
 | 作業ファイル | head と worker の `/tmp` (`/tmp/vs.py` / `/tmp/qwen-manifest.json` / `/tmp/spark.key` など) | 手で消さなくてよい (再起動で消える) | — |
 | 計測の結果 | head の `~/spark-bench/results/` | 消さない。過去の値と比べる元で、ハーネスごと再作成手段が無い (→「既知の制約」9) | — |
 
@@ -1362,6 +1415,8 @@ curl -s http://spark-head.local:8888/health | python3 -c 'import json,sys; h=jso
 - **`~/.ssh/known_hosts`** — エージェントは書き換えない。登録が要るときは `ssh-keyscan` の 1 行をユーザーに依頼する
 - **`drs` / `hms` の実行** — `drs` は Touch ID を、`hms` は sudo (`/etc/codex/config.toml` の symlink) を伴うので、どちらもエージェントは打たない。`git add` までをエージェントが行い、適用はユーザーに依頼する
 - **`~/sparkDash/docker-compose.yml`** — 上流の追跡ファイル。上書きは `docker-compose.override.yml` に置く
+- **head での sparkDash のビルド** (`docker compose up --build` や `docker compose up` の `--no-build` 抜き) — 配信中の head のメモリを上限無しに使う。Mac でビルドして読み込む (→「sparkDash を更新する」)
+- **sparkDash の `config/.secrets-key`** — 消すと `sparks-secrets.json` に暗号化して入れた秘密が読めなくなる。退避した tar も同じ鍵を含むので 600 のまま置く
 - **`docker compose restart`** — vLLM には使わない。`stop` → `start`
 - **`.env.dspark.bak` のような控え** — `.gitignore` が拾わずキーごと公開リポジトリに載る
 - **head の `~/dsv41-local/` と公式が無い版の `start.sh` のローカル差分 2 行** — 公式パッチの本体・実行・mount が揃っていない版で消すと Responses API の `input_text` が 400 になる。更新時は差分を退避して公式を確認し、必要な場合だけ戻す。OpenCode の疎通では検出できない (→「既知の制約」12)
@@ -1415,7 +1470,7 @@ curl -s http://spark-head.local:8888/health | python3 -c 'import json,sys; h=jso
    WantedBy=multi-user.target
    ```
 
-6. **温度センサーは ACPI の 7 つで、履歴はどこにも残っていない。** `/sys/class/thermal/thermal_zone{0..6}/temp` がミリ °C を返す。名前は起動ログ (`journalctl -b -q -o cat | grep 'Thermal Zone \['`) が登録順に出す。zone0 = `TSOC` (SoC 全体) / zone1 = `TS0E` / zone2 = `TS0P` / zone3 = `TS1E` / zone4 = `TS1P` / zone5 = `TGPU` / zone6 = `TUNC`。**`TS<n>E` / `TS<n>P` が効率コアと性能コアに対応するという読み方は本書の推測で、NVIDIA の公表資料では裏を取っていない** (X925 の制限で `TS0P` が 14.3 °C 下がった実測とは整合する)。トリップ点は全 zone とも 104.8 °C、`policy` は `step_wise` である。`TSOC` の 3 文字目は英字の O、`TS0P` / `TS0E` の 3 文字目は数字のゼロで、grep するとき紛らわしい。**サーバ側に残る履歴は無い。** sparkDash は CPU 温度も採るが (head の `~/sparkDash/server/collectors/SystemCollector.js` が hwmon の `acpitz` と thermal zone を読む)、履歴はブラウザのメモリ (`~/sparkDash/src/hooks/metricsStore.ts` の `HISTORY_MAX` = 1,800 サンプル。sparkDash の `docker-compose.override.yml` が `POLL_INTERVAL_CPU` を 15 秒にしているので約 7.5 時間分) にしか無く、ページを閉じれば消える。journald に出るのは起動時の 1 回だけ (7 zone 分 7 行)。`collectd` / `netdata` / prometheus exporter の類は両ノードとも動いていない (2026-09-10 実測)。**したがって過去に遡った統計は取れない。** 必要になったら記録の仕組みを先に用意する
+6. **温度センサーは ACPI の 7 つで、その履歴はどこにも残っていない。** `/sys/class/thermal/thermal_zone{0..6}/temp` がミリ °C を返す。名前は起動ログ (`journalctl -b -q -o cat | grep 'Thermal Zone \['`) が登録順に出す。zone0 = `TSOC` (SoC 全体) / zone1 = `TS0E` / zone2 = `TS0P` / zone3 = `TS1E` / zone4 = `TS1P` / zone5 = `TGPU` / zone6 = `TUNC`。**`TS<n>E` / `TS<n>P` が効率コアと性能コアに対応するという読み方は本書の推測で、NVIDIA の公表資料では裏を取っていない** (X925 の制限で `TS0P` が 14.3 °C 下がった実測とは整合する)。トリップ点は全 zone とも 104.8 °C、`policy` は `step_wise` である。`TSOC` の 3 文字目は英字の O、`TS0P` / `TS0E` の 3 文字目は数字のゼロで、grep するとき紛らわしい。**ACPI の温度の履歴はサーバ側に残らない。** sparkDash は CPU 温度も採るが (head の `~/sparkDash/server/collectors/SystemCollector.js` が hwmon の `acpitz` と thermal zone を読む)、履歴はブラウザのメモリにしか無く、ページを閉じれば消える。ブラウザが持つ長さは、8 時間 (`VITE_HISTORY_HOURS` の既定) と、14,400 サンプル × WebSocket の送信間隔の短いほうである (`~/sparkDash/src/hooks/metricsStore.ts`)。送信間隔は Settings の更新間隔で、いまは 1 秒なので約 4 時間になる (コードからの計算で、実測していない)。サーバ側に残るのは GPU の使用率・温度・電力だけで、8 時間分を `config/gpu-history.json` に 5 分ごとに書く (`/api/sparks/<id>/gpu-history` で引ける)。journald に出るのは起動時の 1 回だけ (7 zone 分 7 行)。`collectd` / `netdata` / prometheus exporter の類は両ノードとも動いていない (2026-09-10 実測)。**したがって過去に遡った統計は取れない。** 必要になったら記録の仕組みを先に用意する
 7. **停止と再起動はユーザーの作業を止める。** 打つ前に稼働中リクエストが無いことを確認する (→「系統の切り替え」の手順 1)。OpenCode の実行中タスクが終わってから操作する
 8. **推論サーバの自動復帰は系統で違う。** DeepSeek 系コンテナの restart policy は `unless-stopped` だが、**Qwen 系 `vllm-fn`、V4.1 EXL3 系 `dsv41-exl3-head` / `dsv41-exl3-worker`、GLM 系 `glm53-flash-tf` は両ノードとも `no` なので、ノードを再起動すると上がってこない** (Qwen 系は 2026-09-06、V4.1 EXL3 系は 2026-09-15、GLM 系は 2026-10-04 に実測)。手で Qwen 系は `./start.sh --launch`、V4.1 EXL3 系と GLM 系は `./start.sh` を打ち直す (重みの同期はマーカーで省略されるので速い)。sparkDash は `always`、`docker` と (head の) `tailscaled` は enabled、RoCE は NetworkManager の autoconnect、GPU と CPU のクロック制限は 2 つの unit がどちらも enabled である (→ 制約 4・5)。どの系統も停止スクリプトで止めた後はコンテナ自体が消えるので再起動しても復帰しない。**cold boot での復帰は未確認なので、電源断の後は `docker ps` で確かめる**
 9. **`~/spark-bench` は再作成手段が無い。** dotfiles にも上流にも無い手書きのハーネスなので、head を作り直すと失われる
@@ -1555,6 +1610,8 @@ curl -s http://spark-head.local:8888/health | python3 -c 'import json,sys; h=jso
 | OpenCode の effort 設定 | Mac 側で `python3 -c "import json;print({k:v.get('options') for k,v in json.load(open('$HOME/.config/opencode/opencode.json'))['provider']['spark']['models'].items()})"`。先に `readlink -f` で実体が dotfiles に解決するか確認する。送信本文の値は未実測 | 2026-10-03 (設定値のみ) |
 | DeepSeek 系の上流既定からの差分 | 下のコードブロック 1 (**キー行と RoCE 側の IP を持つ 4 行が出るので画面外に出さない**) | 2026-09-23 |
 | Qwen 系の上流既定からの差分 | 下のコードブロック 2 | 2026-09-06 |
+| sparkDash の版と待ち受け | `ssh -n spark-head 'git -C ~/sparkDash describe --tags'` が `v2.32.0` を返し、`curl -s http://spark-head:5555/api/health` の `authMode` が `open-remote` であること | 2026-10-12 |
+| sparkDash の worker の表示名 | 「sparkDash の worker の表示名」の確認コマンド。`None` と配信名が出れば合格 | 2026-10-12 |
 | L1 の再計測 | 「L1: サーバ単体 (2026-09-05)」の `bench.py` 2 本をそのまま打つ。**前提が 2 つある**: DeepSeek 系 (Vision-Exp) を配信中であることと、`/tmp/spark.key` を書き直してあること (無認証でも中身は何でもよいが、ファイルが無いと `bench.py` が exit する) | 2026-09-05 |
 
 表に入らないもの。いずれも複数行にわたるか、表のセルでは `|` をエスケープしないと書けないパイプを含む。**表のセルにはパイプを含むコマンドを書かず、ここに番号を付けて置く** (エスケープした `\|` はコピーするとパイプにならない)。1 つのフェンスに 1 つの番号を振る。
