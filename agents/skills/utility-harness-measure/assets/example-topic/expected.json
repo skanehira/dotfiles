@@ -1,8 +1,8 @@
 {
-  "items": ["S1", "S2", "S3", "S4", "S5", "ORDER"],
+  "items": ["CASE", "WHY", "OPTIONS", "ORDER", "LEAN"],
   "max": 2,
   "controls": {
-    "pos": {"S1": 2, "S2": 2, "S3": 2, "S4": 2, "S5": 2, "ORDER": 2},
-    "neg": {"S1": 0, "S2": 0, "S3": 0, "S4": 0, "S5": 0}
+    "pos": {"CASE": 2, "WHY": 2, "OPTIONS": 2, "ORDER": 2, "LEAN": 2},
+    "neg": {"CASE": 0, "WHY": 0, "OPTIONS": 0}
   }
 }

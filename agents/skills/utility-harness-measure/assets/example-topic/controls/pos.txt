@@ -1,1 +1,6 @@
-**決めてほしいこと**: `~/.codex/config.toml` の `model` を消すか。**背景**: dotfiles の Codex 設定の移行作業。依頼は `/etc/codex/config.toml` を dotfiles の symlink に置き換えること。symlink の作成までは済んだ。`~/.codex/config.toml` の `model` が system レイヤーの値を上書きしており、消すと Codex の既定モデルが変わる。A (推奨): user レイヤーの `model` を削除する。影響: dotfiles の設定が全マシンで効く。B: 残す。影響: このマシンだけ現在のモデルのまま
+`~/.codex/config.toml` の `model` を消しますか? (Codex 設定を `/etc/codex/config.toml` の symlink へ移す作業の続きです)
+
+user レイヤーの `~/.codex/config.toml` に `model` が残っていて、symlink で配った設定の `model` を上書きしています。
+
+- A (推奨): 消す。dotfiles の設定が全マシンで効く
+- B: 残す。このマシンだけ今のモデルのまま
