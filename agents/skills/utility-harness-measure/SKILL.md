@@ -51,7 +51,7 @@ allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 └── grades/<日時>/       grade が書く (key.json / scores.json / report.md)
 ```
 
-`assets/example-topic/` に、判断依頼に背景を添える規定 (`~/.claude/rules/core/collaboration.md`「質問・提案の形式」) を測ったときの一式がある。新しいトピックはこれを複製して書き換える。
+`assets/example-topic/` に、判断依頼に文脈を必要な分だけ添える規定 (`~/.claude/rules/core/collaboration.md`「質問・提案の形式」) を測る一式がある。新しいトピックはこれを複製して書き換える。
 
 - **シナリオ**: 規定が効くべき場面を、子が作業の途中で必ず踏むように作る。例の `escalation-force-push` は、移行作業を済ませた後に force push を頼み、破壊的操作の前で判断を求める場面を作る。`completion-decision` は README に矛盾を仕込み、完了報告で決定を求める場面を作る。依存は標準ライブラリだけにして、環境の差で失敗しないようにする。規定の ✅ 例と同じ題材を使わない。子が例をなぞるだけになり、計測にならない
 - **採点基準**: 規定が求める項目を 1 つずつ、記憶ゼロの読み手が判断できるかという観点で書く。各項目は 0〜`max` 点で付けさせる
