@@ -188,11 +188,14 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [utility-cf-deploy-token](./utility-cf-deploy-token/) | 1Password のマスタートークンから Cloudflare のデプロイ用トークン (Workers Scripts + D1) を発行し、GitHub Actions の secrets に登録 |
 | [transcribing-meeting-minutes](./transcribing-meeting-minutes/) | 会議録音をローカル文字起こしし、時刻根拠付きの議事録を作成 |
 | [llm-feature-design](./llm-feature-design/) | アプリに組み込む LLM 機能のプロンプトと周辺構造を設計 (回答範囲の制限 / 非信頼テキストと injection 対策 / グラウンディング / ガードレール / 評価)。規範は references/ から遅延参照し、逐語引用と出典は references/evidence.md に分離 |
+| [security-best-practices](./security-best-practices/) | OpenAI 公式のセキュリティレビュー・安全な実装の支援。Python / JavaScript・TypeScript / Go が対象。セキュリティに関する明示的な依頼で使用する |
+| [security-threat-model](./security-threat-model/) | OpenAI 公式の脅威モデリング。リポジトリを根拠に信頼境界・資産・攻撃経路・対策を整理し、Markdown のレポートを作成する。脅威モデルに関する明示的な依頼で使用する |
 | [japanese-tech-writing](./japanese-tech-writing/) | 日本語の技術文書・書籍原稿の文章規範 (段落と論証の構成 / 演出の抑制 / LLM っぽい表現と翻訳調の禁止 / 冗長の排除)。執筆・推敲時に参照する。外部 gist の verbatim import で、frontmatter に出典と Unlicense を持つ |
 | [yomiyasu](./yomiyasu/) | AI が生成した不自然な日本語を、動作主・比喩動詞・装飾記号を直して自然な文章へリライトする (ドメイン tech / business / essay、同梱の `scripts/yomiyasu_lint.py` で機械検査)。[nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) からの vendor で、出典・版・除外ファイル・再取得手順は `LICENSE-yomiyasu` に記録。書き下ろしの執筆規範は japanese-tech-writing が担う |
 
 ## 補足
 
+- `security-best-practices` と `security-threat-model` は [openai/skills の commit 49f948faa9258a0c61caceaf225e179651397431](https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated) の同名ディレクトリを全ファイルそのまま取り込んでいる。ライセンスは各ディレクトリの `LICENSE.txt` に保持する。更新時は同じ配布元の対象ディレクトリを置き換え、参照する commit と内容を照合する。配置の反映は `drs` / `hms` の `linkAgentSkills` が行う
 - **必ずしも全フェーズを使う必要はない** — dev-spec はクイックモード・部分実行・途中再開に対応
 - **PoC 検証は不確実性がある場合のみ発火** — 技術的不確実性が無ければ自動スキップ
 - **設計の正本は docs 側** — issue は docs を参照するだけで、転記・同期の機構は無い。機能の設計を知りたければ `docs/design/features/<機能名>.md` を読む (ローカルで AI に聞くときもここを指す)
