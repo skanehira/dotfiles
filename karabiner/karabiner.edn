@@ -29,5 +29,6 @@
            [:!T##f :right_arrow [:!terminals]]]}
 
   {:des   "CMD-u/d to scroll in wezterm (vim-like)"
-   :rules [[:!Cu {:mkey {:vwheel -300}} [:wezterm]]
-           [:!Cd {:mkey {:vwheel 300}}  [:wezterm]]]}]}
+   ;; :!C は left_command 固定。右 Command でも効かせるため :modi の :command (左右不問) を使う
+   :rules [[{:key :u :modi {:mandatory [:command]}} {:mkey {:vwheel -300}} [:wezterm]]
+           [{:key :d :modi {:mandatory [:command]}} {:mkey {:vwheel 300}}  [:wezterm]]]}]}
