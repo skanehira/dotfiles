@@ -29,6 +29,10 @@
       if [ -f "$HOME/.cargo/env" ]; then
         . "$HOME/.cargo/env"
       fi
+      # マシン固有の設定
+      if [ -f "$HOME/.zshenv.local" ]; then
+        . "$HOME/.zshenv.local"
+      fi
     '';
 
     history = {
