@@ -83,6 +83,22 @@
           }
         }
       }
+    },
+    "opencode": {
+      "models": {
+        "glm-5.3-flash-free": {
+          "limit": {
+            "context": 1000000,
+            "output": 32000
+          }
+        },
+        "deepseek-v4.1-flash-free": {
+          "limit": {
+            "context": 1000000,
+            "output": 32000
+          }
+        }
+      }
     }
   },
   "update": "disable"

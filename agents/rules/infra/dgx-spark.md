@@ -1216,7 +1216,7 @@ opencode --standalone                      # 常駐サービスを使わず、�
 
 | ファイル | 配り方 | 中身 |
 | --- | --- | --- |
-| `opencode.json` | symlink (live edit) | `provider.spark` (接続先・モデル宣言・モデルごとの `reasoningEffort` と `limit`)、`enabled_providers`、`permission`、`default_agent`、`autoupdate` |
+| `opencode.json` | symlink (live edit) | `providers` (`spark`: 接続先・モデル宣言・モデルごとの `reasoningEffort` と `limit`。`opencode`: Zen 無料モデル 2 件 `glm-5.3-flash-free` / `deepseek-v4.1-flash-free` の `limit` 上書き。2026-10-17 に実測 100 万トークン級のプロンプトを受理した実績に基づき `context` を 1,000,000 に引き上げ)、`permissions`、`policies`、`default_agent`、`update`。旧記載の `enabled_providers` / `autoupdate` は現行ファイルに無い |
 | `plugins/spark-served.ts` | symlink (live edit) | 配信中のモデルの選択 |
 | `cli.json` | symlink (TUI で設定を変えると切れる) | keybinds / theme |
 
