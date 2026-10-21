@@ -15,10 +15,11 @@
   # リダイレクトされる Anthropic 公式の bootstrap スクリプト。
   # PATH に curl を載せておかないと、install.sh が内部で curl/wget を再帰的に呼ぶ際に
   # 「Either curl or wget is required」で落ちる (Linux の HM activation は PATH が最小)
+  # NIX_SSL_CERT_FILE を明示する理由は deno.nix と同じ
   home.activation.bootstrapClaudeCode = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ ! -x "$HOME/.local/bin/claude" ]; then
       echo "Bootstrapping Claude Code..." >&2
-      run sh -c 'export PATH=${pkgs.curl}/bin:$PATH && ${pkgs.curl}/bin/curl -fsSL https://claude.ai/install.sh | bash'
+      run sh -c 'export PATH=${pkgs.curl}/bin:$PATH NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt &&${pkgs.curl}/bin/curl -fsSL https://claude.ai/install.sh | bash'
     fi
   '';
 

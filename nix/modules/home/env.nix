@@ -14,6 +14,11 @@
     GOBIN = "$HOME/go/bin";
     RUSTUP_HOME = "$HOME/.rustup";
     HOMEBREW_INSTALL_CLEANUP = "1";
+    # Node は既定で内蔵のルート一覧だけを使い、そこには eMudhra (CVE-2026-111943) の
+    # emSign ECC Root CA - G3 が残っている。内蔵一覧を NSS 3.131.1 に更新した
+    # nodejs_24 24.22.1 が nixpkgs-unstable に届くまで、ルートを外したシステムの
+    # バンドル (NIX_SSL_CERT_FILE) で検証させる。届いたら消す
+    NODE_OPTIONS = "--use-openssl-ca";
     CHROME_BUNDLE_IDENTIFIER = "com.vivaldi.Vivaldi";
     # 1Password 参照（実値ではなく vault path、commit 安全）
     CF_TOKEN_1P_REF = "op://Personal/Cloudflare Token/credential";
