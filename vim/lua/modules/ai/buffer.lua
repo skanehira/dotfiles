@@ -79,6 +79,8 @@ local function setup_keymaps(bufnr, config)
     { mode = "n", key = "<C-n>",      cb = "on_send_down",          desc = "Send Down to herdr pane" },
     { mode = "n", key = "<Left>",     cb = "on_send_left",          desc = "Send Left to herdr pane" },
     { mode = "n", key = "<Right>",    cb = "on_send_right",         desc = "Send Right to herdr pane" },
+    { mode = "n", key = "<C-u>",      cb = "on_send_page_up",       desc = "Send PageUp to herdr pane" },
+    { mode = "n", key = "<C-d>",      cb = "on_send_page_down",     desc = "Send PageDown to herdr pane" },
     { mode = "i", key = "<C-v>",      cb = "on_send_ctrl_v",        desc = "Send Ctrl+V to herdr pane" },
   }
   -- ループ変数の closure キャプチャを避けるため factory で生成
