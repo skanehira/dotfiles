@@ -277,6 +277,19 @@ nix/
 - **overlays の共有**: `modules/overlays-list.nix` が overlay の素のリストを export し、nix-darwin (`modules/overlays.nix` 経由) と HM standalone (`flake.nix` の `import nixpkgs` 経由) の両方から参照される。
 - **Homebrew**: GUI app (cask) と CLI のうち (a) cask の依存になるコア formula、(b) nixpkgs 未収録 (例: `aqua`) のみ管理 (mac only)。それ以外の CLI ツールは Nix 管理。`brews` には `ca-certificates` / `openssl@3` を保険として (cask 依存リンクが切れた時の巻き添え削除を防止)、`python@3.14` を cask `gcloud-cli` の依存として、`aqua` を nixpkgs 未収録の CLI として明示宣言。`python@3.14` を宣言するのは、cleanup が cask の依存を最新の cask 定義から引くためである。定義だけが新しい python へ進むと (`upgrade = false` なので導入済みの `gcloud-cli` は古い python を使ったまま)、使用中の python が削除候補になり、`brew uninstall` に拒否されて `drs` が警告を出す。`gcloud-cli` を upgrade して使う python が変わったら、この宣言も書き換える。`onActivation.cleanup = "uninstall"` で宣言外は drs 時に自動撤去。
 - **Touch ID for sudo**: `security.pam.services.sudo_local.touchIdAuth + reattach` で tmux 内含めて指紋認証 (mac only)。
+- **CA 証明書のバンドル**: 信頼ストアは 1 つではなく、それぞれ更新手段が違う。認証局の事故 (例: 2026-10 の eMudhra 中間証明書の秘密鍵漏れ、CVE-2026-111943) では全部を確かめる。
+
+  | 信頼ストア | 読むもの | 更新手段 |
+  | --- | --- | --- |
+  | `/etc/ssl/certs/ca-certificates.crt` (mac) | nix 製の curl / git / openssl、`NODE_OPTIONS=--use-openssl-ca` 下の Node | nix-darwin の `security.pki` が nixpkgs の `cacert` から生成する。個別のルートを外すときは `nix/modules/darwin/system.nix` の `security.pki.caCertificateBlacklist` に書いて `drs` |
+  | `/etc/ssl/certs/ca-certificates.crt` (Linux / Android) | 同上と、Linux 上の Go 製バイナリ | ディストリの `ca-certificates` パッケージ。`apt install --only-upgrade ca-certificates` を手で流す (HM standalone には `security.pki` が無い) |
+  | Homebrew の `ca-certificates` | brew の `python@3.14` / `openssl@3` | `homebrew.nix` が `upgrade = false` なので `drs` では上がらない。`brew upgrade ca-certificates` を手で流す |
+  | macOS の Keychain | Apple の `/usr/bin/curl`、mac 上の Go 製バイナリ | macOS のアップデート |
+  | ランタイムの内蔵ルート | Node (`NODE_OPTIONS` が無いとき)、deno、rustup、Claude Code、uv、pnpm | 各ランタイムの更新。Nix 管理のものは `nix flake update nixpkgs`、自己更新のものは `deno upgrade` などを手で流す |
+
+  Go の 1.26.10 / 1.27.3 以降は、問題の中間証明書を含むチェーンを OS を問わず拒否する。ただし効くのはその版でビルドしたバイナリだけである。
+
+  `system.nix` の `caCertificateBlacklist` は、nix-darwin が同じ 4 件を既定値に取り込んだら (nix-darwin #1876) 消してよい。`env.nix` の `NODE_OPTIONS` は、nixpkgs の `nodejs_24` が 24.22.1 以上になったら消す。activation の bootstrap curl (`deno.nix` / `rustup.nix` / `claude.nix` / `vite-plus-bootstrap.nix`) は、`NIX_SSL_CERT_FILE` で上表 1・2 行目のバンドルを明示する。明示しないと、更新されない root profile (`/nix/var/nix/profiles/default`) のバンドルを読むためである。
 
 ## sudo の扱い (重要)
 
