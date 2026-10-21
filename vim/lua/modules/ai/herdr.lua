@@ -175,6 +175,20 @@ function M.send_text(pane_id, text)
   return true, nil
 end
 
+-- ペインに生のバイト列を書き込む（Enter は付けない）
+-- send-keys ではなく send-text を使う: herdr の send-keys は pageup などのキー名を受け付けない。
+-- send-text は bracketed paste で包まずに書き込むので、エスケープシーケンスがキー入力として届く
+-- @param pane_id string ペインID
+-- @param bytes string 送信するバイト列（例: "\27[5~"）
+-- @return boolean, string|nil 成功時は (true, nil)、失敗時は (false, エラーメッセージ)
+function M.send_raw(pane_id, bytes)
+  local _, err = exec_herdr({ "herdr", "pane", "send-text", pane_id, bytes })
+  if err then
+    return false, err
+  end
+  return true, nil
+end
+
 -- 現在のペインのIDを取得
 -- @return string|nil, string|nil 成功時は (ペインID, nil)、失敗時は (nil, エラーメッセージ)
 function M.get_current_pane()

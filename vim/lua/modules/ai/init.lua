@@ -254,6 +254,7 @@ local function open_input_buffer(tool_name, args, context)
     }
     -- herdrペインへ単純にキーを送る callback を一括生成
     -- { cb = bufferモジュール側のコールバック名, key = herdr send-keys に渡すキー名（配列なら複数キーを連続送信）, label = エラー表示用ラベル }
+    -- key の代わりに raw を持つ行は、そのバイト列を herdr send-text でそのまま書き込む
     local passthrough_keys = {
       { cb = "on_send_tab",           key = "tab",              label = "Tab" },
       -- herdrのsend-keys shift+tabは常にlegacy ESC[Zを送るため、kitty keyboard protocolを
@@ -270,23 +271,30 @@ local function open_input_buffer(tool_name, args, context)
       { cb = "on_send_down",          key = "down",             label = "Down" },
       { cb = "on_send_left",          key = "left",             label = "Left" },
       { cb = "on_send_right",         key = "right",            label = "Right" },
+      { cb = "on_send_page_up",       raw = "\27[5~",           label = "PageUp" },
+      { cb = "on_send_page_down",     raw = "\27[6~",           label = "PageDown" },
     }
     -- ループ変数の closure キャプチャを避けるため factory で生成
-    local function make_send_keys_callback(key_name, label)
+    local function make_send_keys_callback(p)
       return function()
         local current_pane = get_pane(tool_name)
         if not current_pane then
           vim.notify(string.format("%sペインが見つかりません", tool_name), vim.log.levels.INFO)
           return
         end
-        local success, err = herdr.send_keys(current_pane, key_name)
+        local success, err
+        if p.raw then
+          success, err = herdr.send_raw(current_pane, p.raw)
+        else
+          success, err = herdr.send_keys(current_pane, p.key)
+        end
         if not success then
-          vim.notify(string.format("%sの送信に失敗しました:\n%s", label, err or "不明なエラー"), vim.log.levels.WARN)
+          vim.notify(string.format("%sの送信に失敗しました:\n%s", p.label, err or "不明なエラー"), vim.log.levels.WARN)
         end
       end
     end
     for _, p in ipairs(passthrough_keys) do
-      buf_config[p.cb] = make_send_keys_callback(p.key, p.label)
+      buf_config[p.cb] = make_send_keys_callback(p)
     end
     local bufnr = buffer.create_input_buffer(buf_config)
     -- バッファ内容の判定（書きかけがあるか）
