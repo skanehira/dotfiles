@@ -20,11 +20,13 @@
 # いるので失敗する。installer 側は失敗を集計して報告するだけで異常終了しない
 # (append_source_to_file の戻り値を握り潰す実装) ため activation は止まらない。
 # PATH は下の sessionPath で通すので追記は不要。
+#
+# NIX_SSL_CERT_FILE を明示する理由は deno.nix と同じ。
 {
   home.activation.bootstrapVitePlus = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ ! -x "$HOME/.vite-plus/bin/vp" ]; then
       echo "Bootstrapping Vite+..." >&2
-      run sh -c 'export PATH=${pkgs.curl}/bin:$PATH VP_NODE_MANAGER=no && ${pkgs.curl}/bin/curl -fsSL https://vite.plus | bash'
+      run sh -c 'export PATH=${pkgs.curl}/bin:$PATH NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt VP_NODE_MANAGER=no &&${pkgs.curl}/bin/curl -fsSL https://vite.plus | bash'
     fi
   '';
 
