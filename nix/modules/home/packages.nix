@@ -9,7 +9,7 @@ let
   # 言語ランタイム / コンパイラ (バージョンは明示ピン)
   languageRuntimes = with pkgs; [
     bun
-    go_1_26
+    go_1_27
     nodejs_24
     uv
     zig
