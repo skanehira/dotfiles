@@ -138,7 +138,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `modules/overlays.nix` — nix-darwin 用 overlays モジュール (overlays-list.nix を消費)
   - `modules/overlays-list.nix` — overlay の素のリスト (mac/Linux 両側で共有)
   - `install.sh` — mac bootstrap 用 (一度限り)
-  - `pkgs/` — nixpkgs 未収録ツールの自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode / claude-recall)
+  - `pkgs/` — nixpkgs 未収録、または nixpkgs 版が使えないツールの自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode / claude-recall / nodejs-bin)
 
 ### Nix 補助
 
@@ -228,7 +228,7 @@ nix/
 ├── home-android.nix       ← home-core.nix + 軽量 module + homeDirectory=/home/...
 ├── darwin.nix             ← imports modules/darwin/
 ├── install.sh             ← mac bootstrap
-├── pkgs/                  ← 自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode / claude-recall)
+├── pkgs/                  ← 自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode / claude-recall / nodejs-bin)
 └── modules/
     ├── overlays.nix       ← nix-darwin 用 module (overlays-list.nix を nixpkgs.overlays に流す)
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
@@ -281,16 +281,16 @@ nix/
 
   | 信頼ストア | 読むもの | 更新手段 |
   | --- | --- | --- |
-  | `/etc/ssl/certs/ca-certificates.crt` (mac) | nix 製の curl / git / openssl、`NODE_OPTIONS=--use-openssl-ca` 下の Node | nix-darwin の `security.pki` が nixpkgs の `cacert` から生成する。個別のルートを外すときは `nix/modules/darwin/system.nix` の `security.pki.caCertificateBlacklist` に書いて `drs` |
-  | `/etc/ssl/certs/ca-certificates.crt` (Linux / Android) | 同上と、Linux 上の Go 製バイナリ | ディストリの `ca-certificates` パッケージ。`apt install --only-upgrade ca-certificates` を手で流す (HM standalone には `security.pki` が無い) |
+  | `/etc/ssl/certs/ca-certificates.crt` (mac) | nix 製の curl / git / openssl | nix-darwin の `security.pki` が nixpkgs の `cacert` から生成する。個別のルートを外すときは `nix/modules/darwin/system.nix` の `security.pki.caCertificateBlacklist` に書いて `drs` |
+  | `/etc/ssl/certs/ca-certificates.crt` (Linux / Android) | nix 製の curl / git / openssl、Linux 上の Go 製バイナリ、暫定の `NODE_OPTIONS=--use-openssl-ca` を使う Node 24.22.1 未満 | ディストリの `ca-certificates` パッケージ。`apt install --only-upgrade ca-certificates` を手で流す (HM standalone には `security.pki` が無い) |
   | Homebrew の `ca-certificates` | brew の `python@3.14` / `openssl@3` | `homebrew.nix` が `upgrade = false` なので `drs` では上がらない。`brew upgrade ca-certificates` を手で流す |
   | macOS の Keychain (SecTrust) | Safari、mac 上の Go 製バイナリなど OS の検証を使うアプリ | Apple が OS アップデートを介さずに失効を配る。eMudhra の中間証明書は、2026-10-22 のこのマシン (macOS 26.6.2) で既に `certificate is revoked` として拒否された |
   | `/etc/ssl/cert.pem` (Apple 同梱) | Apple の `/usr/bin/curl` / `git` / `python3` / `openssl` など | macOS のアップデートでだけ更新される。失効は確認しないので、Keychain 側で遮断されてもこちらは通る (2026-10-22 のこのマシンでは eMudhra の検証用ホストに 200 で接続できた) |
-  | ランタイムの内蔵ルート | Node (`NODE_OPTIONS` が無いとき)、deno、rustup、Claude Code、uv、pnpm | 各ランタイムの更新。Nix 管理のものは `nix flake update nixpkgs`、自己更新のものは `deno upgrade` などを手で流す |
+  | ランタイムの内蔵ルート | Node (`NODE_OPTIONS` が無いとき)、deno、rustup、Claude Code、uv、pnpm | 各ランタイムの更新。Nix 管理のものは `nix flake update nixpkgs` (mac の Node だけは `nix/pkgs/nodejs-bin.nix` の version を書き換える)、自己更新のものは `deno upgrade` などを手で流す |
 
   Go の 1.26.10 / 1.27.3 以降は、問題の中間証明書を含むチェーンを OS を問わず拒否する。ただし効くのはその版でビルドしたバイナリだけである。
 
-  `system.nix` の `caCertificateBlacklist` は、nix-darwin が同じ 4 件を既定値に取り込んだら (nix-darwin #1876) 消してよい。`env.nix` の `NODE_OPTIONS` は、nixpkgs の `nodejs_24` が 24.22.1 以上になったら消す。activation の bootstrap curl (`deno.nix` / `rustup.nix` / `claude.nix` / `vite-plus-bootstrap.nix`) は、`NIX_SSL_CERT_FILE` で上表 1・2 行目のバンドルを明示する。明示しないと、更新されない root profile (`/nix/var/nix/profiles/default`) のバンドルを読むためである。
+  `system.nix` の `caCertificateBlacklist` は、nix-darwin が同じ 4 件を既定値に取り込んだら (nix-darwin #1876) 消してよい。mac の Node は `nix/pkgs/nodejs-bin.nix` で 24.22.1 の公式版を使い、内蔵 CA で検証する。`env.nix` の `NODE_OPTIONS=--use-openssl-ca` は Linux の `nodejs_24` が 24.22.1 未満の間だけ設定される。mac ではこのフラグを設定しない。Claude Code がフラグを検出すると内蔵 CA を使わず `system` のみを選び、macOS 標準のシステムルートを読み込めずに認証が失敗するためである。適用前から開いているシェルには環境変数が残るので、mac で更新を適用した後は `unset NODE_OPTIONS` を実行してから Claude Code を起動する。activation の bootstrap curl (`deno.nix` / `rustup.nix` / `claude.nix` / `vite-plus-bootstrap.nix`) は、`NIX_SSL_CERT_FILE` で上表 1・2 行目のバンドルを明示する。明示しないと、更新されない root profile (`/nix/var/nix/profiles/default`) のバンドルを読むためである。
 
 ## sudo の扱い (重要)
 
