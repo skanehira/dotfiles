@@ -284,7 +284,8 @@ nix/
   | `/etc/ssl/certs/ca-certificates.crt` (mac) | nix 製の curl / git / openssl、`NODE_OPTIONS=--use-openssl-ca` 下の Node | nix-darwin の `security.pki` が nixpkgs の `cacert` から生成する。個別のルートを外すときは `nix/modules/darwin/system.nix` の `security.pki.caCertificateBlacklist` に書いて `drs` |
   | `/etc/ssl/certs/ca-certificates.crt` (Linux / Android) | 同上と、Linux 上の Go 製バイナリ | ディストリの `ca-certificates` パッケージ。`apt install --only-upgrade ca-certificates` を手で流す (HM standalone には `security.pki` が無い) |
   | Homebrew の `ca-certificates` | brew の `python@3.14` / `openssl@3` | `homebrew.nix` が `upgrade = false` なので `drs` では上がらない。`brew upgrade ca-certificates` を手で流す |
-  | macOS の Keychain | Apple の `/usr/bin/curl`、mac 上の Go 製バイナリ | macOS のアップデート |
+  | macOS の Keychain (SecTrust) | Safari、mac 上の Go 製バイナリなど OS の検証を使うアプリ | Apple が OS アップデートを介さずに失効を配る。eMudhra の中間証明書は、2026-10-22 のこのマシン (macOS 26.6.2) で既に `certificate is revoked` として拒否された |
+  | `/etc/ssl/cert.pem` (Apple 同梱) | Apple の `/usr/bin/curl` / `git` / `python3` / `openssl` など | macOS のアップデートでだけ更新される。失効は確認しないので、Keychain 側で遮断されてもこちらは通る (2026-10-22 のこのマシンでは eMudhra の検証用ホストに 200 で接続できた) |
   | ランタイムの内蔵ルート | Node (`NODE_OPTIONS` が無いとき)、deno、rustup、Claude Code、uv、pnpm | 各ランタイムの更新。Nix 管理のものは `nix flake update nixpkgs`、自己更新のものは `deno upgrade` などを手で流す |
 
   Go の 1.26.10 / 1.27.3 以降は、問題の中間証明書を含むチェーンを OS を問わず拒否する。ただし効くのはその版でビルドしたバイナリだけである。
