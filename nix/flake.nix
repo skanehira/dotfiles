@@ -176,7 +176,7 @@
         ]) linuxUsers
       );
 
-      # 自前 derivation (nixpkgs 未収録ツール)。`packages.nix` からも callPackage で
+      # 自前 derivation (nixpkgs 未収録、または nixpkgs 版が使えないツール)。`packages.nix` からも callPackage で
       # 参照されるが、ここに出すことで `nix build .#tsp-server` 等で個別 build できる
       packages = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ] (
         system:
@@ -190,6 +190,7 @@
         }
         // nixpkgs.lib.optionalAttrs (system == "aarch64-darwin") {
           kanary = pkgs.callPackage ./pkgs/kanary.nix { };
+          nodejs-bin = pkgs.callPackage ./pkgs/nodejs-bin.nix { };
         }
       );
 
