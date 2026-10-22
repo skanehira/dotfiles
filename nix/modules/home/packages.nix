@@ -6,11 +6,19 @@
 }:
 
 let
+  # mac は公式配布のバイナリ (理由は nodejs-bin.nix)。dsh の起動を確かめたのは mac だけなので、
+  # Linux は nixpkgs のまま使う
+  nodejs =
+    if pkgs.stdenv.hostPlatform.isDarwin then
+      pkgs.callPackage ../../pkgs/nodejs-bin.nix { }
+    else
+      pkgs.nodejs_24;
+
   # 言語ランタイム / コンパイラ (バージョンは明示ピン)
   languageRuntimes = with pkgs; [
     bun
     go_1_27
-    nodejs_24
+    nodejs
     uv
     zig
   ];
