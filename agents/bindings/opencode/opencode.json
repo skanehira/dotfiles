@@ -30,6 +30,19 @@
             "output": 65536
           }
         },
+        "DeepSeek-V4.1-Flash-1017": {
+          "name": "DeepSeek V4.1 Flash 1017 (Spark)",
+          "capabilities": {
+            "tools": true
+          },
+          "settings": {
+            "reasoningEffort": "max"
+          },
+          "limit": {
+            "context": 400000,
+            "output": 65536
+          }
+        },
         "DeepSeek-v4.1-Flash-EXL3": {
           "name": "DeepSeek V4.1 Flash EXL3 (Spark)",
           "capabilities": {
