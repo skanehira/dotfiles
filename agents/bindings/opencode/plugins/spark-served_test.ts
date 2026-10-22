@@ -201,5 +201,5 @@ Deno.test("BASE_URL_matches_the_spark_baseURL_declared_in_opencode_json", async 
     await Deno.readTextFile(new URL("../opencode.json", import.meta.url)),
   );
 
-  assertEquals(BASE_URL, config.provider[PROVIDER].options.baseURL);
+  assertEquals(BASE_URL, config.providers[PROVIDER].settings.baseURL);
 });
