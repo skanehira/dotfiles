@@ -350,7 +350,7 @@ sudo launchctl load /Library/LaunchDaemons/org.nixos.nix-daemon.plist
 - `vim/lua/plugins/` — lazy.nvim プラグイン設定
 - `vim/lua/settings/` — 基本設定 (options.lua, keymaps.lua, lsp.lua, autocmd.lua, disable.lua)
 - `vim/lua/modules/` — カスタムモジュール (AI, markdown)
-- `vim/after/lsp/` — LSP 個別設定 (denols, rust_analyzer, lua_ls, nixd, tsgo, version_ls, yamlls)
+- `vim/after/lsp/` — LSP 個別設定 (denols, rust_analyzer, lua_ls, nixd, tsc, version_ls, yamlls)
 
 ### Key Paths
 

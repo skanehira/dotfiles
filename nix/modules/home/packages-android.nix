@@ -44,7 +44,7 @@ let
 
   # LSP は cache がある軽量なものだけ。clang-tools 等の大物は入れない
   lspServers = with pkgs; [
-    (writeShellScriptBin "tsgo" ''exec ${typescript}/bin/tsc "$@"'') # tsgo (理由は packages.nix)
+    (writeShellScriptBin "tsc" ''exec ${typescript}/bin/tsc "$@"'') # tsc (理由は packages.nix)
     lua-language-server # lua_ls
     nixd # nixd
   ];
