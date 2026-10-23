@@ -189,10 +189,11 @@ let
   lspServers =
     with pkgs;
     [
-      # tsgo (`tsgo --lsp --stdio`)。nixpkgs の typescript-go は Go 実装の TypeScript 7 として
-      # typescript に統合され、バイナリ名が tsc になった。lspconfig の tsgo 設定は `tsgo` を
-      # 起動するので、同じ名前で tsc を呼ぶラッパーを置く
-      (writeShellScriptBin "tsgo" ''exec ${typescript}/bin/tsc "$@"'')
+      # tsc (`tsc --lsp --stdio`)。`--lsp` は Go 実装の TypeScript 7 以上にしかない。
+      # vim/after/lsp/tsc.lua が root_dir を上書きするので lspconfig のバイナリ探索は走らず、
+      # PATH の `tsc` が直接起動される。プロジェクトの node_modules の tsc (6.x 以下) では
+      # 動かないため、PATH 側に TS 7 の tsc を置く
+      (writeShellScriptBin "tsc" ''exec ${typescript}/bin/tsc "$@"'')
       lua-language-server # lua_ls
       vscode-langservers-extracted # eslint + jsonls (1 パッケージで両方提供)
       graphql-language-service-cli # graphql (graphql-lsp バイナリ)
