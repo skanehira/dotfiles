@@ -56,6 +56,12 @@
       + ''
 
         # tirith: シェル実行前に homograph URL / pipe-to-shell 等の脅威を検査
+        # herdr のペインでは、起動元から受け継いだ TIRITH_SESSION_ID を使わずペインごとに作らせる。
+        # 同じ ID のシェルは receipt の通し番号を共有するため、herdr の再起動で全ペインが同時に
+        # `claude --resume` を Enter すると番号の取り合いで "execution decision is stale" になる。
+        # 負けたシェルは receipt を破棄できず、以後の Enter をすべて
+        # "execution receipt remains unresolved" で拒否し続ける (tirith 0.4.2 で確認)。
+        [[ -n "$HERDR_ENV" ]] && unset TIRITH_SESSION_ID
         eval "$(tirith init --shell zsh)"
       ''
       + lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
