@@ -22,6 +22,7 @@ local disable_plugins = {
   "loaded_netrwPlugin",
   "loaded_netrwSettings",
   "loaded_netrwFileHandlers",
+  "loaded_nvim_dir_plugin",
   "loaded_logiPat",
   "did_install_default_menus",
   "did_install_syntax_menu",
