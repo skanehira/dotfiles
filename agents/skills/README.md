@@ -15,7 +15,7 @@
 | **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装 | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-impl` を自分で起動する |
 | **S: バグ修正・typo** | 直接依頼 | スキル不要。グローバル指示 (CLAUDE.md) の「実装時」の rules を自分で Read して守る |
 
-横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-draft-pr` (PR 作成) / `/workflow-design-notes` (設計の壁打ち台帳 → dev-spec 互換 docs へ落とし込み)。
+横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-pr` (PR 作成。`--draft` で Draft) / `/workflow-design-notes` (設計の壁打ち台帳 → dev-spec 互換 docs へ落とし込み)。
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -43,7 +43,7 @@
 │    review-impl 1 本 (テスト品質/設計準拠/コード品質/E2E      │
 │    + r2 では前ラウンド指摘の再発・転移も) →                    │
 │    high だけ fix (最大 1 ラウンド固定) →                       │
-│    commit → テスト+lint+DoD 1 巡 → PR → merge → close          │
+│    commit → テスト+lint+DoD 1 巡 → 証跡付き PR → merge → close │
 │  詰まったら needs-human + コメントで駐車して次の issue へ      │
 │  進捗は issue コメントのみ。保留 high と medium は             │
 │  issue 別のチェックリスト HTML に記録し、確認を促す            │
@@ -60,7 +60,7 @@ skills/
 ├── dev-impl/                  # 実装ループ (GitHub issue 駆動・依存順)
 ├── dev-impl-quick/            # 軽量実装ループ (docs 不要)
 ├── workflow-commit/
-├── workflow-create-draft-pr/
+├── workflow-create-pr/        # PR 作成 (証跡の集め方は references/)
 ├── workflow-debate/
 ├── workflow-design-notes/
 ├── workflow-review/
@@ -102,6 +102,7 @@ OpenCode (V2) は同じ名前のスキルを 1 つにまとめるので、同じ
 | review-impl subagent (統合レビュワー) | `model: opus` (frontmatter + 呼び出し時明示) | 検証器は実行器より下げない。**呼び出し時の明示を忘れないこと**。model 未指定は frontmatter ではなく親のセッションモデルを継承するため、frontmatter は防御にならない (機械ゲートは無いので自律遵守する) |
 | tech-investigation subagent (dev-spec のフェーズ 5) | `model: opus` (frontmatter + 呼び出し時明示) | 「何をどこまで検証すれば行けると言えるか」を自分で設計する探索的な調査 |
 | コミット実行・巨大出力のテスト実行 | `model: haiku` (subagent) | 機械実行。`~/.claude/rules/core/orchestration.md`「委譲の判断」 |
+| workflow-create-pr | `model: haiku` (frontmatter。ユーザーが直接起動したときだけ効く) | dev-impl からは Skill ツール経由で起動されるので、dev-impl の opus とコンテキストで動く。非対話モードが差分の全文を読まず本文を生成し直さないのは、dev-impl のコンテキストを差分で埋めないため |
 
 モデル指定はすべて alias (`opus` / `sonnet` / `haiku`) で書く (固定 ID 禁止。世代交代への自動追従のため)。
 
@@ -160,7 +161,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 |---|---|
 | [workflow-review](./workflow-review/) | git 差分を review-impl (テスト品質・設計準拠・コード品質・E2E) でレビュー。修正はメインループ直営 TDD |
 | [workflow-commit](./workflow-commit/) | Conventional Commit 形式でコミット (push はユーザが手動) |
-| [workflow-create-draft-pr](./workflow-create-draft-pr/) | ローカルのコミット履歴と差分から Draft PR を作成 (`.github/` のテンプレート自動検出) |
+| [workflow-create-pr](./workflow-create-pr/) | ローカルのコミット履歴と差分から PR を作成 (`.github/` のテンプレート自動検出)。`--draft` で Draft PR、`--evidence` で画面のスクリーンショットと API の実行結果を本文に載せて添付する。dev-impl の 2.4 が非対話モード (`--yes`) で証跡付きの PR を作るのに使う。旧名は workflow-create-draft-pr |
 | [workflow-debate](./workflow-debate/) | 複数サブエージェントで議論を反復し、相違が収束するまで議題を検証 |
 | [workflow-design-notes](./workflow-design-notes/) | 議論しながら設計を固める進行様式。決定台帳 → 節目に DESIGN.md + docs/design/features/ へゼロから落とし込み |
 
