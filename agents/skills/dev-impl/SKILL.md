@@ -330,7 +330,7 @@ Closes #<N>
    | 最終行 | 動作 |
    | --- | --- |
    | `PR_CREATED <url>` / `PR_UPDATED <url>` | 手順 4 へ |
-   | `PR_FAILED secret_detected <ファイル>:<行>` | 証跡のマスク漏れ。親がその証跡ファイルの該当箇所を `<masked>` にして、同じ引数で 1 回だけ再起動する。再発したら 2.6 へ |
+   | `PR_FAILED secret_detected <ファイル>:<行>` | 証跡のマスク漏れ。報告される行は最終本文 (`<SCRATCH>/pr-<N>.md.final.md`) のものなので、その行の内容で `<SCRATCH>/evidence-<N>/api/` を `rg` して元の証跡ファイルを特定する。親がその箇所を `<masked>` にして、同じ引数で 1 回だけ再起動する。再発したら 2.6 へ |
    | `PR_FAILED attach_partial <url>` | PR はできたが本文に画像のローカルパスが残っている。同じ引数で 1 回だけ再起動する (同じ head の PR を更新する)。再発したら 2.6 へ |
    | それ以外の `PR_FAILED` | 理由を見て直せるもの (引数の渡し間違い) は直して 1 回だけ再起動し、直せなければ 2.6 へ |
 
