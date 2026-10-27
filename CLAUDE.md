@@ -489,7 +489,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 - `/dev-spec` — 設計ループ (ユーザーストーリー → ... → PoC 検証 → `docs/design/DESIGN.md` 1 枚 + `docs/design/features/` → GitHub issue をユースケース単位の親子 2 階層で生成 → 人間が確認)
 - `/dev-impl` — 実装ループ (`ready` ラベルの open issue を依存順に自律実装、`model: opus`)
 - `/dev-impl-quick` — 軽量実装ループ (docs 不要。依頼文をタスク分解して直営 TDD → review-impl → タスク単位コミット)
-- `/workflow-review` (レビュー) / `/workflow-commit` (コミット) / `/workflow-create-draft-pr` (Draft PR) / `/workflow-debate` (壁打ち)
+- `/workflow-review` (レビュー) / `/workflow-commit` (コミット) / `/workflow-create-pr` (PR 作成。`--draft` で Draft) / `/workflow-debate` (壁打ち)
 
 ### hooks (agents/hooks/)
 
