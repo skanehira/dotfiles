@@ -1,9 +1,9 @@
 ---
 name: dev-impl
-description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー → 修正 ≤1 ラウンド (high のみ) → 検証 → PR → merge → close」で自律実装するオーケストレーター。前提を満たすプロジェクトでは同じ依存レベルの issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
+description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー → 修正 ≤1 ラウンド (high のみ) → 検証 → 動作確認の証跡付き PR → merge → close」で自律実装するオーケストレーター。前提を満たすプロジェクトでは同じ依存レベルの issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
 argument-hint: "[issue 番号の絞り込み、省略時は ready 全件]"
 model: opus
-allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent
+allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, Skill
 ---
 
 # dev-impl — 実装ループ
@@ -94,7 +94,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 
 | 状態 (`gh pr list --repo "$REPO_SLUG" --head issue-<N>` と、`git fetch origin` 後の `git branch --list issue-<N>` / `git branch -r --list "origin/issue-<N>"`) | 再開位置 |
 | --- | --- |
-| PR が open | 2.4 手順 4 (merge と状態確認) から。手順 4 の先頭が `PR_NUM` を引き直すので番号の復元は要らないが、**並列実行では worktree を作り直して `$WORK_DIR` を再設定してから入る** (rebase 分岐が使う)。検証は push 前に済んでいる前提なので繰り返さないが、`gh pr view --json headRefOid` と `git -C "$WORK_DIR" rev-parse HEAD` が一致しなければ PR 作成後に差分が足されているので、手順 2 の検証を 1 巡してから merge する。レビュー未実施が疑われる場合は 2.3 から |
+| PR が open | 2.4 手順 4 (merge と状態確認) から。手順 4 の先頭が `PR_NUM` を引き直すので番号の復元は要らないが、**並列実行では worktree を作り直して `$WORK_DIR` を再設定してから入る** (rebase 分岐が使う)。検証は push 前に済んでいる前提なので繰り返さないが、`gh pr view --json headRefOid` と `git -C "$WORK_DIR" rev-parse HEAD` が一致しなければ PR 作成後に差分が足されているので、手順 2 の検証を 1 巡し、push してから merge する。PR の動作確認の証跡は作成時点のもので、この run では取り直せない (implementer を起動していない)。merge の前に `gh pr comment` で「`<PR 作成時の headRefOid>` 以降の差分は動作確認の証跡を取っていない」と 1 件残す。レビュー未実施が疑われる場合は 2.3 から |
 | ブランチのみ残存 (ローカルまたは origin、PR なし) | ブランチへ switch し (origin のみに在る場合は `git switch issue-<N>` が追跡ブランチを作る)、`BASE_SHA=$(git merge-base origin/$DEFAULT HEAD)` で基準を復元して 2.2 から。implementer に渡す内容 (2.2) に「ブランチに前回の差分がある。既存差分を前提に続きから実装せよ」の行を足す |
 | どちらも無い | 最初から (2.1 から) |
 
@@ -168,13 +168,16 @@ repo_dir: <WORK_DIR>
 issue_number: <N>
 port: <スロットのポート>
 report_path: <SCRATCH>/impl-<N>.json
+evidence_dir: <SCRATCH>/evidence-<N>
 ```
 
 - `port` の行は並列実行 (2.0) のときだけ渡し、直列実行では行ごと省く
+- `evidence_dir` は直列・並列のどちらでも渡す。issue ごとに分けるので、並列で走る issue の証跡は混ざらない
 
 **検収**: report JSON を読み、次をすべて満たすときだけ `status: done` を done と扱う。
 
 - `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true`
+- `evidence.manifest_path` の `manifest.json` があり、その `captured_mode` が今回起動した `mode` と一致し、`screens[].file` と `api[].file` の全パスが実在する (`ls` で確かめる)。実在しないパスを 2.4 手順 3 に渡すと添付が失敗し、本文にローカルのパスが残る。画面と API が両方とも空なら `note` に理由が書かれていること
 - UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でないこと。**その画像を親が `Read` で実際に開いて**、同じ行の下端・幅の決まり方・ラベル位置が揃っていることを確かめる。exit code は見た目を守らないので、ここを飛ばすと崩れは利用者が指摘するまで残る
 
 検収に落ちた報告の扱い:
@@ -244,13 +247,14 @@ issue_number: <N>
 port: <スロットのポート>
 findings_path: <SCRATCH>/review-<N>-r1.json
 report_path: <SCRATCH>/impl-<N>-fix.json
+evidence_dir: <SCRATCH>/evidence-<N>
 ```
 
 - `port` の行は並列実行 (2.0) のときだけ渡し、直列実行では行ごと省く
 - `findings_path` は、`test-weakening` の裁定の印 (`adjudication`) を書き足した後の r1 の review JSON を指す
 - `report_path` は 2.2 の `impl-<N>.json` と別名にする (実装時の報告を上書きしない)
 
-返った report には 2.2 と同じ検収 (`test_result` / `dod_result` の exit code と `self_review`、UI に触れる issue では `ui_evidence`) を当てる。
+返った report には 2.2 と同じ検収 (`test_result` / `dod_result` の exit code と `self_review`、証跡の `manifest.json`、UI に触れる issue では `ui_evidence`) を当てる。fix は `implement` と同じ `evidence_dir` に証跡を取り直すので、検収後の `manifest.json` の `captured_mode` は `fix` になる。
 
 - 検収を通った `done` → r2 を回す
 - `escalate` / `failed` → 2.6 へ
@@ -294,12 +298,15 @@ report_path: <SCRATCH>/impl-<N>-fix.json
 
    **同じコマンドを二度走らせない。** issue の `## DoD` に並ぶコマンドが `docs/design/DESIGN.md`「開発・検証コマンド」の全体テスト・lint と重複する場合は 1 回だけ実行する。**重複と見なすのは前後の空白を除いた文字列が完全一致するときだけ**で、包含関係 (`deno test src/export/` と `deno test`)・オプション違い・言い換えは重複と見なさず両方実行する (部分集合を「同じ」と読むと DoD の検証をしないまま green を宣言できる)。DESIGN.md が無い構成と、DESIGN.md はあるが「開発・検証コマンド」節が無い構成では、同一性を判定できないので重複排除せず両方実行する。
 
+   検証の E2E には `E2E_EVIDENCE_DIR` を付けない。証跡は最後に done になった implementer の報告のものを使い、ここでは書き出さない (全 spec が書き出すと他の機能の画像が混ざる)。
+
    1 つでも失敗したら push も merge もしない → 2.6 へ (「テスト red / DoD 失敗」の駐車)。
 
-3. **PR**: **push は毎回行う** (`git -C "$WORK_DIR" push -u origin "issue-$N"`)。再開でスキップしてよいのは `gh pr create` だけで、push を飛ばすと再開後に足した差分が PR に載らないまま merge される。push が失敗したら (前 run の同名 remote ブランチ残骸等)、原因を確認して解消できなければ 2.6 へ:
+3. **PR**: **push は毎回行う** (`git -C "$WORK_DIR" push -u origin "issue-$N"`)。再開でスキップしてよいのは PR の作成だけで、push を飛ばすと再開後に足した差分が PR に載らないまま merge される。push が失敗したら (前 run の同名 remote ブランチ残骸等)、原因を確認して解消できなければ 2.6 へ。
 
-```bash
-PR_URL=$(gh pr create --repo "$REPO_SLUG" --title "<issue タイトル>" --body "$(cat <<'EOF'
+   PR はスキル `workflow-create-pr` の非対話モードで作る。まず本文の下書きを `<SCRATCH>/pr-<N>.md` に Write する。「動作確認」節は書かない (スキルが証跡から足して、`🤖 Generated` の行の直前に入れる):
+
+```markdown
 Closes #<N>
 
 ## 変更の要約
@@ -310,11 +317,24 @@ Closes #<N>
 - レビュー: review-impl <ラウンド数> 周 (low <k> 件・保留 high <h> 件・保留 medium <m> 件は merge 後の issue コメントに記載。0 件ならその旨)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
-EOF
-)")
 ```
 
-4. **merge**: 検証は手順 2 で済んでいるので、ここでは merge して**状態で成功を確認する**。**まず PR 番号を引き直す**。`gh pr create` の戻り値は同じ Bash 呼び出しの中でしか生きておらず、再開経路 (Step 1 の再開表) では手順 3 自体を通っていないためである:
+   続けて Skill ツールで `workflow-create-pr` を次の引数で起動する。`--evidence` には、**最後に done になった implementer の報告** (fix を回したなら `impl-<N>-fix.json`) の `evidence.manifest_path` を渡す。`--draft` は渡さない (Draft PR は手順 4 で merge できない):
+
+```
+--yes --repo <REPO_SLUG> --repo-dir <WORK_DIR> --base <DEFAULT> --head issue-<N> --title "<issue タイトル>" --body-file <SCRATCH>/pr-<N>.md --evidence <manifest_path>
+```
+
+   スキルの最終行で分岐する:
+
+   | 最終行 | 動作 |
+   | --- | --- |
+   | `PR_CREATED <url>` / `PR_UPDATED <url>` | 手順 4 へ |
+   | `PR_FAILED secret_detected <ファイル>:<行>` | 証跡のマスク漏れ。親がその証跡ファイルの該当箇所を `<masked>` にして、同じ引数で 1 回だけ再起動する。再発したら 2.6 へ |
+   | `PR_FAILED attach_partial <url>` | PR はできたが本文に画像のローカルパスが残っている。同じ引数で 1 回だけ再起動する (同じ head の PR を更新する)。再発したら 2.6 へ |
+   | それ以外の `PR_FAILED` | 理由を見て直せるもの (引数の渡し間違い) は直して 1 回だけ再起動し、直せなければ 2.6 へ |
+
+4. **merge**: 検証は手順 2 で済んでいるので、ここでは merge して**状態で成功を確認する**。**まず PR 番号を引き直す**。手順 3 のスキルが返す URL は会話に残るだけで変数には入っておらず、再開経路 (Step 1 の再開表) では手順 3 自体を通っていないためである:
 
 ```bash
 PR_NUM=$(gh pr list --repo "$REPO_SLUG" --head "issue-$N" --json number -q '.[0].number')
@@ -346,7 +366,7 @@ git -C "$REPO_DIR" branch -D "issue-$N"
 
 **`gh pr merge --repo <slug> --delete-branch` はリモートのブランチしか消さない** (実測: gh 2.97.0 は `--repo` が指定されるとローカル削除の経路を丸ごと無効化する)。残したままにすると Step 1 の再開判定が「中断からの復帰」として誤発火し、次回の `worktree add -b issue-$N` も失敗する。`branch -D` が失敗したら (worktree が残っている・チェックアウト中)、その原因を解消して 1 回だけ再試行し、それでも消えなければ**駐車はせず** (merge は済んでいる) 最終報告に残存ブランチとして列挙する。
 
-**`$MERGE_RC` が非ゼロで、かつ `$STATE` が `MERGED` でない場合**は、コンフリクトを疑って復旧する (駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合)。`git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで手順 2 の検証をもう 1 巡回して green を確認してから** `git -C "$WORK_DIR" push --force-with-lease origin "issue-$N"` で押し直す (rebase 後は履歴が書き変わっており、素の push は non-fast-forward で必ず拒否される)。先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない。解消できなければ 2.6 へ。
+**`$MERGE_RC` が非ゼロで、かつ `$STATE` が `MERGED` でない場合**は、コンフリクトを疑って復旧する (駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合)。`git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで手順 2 の検証をもう 1 巡回して green を確認してから** `git -C "$WORK_DIR" push --force-with-lease origin "issue-$N"` で押し直す (rebase 後は履歴が書き変わっており、素の push は non-fast-forward で必ず拒否される)。先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない。解消できなければ 2.6 へ。rebase では動作確認の証跡を取り直さない (この issue 自身の差分は変わらない)。押し直したら `gh pr comment` で「rebase 後の HEAD は `<sha>`。動作確認の証跡は rebase 前の `<sha>` で取ったもの」と 1 件残してから merge する。
 
 ### 2.5 完了処理
 
@@ -387,7 +407,7 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ### 2.6 エスカレーション (needs-human 駐車)
 
-解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / 直せないコミットの失敗 / push の失敗と、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
+解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / 直せないコミットの失敗 / push の失敗 / 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR 作成と、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human
@@ -444,3 +464,4 @@ done
 - **dev-spec**: 上流の設計ループ。issue の生成元
 - **dev-impl-implementer** (subagent): 実装の葉。issue と docs を直読する
 - **review-impl** (subagent): 統合レビュワー (テスト品質 / 設計準拠 / コード品質 / E2E。r2 では前ラウンド指摘の再発・転移も)
+- **workflow-create-pr**: 2.4 手順 3 で非対話モードで起動する。implementer が集めた証跡を PR 本文の「動作確認」節に載せ、スクリーンショットを添付する。証跡の集め方の正本は同スキルの `references/evidence.md`

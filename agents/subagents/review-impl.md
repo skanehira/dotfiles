@@ -53,6 +53,8 @@ model: opus
 - 頼まれていない機能・抽象化・不可能シナリオの error handling (最小実装違反)
 - 依頼にトレースできない隣接コードの改変
 - 曖昧な命名 (`check` / `process` / `handle` 等) の新規導入
+
+E2E の中の証跡ヘルパー (`E2E_EVIDENCE_DIR` を読んでスクリーンショットを書き出す `capture`) と、golden path の spec からの `capture` 呼び出しは、頼まれていない機能として指摘しない。dev-impl が PR に動作確認の証跡を載せるための規約で、`~/.claude/skills/workflow-create-pr/references/evidence.md` が定めている。
 - `implementation.md`「コードコメント」の「書かない」に当たる新規コメント (What の再述・変更履歴・タスク ID の参照・自信の無さを言葉で埋めたもの)。severity は `medium` にする。契約は壊れておらず、規約違反が残る段階だからである (dev-impl では保留リストに回る)。族の一括走査に従い、差分の追加コメント行をすべて判定して 1 件にまとめる
 
 ### 4. E2E 実行 (UI に触れる差分のみ)
@@ -61,7 +63,7 @@ model: opus
 
 - 対象の golden path Playwright E2E が存在するか (設計文書 (項目 2) の「テスト方針」にある `E2E 対象動線:` 行が指定する動線)。無ければ `high`
 - **設計文書の「テスト方針」に `E2E 対象動線:` 行自体が無い場合は、E2E 不在を high にせず `medium` / `category: e2e` で報告し、summary を `対象動線未指定 (設計差し戻し): ` で始める**。implementer は書く対象を決められないので、これは実装ではなく設計側の欠落である。呼び出し側はこの書式で設計差し戻しを識別し、別立てにする
-- 存在すれば実行し、exit code で判定する。**失敗は `severity: high` / `category: e2e` の finding として記録する** (`checked.e2e` だけに書くと修正ループに入らない)
+- 存在すれば実行し、exit code で判定する。`E2E_EVIDENCE_DIR` は付けない (付けると証跡のスクリーンショットを書き出してしまう)。**失敗は `severity: high` / `category: e2e` の finding として記録する** (`checked.e2e` だけに書くと修正ループに入らない)
 - 実行に dev server 等が要る場合は `docs/design/DESIGN.md`「開発・検証コマンド」に従い**自分でバックグラウンド起動し、検査後に停止する**。`port` が渡されていればそのポートで起動する。ブラウザの逐次操作 (chrome-devtools) は行わない
 
 ### 5. UI レイアウト (視覚テストがあるプロジェクトの、UI に触れる差分のみ)
