@@ -53,7 +53,7 @@
 - 実装手続き (TDD 適用判断 / 動作検証の手段 / 外科的変更 / コードコメント / 多段タスクの DoD) → `~/.claude/rules/core/implementation.md`
 - 検証コマンドの規律 (不変則 4 の陽性・陰性対照) → `~/.claude/rules/core/verification.md`
 - 設計原則 (SOLID / YAGNI / 凝集度・結合度・コロケーション / 外界 DI) → `~/.claude/rules/core/design.md`
-- テスト方針 (戦略 / ピラミッド / シナリオ網羅 / 待ち時間を作らない) → `~/.claude/rules/core/testing.md`
+- テスト方針 (戦略 / ピラミッド / シナリオ網羅 / 待ち時間を作らない / E2E のログインの使い回し) → `~/.claude/rules/core/testing.md`
 - コミット規約 → `~/.claude/rules/core/commit.md` (subject 形式を検証する機械ゲートは無い。自律遵守する)
 - 実装はメインループ直営で行い、テスト実行 (巨大出力のみ) とコミット実行は Haiku に委譲する (判断基準は `~/.claude/rules/core/orchestration.md`「委譲の判断」)
 - 実装が一段落したらレビュー subagent で事後検証する (起動条件は `~/.claude/rules/core/implementation.md`)
