@@ -1,6 +1,6 @@
 ---
 name: dev-impl
-description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー → 修正 ≤1 ラウンド (high のみ) → 検証 → 動作確認の証跡付き PR → merge → close」で自律実装するオーケストレーター。前提を満たすプロジェクトでは同じ依存レベルの issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
+description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー → 修正 ≤1 ラウンド (high のみ) → 検証 → 動作確認の証跡付き PR → CI pass (CI があれば) → merge → close」で自律実装するオーケストレーター。前提を満たすプロジェクトでは同じ依存レベルの issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
 argument-hint: "[issue 番号の絞り込み、省略時は ready 全件]"
 model: opus
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, Skill
@@ -94,7 +94,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 
 | 状態 (`gh pr list --repo "$REPO_SLUG" --head issue-<N>` と、`git fetch origin` 後の `git branch --list issue-<N>` / `git branch -r --list "origin/issue-<N>"`) | 再開位置 |
 | --- | --- |
-| PR が open | 2.4 手順 4 (merge と状態確認) から。手順 4 の先頭が `PR_NUM` を引き直すので番号の復元は要らないが、**並列実行では worktree を作り直して `$WORK_DIR` を再設定してから入る** (rebase 分岐が使う)。検証は push 前に済んでいる前提なので繰り返さないが、`gh pr view --json headRefOid` と `git -C "$WORK_DIR" rev-parse HEAD` が一致しなければ PR 作成後に差分が足されているので、手順 2 の検証を 1 巡し、push してから merge する。PR の動作確認の証跡は作成時点のもので、この run では取り直せない (implementer を起動していない)。merge の前に `gh pr comment` で「`<PR 作成時の headRefOid>` 以降の差分は動作確認の証跡を取っていない」と 1 件残す。レビュー未実施が疑われる場合は 2.3 から |
+| PR が open | 2.4 手順 4 (CI ゲート・merge と状態確認) から。手順 4 の先頭が `PR_NUM` を引き直すので番号の復元は要らないが、**並列実行では worktree を作り直して `$WORK_DIR` を再設定してから入る** (rebase 分岐が使う)。検証は push 前に済んでいる前提なので繰り返さないが、`gh pr view --json headRefOid` と `git -C "$WORK_DIR" rev-parse HEAD` が一致しなければ PR 作成後に差分が足されているので、手順 2 の検証を 1 巡し、push してから CI ゲートを通して merge する (push で CI が新しい HEAD で走り直すため、push より前の CI の結果は使わない)。PR の動作確認の証跡は作成時点のもので、この run では取り直せない (implementer を起動していない)。merge の前に `gh pr comment` で「`<PR 作成時の headRefOid>` 以降の差分は動作確認の証跡を取っていない」と 1 件残す。レビュー未実施が疑われる場合は 2.3 から |
 | ブランチのみ残存 (ローカルまたは origin、PR なし) | ブランチへ switch し (origin のみに在る場合は `git switch issue-<N>` が追跡ブランチを作る)、`BASE_SHA=$(git merge-base origin/$DEFAULT HEAD)` で基準を復元して 2.2 から。implementer に渡す内容 (2.2) に「ブランチに前回の差分がある。既存差分を前提に続きから実装せよ」の行を足す |
 | どちらも無い | 最初から (2.1 から) |
 
@@ -294,9 +294,28 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
    コミットが手順 2 の検証より前に来るのは、検証対象を「積み終えた差分」に固定するためである。`~/.claude/rules/core/commit.md` のコミット条件 (全テスト green) は、implementer の `test_result` / `dod_result` が exit 0 であること (2.2 の検収で確認済み) を根拠に満たす。**手順 2 が red だった場合、このコミットは merge されない駐車ブランチ上の記録として扱う** (2.6 の WIP 退避と同じ例外)。
 
-2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する (CI は使わない — 判定はこのローカル実行が兼ねる)。**実行は `$WORK_DIR` で行う** (並列実行では worktree の中。Haiku subagent に委譲する場合は `cd <WORK_DIR> && ...` の形でコマンドを渡さないと別の作業ツリーを検証することになる)。出力が巨大になると実行前に分かっているもの (E2E と、出力が数千行を超えると分かっているスイート) は実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る (起動と渡す内容はモデル方針「Haiku への委譲」)。
+2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + フォーマット検査 + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する。**CI の有無に関わらずこのローカル検証を行う**。issue の DoD は CI に含まれないのでここでしか検証されず、red のまま push すると CI の実行を 1 回無駄にするためである。CI の結果は手順 4 の CI ゲートで merge の前に待つ。**実行は `$WORK_DIR` で行う** (並列実行では worktree の中。Haiku subagent に委譲する場合は `cd <WORK_DIR> && ...` の形でコマンドを渡さないと別の作業ツリーを検証することになる)。出力が巨大になると実行前に分かっているもの (E2E と、出力が数千行を超えると分かっているスイート) は実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る (起動と渡す内容はモデル方針「Haiku への委譲」)。
 
    **同じコマンドを二度走らせない。** issue の `## DoD` に並ぶコマンドが `docs/design/DESIGN.md`「開発・検証コマンド」の全体テスト・lint と重複する場合は 1 回だけ実行する。**重複と見なすのは前後の空白を除いた文字列が完全一致するときだけ**で、包含関係 (`deno test src/export/` と `deno test`)・オプション違い・言い換えは重複と見なさず両方実行する (部分集合を「同じ」と読むと DoD の検証をしないまま green を宣言できる)。DESIGN.md が無い構成と、DESIGN.md はあるが「開発・検証コマンド」節が無い構成では、同一性を判定できないので重複排除せず両方実行する。
+
+   **フォーマット検査のコマンド**は次の順で最初に見つかったものを使う:
+
+   1. `docs/design/DESIGN.md`「開発・検証コマンド」に書かれたフォーマット検査
+   2. issue の `## DoD` に含まれるフォーマット検査
+   3. プロジェクトの設定ファイルからの推定 (下表。複数当たれば全部実行する)
+   4. どれも無ければ実行しない。PR 本文の「検証」節と 2.5 の完了コメントに「フォーマット検査: 定義なし (推定不能)」と書いて先へ進む
+
+   | 手がかり | 実行するコマンド |
+   | --- | --- |
+   | `deno.json` / `deno.jsonc` | `deno fmt --check` |
+   | `Cargo.toml` | `cargo fmt --check` |
+   | `package.json` の `scripts` に `format:check` か `fmt:check` | `npm run <そのスクリプト名>` |
+   | `biome.json` / `biome.jsonc` | `npx biome format .` |
+   | `.prettierrc*` | `npx prettier --check .` |
+   | `go.mod` | `test -z "$(gofmt -l .)"` |
+   | `flake.nix` の `formatter` | `nix fmt -- --ci` |
+
+   **ファイルを書き換えずに差分だけを報告する check 系のコマンドに限る。** 手順 1 でコミット済みなので、書き換える formatter を走らせると整形結果が作業ツリーに残り、コミットにも PR にも乗らない。
 
    検証の E2E には `E2E_EVIDENCE_DIR` を付けない。証跡は最後に done になった implementer の報告のものを使い、ここでは書き出さない (全 spec が書き出すと他の機能の画像が混ざる)。
 
@@ -313,7 +332,7 @@ Closes #<N>
 <implementer の summary>
 
 ## 検証
-- テスト + lint + DoD: 手順 2 でローカル実行し全て green (<passed/failed 件数>)
+- テスト + lint + フォーマット検査 + DoD: 手順 2 でローカル実行し全て green (<passed/failed 件数>。フォーマット検査が定義なしならその旨)
 - レビュー: review-impl <ラウンド数> 周 (low <k> 件・保留 high <h> 件・保留 medium <m> 件は merge 後の issue コメントに記載。0 件ならその旨)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
@@ -334,11 +353,40 @@ Closes #<N>
    | `PR_FAILED attach_partial <url>` | PR はできたが本文に画像のローカルパスが残っている。同じ引数で 1 回だけ再起動する (同じ head の PR を更新する)。再発したら 2.6 へ |
    | それ以外の `PR_FAILED` | 理由を見て直せるもの (引数の渡し間違い) は直して 1 回だけ再起動し、直せなければ 2.6 へ |
 
-4. **merge**: 検証は手順 2 で済んでいるので、ここでは merge して**状態で成功を確認する**。**まず PR 番号を引き直す**。手順 3 のスキルが返す URL は会話に残るだけで変数には入っておらず、再開経路 (Step 1 の再開表) では手順 3 自体を通っていないためである:
+4. **CI ゲートと merge**: ローカル検証は手順 2 で済んでいるので、ここでは CI があればその pass を待ってから merge し、**状態で成功を確認する**。**まず PR 番号を引き直す**。手順 3 のスキルが返す URL は会話に残るだけで変数には入っておらず、再開経路 (Step 1 の再開表) では手順 3 自体を通っていないためである:
 
 ```bash
 PR_NUM=$(gh pr list --repo "$REPO_SLUG" --head "issue-$N" --json number -q '.[0].number')
 [ -n "$PR_NUM" ] || exit 1        # 空なら 2.6 へ (下記)
+```
+
+#### CI ゲート
+
+**CI の有無は PR に登録された checks の件数で判定する。** `gh pr checks` は checks が 1 件も無い PR で `no checks reported on the '<branch>' branch` を出して exit 1 を返し、`--json` を付けても同じなので、exit code では「CI なし」と「CI が fail」を区別できない (gh 2.102.0 で実測)。件数は `statusCheckRollup` から取る。GitHub Actions の check run と外部 CI の commit status の両方が入る:
+
+```bash
+ci_count() { gh pr view --repo "$REPO_SLUG" "$PR_NUM" --json statusCheckRollup -q '.statusCheckRollup | length'; }
+```
+
+1. **登録を待つ**: push の直後は checks の登録が遅れる。`git -C "$WORK_DIR" ls-files '.github/workflows/*.yml' '.github/workflows/*.yaml'` が 1 件以上なら、`ci_count` が 0 より大きくなるまで 10 秒おきに最大 12 回 (2 分) 引き直す。workflow ファイルが無ければ `ci_count` を 1 回だけ引く
+2. **CI なし**: `ci_count` が 0 のままなら CI なしとして、手順 2 のローカル検証を根拠に merge へ進む。workflow ファイルがあっても `paths:` などの条件でこの PR では走らない構成はここに当たる。2.5 の完了コメントに「CI: なし (checks 未登録)」と書く
+3. **CI あり**: 終わるまで待つ。`gh pr checks --repo "$REPO_SLUG" "$PR_NUM" --watch --fail-fast` を Bash ツールの最大タイムアウト (600000 ms) で実行する。`--watch` 自体はタイムアウトを持たないので、ツールのタイムアウトで切れることがある。**切れても失敗と読まず**、`gh pr checks --repo "$REPO_SLUG" "$PR_NUM" --json name,bucket` に `pending` が残っていれば `--watch` を再実行する。待ちの合計が 60 分を超えたら 2.6 へ (CI のタイムアウト)
+4. **判定**: `--watch` の exit code では判定しない。終わったら次のコマンドの `bucket` で判定する。`--required` は付けない (branch protection が必須にした checks だけでなく全 checks を見る)
+
+```bash
+gh pr checks --repo "$REPO_SLUG" "$PR_NUM" --json name,bucket,link
+```
+
+| `bucket` | 動作 |
+| --- | --- |
+| 全件が `pass` か `skipping` | merge へ進む。2.5 の完了コメントに「CI: pass」と check 名を書く |
+| `fail` か `cancel` が 1 件以上 | merge せず 2.6 へ。fix のラウンドは回さない。ローカル検証が green で CI だけが red なのは環境差の疑いが強く、どちらを正とするかは人間が決める。駐車コメントに該当 check の `name` と `link` を列挙する |
+
+CI の待ちは出力が小さいので Haiku に委譲しない。
+
+#### merge
+
+```bash
 gh pr merge --repo "$REPO_SLUG" "$PR_NUM" --squash --delete-branch
 MERGE_RC=$?   # 次のコマンドで $? が上書きされる前に捕まえる
 STATE=$(gh pr view --repo "$REPO_SLUG" "$PR_NUM" --json state -q .state)   # MERGED を期待
@@ -366,7 +414,7 @@ git -C "$REPO_DIR" branch -D "issue-$N"
 
 **`gh pr merge --repo <slug> --delete-branch` はリモートのブランチしか消さない** (実測: gh 2.97.0 は `--repo` が指定されるとローカル削除の経路を丸ごと無効化する)。残したままにすると Step 1 の再開判定が「中断からの復帰」として誤発火し、次回の `worktree add -b issue-$N` も失敗する。`branch -D` が失敗したら (worktree が残っている・チェックアウト中)、その原因を解消して 1 回だけ再試行し、それでも消えなければ**駐車はせず** (merge は済んでいる) 最終報告に残存ブランチとして列挙する。
 
-**`$MERGE_RC` が非ゼロで、かつ `$STATE` が `MERGED` でない場合**は、コンフリクトを疑って復旧する (駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合)。`git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで手順 2 の検証をもう 1 巡回して green を確認してから** `git -C "$WORK_DIR" push --force-with-lease origin "issue-$N"` で押し直す (rebase 後は履歴が書き変わっており、素の push は non-fast-forward で必ず拒否される)。先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない。解消できなければ 2.6 へ。rebase では動作確認の証跡を取り直さない (この issue 自身の差分は変わらない)。押し直したら `gh pr comment` で「rebase 後の HEAD は `<sha>`。動作確認の証跡は rebase 前の `<sha>` で取ったもの」と 1 件残してから merge する。
+**`$MERGE_RC` が非ゼロで、かつ `$STATE` が `MERGED` でない場合**は、コンフリクトを疑って復旧する (駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合)。`git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで手順 2 の検証をもう 1 巡回して green を確認してから** `git -C "$WORK_DIR" push --force-with-lease origin "issue-$N"` で押し直す (rebase 後は履歴が書き変わっており、素の push は non-fast-forward で必ず拒否される)。先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない。解消できなければ 2.6 へ。rebase では動作確認の証跡を取り直さない (この issue 自身の差分は変わらない)。押し直したら `gh pr comment` で「rebase 後の HEAD は `<sha>`。動作確認の証跡は rebase 前の `<sha>` で取ったもの」と 1 件残す。押し直すと CI が新しい HEAD で走り直すので、**CI ゲートを最初 (登録を待つ) からやり直して**から merge する。
 
 ### 2.5 完了処理
 
@@ -375,7 +423,8 @@ merge により `Closes #N` で issue は自動 close される (されていな
 ```
 実装完了 (dev-impl)
 - 変更: <summary と主要ファイル>
-- テスト + lint + DoD: <2.4 手順 2 で最後に実行した巡の結果 (件数)>、green
+- テスト + lint + フォーマット検査 + DoD: <2.4 手順 2 で最後に実行した巡の結果 (件数)>、green (フォーマット検査が定義なしならその旨)
+- CI: <pass (check 名の列挙) / なし (checks 未登録)>
 - レビュー: <ラウンド数> 周 (最終ラウンドの low の報告: <あれば列挙、なければ「なし」>)
 - 保留 high (test-quality / code-quality): <各 1 行で `file:line` + summary。なければ「なし」>
 - 保留 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/pending-review/issue-<N>.html` に記録)
@@ -407,7 +456,7 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ### 2.6 エスカレーション (needs-human 駐車)
 
-解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / 直せないコミットの失敗 / push の失敗 / 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR 作成と、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
+解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / 直せないコミットの失敗 / push の失敗 / 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR 作成、CI の `fail` / `cancel` / 60 分のタイムアウト、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human
