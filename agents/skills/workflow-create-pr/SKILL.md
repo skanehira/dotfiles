@@ -483,7 +483,7 @@ gh pr view "<PR の URL か番号>" --repo "$REPO" --json body -q .body | rg -n 
 
 ### Draft は指定したときだけ
 
-`--draft` があるときだけ Draft PR にする。dev-impl は作成直後に merge するため `--draft` を渡さない (Draft PR は merge できない)。
+`--draft` があるときだけ Draft PR にする。dev-impl は作成後に CI の pass を待って (CI があれば) そのまま merge するため `--draft` を渡さない (Draft PR は merge できない)。
 
 ### 本文はファイルで渡す
 
