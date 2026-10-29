@@ -221,4 +221,16 @@ function M.kill_pane(pane_id)
   return true, nil
 end
 
+-- Git worktree を作り、herdr の workspace として開いてフォーカスを移す
+-- @param branch string ブランチ名（既存なら checkout、無ければ HEAD から作成）
+-- @return string|nil, string|nil 成功時は (出力, nil)、失敗時は (nil, エラーメッセージ)
+function M.create_worktree(branch)
+  return exec_herdr({
+    "herdr", "worktree", "create",
+    "--cwd", vim.fn.getcwd(),
+    "--branch", branch,
+    "--focus",
+  })
+end
+
 return M
