@@ -483,6 +483,32 @@ local function visual_keymap_handler(open_fn)
   end
 end
 
+-- 入力したブランチ名で worktree を作る。名前が無ければ入力を求める
+-- @param name string|nil ブランチ名
+local function create_worktree(name)
+  local function run(input)
+    if not input or vim.trim(input) == "" then
+      return
+    end
+    local _, err = herdr.create_worktree(vim.trim(input))
+    if err then
+      vim.notify("worktreeの作成に失敗しました:\n" .. err, vim.log.levels.ERROR)
+    end
+  end
+
+  if name then
+    run(name)
+  else
+    vim.ui.input({ prompt = "worktree branch: " }, run)
+  end
+end
+
+local HERDR_SUBCOMMANDS = {
+  worktree = function(args)
+    create_worktree(args[1])
+  end,
+}
+
 -- モジュールを初期化してコマンドとキーマップを登録
 function M.setup()
   -- コメントスタックの初期化（namespace, autocmd, ハイライト）
@@ -538,7 +564,35 @@ function M.setup()
   vim.api.nvim_create_user_command("OpencodeDelete", function() M.delete_comment_at_cursor("opencode") end,
     { desc = "Delete OpenCode comment at cursor line" })
 
+  vim.api.nvim_create_user_command("Herdr", function(opts)
+    if not herdr.is_in_herdr() then
+      vim.notify("エラー: このコマンドはherdrペイン内でのみ使用できます", vim.log.levels.ERROR)
+      return
+    end
+    local sub = opts.fargs[1]
+    local handler = HERDR_SUBCOMMANDS[sub]
+    if not handler then
+      vim.notify("unknown subcommand: " .. sub, vim.log.levels.ERROR)
+      return
+    end
+    handler(vim.list_slice(opts.fargs, 2))
+  end, {
+    nargs = "+",
+    complete = function(arg_lead, cmd_line)
+      if not cmd_line:match("^%S+%s+%S*$") then
+        return {}
+      end
+      return vim.tbl_filter(function(name)
+        return vim.startswith(name, arg_lead)
+      end, vim.tbl_keys(HERDR_SUBCOMMANDS))
+    end,
+    desc = "Run herdr subcommand (worktree)",
+  })
+
   local map_opts = { noremap = true, silent = true }
+
+  vim.keymap.set("n", "<C-g>w", "<Cmd>Herdr worktree<CR>",
+    vim.tbl_extend("force", map_opts, { desc = "Create herdr worktree" }))
 
   -- キーマップ: Claude（ノーマルモード）
   vim.keymap.set("n", "<leader>ac", "<Cmd>Claude<CR>",
