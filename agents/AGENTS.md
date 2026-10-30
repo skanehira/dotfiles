@@ -68,7 +68,7 @@
 
 ## ローカル LLM バックエンド (DGX Spark)
 
-自宅に DGX Spark 2 台のローカル LLM クラスタ (`spark-head` / `spark-worker`) がある。Spark・ローカル LLM に関わる作業では、着手前に `~/.claude/rules/infra/dgx-spark.md` を Read する (接続先 / 起動停止 / 性能特性 / 既知の制約)。
+自宅に DGX Spark 2 台のローカル LLM クラスタ (`spark-head` / `spark-worker`) がある。Spark・ローカル LLM に関わる作業では、着手前に `~/.claude/rules/infra/dgx-spark.md` (共通: 接続先 / 系統の切り替え / 性能特性 / 既知の制約) と、対象の系統の `~/.claude/rules/infra/dgx-spark/<系統>.md` を Read する。系統ファイルの一覧と、配信中の系統の調べ方は共通ファイルの冒頭にある。
 
 ## 依拠する外部事実
 
@@ -80,4 +80,4 @@
 | ランタイムごとのツール・パスの読み替え | `agents/bindings/codex/AGENTS.md` / `agents/bindings/opencode/AGENTS.md` | 実行中のランタイムに対応する binding の読み替え表と制約を読む |
 | モデル割当と subagent のモデル継承 | `agents/rules/core/orchestration.md`、各 binding の `AGENTS.md`、`agents/scripts/subagent-format.ts`、`agents/bindings/codex/config.toml` | 割当規約、生成物に出すキー、ランタイム側のモデル設定を分けて確認する。実際の起動でモデルを確認していなければ、継承の規定だけからモデル名を断定しない |
 | テスト・レビュー・コミットの検証手段 | `agents/rules/core/implementation.md` / `verification.md` / `commit.md`、各プロジェクトの指示・CI、使用するスキル | 規定元と実行コマンド・結果を対応づける。dotfiles の CI 対象とハーネスのゲート一覧は同リポジトリの `CLAUDE.md` にある |
-| Spark の接続先・配信系統・検証コマンド | `agents/rules/infra/dgx-spark.md`「依拠する外部事実」 | 同表の確認方法で現在値を取得し、日付付きの過去の実測値と区別する。認証情報を出力しない |
+| Spark の接続先・配信系統・検証コマンド | `agents/rules/infra/dgx-spark.md` と `agents/rules/infra/dgx-spark/<系統>.md` の「依拠する外部事実」 | 同表の確認方法で現在値を取得し、日付付きの過去の実測値と区別する。認証情報を出力しない |
