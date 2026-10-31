@@ -2,7 +2,6 @@
 name: workflow-create-pr
 description: "ローカルのコミット履歴と差分から GitHub の PR を作成する。既定は通常の PR で、`--draft` で Draft PR にする。画面のスクリーンショットと API の実行結果の証跡マニフェストを受け取ると、本文の「動作確認」節に埋め込み、画像を `gh pr create --attach` で添付する。ブランチ未作成・コミット未作成の状態でも、必要に応じてブランチ作成とコミットを行ってから作成する。`.github/` にPRテンプレートがあれば内容を埋め、なければ作業内容から本文を生成し、作成してよいかをユーザーに確認してから実行する。`--yes` の非対話モードは dev-impl が証跡付きの PR を作るときに使う。「PRを出したい」「PRを作って」「プルリクを作って」「draft PRを作成」「PR本文を生成」「証跡付きでPRを出して」などのリクエストで起動。"
 argument-hint: "[--base <branch>] [--draft] [--evidence <manifest.json>] [--yes --repo <owner/name> --repo-dir <path> --head <branch> --title <title> --body-file <path>]"
-model: haiku
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git symbolic-ref:*), Bash(git branch:*), Bash(git switch:*), Bash(git remote:*), Bash(git push:*), Bash(git -C:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh repo view:*), Bash(gh auth status:*), Bash(gh --version:*), Bash(ls:*), Bash(rg:*), Read, Write, Glob, AskUserQuestion, Skill
 ---
 
@@ -47,7 +46,7 @@ allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git r
 
 **非対話モード** (`--yes`) は、dev-impl のようにユーザーの応答を待てない呼び出し元が使う。本文の下書きは呼び出し元が書き、このスキルは証跡の埋め込み・添付・作成だけを行う。`--repo` / `--repo-dir` / `--base` / `--head` / `--title` / `--body-file` を全て必須とし、1 つでも欠けたら何もせず `PR_FAILED missing_arg <引数名>` を返す。非対話モードは質問しない。判断が要る場面では PR を作らずに `PR_FAILED <理由>` を返して呼び出し元に任せる。
 
-Skill ツールから起動された場合、frontmatter の `model: haiku` は効かず、呼び出し元のモデルとコンテキストで動く。非対話モードが差分の全文を読まず、本文を生成し直さないのは、呼び出し元のコンテキストを差分で埋めないためである。
+frontmatter に `model` を書かず、呼び出し元のモデルとコンテキストで動く。Skill ツールから起動されても frontmatter の `model` は効き、そのターンの残りのセッションモデルまで切り替わる。`model: haiku` を書くと、dev-impl が PR を作ったあとの merge と次の issue の起動を Haiku が行うことになる (2026-10-31 に実測)。非対話モードが差分の全文を読まず、本文を生成し直さないのは、呼び出し元のコンテキストを差分で埋めないためである。
 
 | 手順 | 手動モード | 非対話モード |
 | --- | --- | --- |
