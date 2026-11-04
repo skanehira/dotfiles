@@ -192,6 +192,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [llm-feature-design](./llm-feature-design/) | アプリに組み込む LLM 機能のプロンプトと周辺構造を設計 (回答範囲の制限 / 非信頼テキストと injection 対策 / グラウンディング / ガードレール / 評価)。規範は references/ から遅延参照し、逐語引用と出典は references/evidence.md に分離 |
 | [security-best-practices](./security-best-practices/) | OpenAI 公式のセキュリティレビュー・安全な実装の支援。Python / JavaScript・TypeScript / Go が対象。セキュリティに関する明示的な依頼で使用する |
 | [security-threat-model](./security-threat-model/) | OpenAI 公式の脅威モデリング。リポジトリを根拠に信頼境界・資産・攻撃経路・対策を整理し、Markdown のレポートを作成する。脅威モデルに関する明示的な依頼で使用する |
+| [security-audit](./security-audit/) | Cloudflare 製の脆弱性監査。偵察・網羅的な探索・反証・構造化出力・独立検証・報告の 6 フェーズを別々のエージェントで回し、検証スクリプトで `findings.json` と `coverage-ledger.json` を検査する。言語別の指針は security-best-practices、脅威の整理は security-threat-model を使う。全監査では出力先を必ず指定する (指定しないと既定の `~/security-audit-skill/` がホーム直下にできる)。対象のコードを実行する確認には OS が強制するサンドボックスが要り、無ければその候補は `needs_validation` に留まる。[cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) からの無改変の vendor で (上流のテスト 2 本は除外)、出典・版・除外ファイル・再取得手順は `LICENSE-cloudflare` に記録 |
 | [japanese-tech-writing](./japanese-tech-writing/) | 日本語の技術文書・書籍原稿の文章規範 (段落と論証の構成 / 演出の抑制 / LLM っぽい表現と翻訳調の禁止 / 冗長の排除)。執筆・推敲時に参照する。外部 gist の verbatim import で、frontmatter に出典と Unlicense を持つ |
 | [yomiyasu](./yomiyasu/) | AI が生成した不自然な日本語を、動作主・比喩動詞・装飾記号を直して自然な文章へリライトする (ドメイン tech / business / essay、同梱の `scripts/yomiyasu_lint.py` で機械検査)。[nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) からの vendor で、出典・版・除外ファイル・再取得手順は `LICENSE-yomiyasu` に記録。書き下ろしの執筆規範は japanese-tech-writing が担う |
 
