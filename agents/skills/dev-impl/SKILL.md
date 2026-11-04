@@ -177,12 +177,15 @@ evidence_dir: <SCRATCH>/evidence-<N>
 **検収**: report JSON を読み、次をすべて満たすときだけ `status: done` を done と扱う。
 
 - `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true`
+- `self_review.basic_checks` の 4 つ (`new_behavior` / `removed_behavior` / `touched_specs` / `new_branches`) がすべて空でない。`self_review.change_types` が空でない
+- `self_review.change_types` に「その他」がある場合、`self_review.other` の各項目に `summary` / `axes` (`spec` / `layer` / `artifact`) / `answers` (4 問い) が埋まっている
+- 差分にコメントを足している場合、`self_review.comments` の `added` / `removed` が記録されている (`implementation.md`「コードコメント」の自己点検の結果)
 - `evidence.manifest_path` の `manifest.json` があり、その `captured_mode` が今回起動した `mode` と一致し、`screens[].file` と `api[].file` の全パスが実在する (`ls` で確かめる)。実在しないパスを 2.4 手順 3 に渡すと添付が失敗し、本文にローカルのパスが残る。画面と API が両方とも空なら `note` に理由が書かれていること
 - UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でないこと。**その画像を親が `Read` で実際に開いて**、同じ行の下端・幅の決まり方・ラベル位置が揃っていることを確かめる。exit code は見た目を守らないので、ここを飛ばすと崩れは利用者が指摘するまで残る
 
 検収に落ちた報告の扱い:
 
-- **同じ `mode: implement` で 1 回だけ再起動する**。渡す内容に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」の行を足す
+- **同じ `mode: implement` で 1 回だけ再起動する**。渡す内容に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」の行を足す。セルフチェックの記録が不足している場合は、`basic_checks` / `change_types` / `other` / `comments` のどこが足りないかを具体的に伝える
 - `mode: fix` は使わない。`mode: fix` は `findings_path` の JSON から high を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる
 - **この再起動は 2.3 の fix ラウンドに数えない**。実装の検収であって、レビュー指摘の修正ではないため
 - **2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)
@@ -284,7 +287,7 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 修正対象にしなかった medium と、r2 で残った `test-quality` / `code-quality` の high は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。**保留対象が 1 件以上あるときだけ** `docs/pending-review/issue-<N>.html` を新規に書き出す (0 件なら作らない — 空ファイルが積まれると Step 3 の件数がノイズを数える)。各 finding はチェックボックス付きの 1 項目で、severity / category / `file:line` / summary / evidence / fix_hint をまとめる。**high は medium より前に置く。** 各項目の要素に `data-severity="high|medium"` と `data-category="<category>"` を持たせる — Step 3 が `rg -c 'data-severity="high"' docs/pending-review/` で件数を数え、過去 run のファイルも同じ形で数えられるようにするため。 外部依存の無い自己完結の静的 HTML とする。**issue 1 件につき 1 ファイルにする** — 全 issue が 1 枚のファイルへ追記する形だと、並列で走る issue が同じ位置に節を足して rebase のたびに必ず衝突する。ファイルを分ければ衝突は起きないので、union の衝突解決も要らない。**このファイルは 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
 
-**r2 まで回した issue では、r1 と r2 の medium を `file:line` + summary で重複排除した和を書き出す。** r2 が r1 と同じ medium を出し直すとは限らないので (検査項目 6 は high しか追わず、族の走査も high 候補を先に処理して打ち切りうる)、r2 のぶんだけを書くと r1 の medium が黙って落ちる。逆に単純な和では同じ指摘が二重に載るので、重複排除する。r1 で通過した issue は r1 の medium だけになる。
+**r2 まで回した issue では、r1 と r2 の medium を `file:line` + summary で重複排除した和を書き出す。** r2 が r1 と同じ medium を出し直すとは限らないので (検査項目 6 は high しか追わず、同じ形の箇所の走査も high 候補を先に処理して打ち切りうる)、r2 のぶんだけを書くと r1 の medium が黙って落ちる。逆に単純な和では同じ指摘が二重に載るので、重複排除する。r1 で通過した issue は r1 の medium だけになる。
 
 **`medium` / `category: e2e` で、summary が `対象動線未指定 (設計差し戻し):` で始まる finding だけは別立てで扱う** (この書式は review-impl 側で固定してある)。 これは実装ではなく設計側の欠落なので、保留リストに載せたうえで、2.5 の完了コメントに「設計差し戻しが必要な指摘」として独立の行で書き、Step 3 の最終報告にも載せる (保留リストに埋もれると設計へ差し戻る経路が消える)。
 
@@ -490,12 +493,13 @@ done
 
 **この走査は `tracking` ラベルの open issue を repo 全件対象にする。** dev-spec 由来でない手作りの `tracking` issue がある repo では、close 前に対象一覧を提示して人間に確認する。
 
-2. デフォルトブランチへ戻って `git pull` し、`docs/pending-review/` にファイルがあれば一覧と件数を出す。件数は `rg -c 'data-severity="high"' docs/pending-review/` と同 `medium` で数える (2.3 が全項目にこの属性を付けている)。あわせて `data-category="e2e"` かつ medium の項目を拾い、設計差し戻しが必要な指摘として最終報告に列挙する。`open docs/pending-review/` でディレクトリを開き (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、保留 high <h> 件・保留 medium <m> 件のチェックが必要」とユーザーに確認を促す (過去 run の未消化分も累積している)。対応要と判断した項目は新しい issue にするか直接の修正依頼で対応し、確認が済んだ issue はファイルごと削除する (手動または修正依頼。通常のコミットで反映)
+2. デフォルトブランチへ戻って `git pull` し、`docs/pending-review/` にファイルがあれば一覧と件数を出す。件数は `rg -c 'data-severity="high"' docs/pending-review/` と同 `medium` で数える (2.3 が全項目にこの属性を付けている)。あわせて `data-category="e2e"` かつ medium の項目を拾い、設計差し戻しが必要な指摘として最終報告に列挙する。`open docs/pending-review/` でディレクトリを開き (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、保留 high <h> 件・保留 medium <m> 件のチェックが必要」とユーザーに確認を促す (過去 run の未消化分も累積している)。対応要と判断した項目は新しい issue にするか直接の修正依頼で対応し、確認が済んだ issue はファイルごと削除する (手動または修正依頼。通常のコミットで反映)。**あわせて、保留にした medium を「早見表にあった種類か」で分ける。** 早見表 (`dev-impl-implementer.md`「実装後のセルフチェック」) に無かった種類は、次回の早見表に足す候補として最終報告に列挙する (同じ種類が 3 回出たら表に足す)。
 3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
    - 実装した issue と PR の一覧
    - close した親 (tracking) issue と、open のまま残した親 (子が残っている / 子ゼロ / 判定不能の別に)
    - 2.5 で親 close を判定できなかった子 issue の番号 (親に紐付いていない 404 の子と、API 失敗の子を分けて)
    - 保留レビュー項目 (保留 high・medium) の件数とチェックリストのパス、および設計差し戻しが必要な指摘
+   - 早見表に無かった指摘の種類 (次回の表に足す候補)
    - `needs-human` で駐車した issue と、人間がすべき決定。報告を読む時点のユーザーは issue の中身を覚えていない前提で、issue ごとに `~/.claude/rules/core/collaboration.md`「質問・提案の形式」に従って書く。どの件の話かは issue の番号とタイトルで示す
    - 実装中の設計判断・docs 更新の要約
 
