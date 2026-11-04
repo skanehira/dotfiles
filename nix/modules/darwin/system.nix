@@ -62,13 +62,11 @@
 
   # CVE-2026-111943: eMudhra の中間証明書 8 件の秘密鍵が復元可能になった。curl や Go などの
   # ブラウザ以外のクライアントは失効を確認しないので、配下のルートを信頼から外すしかない。
-  # NixOS の security.pki が既定値に入れたものと同じ 4 件。nix-darwin #1876 が既定値へ
-  # 取り込んだ後は重複になるだけなので、input を上げたときに消してよい
+  # NSS 3.131.1 の certdata.txt から emSign の 3 ルートは削除済みなので、blacklist に残すと
+  # buildcatrust が「blocklist にあるが cert store に無い」として失敗する。現存する
+  # Comodo AAA Services root だけを指定する。
   security.pki.caCertificateBlacklist = [
     "Comodo AAA Services root"
-    "emSign ECC Root CA - G3"
-    "emSign Root CA - C1"
-    "emSign ECC Root CA - C3"
   ];
 
   # zsh をシステムシェルとして認識させる (HM 側でも programs.zsh.enable する)
