@@ -1,8 +1,15 @@
-{ ... }:
+{ pkgs, ... }:
 
 {
   programs.gh = {
     enable = true;
+
+    # gh-actions-lock を gh の extension として入れる。
+    # programs.gh.extensions は ~/.local/share/gh/extensions/<pname> を
+    # ${pkg}/bin への symlink として作り、gh actions-lock で呼べる。
+    extensions = [
+      pkgs.gh-actions-lock
+    ];
 
     # git push/pull の認証を gh の token に肩代わりさせる
     # (osxkeychain / 手動 PAT 設定が不要になる)
