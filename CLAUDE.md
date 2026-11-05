@@ -290,7 +290,7 @@ nix/
 
   Go の 1.26.10 / 1.27.3 以降は、問題の中間証明書を含むチェーンを OS を問わず拒否する。ただし効くのはその版でビルドしたバイナリだけである。
 
-  `system.nix` の `caCertificateBlacklist` は、nix-darwin が同じ 4 件を既定値に取り込んだら (nix-darwin #1876) 消してよい。mac の Node は `nix/pkgs/nodejs-bin.nix` で 24.22.1 の公式版を使い、内蔵 CA で検証する。`env.nix` の `NODE_OPTIONS=--use-openssl-ca` は Linux の `nodejs_24` が 24.22.1 未満の間だけ設定される。mac ではこのフラグを設定しない。Claude Code がフラグを検出すると内蔵 CA を使わず `system` のみを選び、macOS 標準のシステムルートを読み込めずに認証が失敗するためである。適用前から開いているシェルには環境変数が残るので、mac で更新を適用した後は `unset NODE_OPTIONS` を実行してから Claude Code を起動する。activation の bootstrap curl (`deno.nix` / `rustup.nix` / `claude.nix` / `vite-plus-bootstrap.nix`) は、`NIX_SSL_CERT_FILE` で上表 1・2 行目のバンドルを明示する。明示しないと、更新されない root profile (`/nix/var/nix/profiles/default`) のバンドルを読むためである。
+  `system.nix` の `caCertificateBlacklist` には `Comodo AAA Services root` の 1 件だけを書く。`cacert` の cert store に無い名前を書くと buildcatrust が失敗するので、NSS 3.131.1 で削除された emSign の 3 ルートは書かない。nix-darwin は commit `97fd0908` 以降 (nix-darwin #1876 とその修正) この 1 件を自身で外すので、`nix/flake.lock` の `nix-darwin` がそれ以降になったら消してよい。mac の Node は `nix/pkgs/nodejs-bin.nix` で 24.22.1 の公式版を使い、内蔵 CA で検証する。`env.nix` の `NODE_OPTIONS=--use-openssl-ca` は Linux の `nodejs_24` が 24.22.1 未満の間だけ設定される。mac ではこのフラグを設定しない。Claude Code がフラグを検出すると内蔵 CA を使わず `system` のみを選び、macOS 標準のシステムルートを読み込めずに認証が失敗するためである。適用前から開いているシェルには環境変数が残るので、mac で更新を適用した後は `unset NODE_OPTIONS` を実行してから Claude Code を起動する。activation の bootstrap curl (`deno.nix` / `rustup.nix` / `claude.nix` / `vite-plus-bootstrap.nix`) は、`NIX_SSL_CERT_FILE` で上表 1・2 行目のバンドルを明示する。明示しないと、更新されない root profile (`/nix/var/nix/profiles/default`) のバンドルを読むためである。
 
 ## sudo の扱い (重要)
 
