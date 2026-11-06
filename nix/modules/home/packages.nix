@@ -165,6 +165,7 @@ let
   systemUtils =
     with pkgs;
     [
+      gawk # awk も GNU 版にする。macOS 標準の awk は -v に改行を含む値を渡すと失敗する
       gnupg
       graphviz
       rclone
