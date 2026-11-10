@@ -89,7 +89,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 - `$ARGUMENTS` で issue 番号が指定されていれば、その issue (と未完了の依存先) だけを対象にする
 - `tracking` ラベルの親 issue (ユースケース単位のトラッキング) は実装対象にしない
 - 各対象 issue の**実効スコア**を求める。実効スコアは、自分と、自分に直接・間接に依存する全ての対象 issue のスコアの最大値である (スコアの低い依存先が後回しになって、スコアの高い issue が塞がれるのを防ぐため)
-  - スコアは本文の `## 優先度` の `スコア <数値>` で、書式は `~/.claude/skills/dev-triage/references/priority.md`「issue への書き方」にある。`緊急枠` と書かれた issue は、どのスコアよりも高い値として扱う。そのため、緊急枠の issue と、その直接・間接の依存先が先頭に来る
+  - スコアは本文の `## 優先度` の `スコア <数値>` で、書式は `~/.claude/skills/dev-triage/references/priority.md`「issue への書き方」にある。緊急枠の行 (行の先頭が `緊急枠 (`) がある issue は、どのスコアよりも高い値として扱う。そのため、緊急枠の issue と、その直接・間接の依存先が先頭に来る
   - 引き継ぐ元は対象 issue (`ready` / `in-progress`) に限る。`needs-design` などのこの run で着手できない issue のスコアで順を動かしても、その issue はこの run では実装されないため
   - どの issue からもスコアを得られない issue (`/dev-spec` が作った issue など) は実効スコア無しとし、実効スコアのある issue の後ろに置く
 - **着手順**: 依存先がすべて close された issue (**着手できる issue**) の中から、実効スコアの高い順、同じなら番号の小さい順に選ぶ
@@ -474,7 +474,7 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human
-gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。未 merge の保留 high / medium と、設計差し戻しが必要な指摘があればその summary も列挙 (pending-review のファイルが merge されていないため)。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置>"
+gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。未 merge の保留 high / medium と、設計差し戻しが必要な指摘があればその summary も列挙 (pending-review のファイルが merge されていないため)。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置><!-- dev-impl -->"
 ```
 
 ブランチと open PR は merge せず残す (人間が差分を確認でき、再開時に再利用できる)。**その issue に依存しない次の issue へ進む。**

@@ -30,7 +30,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, AskUserQuestion
 ```bash
 REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
-gh label list --repo "$REPO_SLUG" --json name -q '.[].name' | rg -x 'needs-design|design-review|needs-human|ready'
+gh label list --repo "$REPO_SLUG" --limit 500 --json name -q '.[].name' | rg -x 'needs-design|design-review|needs-human|ready'
 ls .github/workflows/design-approved.yml
 ls docs/ISSUE_TRIAGE.md 2>/dev/null
 ```
@@ -52,7 +52,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,headRefNam
 - 取得件数が limit に達したら limit を上げて取り直す
 - `needs-human` / `tracking` / `事業・運営` の付いた issue は対象から外す
 - 引数で issue 番号を指定されたら、その 1 件だけにする
-- 並べ方: 本文の `## 優先度` に `緊急枠` と書かれた issue を先頭に置き、次に `スコア <数値>` の高い順に並べる。どちらも無い issue はその後ろに、番号の小さい順に並べる (書式は `~/.claude/skills/dev-triage/references/priority.md`「issue への書き方」)
+- 並べ方: 本文の `## 優先度` に緊急枠の行 (行の先頭が `緊急枠 (`) がある issue を先頭に置き、次に `スコア <数値>` の高い順に並べる。どちらも無い issue はその後ろに、番号の小さい順に並べる (書式は `~/.claude/skills/dev-triage/references/priority.md`「issue への書き方」)
 - 本文に `Design-for: #<この issue>` の行を持つ open の PR がある issue は飛ばし、最終報告に理由を書く (設計済みで、人のレビュー待ち)
 - ブランチ `design/issue-<N>` が origin にあるのに open の PR が無い issue は、設計 PR が merge されずに close されたあと、人が `needs-design` を付け直したものとして扱う。古いブランチを消してから設計し直す (`git push origin --delete design/issue-<N>`)。このスキルは同時に 1 つだけ起動する前提で、別の起動が設計中のブランチと区別しない (定期起動の設計で同時実行を 1 にする)
 
@@ -66,7 +66,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,headRefNam
 
 ### 3. 読んで振り分ける
 
-issue の本文とコメント、参照されている設計書、`docs/design/DESIGN.md` (とくに「既知の制約」「未解決の論点」)、`docs/design/features/` の関連する設計書、`docs/design/USECASES.md` と `USER_STORIES.md` (あれば)、実際のコードを読む。読んでから、次の表で振り分ける。上から順に見て、最初に当てはまる行を使う。
+issue の本文とコメント (コメントは作成者が `OWNER` / `MEMBER` / `COLLABORATOR` のものだけ。公開のリポジトリで外部の人のコメントを設計する Claude に読ませないため。`gh api "repos/$REPO_SLUG/issues/<N>/comments" --paginate --jq '.[] | select(.author_association | IN("OWNER","MEMBER","COLLABORATOR"))'`)、参照されている設計書、`docs/design/DESIGN.md` (とくに「既知の制約」「未解決の論点」)、`docs/design/features/` の関連する設計書、`docs/design/USECASES.md` と `USER_STORIES.md` (あれば)、実際のコードを読む。読んでから、次の表で振り分ける。上から順に見て、最初に当てはまる行を使う。
 
 | issue の中身 | 振り分け | 出すもの |
 | --- | --- | --- |

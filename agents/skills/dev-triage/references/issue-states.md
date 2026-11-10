@@ -4,7 +4,7 @@
 - 生成者: dotfiles の `dev-triage` スキル (このファイルが正本)
 - 消費者: `dev-triage` (状態を付ける)、`dev-feat-spec` (設計して `design-review` にする)、`dev-project-setup` (ラベル・Project の列・GitHub Actions をこの表に合わせて作る)、`/dev-impl` (`ready` を実装する)、設計をレビューする人
 
-対象のリポジトリに `docs/ISSUE_TRIAGE.md` があり、この節と同じ事柄 (着手可能の基準など) を定めていれば、そちらを優先する。定めていない事柄は、このファイルに従う。
+対象のリポジトリに `docs/ISSUE_TRIAGE.md` があり、このファイルと同じ見出しの節 (例: `## 着手可能の基準`) があれば、その節をこのファイルの同じ節の代わりに使う。ラベルの名前と状態の遷移 (「状態の管理」の表) は上書きできない (GitHub Actions と他のスキルに固定で書かれているため)。
 
 ## 状態の管理
 
@@ -30,9 +30,9 @@
 
   | 止めたスキル | 人が直すラベル | 次に動くもの |
   | --- | --- | --- |
-  | `dev-triage` | `needs-human` を外す | 次の `dev-triage` が回答を読んで整理し直す |
+  | `dev-triage` | コメントの案内に従う (多くは `needs-human` を外すだけ。緊急枠は `needs-design` に付け替え、着手済みは `ready` を付ける) | 次の `dev-triage` が回答を読んで整理し直す |
   | `dev-feat-spec` | `needs-human` を外す (`needs-design` は残っている) | 次の `dev-feat-spec` が設計し直す |
-  | `/dev-impl` | `needs-human` を外して `ready` を付ける | 次の `/dev-impl` が `issue-<N>` ブランチから再開する |
+  | `/dev-impl` | 回答を issue の本文か参照の docs に反映してから、`needs-human` を外して `ready` を付ける (implementer は本文と docs しか読まないため) | 次の `/dev-impl` が `issue-<N>` ブランチから再開する |
 
   `/dev-impl` が止めた issue で `ready` を付け忘れると、状態のラベルが無くなる。`dev-triage` は `issue-<N>` ブランチを見てこれに気付き、設計し直さずに `needs-human` に戻す
 

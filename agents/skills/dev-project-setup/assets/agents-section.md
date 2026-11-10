@@ -16,6 +16,6 @@ issue の状態はラベルで管理する。Project <!-- 記入: Project の UR
 | 人が承認した | `ready` (設計 PR の merge では GitHub Actions が付ける) |
 | 実装を始めた | `ready` を外して `in-progress` を付ける |
 | 人の判断が要って止めた | `needs-human` を付ける |
-| 人が `needs-human` に回答した | 人が回答を issue に書き、止めたスキルのコメントの案内に従う。`dev-triage` と `dev-feat-spec` が止めたものは `needs-human` を外すだけでよい。`/dev-impl` が止めたものは `needs-human` を外して `ready` を付ける (`~/.claude/skills/dev-triage/references/issue-states.md`「状態の管理」) |
+| 人が `needs-human` に回答した | 人が回答を issue に書き、止めたスキルのコメントの案内に従う。`dev-feat-spec` が止めたものは `needs-human` を外すだけでよい。`dev-triage` が止めたものはコメントの案内に従う。`/dev-impl` が止めたものは、回答を本文か参照の docs に反映してから、`needs-human` を外して `ready` を付ける (`~/.claude/skills/dev-triage/references/issue-states.md`「状態の管理」) |
 
 Status を手で動かさない。ラベルと Status が食い違ったら、ラベルを正としてラベルを付け直す (付け直すと Actions が Status を揃える)。
