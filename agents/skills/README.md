@@ -60,6 +60,7 @@ skills/
 ├── dev-spec/                  # 設計ループ (フェーズ手順は references/)
 ├── dev-impl/                  # 実装ループ (GitHub issue 駆動・依存順)
 ├── dev-impl-quick/            # 軽量実装ループ (docs 不要)
+├── dev-project-setup/         # issue の運用の土台 (ラベル・Project・同期の Actions)
 ├── workflow-commit/
 ├── workflow-create-pr/        # PR 作成 (証跡の集め方は references/)
 ├── workflow-debate/
@@ -153,6 +154,7 @@ git index を共有する操作 (コミット) は並列化できないので親
 | [dev-spec](./dev-spec/)             | 設計ループ。ユーザーストーリー〜PoC 検証〜横断設計 (DESIGN.md 1 枚)〜機能設計 (docs/design/features/)〜設計チェック〜issue ドラフトチェック〜GitHub issue 生成。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化                                                                                                                                                                                                                                                                              | `cli`/`webapp` + タスク説明 (省略時は推論して確認)                                         | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + docs/design/features/*.md + GitHub issue 群 (ユースケース単位の親 `tracking` + 子 N 件 `ready`、sub-issue 紐付け) |
 | [dev-impl](./dev-impl/)             | 実装ループ。GitHub issue を `Depends on #N` の依存順に自律実装 (同じ依存レベルは最大 3 並列、merge は直列。implementer subagent が issue と docs を直読して TDD → review-impl → high だけ修正 ≤1 ラウンド → 検証 green (テスト・lint・フォーマット検査・DoD) → PR → CI pass (CI があれば) → merge → close)。詰まった issue は needs-human で駐車して次へ。進捗は issue コメントのみで、保留した high (test-quality / code-quality) と medium は issue 別のチェックリスト (docs/pending-review/issue-<N>.html、リポジトリで持ち回り) に記録して run 終了時に確認を促す | GitHub issue (必須)。docs/design/DESIGN.md + docs/design/features/ は issue から参照される | issue ごとの PR + merge コミット                                                                                                                                             |
 | [dev-impl-quick](./dev-impl-quick/) | 軽量実装ループ。依頼文をタスク分解 → 1 件ずつ直営 TDD → テストゲート → review-impl (focus: tests、モデル: opus を明示) → タスク単位 commit                                                                                                                                                                                                                                                                                                                                                                                                                            | 依頼文または簡易タスクリスト (docs 不要)                                                   | タスク単位のコミット                                                                                                                                                         |
+| [dev-project-setup](./dev-project-setup/) | 本格的な開発を始める前に、issue の状態のラベル、非公開の GitHub Project と Status の列、ラベルと列を同期する GitHub Actions、設計 PR の merge で `ready` を付ける GitHub Actions、`docs/ISSUE_TRIAGE.md` と AGENTS.md の運用の節の雛形を用意する。`/dev-spec` より前に使う。何度実行しても結果は変わらない |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / design-doc / feature-doc / issue-template)。
 

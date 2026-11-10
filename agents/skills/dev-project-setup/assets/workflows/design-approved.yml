@@ -1,0 +1,53 @@
+# 設計 PR が merge されたら、本文の「Design-for: #<番号>」の issue を承認済み (ready) にする。
+# 生成元: dev-project-setup スキル。状態の定義は docs/ISSUE_TRIAGE.md「状態の管理」。
+name: Design approved
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  approve:
+    if: github.event.pull_request.merged == true
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - name: Find the designed issues
+        id: find
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          CLIENT_ID: ${{ vars.PROJECT_APP_CLIENT_ID }}
+          PRIVATE_KEY: ${{ secrets.PROJECT_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          issues=$(printf '%s\n' "$BODY" | sed -nE 's/^[[:space:]]*Design-for:[[:space:]]*#([0-9]+)[[:space:]]*$/\1/p' | sort -u | tr '\n' ' ')
+          if [ -z "$issues" ]; then
+            echo "Design-for の行が無いので何もしない"
+          elif [ -z "$CLIENT_ID" ] || [ -z "$PRIVATE_KEY" ]; then
+            echo "::error::変数 PROJECT_APP_CLIENT_ID か secret PROJECT_APP_PRIVATE_KEY が無い。dev-project-setup の手順で登録する"
+            exit 1
+          fi
+          echo "issues=$issues" >>"$GITHUB_OUTPUT"
+      # GITHUB_TOKEN で付けたラベルは issue-state-sync を起動しないので、GitHub App のトークンで付ける
+      - name: Create a token of the GitHub App
+        if: steps.find.outputs.issues != ''
+        id: app-token
+        uses: actions/create-github-app-token@v3.3.0
+        with:
+          client-id: ${{ vars.PROJECT_APP_CLIENT_ID }}
+          private-key: ${{ secrets.PROJECT_APP_PRIVATE_KEY }}
+          permission-issues: write
+      - name: Mark the designed issues as ready
+        if: steps.find.outputs.issues != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          ISSUES: ${{ steps.find.outputs.issues }}
+        run: |
+          set -euo pipefail
+          for n in $ISSUES; do
+            gh issue edit "$n" --repo "$REPO" --add-label ready --remove-label design-review,needs-design >/dev/null
+            echo "#$n -> ready"
+          done

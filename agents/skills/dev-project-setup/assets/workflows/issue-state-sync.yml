@@ -1,0 +1,71 @@
+# issue の状態のラベルに合わせて、Project の Status を動かす。
+# 生成元: dev-project-setup スキル。状態の定義は docs/ISSUE_TRIAGE.md「状態の管理」。
+name: Issue state sync
+
+on:
+  issues:
+    types: [opened, reopened, labeled, unlabeled, closed]
+
+permissions: {}
+
+concurrency:
+  group: issue-state-sync-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - name: Check the settings
+        env:
+          CLIENT_ID: ${{ vars.PROJECT_APP_CLIENT_ID }}
+          PRIVATE_KEY: ${{ secrets.PROJECT_APP_PRIVATE_KEY }}
+          OWNER: ${{ vars.PROJECT_OWNER }}
+          NUMBER: ${{ vars.PROJECT_NUMBER }}
+        run: |
+          if [ -z "$CLIENT_ID" ] || [ -z "$PRIVATE_KEY" ] || [ -z "$OWNER" ] || [ -z "$NUMBER" ]; then
+            echo "::error::変数 PROJECT_APP_CLIENT_ID / PROJECT_OWNER / PROJECT_NUMBER か、secret PROJECT_APP_PRIVATE_KEY が無い。dev-project-setup の手順で登録する"
+            exit 1
+          fi
+      # GITHUB_TOKEN は組織の Project を更新できないので、GitHub App のトークンを実行のたびに作る
+      - name: Create a token of the GitHub App
+        id: app-token
+        uses: actions/create-github-app-token@v3.3.0
+        with:
+          client-id: ${{ vars.PROJECT_APP_CLIENT_ID }}
+          private-key: ${{ secrets.PROJECT_APP_PRIVATE_KEY }}
+          owner: ${{ vars.PROJECT_OWNER }}
+          permission-issues: read
+          permission-organization-projects: write
+      - name: Move the issue to the column of its state
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          OWNER: ${{ vars.PROJECT_OWNER }}
+          NUMBER: ${{ vars.PROJECT_NUMBER }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_STATE: ${{ github.event.issue.state }}
+          LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          has() { jq -e --arg l "$1" 'index($l) != null' <<<"$LABELS" >/dev/null; }
+          if [ "$ISSUE_STATE" = closed ]; then status=完了
+          elif has 事業・運営; then status=事業・運営
+          elif has tracking; then status=作業中
+          elif has needs-human; then status=判断待ち
+          elif has in-progress; then status=作業中
+          elif has ready; then status=着手可能
+          elif has design-review; then status=設計レビュー
+          elif has needs-design; then status=設計待ち
+          else status=未整理
+          fi
+          project_id=$(gh project view "$NUMBER" --owner "$OWNER" --format json --jq .id)
+          item_id=$(gh project item-add "$NUMBER" --owner "$OWNER" --url "$ISSUE_URL" --format json --jq .id)
+          read -r field_id option_id < <(gh project field-list "$NUMBER" --owner "$OWNER" --format json \
+            --jq ".fields[]|select(.name==\"Status\")|.id as \$f|.options[]|select(.name==\"$status\")|\"\(\$f) \(.id)\"")
+          if [ -z "${option_id:-}" ]; then
+            echo "::error::Status に列「$status」が無い。dev-project-setup を実行し直す"
+            exit 1
+          fi
+          gh project item-edit --project-id "$project_id" --id "$item_id" --field-id "$field_id" --single-select-option-id "$option_id" >/dev/null
+          echo "$ISSUE_URL -> $status"
