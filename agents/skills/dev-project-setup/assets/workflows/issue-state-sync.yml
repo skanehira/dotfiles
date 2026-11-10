@@ -1,5 +1,5 @@
 # issue の状態のラベルに合わせて、Project の Status を動かす。
-# 生成元: dev-project-setup スキル。状態の定義は docs/ISSUE_TRIAGE.md「状態の管理」。
+# 生成元: dev-project-setup スキル。状態の定義は dotfiles の agents/skills/dev-triage/references/issue-states.md「状態の管理」。
 name: Issue state sync
 
 on:

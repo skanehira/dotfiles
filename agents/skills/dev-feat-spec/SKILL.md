@@ -16,7 +16,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, AskUserQuestion
 
 # dev-feat-spec — 機能追加の設計ループ
 
-運用の前提: AI が issue を整理・設計・実装し、人は設計の確認だけを行う。issue の状態はラベルが正本で、`ready` は人が設計を承認した印である。このスキルは `needs-design` の issue を設計して `design-review` にするところまでを受け持ち、`ready` は付けない。状態の定義は対象リポジトリの `docs/ISSUE_TRIAGE.md`「状態の管理」(dev-project-setup の雛形) にある。
+運用の前提: AI が issue を整理・設計・実装し、人は設計の確認だけを行う。issue の状態はラベルが正本で、`ready` は人が設計を承認した印である。このスキルは `needs-design` の issue を設計して `design-review` にするところまでを受け持ち、`ready` は付けない。状態の定義と着手可能の基準は `~/.claude/skills/dev-triage/references/issue-states.md` が正本で、対象リポジトリに `docs/ISSUE_TRIAGE.md` があれば、そこに書かれた定義を優先する。スコアは `dev-triage` が本文の `## 優先度` に書く。
 
 | 起動 | モード | 人への質問 |
 | --- | --- | --- |
@@ -31,12 +31,13 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, AskUserQuestion
 REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
 gh label list --repo "$REPO_SLUG" --json name -q '.[].name' | rg -x 'needs-design|design-review|needs-human|ready'
-ls .github/workflows/design-approved.yml docs/ISSUE_TRIAGE.md
+ls .github/workflows/design-approved.yml
+ls docs/ISSUE_TRIAGE.md 2>/dev/null
 ```
 
-- ラベルの出力が 4 行で、2 つのファイルがあることを確かめる。揃っていなければ、`dev-project-setup` を先に実行するよう伝えて止まる (設計 PR の merge で `ready` が付かないまま、人が承認したつもりの issue が残るため)
+- ラベルの出力が 4 行で、`design-approved.yml` があることを確かめる。揃っていなければ、`dev-project-setup` を先に実行するよう伝えて止まる (設計 PR の merge で `ready` が付かないまま、人が承認したつもりの issue が残るため)
 - 作業ツリーが dirty なら止まる。設計は issue ごとに `origin/$DEFAULT` から切ったブランチで行う
-- 対象リポジトリの `AGENTS.md` (無ければ `CLAUDE.md`) と `docs/ISSUE_TRIAGE.md` を Read する。受け入れ基準の ID の振り方、設計書の置き場所、ドキュメントの書き方などのプロジェクトの規約は、このスキルより優先する
+- `~/.claude/skills/dev-triage/references/issue-states.md` と、対象リポジトリの `AGENTS.md` (無ければ `CLAUDE.md`) を Read する。`docs/ISSUE_TRIAGE.md` があれば、それも Read する。受け入れ基準の ID の振り方、設計書の置き場所、ドキュメントの書き方などのプロジェクトの規約は、このスキルより優先する
 
 ## 設計モード
 
@@ -50,7 +51,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,headRefNam
 - 取得件数が limit に達したら limit を上げて取り直す
 - `needs-human` / `tracking` / `事業・運営` の付いた issue は対象から外す
 - 引数で issue 番号を指定されたら、その 1 件だけにする
-- 並べ方: 本文の `## 優先度` の `スコア <数値>` の高い順。スコアが無い issue はその後ろに、番号の小さい順に並べる
+- 並べ方: 本文の `## 優先度` に `緊急枠` と書かれた issue を先頭に置き、次に `スコア <数値>` の高い順に並べる。どちらも無い issue はその後ろに、番号の小さい順に並べる (書式は `~/.claude/skills/dev-triage/references/priority.md`「issue への書き方」)
 - 本文に `Design-for: #<この issue>` の行を持つ open の PR がある issue は飛ばし、最終報告に理由を書く (設計済みで、人のレビュー待ち)
 - ブランチ `design/issue-<N>` が origin にあるのに open の PR が無い issue は、設計 PR が merge されずに close されたあと、人が `needs-design` を付け直したものとして扱う。古いブランチを消してから設計し直す (`git push origin --delete design/issue-<N>`)。このスキルは同時に 1 つだけ起動する前提で、別の起動が設計中のブランチと区別しない (定期起動の設計で同時実行を 1 にする)
 
@@ -106,11 +107,11 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
   - 子の本文の末尾に、親の `## 優先度` を写す (子は親のスコアを引き継ぐ)
   - 子のあいだの依存は、`Depends on <子の下書きの名前>` と書いておき、手順 7 で作ったときに `Depends on #<番号>` へ置き換える。依存は「依存先が merge した成果物が無いと DoD が失敗する」ときだけ書く
 
-書き直した本文は、`docs/ISSUE_TRIAGE.md`「着手可能の基準」を満たしていなければならない。人が承認したら、そのまま `ready` になるため。
+書き直した本文は、着手可能の基準 (`issue-states.md`「着手可能の基準」。`docs/ISSUE_TRIAGE.md` が基準を定めていればそちら) を満たしていなければならない。人が承認したら、そのまま `ready` になるため。
 
 ### 6. 別のコンテキストで検査する
 
-書き手は自分の書き漏れを見つけにくいので、`general-purpose` の subagent を**モデル: opus を明示**して 1 本起動し、完了を待つ。渡すもの: 変えた設計書のパス (と `git diff origin/$DEFAULT` の出力のファイル)、書き直した issue の本文 (子があれば子も) のファイル、対象リポジトリの `docs/ISSUE_TRIAGE.md`「着手可能の基準」。指示文に含める観点:
+書き手は自分の書き漏れを見つけにくいので、`general-purpose` の subagent を**モデル: opus を明示**して 1 本起動し、完了を待つ。渡すもの: 変えた設計書のパス (と `git diff origin/$DEFAULT` の出力のファイル)、書き直した issue の本文 (子があれば子も) のファイル、着手可能の基準 (`~/.claude/skills/dev-triage/references/issue-states.md`「着手可能の基準」と、対象リポジトリの `docs/ISSUE_TRIAGE.md` があればその基準)。指示文に含める観点:
 
 1. **落とし漏れ**: issue が求めることが、設計書と受け入れ基準にすべて現れているか。足した受け入れ基準が「テスト方針」の表に写っているか
 2. **矛盾**: 変えた設計書と、DESIGN.md や他の機能設計書とが食い違っていないか
@@ -162,6 +163,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 ## 関連
 
 - `dev-project-setup`: ラベル、Project、`design-approved.yml` (merge で `ready` を付ける) を用意する。このスキルの前提
+- `dev-triage`: 未整理の issue を採点して `needs-design` にする。このスキルの入力を作る。状態の定義と着手可能の基準の正本を持つ
 - `/dev-spec`: 新規開発の初期段階 (ユーザーストーリーから作る)。機能設計書と issue の型はこのスキルと共有する
 - `/dev-impl`: `ready` の issue を実装する
 - 運用の決定の記録: dotfiles の `docs/DESIGN_NOTES.md`「設計 (dev-feat-spec)」「dev-feat-spec の設計」

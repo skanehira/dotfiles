@@ -1,5 +1,5 @@
 # 設計 PR が merge されたら、本文の「Design-for: #<番号>」の issue を承認済み (ready) にする。
-# 生成元: dev-project-setup スキル。状態の定義は docs/ISSUE_TRIAGE.md「状態の管理」。
+# 生成元: dev-project-setup スキル。状態の定義は dotfiles の agents/skills/dev-triage/references/issue-states.md「状態の管理」。
 name: Design approved
 
 on:

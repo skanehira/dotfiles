@@ -1,6 +1,6 @@
 ---
 name: dev-project-setup
-description: 新しいリポジトリで本格的な開発を始める前に、AI が issue を整理・設計・実装する運用の土台を用意する。状態のラベル、非公開の GitHub Project と Status の列、ラベルと列を同期する GitHub Actions、設計 PR の merge で ready を付ける GitHub Actions、docs/ISSUE_TRIAGE.md と AGENTS.md の運用の節の雛形を作る。既存のリポジトリに足りないものを足す用途にも使え、何度実行しても結果は変わらない。「プロジェクトをセットアップして」「issue の運用を用意して」「ラベルと Project を作って」「dev-spec の前の準備をして」「このリポジトリに状態のラベルを入れて」などで起動する。/dev-spec より前に使う。
+description: 新しいリポジトリで本格的な開発を始める前に、AI が issue を整理・設計・実装する運用の土台を用意する。状態のラベル、非公開の GitHub Project と Status の列、ラベルと列を同期する GitHub Actions、設計 PR の merge で ready を付ける GitHub Actions、AGENTS.md の運用の節の雛形を作る。既存のリポジトリに足りないものを足す用途にも使え、何度実行しても結果は変わらない。「プロジェクトをセットアップして」「issue の運用を用意して」「ラベルと Project を作って」「dev-spec の前の準備をして」「このリポジトリに状態のラベルを入れて」などで起動する。/dev-spec より前に使う。
 argument-hint: "[owner/repo。省略時はカレントのリポジトリ] [--business] [--project <番号>]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 ---
@@ -9,7 +9,9 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 
 AI が issue の整理・設計・実装を進め、人は設計の確認だけを行う運用の土台を、リポジトリに用意する。
 
-この運用では、**ラベルが状態の正本**で、Project は人が状況を把握するためのものである。AI はラベルだけを読み書きし、Project の Status は GitHub Actions がラベルに合わせて動かす。状態とラベルの対応は `assets/ISSUE_TRIAGE.md`「状態の管理」の表が正本で、`assets/workflows/issue-state-sync.yml` と `scripts/setup-project.sh` はこの表に合わせてある。表を変えるときは 3 つを揃える。
+この運用では、**ラベルが状態の正本**で、Project は人が状況を把握するためのものである。AI はラベルだけを読み書きし、Project の Status は GitHub Actions がラベルに合わせて動かす。状態とラベルの対応は `~/.claude/skills/dev-triage/references/issue-states.md`「状態の管理」の表が正本で、`assets/workflows/issue-state-sync.yml`・`scripts/setup-labels.sh`・`scripts/setup-project.sh` はこの表に合わせてあり、`assets/agents-section.md` はラベルの付け替えの手順でこの表を参照する。表を変えるときはこれらを揃える。
+
+状態の定義、着手可能の基準、優先度の定義は dev-triage の references に置き、リポジトリには置かない。プロジェクト固有の定義 (緊急枠、要件の正本など) が要るリポジトリは、人が `docs/ISSUE_TRIAGE.md` を書いてよい。あれば dev-triage と dev-feat-spec がそちらを優先する。このスキルは `docs/ISSUE_TRIAGE.md` を作らない。
 
 ## 作るもの
 
@@ -20,7 +22,6 @@ AI が issue の整理・設計・実装を進め、人は設計の確認だけ�
 | 非公開の Project と Status の列 | `scripts/setup-project.sh` | 足りない列を足す。定義に無い列は、item が無ければ消し、あれば残して警告する |
 | リポジトリ変数 `PROJECT_OWNER` / `PROJECT_NUMBER` | 同上 | 上書きする |
 | `.github/workflows/issue-state-sync.yml` と `design-approved.yml` | `assets/workflows/` から複製する | 同じなら何もしない。違えば差分を見せて確認する |
-| `docs/ISSUE_TRIAGE.md` | `assets/ISSUE_TRIAGE.md` から複製する | 上書きしない。足りない節を報告する |
 | `AGENTS.md` の「issue とボードの運用」 | `assets/agents-section.md` を末尾に足す | 節があれば足さない |
 | GitHub App と Project の自動処理の設定 | 人が行う (`references/manual-steps.md`) | 済んでいるかを確かめる |
 
@@ -66,13 +67,12 @@ bash "$SKILL_DIR/scripts/setup-project.sh" "$REPO" [--business] [--project <番�
 
 ### 4. 文書の雛形を置く
 
-- `docs/ISSUE_TRIAGE.md` が無ければ `assets/ISSUE_TRIAGE.md` を複製する。あれば上書きせず、雛形の節 (「状態の管理」「着手可能の基準」「判定の手順」「優先度」) のうち無いものを報告する
 - `AGENTS.md` に「issue とボードの運用」の節が無ければ、`assets/agents-section.md` を末尾に足す。`AGENTS.md` が無く `CLAUDE.md` があれば、`CLAUDE.md` に足す
-- 雛形の `<!-- 記入: ... -->` を、分かる範囲で埋める (Project の URL、日付)。プロジェクト固有の内容 (要件の正本、中核の業務、「全利用者」の範囲など) は、残った「記入:」の一覧を完了報告に載せて、人に埋めてもらう
+- 雛形の `<!-- 記入: Project の URL -->` を埋める。埋められなければ、残った「記入:」を完了報告に載せて、人に埋めてもらう
 
 ### 5. 変更を PR にする
 
-ファイルの変更 (ワークフロー 2 本と文書) は、ブランチを切ってコミットし、PR を出す。デフォルトブランチに直接コミットしない。ラベル・Project・変数はリポジトリの外の設定なので PR には含まれない。PR の本文に「この PR の外で済ませたこと」として列挙する。
+ファイルの変更 (ワークフロー 2 本と `AGENTS.md`) は、ブランチを切ってコミットし、PR を出す。デフォルトブランチに直接コミットしない。ラベル・Project・変数はリポジトリの外の設定なので PR には含まれない。PR の本文に「この PR の外で済ませたこと」として列挙する。
 
 ### 6. 人が行う設定を案内する
 
@@ -94,5 +94,6 @@ bash "$SKILL_DIR/scripts/setup-project.sh" "$REPO" [--business] [--project <番�
 ## 関連
 
 - `/dev-spec`: このスキルの後に、新規開発の設計で使う
+- `dev-triage`: 未整理の issue を採点し、状態のラベルを付ける。状態の定義・着手可能の基準・優先度の定義の正本を持つ
 - `/dev-impl`: `ready` の issue を実装する。`in-progress` を付け、merge で close する
 - 運用の決定の記録: dotfiles の `docs/DESIGN_NOTES.md`
