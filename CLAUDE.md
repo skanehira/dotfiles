@@ -255,6 +255,7 @@ nix/
     │   ├── wezterm.nix   ← wezterm/wezterm.lua を mkOutOfStoreSymlink で live edit (extraConfig は使わない)
     │   └── zsh.nix       ← programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済) + shellAliases (drs/hms を OS 別 lib.optionalAttrs。hms の -c には configName が入る)
     └── darwin/
+        ├── agent-loop.nix ← agent-loop を 10 分おきに動かす launchd のユーザー用エージェント (Label は org.nixos.agent-loop。→「AI が issue を進める開発フロー」節)
         ├── codex.nix     ← /etc/codex/config.toml を agents/bindings/codex/config.toml へ symlink (environment.etc)
         ├── homebrew.nix  ← declarative brews / casks
         ├── sleepctl.nix  ← 蓋閉じ監視デーモン (disablesleep 中に蓋を閉じたら pmset displaysleepnow を 1 回打つ)
@@ -490,6 +491,32 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 - `/dev-impl` — 実装ループ (`ready` ラベルの open issue を依存順に自律実装、`model: opus`)
 - `/dev-impl-quick` — 軽量実装ループ (docs 不要。依頼文をタスク分解して直営 TDD → review-impl → タスク単位コミット)
 - `/workflow-review` (レビュー) / `/workflow-commit` (コミット) / `/workflow-create-pr` (PR 作成。`--draft` で Draft) / `/workflow-debate` (壁打ち)
+
+### AI が issue を進める開発フロー (agent-loop)
+
+機能追加とバグ修正は、人が issue を作り、設計を確認するだけで進む。整理・設計・実装・merge は、`agent-loop` が起動する Claude Code が行う。Deploy は人が行う。決定の経緯は `docs/DESIGN_NOTES.md` にある。
+
+```text
+人が issue を作る
+  → /dev-triage    採点して状態のラベルを付ける (needs-design / needs-human / tracking)
+  → /dev-feat-spec 設計 PR か修正方針を出して design-review にする
+  → 人が設計 PR を merge する (Actions が ready を付ける) か、修正方針を読んで ready を付ける
+  → /dev-impl      依存を守ってスコアの高い順に実装し、PR を merge して issue を close する
+```
+
+| 状態のラベル | 次に動くもの | 状態の定義の正本 |
+| --- | --- | --- |
+| なし (未整理) | `/dev-triage` | `agents/skills/dev-triage/references/issue-states.md` |
+| `needs-design` | `/dev-feat-spec` | 同上 |
+| `design-review` / `needs-human` | 人 | 同上 |
+| `ready` / `in-progress` | `/dev-impl` | 同上 |
+
+- **リポジトリの準備**: `/dev-project-setup` がラベル・Project・Actions 2 本・`AGENTS.md` の運用の節を用意する。優先度などの定義は dev-triage の references にあり、プロジェクト固有の定義があるときだけ `docs/ISSUE_TRIAGE.md` を置く
+- **agent-loop の動き**: launchd (`nix/modules/darwin/agent-loop.nix`) が 10 分おきに `agents/scripts/agent-loop.ts` を動かす。スクリプトは LLM を使わず、`~/.config/agent-loop/repos.yaml` の各リポジトリで仕事を探し、種類ごとに `claude --bg --worktree <名前> --model opus --permission-mode bypassPermissions "/dev-triage"` のように起動する。同じリポジトリの同じ種類は同時に 1 つだけで、前回の run と入力が同じなら起動しない (6 時間経てば 1 回だけ起動し直す)。仕組みの詳細はスクリプトの冒頭にある
+- **対象のリポジトリの追加**: `~/.config/agent-loop/repos.yaml` に足す (書式は `agents/scripts/agent-loop.repos.example.yaml`)。このファイルは dotfiles の外にあり、git 管理しない (業務のリポジトリの名前が入るため)。clone は Claude Code の trust を受け入れ済みであること
+- **見る**: `claude agents` (一覧)、`claude attach <名前>` (動いている画面)、`claude logs <名前>`。見回りのログは `~/.local/state/agent-loop/agent-loop.log` と `~/Library/Logs/agent-loop.log`、状態は `~/.local/state/agent-loop/state.json`
+- **止める**: 見回りを止めるのは `launchctl bootout gui/$(id -u)/org.nixos.agent-loop`、再開は `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/org.nixos.agent-loop.plist`。動いているセッションは `claude stop <id>`。1 つのリポジトリだけ外すときは `repos.yaml` から消す
+- **手で 1 回動かす**: `./agents/scripts/agent-loop.ts --dry-run` で、起動せずに判定だけを見られる
 
 ### hooks (agents/hooks/)
 

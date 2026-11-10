@@ -1,0 +1,12 @@
+# agent-loop の対象のリポジトリの見本。実際の一覧は ~/.config/agent-loop/repos.yaml に置く
+# (dotfiles は公開リポジトリで、一覧には業務のリポジトリの名前が入るため、git 管理に入れない)。
+#
+# slug:  GitHub の owner/repo
+# path:  ローカルの clone。Claude Code の trust を受け入れ済みであること (未承認だと claude --bg が起動しない)
+# kinds: 省略時は triage / design / impl のすべて。triage = /dev-triage、design = /dev-feat-spec、impl = /dev-impl
+repos:
+  - slug: acme/app
+    path: ~/dev/github.com/acme/app
+  - slug: acme/docs-site
+    path: ~/dev/github.com/acme/docs-site
+    kinds: [triage, design]
