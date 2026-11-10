@@ -78,7 +78,7 @@ export interface SessionInfo {
 }
 
 export interface Deps {
-  listUntriaged(repo: RepoConfig): Promise<number[]>;
+  listUntriaged(repo: RepoConfig): Promise<Item[]>;
   listIssues(repo: RepoConfig): Promise<RawIssue[]>;
   listOpenPrBodies(repo: RepoConfig): Promise<string[]>;
   listSessions(): Promise<SessionInfo[]>;
@@ -165,11 +165,21 @@ export function inputKey(items: Item[]): string {
   ).join(",");
 }
 
-/** 終わったとみなすセッションの状態。一覧から消えたもの (undefined) も含む */
-// blocked は人の返事を待って止まった状態。無人の run では誰も答えないので、終わったものとして扱う
+// claude agents --json の state のうち、もう進まないもの。blocked は人の返事を待って止まった状態で、
+// 無人の run では誰も答えないので終わりとして扱う。failed / stopped / error も同じ
+const END_STATES = ["done", "blocked", "failed", "stopped", "error"];
+
+/** 終わったとみなすセッションか。一覧から消えたもの (undefined) も含む */
 function isFinished(session: SessionInfo | undefined): boolean {
-  return session === undefined ||
-    ["done", "error", "blocked"].includes(session.state);
+  return session === undefined || END_STATES.includes(session.state);
+}
+
+/**
+ * 終わったセッションの片付け方。done と一覧から消えたものだけを消す。ほかの終わり方 (人の返事待ち・
+ * 失敗・人が止めた) は、人が理由を読めるよう会話と worktree を残す
+ */
+export function cleanupMode(endState: string | undefined): "remove" | "keep" {
+  return endState === undefined || endState === "done" ? "remove" : "keep";
 }
 
 function shouldLaunch(
@@ -198,44 +208,64 @@ export async function tick(
   const sessions = new Map((await deps.listSessions()).map((s) => [s.id, s]));
 
   for (const repo of repos) {
-    const rs: RepoState = next[repo.slug] ?? {};
-    rs.running ??= {};
-    rs.finished ??= {};
+    const rs: Required<RepoState> = {
+      running: next[repo.slug]?.running ?? {},
+      finished: next[repo.slug]?.finished ?? {},
+    };
     next[repo.slug] = rs;
-
-    const idle: Kind[] = [];
-    for (const kind of repo.kinds) {
-      const run = rs.running[kind];
-      if (run) {
-        if (!isFinished(sessions.get(run.sessionId))) {
-          deps.log(`${repo.slug} ${kind}: 実行中 (${run.name})`);
-          continue;
-        }
-        await deps.cleanup(repo, run, sessions.get(run.sessionId)?.state);
-        rs.finished[kind] = { inputKey: run.inputKey, finishedAt: now };
-        delete rs.running[kind];
-        deps.log(`${repo.slug} ${kind}: 終了を確認して片付けた (${run.name})`);
-      }
-      idle.push(kind);
-    }
-    if (idle.length === 0) continue;
-
-    const keys = await snapshotKeys(repo, idle, deps);
-    for (const kind of idle) {
-      const key = keys[kind] ?? "";
-      const skip = shouldLaunch(key, rs.finished[kind], now);
-      if (skip) {
-        deps.log(`${repo.slug} ${kind}: 起動しない (${skip})`);
-        continue;
-      }
-      const launched = await deps.launch(repo, kind, now);
-      rs.running[kind] = { ...launched, inputKey: key, startedAt: now };
+    // 1 つのリポジトリの失敗で見回り全体を落とさない。落とすと状態が保存されず、同じ見回りで
+    // 先に起動したセッションの記録を失って、次の見回りで重ねて起動するため
+    try {
+      await tickRepo(repo, rs, sessions, deps, now);
+    } catch (e) {
       deps.log(
-        `${repo.slug} ${kind}: 起動した (${launched.name}, 入力 ${key})`,
+        `${repo.slug}: この見回りを中断した: ${
+          e instanceof Error ? e.message : e
+        }`,
       );
     }
   }
   return next;
+}
+
+async function tickRepo(
+  repo: RepoConfig,
+  rs: Required<RepoState>,
+  sessions: Map<string, SessionInfo>,
+  deps: Deps,
+  now: number,
+): Promise<void> {
+  const idle: Kind[] = [];
+  for (const kind of repo.kinds) {
+    const run = rs.running[kind];
+    if (run) {
+      if (!isFinished(sessions.get(run.sessionId))) {
+        deps.log(`${repo.slug} ${kind}: 実行中 (${run.name})`);
+        continue;
+      }
+      await deps.cleanup(repo, run, sessions.get(run.sessionId)?.state);
+      rs.finished[kind] = { inputKey: run.inputKey, finishedAt: now };
+      delete rs.running[kind];
+      deps.log(`${repo.slug} ${kind}: 終了を確認して片付けた (${run.name})`);
+    }
+    idle.push(kind);
+  }
+  if (idle.length === 0) return;
+
+  const keys = await snapshotKeys(repo, idle, deps);
+  for (const kind of idle) {
+    const key = keys[kind] ?? "";
+    const skip = shouldLaunch(key, rs.finished[kind], now);
+    if (skip) {
+      deps.log(`${repo.slug} ${kind}: 起動しない (${skip})`);
+      continue;
+    }
+    const launched = await deps.launch(repo, kind, now);
+    rs.running[kind] = { ...launched, inputKey: key, startedAt: now };
+    deps.log(
+      `${repo.slug} ${kind}: 起動した (${launched.name}, 入力 ${key})`,
+    );
+  }
 }
 
 async function snapshotKeys(
@@ -245,13 +275,8 @@ async function snapshotKeys(
 ): Promise<Partial<Record<Kind, string>>> {
   const keys: Partial<Record<Kind, string>> = {};
   if (kinds.includes("triage")) {
-    // 未整理の issue は状態のラベルが付くと対象から外れるので、番号だけで入力を表す
-    keys.triage = inputKey(
-      (await deps.listUntriaged(repo)).map((number) => ({
-        number,
-        updatedAt: "",
-      })),
-    );
+    // 更新時刻も入力に含める。needs-human を外して戻ってきた issue は、番号が同じでも更新時刻が変わる
+    keys.triage = inputKey(await deps.listUntriaged(repo));
   }
   if (kinds.includes("design") || kinds.includes("impl")) {
     const [issues, prBodies] = await Promise.all([
@@ -308,7 +333,7 @@ async function runOk(
   return r.stdout;
 }
 
-export function parseConfig(text: string): RepoConfig[] {
+export function parseConfig(text: string, home: string): RepoConfig[] {
   const doc = parseYaml(text) as {
     repos?: { slug?: string; path?: string; kinds?: string[] }[];
   } | null;
@@ -323,7 +348,7 @@ export function parseConfig(text: string): RepoConfig[] {
         throw new Error(`repos[${i}] の kinds に知らない値: ${k}`);
       }
     }
-    return { slug: r.slug, path: r.path.replace(/^~(?=\/)/, HOME), kinds };
+    return { slug: r.slug, path: r.path.replace(/^~(?=\/)/, home), kinds };
   });
 }
 
@@ -382,8 +407,11 @@ function sessionName(repo: RepoConfig, kind: Kind, now: number): string {
 export function realDeps(logFile: string): Deps {
   return {
     async listUntriaged(repo) {
-      const out = await runOk(UNTRIAGED_SCRIPT, [repo.slug]);
-      return out.split("\n").filter((l) => l.trim() !== "").map(Number);
+      const out = await runOk(UNTRIAGED_SCRIPT, [repo.slug, "--with-updated"]);
+      return out.split("\n").filter((l) => l.trim() !== "").map((l) => {
+        const [number, updatedAt] = l.split("\t");
+        return { number: Number(number), updatedAt };
+      });
     },
     async listIssues(repo) {
       const out = await runOk("gh", [
@@ -448,10 +476,10 @@ export function realDeps(logFile: string): Deps {
     },
     async cleanup(repo, rec, endState) {
       await run("claude", ["stop", rec.sessionId]);
-      if (endState === "blocked") {
-        // 最終報告で人に質問して止まった run。rm すると質問ごと消えるので、会話と worktree を残す
+      if (cleanupMode(endState) === "keep") {
+        // 人の返事待ち・失敗・人が止めた run。rm すると理由ごと消えるので、会話と worktree を残す
         this.log(
-          `${repo.slug}: ${rec.name} は人の返事待ちで止まった。会話と worktree を残す (claude attach ${rec.sessionId})`,
+          `${repo.slug}: ${rec.name} は ${endState} で終わった。会話と worktree を残す (claude attach ${rec.sessionId})`,
         );
         return;
       }
@@ -485,7 +513,8 @@ export function realDeps(logFile: string): Deps {
           }`,
         );
       }
-      // worktree の作成で切られたブランチ (Claude Code の既定の名前) を消す。中身は origin の先頭のまま
+      // worktree の作成で切られたブランチ (Claude Code の既定の名前) を消す。run がこのブランチに
+      // push していないコミットを積んでいることもあるので、先端がどこかの remote のブランチに含まれるときだけ消す
       const branch = `worktree-${rec.name}`;
       const exists = await run("git", [
         "-C",
@@ -495,8 +524,21 @@ export function realDeps(logFile: string): Deps {
         "--quiet",
         `refs/heads/${branch}`,
       ]);
-      if (exists.code === 0) {
+      if (exists.code !== 0) return;
+      const pushed = await run("git", [
+        "-C",
+        repo.path,
+        "branch",
+        "-r",
+        "--contains",
+        `refs/heads/${branch}`,
+      ]);
+      if (pushed.code === 0 && pushed.stdout.trim() !== "") {
         await run("git", ["-C", repo.path, "branch", "-D", branch]);
+      } else {
+        this.log(
+          `${repo.slug}: ${branch} に push していないコミットがあるので、ブランチを残す`,
+        );
       }
     },
     log(message) {
@@ -557,9 +599,17 @@ async function main(): Promise<void> {
     }
     : real;
   await withLock(STATE_DIR, async () => {
+    let text: string;
+    try {
+      text = Deno.readTextFileSync(CONFIG_PATH);
+    } catch (e) {
+      // 対象の一覧を置いていないマシンでは何もしない (ログも伸ばさない)
+      if (e instanceof Deno.errors.NotFound) return;
+      throw e;
+    }
     let repos: RepoConfig[];
     try {
-      repos = parseConfig(Deno.readTextFileSync(CONFIG_PATH));
+      repos = parseConfig(text, HOME);
     } catch (e) {
       deps.log(
         `設定を読めない (${CONFIG_PATH}): ${
@@ -571,12 +621,25 @@ async function main(): Promise<void> {
     let state: State = {};
     try {
       state = JSON.parse(Deno.readTextFileSync(statePath));
-    } catch {
-      // 初回は状態のファイルが無い
+    } catch (e) {
+      if (!(e instanceof Deno.errors.NotFound)) {
+        // 壊れた状態から始めると、動いている run の記録を失って全種類を重ねて起動するので、止まる
+        deps.log(
+          `状態のファイルを読めないので見回りを止める (${statePath}): ${
+            e instanceof Error ? e.message : e
+          }`,
+        );
+        return;
+      }
     }
     const next = await tick(repos, state, deps, Date.now());
     if (!dryRun) {
-      Deno.writeTextFileSync(statePath, JSON.stringify(next, null, 2) + "\n");
+      // 書き込みの途中で落ちても壊れないよう、一時ファイルに書いてから置き換える
+      Deno.writeTextFileSync(
+        `${statePath}.tmp`,
+        JSON.stringify(next, null, 2) + "\n",
+      );
+      Deno.renameSync(`${statePath}.tmp`, statePath);
     }
   });
 }

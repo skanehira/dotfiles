@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# usage: list-untriaged.sh <owner/repo> [--excluded]
+# usage: list-untriaged.sh <owner/repo> [--excluded|--with-updated]
 #
 # 「未整理の issue」の唯一の定義。dev-triage の手順 1 と agent-loop が同じこのスクリプトを呼ぶ。
 # 条件: open の issue (PR を除く) で、作成者が OWNER / MEMBER / COLLABORATOR、状態のラベルも
@@ -7,9 +7,10 @@
 #
 # 既定の出力: 条件に当たる issue の番号を 1 行に 1 つ、番号の小さい順に出す (API の既定は新しい順)。
 # --excluded: 状態のラベルが無いのに外した件数を "author=<件数> young=<件数>" の 1 行で出す。
+# --with-updated: 既定と同じ issue を "<番号>\t<更新時刻>" で出す (agent-loop が前回の run との入力の差を見るのに使う)。
 set -euo pipefail
 
-repo=${1:?usage: list-untriaged.sh <owner/repo> [--excluded]}
+repo=${1:?usage: list-untriaged.sh <owner/repo> [--excluded|--with-updated]}
 mode=${2:-}
 
 # gh の --jq は --arg / --argjson を受け取らないので、取得だけを gh で行い、判定は jq に渡す
@@ -26,6 +27,9 @@ defs='
 case "$mode" in
 "")
   jq -r "$defs"' unlabeled | map(select(member and old_enough) | .number) | sort | .[]' <<<"$issues"
+  ;;
+--with-updated)
+  jq -r "$defs"' unlabeled | map(select(member and old_enough)) | sort_by(.number) | .[] | "\(.number)\t\(.updated_at)"' <<<"$issues"
   ;;
 --excluded)
   jq -r "$defs"' unlabeled

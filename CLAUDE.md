@@ -517,6 +517,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 - **見る**: `claude agents` (一覧)、`claude attach <名前>` (動いている画面)、`claude logs <名前>`。見回りのログは `~/.local/state/agent-loop/agent-loop.log` と `~/Library/Logs/agent-loop.log`、状態は `~/.local/state/agent-loop/state.json`
 - **止める**: 見回りを止めるのは `launchctl bootout gui/$(id -u)/org.nixos.agent-loop`、再開は `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/org.nixos.agent-loop.plist`。動いているセッションは `claude stop <id>`。1 つのリポジトリだけ外すときは `repos.yaml` から消す
 - **手で 1 回動かす**: `./agents/scripts/agent-loop.ts --dry-run` で、起動せずに判定だけを見られる
+- **残った会話と worktree**: run が `done` 以外 (`blocked` = 最終報告で人に質問して止まった、`failed`、`stopped`) で終わると、`agent-loop` は会話と worktree を残し、`<名前> は <状態> で終わった。会話と worktree を残す (claude attach <id>)` をログに書く。`done` でも、worktree に未保存の作業がある (追跡中のファイルの変更・push していない HEAD・中に残った worktree) と残す。読み終えたら、`claude rm <id>` で消す。worktree が残るときは、`git -C <clone> worktree remove --force <clone>/.claude/worktrees/<名前>` と `git -C <clone> branch -D worktree-<名前>` で片付けてから、もう一度 `claude rm <id>` する (`claude rm` は、フックが作った worktree を消さずに `kept` と出して終わるため)
 
 ### hooks (agents/hooks/)
 
