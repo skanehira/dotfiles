@@ -87,7 +87,12 @@ export interface Deps {
     kind: Kind,
     now: number,
   ): Promise<{ sessionId: string; name: string }>;
-  cleanup(repo: RepoConfig, run: RunRecord): Promise<void>;
+  /** endState はセッションの最後の状態 (一覧から消えていれば undefined) */
+  cleanup(
+    repo: RepoConfig,
+    run: RunRecord,
+    endState: string | undefined,
+  ): Promise<void>;
   log(message: string): void;
 }
 
@@ -161,9 +166,10 @@ export function inputKey(items: Item[]): string {
 }
 
 /** 終わったとみなすセッションの状態。一覧から消えたもの (undefined) も含む */
+// blocked は人の返事を待って止まった状態。無人の run では誰も答えないので、終わったものとして扱う
 function isFinished(session: SessionInfo | undefined): boolean {
-  return session === undefined || session.state === "done" ||
-    session.state === "error";
+  return session === undefined ||
+    ["done", "error", "blocked"].includes(session.state);
 }
 
 function shouldLaunch(
@@ -205,7 +211,7 @@ export async function tick(
           deps.log(`${repo.slug} ${kind}: 実行中 (${run.name})`);
           continue;
         }
-        await deps.cleanup(repo, run);
+        await deps.cleanup(repo, run, sessions.get(run.sessionId)?.state);
         rs.finished[kind] = { inputKey: run.inputKey, finishedAt: now };
         delete rs.running[kind];
         deps.log(`${repo.slug} ${kind}: 終了を確認して片付けた (${run.name})`);
@@ -440,8 +446,15 @@ export function realDeps(logFile: string): Deps {
       }
       return { sessionId: id, name };
     },
-    async cleanup(repo, rec) {
+    async cleanup(repo, rec, endState) {
       await run("claude", ["stop", rec.sessionId]);
+      if (endState === "blocked") {
+        // 最終報告で人に質問して止まった run。rm すると質問ごと消えるので、会話と worktree を残す
+        this.log(
+          `${repo.slug}: ${rec.name} は人の返事待ちで止まった。会話と worktree を残す (claude attach ${rec.sessionId})`,
+        );
+        return;
+      }
       // claude rm は、フック (WorktreeCreate) が作った worktree に管理外のファイル (node_modules など)
       // があると、worktree を消さずに "kept" と出して exit 0 で終わる。そのため worktree は自分で確かめて消す
       const wt = await findWorktree(repo.path, rec.name);
@@ -536,7 +549,7 @@ async function main(): Promise<void> {
           name: sessionName(repo, kind, now),
         });
       },
-      cleanup: (repo, rec) => {
+      cleanup: (repo, rec, _endState) => {
         console.log(`[dry-run] 片付ける: ${repo.slug} ${rec.name}`);
         return Promise.resolve();
       },

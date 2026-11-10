@@ -67,8 +67,12 @@ function fakeDeps(
         name: `al-app-${kind}-${seq}`,
       });
     },
-    cleanup: (repo, run) => {
-      calls.push(`cleanup ${repo.slug} ${run.sessionId}`);
+    cleanup: (repo, run, endState) => {
+      calls.push(
+        `cleanup ${repo.slug} ${run.sessionId}${
+          endState === "blocked" ? " keep" : ""
+        }`,
+      );
       return Promise.resolve();
     },
     log: () => {},
@@ -315,5 +319,34 @@ Deno.test("worktree は、変更が無く HEAD が push 済みで、中に別の
   assertEquals(decideWorktreeRemoval({ ...safe, nestedWorktrees: 2 }), {
     remove: false,
     reason: "中に別の worktree が 2 つ残っている",
+  });
+});
+
+Deno.test("人の返事を待って止まったセッション (blocked) は終わったものとし、会話を残す片付けにする", async () => {
+  const { deps, calls } = fakeDeps({
+    sessions: [{ id: "s9", state: "blocked" }],
+  });
+  const before: State = {
+    "acme/app": {
+      running: {
+        design: {
+          sessionId: "s9",
+          name: "x",
+          inputKey: "1@a",
+          startedAt: NOW - HOUR,
+        },
+      },
+      finished: {},
+    },
+  };
+
+  const state = await tick([REPO], before, deps, NOW);
+
+  assertEquals(calls.filter((c) => c.startsWith("cleanup")), [
+    "cleanup acme/app s9 keep",
+  ]);
+  assertEquals(state["acme/app"].finished?.design, {
+    inputKey: "1@a",
+    finishedAt: NOW,
   });
 });
