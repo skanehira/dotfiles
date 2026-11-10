@@ -73,7 +73,7 @@ gh issue view <N> --repo <REPO_SLUG> --json title,body,labels,createdAt,updatedA
 gh api "repos/<REPO_SLUG>/issues/<N>/comments" --paginate \
   --jq '.[] | select(.author_association | IN("OWNER","MEMBER","COLLABORATOR")) | {user: .user.login, created_at, body}'
 gh api "repos/<REPO_SLUG>/issues/<N>/sub_issues" --jq length
-gh api "repos/<REPO_SLUG>/issues/<N>/parent" --jq '.number'   # 親が無ければ 404
+gh api "repos/<REPO_SLUG>/issues/<N>/parent" --jq '.number'   # 親が無ければ exit 1 で、標準出力に "No parent issue found" の JSON が出る
 git ls-remote --heads origin "refs/heads/issue-<N>"   # "issue-<N>" だけだと design/issue-<N> にも当たる
 ```
 
@@ -120,7 +120,13 @@ git ls-remote --heads origin "refs/heads/issue-<N>"   # "issue-<N>" だけだと
 
 ### 5. 反映する
 
-反映の直前に、ラベルと本文を取り直す (`gh issue view <N> --repo <REPO_SLUG> --json labels,body`)。
+反映の直前に、ラベルと本文を取り直す。判定は `gh` の `--jq` で直接行う (取った JSON を `echo` に通すと、zsh が本文の `\n` を改行に変えて jq が読めなくなる)。
+
+```bash
+gh issue view <N> --repo <REPO_SLUG> --json labels --jq '[.labels[].name] | map(select(IN("needs-design","design-review","ready","in-progress","needs-human","tracking","事業・運営"))) | length'   # 0 なら未整理のまま
+gh issue view <N> --repo <REPO_SLUG> --json body --jq '.body | test("(?m)^## 優先度")'   # true なら追記しない
+gh issue view <N> --repo <REPO_SLUG> --json body --jq .body > <SCRATCH>/issue-<N>/body.md   # 追記の元にする本文
+```
 
 - 状態のラベル (または `事業・運営`) がすでに付いていれば、何も反映せずに次の issue へ進み、最終報告に「先に整理済み」と書く (人か別の起動が先に付けたため)
 - 取り直した本文に `## 優先度` がすでにあれば、追記しない
