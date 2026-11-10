@@ -162,5 +162,5 @@ issue ごとに 1 行で並べる: 番号、付けたラベル (種別と状態)
 
 - `dev-project-setup`: 状態と種別のラベル、Project と `区分` の項目、変数 `PROJECT_OWNER` / `PROJECT_NUMBER`、ラベルと列を同期する Actions を用意する。このスキルの前提
 - `/dev-feat-spec`: `needs-design` の issue を、緊急枠を先頭に、スコアの高い順に設計する
-- `/dev-impl`: `ready` の issue を依存順に実装する。スコアの高い順に着手する変更は、dotfiles の台帳「実装 (/dev-impl)」で決めてあり、まだ入っていない
+- `/dev-impl`: `ready` の issue を、依存を守って実効スコアの高い順 (緊急枠が先頭) に実装する (`dev-impl/SKILL.md`「Step 1」)
 - 運用の決定の記録: dotfiles リポジトリの `docs/DESIGN_NOTES.md`「優先度」「状態の定義」「ローカルの指揮」「整理のスキル (dev-triage)」
