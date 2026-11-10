@@ -7,7 +7,7 @@ description: >-
   人か顧客の判断が要るものは質問を書いて `needs-human` で止める。
   issue の本文は /dev-impl が読む形 (ゴール / 設計 / DoD / 非スコープ / 依存 / 優先度) に書き直すので、
   人が設計 PR を merge すると GitHub Actions が `ready` を付け、そのまま /dev-impl に渡る。
-  CI の定期実行でも手元でも動く。`/dev-feat-spec <PR 番号>` で起動すると、人の指摘を受けて設計 PR を直す。
+  定期起動 (agent-loop) でも手元でも動く。`/dev-feat-spec <PR 番号>` で起動すると、人の指摘を受けて設計 PR を直す。
   「needs-design の issue を設計して」「機能追加の設計 PR を出して」「issue の修正方針を書いて」
   「この設計 PR を直して」などで起動する。新規開発の初期段階 (ユーザーストーリーから作る) は /dev-spec を使う。
 argument-hint: "[issue 番号 | PR 番号。省略時は needs-design の全件]"
@@ -20,7 +20,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, AskUserQuestion
 
 | 起動 | モード | 人への質問 |
 | --- | --- | --- |
-| 引数なし、または issue 番号 | 設計モード (下の「設計モード」) | しない。CI の定期実行 (`claude -p`) でも止まらずに最後まで進む |
+| 引数なし、または issue 番号 | 設計モード (下の「設計モード」) | しない。定期起動 (`agent-loop` が新しい Claude Code で起動する) でも止まらずに最後まで進む |
 | PR 番号 | 直しのモード (下の「直しのモード」) | してよい。人が手元で起動し、指摘を伝える |
 
 引数の番号が issue か PR かは `gh pr view <番号>` が成功するかで判定する。
@@ -35,6 +35,7 @@ ls .github/workflows/design-approved.yml
 ls docs/ISSUE_TRIAGE.md 2>/dev/null
 ```
 
+- Claude Code の Bash ではシェルの変数が呼び出しをまたいで残らない。ここで得た `REPO_SLUG` / `DEFAULT` と、手順 2 の `SCRATCH` の値を控え、以降のコマンドの `$REPO_SLUG` / `$DEFAULT` / `$SCRATCH` はその値に置き換えて書く (変数のまま書くと、空の値で `gh` や `git` が動く)
 - ラベルの出力が 4 行で、`design-approved.yml` があることを確かめる。揃っていなければ、`dev-project-setup` を先に実行するよう伝えて止まる (設計 PR の merge で `ready` が付かないまま、人が承認したつもりの issue が残るため)
 - 作業ツリーが dirty なら止まる。設計は issue ごとに `origin/$DEFAULT` から切ったブランチで行う
 - `~/.claude/skills/dev-triage/references/issue-states.md` と、対象リポジトリの `AGENTS.md` (無ければ `CLAUDE.md`) を Read する。`docs/ISSUE_TRIAGE.md` があれば、それも Read する。受け入れ基準の ID の振り方、設計書の置き場所、ドキュメントの書き方などのプロジェクトの規約は、このスキルより優先する
@@ -144,7 +145,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 
 ### 8. 最終報告
 
-次を issue ごとに 1 行で並べる: 番号、振り分け (設計 PR / 修正方針 / 判断待ち / 飛ばした)、PR の URL か理由、検査の結果 (high・medium の件数)。CI で動いたときも同じ形で標準出力に書く。
+次を issue ごとに 1 行で並べる: 番号、振り分け (設計 PR / 修正方針 / 判断待ち / 飛ばした)、PR の URL か理由、検査の結果 (high・medium の件数)。定期起動で動いたときも同じ形で出力する。
 
 ## 直しのモード
 
