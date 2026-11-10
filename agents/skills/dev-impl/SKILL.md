@@ -422,7 +422,7 @@ STATE=$(gh pr view --repo "$REPO_SLUG" "$PR_NUM" --json state -q .state)   # MER
 
 ```bash
 git -C "$REPO_DIR" worktree remove "$WT"        # 並列実行のみ。branch -D より先に行う
-git -C "$REPO_DIR" switch "$DEFAULT"            # 直列実行のみ。チェックアウト中のブランチは消せない
+git -C "$REPO_DIR" switch "$DEFAULT" 2>/dev/null || git -C "$REPO_DIR" switch --detach "origin/$DEFAULT"   # 直列実行のみ。チェックアウト中のブランチは消せない。$REPO_DIR が worktree で、既定ブランチを別の checkout が使っていると switch できないので detach する
 git -C "$REPO_DIR" branch -D "issue-$N"
 ```
 
@@ -504,7 +504,7 @@ done
 
 **この走査は `tracking` ラベルの open issue を repo 全件対象にする。** dev-spec 由来でない手作りの `tracking` issue がある repo では、close 前に対象一覧を提示して人間に確認する。
 
-2. デフォルトブランチへ戻って `git pull` し、`docs/pending-review/` にファイルがあれば一覧と件数を出す。件数は `rg -c 'data-severity="high"' docs/pending-review/` と同 `medium` で数える (2.3 が全項目にこの属性を付けている)。あわせて `data-category="e2e"` かつ medium の項目を拾い、設計差し戻しが必要な指摘として最終報告に列挙する。`open docs/pending-review/` でディレクトリを開き (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、保留 high <h> 件・保留 medium <m> 件のチェックが必要」とユーザーに確認を促す (過去 run の未消化分も累積している)。対応要と判断した項目は新しい issue にするか直接の修正依頼で対応し、確認が済んだ issue はファイルごと削除する (手動または修正依頼。通常のコミットで反映)。**あわせて、保留にした medium を「早見表にあった種類か」で分ける。** 早見表 (`dev-impl-implementer.md`「実装後のセルフチェック」) に無かった種類は、次回の早見表に足す候補として最終報告に列挙する (同じ種類が 3 回出たら表に足す)。
+2. デフォルトブランチへ戻って `git pull` し (`git fetch origin` のあと `git switch "$DEFAULT" && git pull`。$REPO_DIR が worktree で既定ブランチを別の checkout が使っていて switch できなければ `git switch --detach "origin/$DEFAULT"`)、`docs/pending-review/` にファイルがあれば一覧と件数を出す。件数は `rg -c 'data-severity="high"' docs/pending-review/` と同 `medium` で数える (2.3 が全項目にこの属性を付けている)。あわせて `data-category="e2e"` かつ medium の項目を拾い、設計差し戻しが必要な指摘として最終報告に列挙する。`open docs/pending-review/` でディレクトリを開き (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、保留 high <h> 件・保留 medium <m> 件のチェックが必要」とユーザーに確認を促す (過去 run の未消化分も累積している)。対応要と判断した項目は新しい issue にするか直接の修正依頼で対応し、確認が済んだ issue はファイルごと削除する (手動または修正依頼。通常のコミットで反映)。**あわせて、保留にした medium を「早見表にあった種類か」で分ける。** 早見表 (`dev-impl-implementer.md`「実装後のセルフチェック」) に無かった種類は、次回の早見表に足す候補として最終報告に列挙する (同じ種類が 3 回出たら表に足す)。
 3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
    - 実装した issue と PR の一覧
    - 着手できなかった issue と、塞いでいる open の依存先 (番号とラベル)。依存が循環していた issue 群
