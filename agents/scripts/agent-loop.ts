@@ -128,6 +128,32 @@ export function classifyIssues(
   };
 }
 
+export interface WorktreeFacts {
+  dirty: boolean;
+  headPushed: boolean;
+  nestedWorktrees: number;
+}
+
+/** run が終わった worktree を消してよいか。未保存の作業を消さないことだけを見る */
+export function decideWorktreeRemoval(
+  f: WorktreeFacts,
+): { remove: boolean; reason: string } {
+  if (f.dirty) return { remove: false, reason: "追跡中のファイルに変更がある" };
+  if (!f.headPushed) {
+    return {
+      remove: false,
+      reason: "HEAD がどの remote のブランチにも含まれていない",
+    };
+  }
+  if (f.nestedWorktrees > 0) {
+    return {
+      remove: false,
+      reason: `中に別の worktree が ${f.nestedWorktrees} つ残っている`,
+    };
+  }
+  return { remove: true, reason: "未保存の作業が無い" };
+}
+
 export function inputKey(items: Item[]): string {
   return [...items].sort((a, b) => a.number - b.number).map((i) =>
     `${i.number}@${i.updatedAt}`
@@ -295,6 +321,53 @@ export function parseConfig(text: string): RepoConfig[] {
   });
 }
 
+async function worktreePaths(repoPath: string): Promise<string[]> {
+  const out = await runOk("git", [
+    "-C",
+    repoPath,
+    "worktree",
+    "list",
+    "--porcelain",
+  ]);
+  return out.split("\n").filter((l) => l.startsWith("worktree ")).map((l) =>
+    l.slice(9)
+  );
+}
+
+/** Claude Code (とリポジトリの WorktreeCreate フック) は <clone>/.claude/worktrees/<名前> に作る */
+async function findWorktree(
+  repoPath: string,
+  name: string,
+): Promise<string | null> {
+  return (await worktreePaths(repoPath)).find((p) =>
+    p.endsWith(`/.claude/worktrees/${name}`)
+  ) ??
+    null;
+}
+
+async function worktreeFacts(
+  repoPath: string,
+  wt: string,
+): Promise<WorktreeFacts> {
+  const status = await runOk("git", ["-C", wt, "status", "--porcelain"]);
+  const containing = await run("git", [
+    "-C",
+    wt,
+    "branch",
+    "-r",
+    "--contains",
+    "HEAD",
+  ]);
+  const nested =
+    (await worktreePaths(repoPath)).filter((p) => p.startsWith(`${wt}/`))
+      .length;
+  return {
+    dirty: status.trim() !== "",
+    headPushed: containing.code === 0 && containing.stdout.trim() !== "",
+    nestedWorktrees: nested,
+  };
+}
+
 function sessionName(repo: RepoConfig, kind: Kind, now: number): string {
   const stamp = new Date(now).toISOString().replace(/[-:]/g, "").slice(0, 13); // 20261111T1200
   return `al-${repo.slug.split("/")[1]}-${kind}-${stamp}`;
@@ -369,15 +442,35 @@ export function realDeps(logFile: string): Deps {
     },
     async cleanup(repo, rec) {
       await run("claude", ["stop", rec.sessionId]);
-      // rm は worktree も消す。push していないコミットがあると拒むので、そのときは残して報告する
+      // claude rm は、フック (WorktreeCreate) が作った worktree に管理外のファイル (node_modules など)
+      // があると、worktree を消さずに "kept" と出して exit 0 で終わる。そのため worktree は自分で確かめて消す
+      const wt = await findWorktree(repo.path, rec.name);
+      if (wt) {
+        const decision = decideWorktreeRemoval(
+          await worktreeFacts(repo.path, wt),
+        );
+        if (!decision.remove) {
+          this.log(
+            `${repo.slug}: ${rec.name} の worktree を残す (${decision.reason}): ${wt}`,
+          );
+          return;
+        }
+        await runOk("git", [
+          "-C",
+          repo.path,
+          "worktree",
+          "remove",
+          "--force",
+          wt,
+        ]);
+      }
       const rm = await run("claude", ["rm", rec.sessionId]);
-      if (rm.code !== 0) {
+      if (rm.code !== 0 || /\bkept\b/.test(rm.stdout + rm.stderr)) {
         this.log(
-          `${repo.slug}: claude rm ${rec.sessionId} が失敗したので worktree を残す: ${
+          `${repo.slug}: claude rm ${rec.sessionId} がセッションを消さなかった: ${
             (rm.stdout + rm.stderr).trim()
           }`,
         );
-        return;
       }
       // worktree の作成で切られたブランチ (Claude Code の既定の名前) を消す。中身は origin の先頭のまま
       const branch = `worktree-${rec.name}`;

@@ -1,6 +1,7 @@
 import { assertEquals } from "jsr:@std/assert@1";
 import {
   classifyIssues,
+  decideWorktreeRemoval,
   type Deps,
   inputKey,
   type RawIssue,
@@ -294,4 +295,25 @@ Deno.test("すべての種類が動いているリポジトリでは、GitHub �
   await tick([REPO], before, deps, NOW);
 
   assertEquals(calls, []);
+});
+
+Deno.test("worktree は、変更が無く HEAD が push 済みで、中に別の worktree が無いときだけ消す", () => {
+  const safe = { dirty: false, headPushed: true, nestedWorktrees: 0 };
+
+  assertEquals(decideWorktreeRemoval(safe), {
+    remove: true,
+    reason: "未保存の作業が無い",
+  });
+  assertEquals(decideWorktreeRemoval({ ...safe, dirty: true }), {
+    remove: false,
+    reason: "追跡中のファイルに変更がある",
+  });
+  assertEquals(decideWorktreeRemoval({ ...safe, headPushed: false }), {
+    remove: false,
+    reason: "HEAD がどの remote のブランチにも含まれていない",
+  });
+  assertEquals(decideWorktreeRemoval({ ...safe, nestedWorktrees: 2 }), {
+    remove: false,
+    reason: "中に別の worktree が 2 つ残っている",
+  });
 });
