@@ -202,3 +202,8 @@
 - [決定] 費用の上限は置かない — サブスクリプションで使うため (2026-11-11、ユーザーの判断)
 - [決定] 対象の一覧は dotfiles の外の `~/.config/agent-loop/repos.yaml` に置き、dotfiles には架空の名前の見本 (`agents/scripts/agent-loop.repos.example.yaml`) だけを置く。状態とログは `~/.local/state/agent-loop/` に置く — dotfiles は公開リポジトリで、一覧には業務のリポジトリの名前が入るため (2026-11-11、ユーザーの判断)
 - [決定] `/dev-impl` が worktree の中で動いても終われるよう、既定ブランチへ戻る手順を「switch できなければ `origin` の先頭に detach する」にした — 既定ブランチは手元の clone が checkout しているので、worktree からは switch できないため
+- [決定] セッションの終わりは、`claude agents --json --all` の state が `done` / `blocked` / `failed` / `stopped` / `error` のどれかか、一覧から消えたときとする。`done` と消えたものだけを片付けて消し、ほかは `stop` だけにして会話と worktree を残す — `blocked` (最終報告で人に質問して止まった) は 2026-11-11 の設計の run で実際に起き、終わりと認識しないとその種類が永久に「実行中」になった。消すと質問や失敗の理由ごと失うため
+- [決定] worktree は agent-loop が確かめてから消す (追跡中のファイルに変更が無く、HEAD がどこかの remote のブランチに含まれ、中に別の worktree が無いとき)。worktree の作成で切られたブランチも、先端が remote のブランチに含まれるときだけ消す — `claude rm` は、フックが作った worktree に管理外のファイルがあると、消さずに `kept` と出して exit 0 を返すため (2026-11-11 に確かめた)。未 push のコミットを消さないため
+- [決定] 1 つのリポジトリで問い合わせが失敗しても見回り全体を落とさず、そのリポジトリだけを中断してログに残す。状態のファイルは一時ファイルに書いてから置き換え、読めないときは見回りを止める — 落としたり空の状態から始めたりすると、動いている run の記録を失い、次の見回りで重ねて起動するため (2026-11-11、別のコンテキストのレビューの指摘)
+- [決定] 整理の入力は、未整理の issue の番号と更新時刻にする (`list-untriaged.sh --with-updated`) — 番号だけだと、人が `needs-human` に回答してラベルを外した issue が前回と同じ入力に見え、最長 6 時間整理されないため
+- [決定] `~/.config/agent-loop/repos.yaml` が無いマシンでは、何もせずログも書かない — nix-darwin のモジュールはすべての mac に入るため
