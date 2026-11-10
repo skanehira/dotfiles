@@ -9,6 +9,7 @@
     "CLAUDE_CODE_DISABLE_INLINE_SHELL_RM_PROMPT": "1"
   },
   "includeCoAuthoredBy": true,
+  "idleCompaction": false,
   "permissions": {
     "allow": [
       "Read",
