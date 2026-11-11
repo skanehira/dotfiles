@@ -193,7 +193,7 @@
 
 ## agent-loop (2026-11-11)
 
-- [決定] `agent-loop` は Deno のスクリプト (`agents/scripts/agent-loop.ts`) にし、nix-darwin の launchd のユーザー用エージェント (`nix/modules/darwin/agent-loop.nix`、10 分おき) が動かす。どの仕事を起動するかの判定は純粋な関数にして、`gh` と `claude` を差し替えたテストで確かめる — dotfiles の他のスクリプトと同じ形で、`deno test agents/` で検証できるため → 間隔は 1 時間に変更 (下の「agent-loop の運用の調整」)
+- [決定] `agent-loop` は Deno のスクリプト (`agents/scripts/agent-loop.ts`) にし、nix-darwin の launchd のユーザー用エージェント (`nix/modules/darwin/agent-loop.nix`、10 分おき) が動かす。どの仕事を起動するかの判定は純粋な関数にして、`gh` と `claude` を差し替えたテストで確かめる — dotfiles の他のスクリプトと同じ形で、`deno test agents/` で検証できるため → 間隔は 1 時間に変更 (下の「agent-loop の運用の調整」) → nix で配るのはやめた (下の「agent-loop を動かすマシン」)
 - [決定] Claude Code は tmux ではなく `claude --bg --name <名前> --worktree <名前>` で起動し、終わったかは `claude agents --json --all` の `state` (`done`) で知る。動いている画面は `claude attach <名前>` で見る。終わったら `claude stop` と `claude rm` で片付け、worktree の作成で切られたブランチを消す — Claude Code 自身のバックグラウンドのセッションと worktree の仕組みを使えば、tmux の窓の管理と完了の検出を自分で作らずに済み、リポジトリの WorktreeCreate フック (依存の導入) もそのまま効くため。台帳の「tmux のウィンドウ」の理由 (動いている画面を見られる) は `claude attach` で満たす
 - [棄却] tmux のウィンドウで `claude -p` を動かし、終了で完了を知る — 完了の検出とログの表示を自分で作る必要があり、worktree も自分で作ると Claude Code の信頼済みのディレクトリにならないため (`claude --bg` は信頼済みでないディレクトリでは起動しない。2026-11-11 に確かめた)
 - [決定] 起動のたびに `--model opus --permission-mode bypassPermissions` を渡す。`bypassPermissions` は worktree の中に閉じた run に限る — 省くと普段の既定のモード (plan) を引き継いで読み取りだけで終わる。許可の一覧はリポジトリごとに違い、無人の run で許可を求めると止まるため (2026-11-11、ユーザーの判断)
@@ -215,3 +215,9 @@
 - [決定] `agent-loop` から起動された run が `needs-human` のコメントを書くときは、`claude attach <id>` の行を足し、ジョブのディレクトリ (`CLAUDE_JOB_DIR`) に印のファイル `needs-human` を置く。`agent-loop` は印のあるセッションを `done` でも消さず、会話と worktree を残す — 人があとから会話を開いて判断の経緯を読めるようにするため。消すとコメントの行から開けなくなるため (2026-11-11、ユーザーの指示。`CLAUDE_JOB_DIR` と `CLAUDE_CODE_SESSION_ATTENDED=0` が `claude --bg` のセッションの環境にあることを確かめた)
 - [決定] Project のボードには issue だけを載せる。組み込みの「Auto-add to project」の絞り込みを `is:issue` にし、載っている PR のカードは外す。設計 PR や実装の PR は issue から辿る — PR は `issue-state-sync.yml` の対象外で Status が付かず、「No Status」に溜まっていたため。PR も同期すると 1 つの仕事にカードが 2 枚並ぶため (2026-11-11、ユーザーの判断。既存のリポジトリで PR のカード 213 件を外した)
 - [棄却] 組み込みの「Item added to project」で、作成時に「未整理」に入れる — 組み込みはラベルの付け替えで動けず、Actions と 2 か所で Status を書くと、ラベル付きで作った子 issue が「未整理」に上書きされるため
+
+## agent-loop を動かすマシン (2026-11-11)
+
+- [決定] agent-loop は 1 台の mac (Mac Studio) だけで動かし、nix では配らない。launchd の plist (Label `local.agent-loop`) は `agents/scripts/agent-loop-install.sh` がそのマシンにだけ書いて読み込む — nix-darwin の設定は username を key にした 1 つだけで、すべての mac に入るため。ホスト名で分ける例外は作らない (2026-11-11、ユーザーの判断)
+- [棄却] nix のモジュールのまま、`repos.yaml` の無いマシンでは何もしない — 動くマシンは限れるが、ほかの mac でも 1 時間おきに Deno が起動するため
+- [棄却] ホスト名で分けて、この mac にだけモジュールを入れる — 「ホスト名で設定を分けない」方針に例外を作るため
