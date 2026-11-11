@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-env --allow-run --allow-read --allow-write
 /**
- * agent-loop: launchd から 10 分おきに 1 回呼ばれ、対象のリポジトリごとに仕事を探して、
+ * agent-loop: launchd から 1 時間おきに 1 回呼ばれ、対象のリポジトリごとに仕事を探して、
  * 仕事の種類ごとに新しい Claude Code をバックグラウンドで起動する。LLM は使わない。
  *
  * | 種類   | 仕事があるとき                                   | 起動するスキル   |

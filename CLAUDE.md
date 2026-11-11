@@ -255,7 +255,7 @@ nix/
     │   ├── wezterm.nix   ← wezterm/wezterm.lua を mkOutOfStoreSymlink で live edit (extraConfig は使わない)
     │   └── zsh.nix       ← programs.zsh (history, completion, prompt、homebrew/linuxbrew 分岐済) + shellAliases (drs/hms を OS 別 lib.optionalAttrs。hms の -c には configName が入る)
     └── darwin/
-        ├── agent-loop.nix ← agent-loop を 10 分おきに動かす launchd のユーザー用エージェント (Label は org.nixos.agent-loop。→「AI が issue を進める開発フロー」節)
+        ├── agent-loop.nix ← agent-loop を 1 時間おきに動かす launchd のユーザー用エージェント (Label は org.nixos.agent-loop。→「AI が issue を進める開発フロー」節)
         ├── codex.nix     ← /etc/codex/config.toml を agents/bindings/codex/config.toml へ symlink (environment.etc)
         ├── homebrew.nix  ← declarative brews / casks
         ├── sleepctl.nix  ← 蓋閉じ監視デーモン (disablesleep 中に蓋を閉じたら pmset displaysleepnow を 1 回打つ)
@@ -512,7 +512,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 | `ready` / `in-progress` | `/dev-impl` | 同上 |
 
 - **リポジトリの準備**: `/dev-project-setup` がラベル・Project・Actions 2 本・`AGENTS.md` の運用の節を用意する。優先度などの定義は dev-triage の references にあり、プロジェクト固有の定義があるときだけ `docs/ISSUE_TRIAGE.md` を置く
-- **agent-loop の動き**: launchd (`nix/modules/darwin/agent-loop.nix`) が 10 分おきに `agents/scripts/agent-loop.ts` を動かす。スクリプトは LLM を使わず、`~/.config/agent-loop/repos.yaml` の各リポジトリで仕事を探し、種類ごとに `claude --bg --worktree <名前> --model opus --permission-mode bypassPermissions "/dev-triage"` のように起動する。同じリポジトリの同じ種類は同時に 1 つだけで、前回の run と入力が同じなら起動しない (6 時間経てば 1 回だけ起動し直す)。仕組みの詳細はスクリプトの冒頭にある
+- **agent-loop の動き**: launchd (`nix/modules/darwin/agent-loop.nix`) が 1 時間おきに `agents/scripts/agent-loop.ts` を動かす (急ぐときは、人がスキルを手元で起動する)。スクリプトは LLM を使わず、`~/.config/agent-loop/repos.yaml` の各リポジトリで仕事を探し、種類ごとに `claude --bg --worktree <名前> --model opus --permission-mode bypassPermissions "/dev-triage"` のように起動する。同じリポジトリの同じ種類は同時に 1 つだけで、前回の run と入力が同じなら起動しない (6 時間経てば 1 回だけ起動し直す)。仕組みの詳細はスクリプトの冒頭にある
 - **対象のリポジトリの追加**: `~/.config/agent-loop/repos.yaml` に足す (書式は `agents/scripts/agent-loop.repos.example.yaml`)。このファイルは dotfiles の外にあり、git 管理しない (業務のリポジトリの名前が入るため)。clone は Claude Code の trust を受け入れ済みであること
 - **見る**: `claude agents` (一覧)、`claude attach <名前>` (動いている画面)、`claude logs <名前>`。見回りのログは `~/.local/state/agent-loop/agent-loop.log` と `~/Library/Logs/agent-loop.log`、状態は `~/.local/state/agent-loop/state.json`
 - **止める**: 見回りを止めるのは `launchctl bootout gui/$(id -u)/org.nixos.agent-loop`、再開は `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/org.nixos.agent-loop.plist`。動いているセッションは `claude stop <id>`。1 つのリポジトリだけ外すときは `repos.yaml` から消す

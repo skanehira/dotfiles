@@ -6,7 +6,7 @@ let
   script = "${home}/dev/github.com/skanehira/dotfiles/agents/scripts/agent-loop.ts";
 in
 {
-  # agent-loop: 10 分おきに対象のリポジトリの issue を見回り、仕事の種類ごとに Claude Code を
+  # agent-loop: 1 時間おきに対象のリポジトリの issue を見回り、仕事の種類ごとに Claude Code を
   # バックグラウンドで起動する (agents/scripts/agent-loop.ts の冒頭に仕組みがある)。
   # 対象の一覧は dotfiles の外の ~/.config/agent-loop/repos.yaml に置く。無ければ何もしない。
   # Label は org.nixos.agent-loop になる
@@ -21,7 +21,7 @@ in
         "--allow-write"
         script
       ];
-      StartInterval = 600;
+      StartInterval = 3600;
       RunAtLoad = true;
       ProcessType = "Background";
       # launchd の既定の PATH には gh / claude / deno が無い
