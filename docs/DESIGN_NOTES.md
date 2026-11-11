@@ -221,3 +221,5 @@
 - [決定] agent-loop は 1 台の mac (Mac Studio) だけで動かし、nix では配らない。launchd の plist (Label `local.agent-loop`) は `agents/scripts/agent-loop-install.sh` がそのマシンにだけ書いて読み込む — nix-darwin の設定は username を key にした 1 つだけで、すべての mac に入るため。ホスト名で分ける例外は作らない (2026-11-11、ユーザーの判断)
 - [棄却] nix のモジュールのまま、`repos.yaml` の無いマシンでは何もしない — 動くマシンは限れるが、ほかの mac でも 1 時間おきに Deno が起動するため
 - [棄却] ホスト名で分けて、この mac にだけモジュールを入れる — 「ホスト名で設定を分けない」方針に例外を作るため
+- [決定] run が `done` 以外 (`blocked` / `failed` / `stopped` / `error`) で終わったときと、見回りが中断・停止したときは、`terminal-notifier` で mac に通知する。run の通知は、クリックで WezTerm を開いて `claude attach <id>` する — それまでは、ログと `claude agents` を自分で見に行かないと異常に気付けなかったため。この mac の前にいればすぐ気付ける (2026-11-11、ユーザーの判断)
+- [棄却] agent-loop 用の issue にコメントして知らせる — どこにいても気付けるが、業務のリポジトリにハーネスの事情が混ざるため
