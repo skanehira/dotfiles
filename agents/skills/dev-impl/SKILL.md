@@ -432,7 +432,7 @@ git -C "$REPO_DIR" branch -D "issue-$N"
 
 ### 2.5 完了処理
 
-merge により `Closes #N` で issue は自動 close される (されていなければ `gh issue close` する)。完了コメントを 1 件残す:
+merge により `Closes #N` で issue は自動 close される (されていなければ `gh issue close` する)。close を確かめたら、**`in-progress` を必ず外す** (`gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress`)。close しても作業中のラベルは自動では外れず、残ると閉じた issue が作業中に見え、`in-progress` で探す再開の判定 (Step 1) にも紛れるため。完了コメントを 1 件残す:
 
 ```
 実装完了 (dev-impl)
