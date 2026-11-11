@@ -94,6 +94,8 @@ export interface Deps {
     endState: string | undefined,
   ): Promise<void>;
   log(message: string): void;
+  /** 人に知らせる。attachId があれば、クリックでその run の会話を開く */
+  notify(title: string, message: string, attachId?: string): Promise<void>;
 }
 
 const MEMBERS = ["OWNER", "MEMBER", "COLLABORATOR"];
@@ -223,10 +225,11 @@ export async function tick(
     try {
       await tickRepo(repo, rs, sessions, deps, now);
     } catch (e) {
-      deps.log(
-        `${repo.slug}: この見回りを中断した: ${
-          e instanceof Error ? e.message : e
-        }`,
+      const reason = e instanceof Error ? e.message : String(e);
+      deps.log(`${repo.slug}: この見回りを中断した: ${reason}`);
+      await deps.notify(
+        `agent-loop: ${repo.slug}`,
+        `見回りを中断した: ${reason}`,
       );
     }
   }
@@ -248,7 +251,16 @@ async function tickRepo(
         deps.log(`${repo.slug} ${kind}: 実行中 (${run.name})`);
         continue;
       }
-      await deps.cleanup(repo, run, sessions.get(run.sessionId)?.state);
+      const endState = sessions.get(run.sessionId)?.state;
+      await deps.cleanup(repo, run, endState);
+      // 一覧から消えた (undefined) ものと done は正常な終わり。それ以外は人が理由を見る必要がある
+      if (endState !== undefined && endState !== "done") {
+        await deps.notify(
+          `agent-loop: ${repo.slug} ${kind}`,
+          `${run.name} が ${endState} で終わった。クリックで会話を開く`,
+          run.sessionId,
+        );
+      }
       rs.finished[kind] = { inputKey: run.inputKey, finishedAt: now };
       delete rs.running[kind];
       deps.log(`${repo.slug} ${kind}: 終了を確認して片付けた (${run.name})`);
@@ -331,6 +343,12 @@ async function pathExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** PATH からコマンドの絶対パスを探す。通知のクリックで動くシェルは PATH を持たないため、絶対パスで渡す */
+async function which(cmd: string): Promise<string | null> {
+  const r = await run("/usr/bin/which", [cmd]);
+  return r.code === 0 ? r.stdout.trim() : null;
 }
 
 async function runOk(
@@ -566,6 +584,26 @@ export function realDeps(logFile: string): Deps {
       Deno.writeTextFileSync(logFile, line, { append: true });
       console.log(line.trimEnd());
     },
+    async notify(title, message, attachId) {
+      // mac の通知センターに出す。クリックしたら WezTerm で claude attach を開く
+      const args = ["-title", title, "-message", message, "-sound", "default"];
+      if (attachId) {
+        const wezterm = await which("wezterm");
+        const claude = await which("claude");
+        if (wezterm && claude) {
+          args.push(
+            "-execute",
+            `${wezterm} start -- ${claude} attach ${attachId}`,
+          );
+        }
+      }
+      const r = await run("terminal-notifier", args);
+      if (r.code !== 0) {
+        this.log(
+          `通知を出せなかった (terminal-notifier が exit ${r.code}): ${r.stderr.trim()}`,
+        );
+      }
+    },
   };
 }
 
@@ -616,6 +654,14 @@ async function main(): Promise<void> {
         return Promise.resolve();
       },
       log: (message) => console.log(message),
+      notify: (title, message, attachId) => {
+        console.log(
+          `[dry-run] 通知する: ${title} / ${message}${
+            attachId ? ` (claude attach ${attachId})` : ""
+          }`,
+        );
+        return Promise.resolve();
+      },
     }
     : real;
   await withLock(STATE_DIR, async () => {
@@ -631,11 +677,11 @@ async function main(): Promise<void> {
     try {
       repos = parseConfig(text, HOME);
     } catch (e) {
-      deps.log(
-        `設定を読めない (${CONFIG_PATH}): ${
-          e instanceof Error ? e.message : e
-        }`,
-      );
+      const message = `設定を読めない (${CONFIG_PATH}): ${
+        e instanceof Error ? e.message : e
+      }`;
+      deps.log(message);
+      await deps.notify("agent-loop", message);
       return;
     }
     let state: State = {};
@@ -644,11 +690,12 @@ async function main(): Promise<void> {
     } catch (e) {
       if (!(e instanceof Deno.errors.NotFound)) {
         // 壊れた状態から始めると、動いている run の記録を失って全種類を重ねて起動するので、止まる
-        deps.log(
+        const message =
           `状態のファイルを読めないので見回りを止める (${statePath}): ${
             e instanceof Error ? e.message : e
-          }`,
-        );
+          }`;
+        deps.log(message);
+        await deps.notify("agent-loop", message);
         return;
       }
     }

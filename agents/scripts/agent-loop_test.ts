@@ -53,6 +53,7 @@ function fakeDeps(
 ) {
   const calls: string[] = [];
   const logs: string[] = [];
+  const notes: string[] = [];
   let seq = 0;
   const deps: Deps = {
     listUntriaged: (repo) => {
@@ -85,8 +86,12 @@ function fakeDeps(
     log: (message) => {
       logs.push(message);
     },
+    notify: (title, message, attachId) => {
+      notes.push(`${title} | ${message} | ${attachId ?? "-"}`);
+      return Promise.resolve();
+    },
   };
-  return { deps, calls, logs };
+  return { deps, calls, logs, notes };
 }
 
 function runningRecord(sessionId: string, inputKey = "k") {
@@ -437,4 +442,41 @@ Deno.test("parseConfig は slug・path の欠けと知らない kinds を拒む"
     Error,
     "repos[0] の kinds に知らない値: deploy",
   );
+});
+
+Deno.test("done 以外で終わった run は、会話を開く id 付きで人に通知し、done では通知しない", async () => {
+  const { deps, notes } = fakeDeps({
+    sessions: [
+      { id: "a", state: "failed" },
+      { id: "b", state: "done" },
+      { id: "c", state: "blocked" },
+    ],
+  });
+  const before: State = {
+    "acme/app": {
+      running: {
+        triage: runningRecord("a"),
+        design: runningRecord("b"),
+        impl: runningRecord("c"),
+      },
+      finished: {},
+    },
+  };
+
+  await tick([REPO], before, deps, NOW);
+
+  assertEquals(notes, [
+    "agent-loop: acme/app triage | a が failed で終わった。クリックで会話を開く | a",
+    "agent-loop: acme/app impl | c が blocked で終わった。クリックで会話を開く | c",
+  ]);
+});
+
+Deno.test("見回りがリポジトリで中断したときも、人に通知する", async () => {
+  const { deps, notes } = fakeDeps({ issues: new Error("gh が落ちた") });
+
+  await tick([{ ...REPO, kinds: ["design"] }], {}, deps, NOW);
+
+  assertEquals(notes, [
+    "agent-loop: acme/app | 見回りを中断した: gh が落ちた | -",
+  ]);
 });

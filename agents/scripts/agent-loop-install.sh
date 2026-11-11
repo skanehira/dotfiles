@@ -19,7 +19,7 @@ if [ "${1:-}" = "--uninstall" ]; then
 fi
 
 mkdir -p "$HOME/Library/LaunchAgents"
-# launchd の既定の PATH には gh / claude / deno が無いので、明示する
+# launchd の既定の PATH には gh / claude / deno / terminal-notifier / wezterm が無いので、明示する
 cat >"$plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -42,7 +42,7 @@ cat >"$plist" <<EOF
     <key>HOME</key>
     <string>$HOME</string>
     <key>PATH</key>
-    <string>$HOME/.local/bin:$HOME/.deno/bin:/etc/profiles/per-user/$USER/bin:/run/current-system/sw/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <string>$HOME/.local/bin:$HOME/.deno/bin:/etc/profiles/per-user/$USER/bin:/run/current-system/sw/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
   </dict>
   <key>StartInterval</key>
   <integer>3600</integer>
