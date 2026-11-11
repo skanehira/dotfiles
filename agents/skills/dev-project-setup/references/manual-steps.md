@@ -40,7 +40,15 @@ Project の画面 → 右上の「…」→ Workflows で、次を Off にする
 - Item reopened
 - Item added to project (Status を設定するもの)
 
-「Auto-add to project」は On のままでよい (issue の追加は `issue-state-sync.yml` も行うので、どちらでも動く)。
+「Auto-add to project」は On のままでよいが、絞り込みは `is:issue` にする (既定は issue と PR の両方を足す)。PR は `issue-state-sync.yml` の対象外で Status が付かず、「No Status」の列に溜まり続けるため。ボードには issue だけを載せ、設計 PR や実装の PR は issue から辿る (設計 PR を出すと、その issue が `design-review` で「設計レビュー」に入る)。issue の追加は `issue-state-sync.yml` も行うので、Auto-add を Off にしても issue は載る。
+
+既存の Project に PR が載っているときは、項目だけを外す (PR そのものには影響しない)。外す前に件数を確かめ、人に確かめてから流す:
+
+```bash
+gh project item-list <番号> --owner <持ち主> --format json --limit 1000 --jq '[.items[] | select(.content.type == "PullRequest")] | length'
+gh project item-list <番号> --owner <持ち主> --format json --limit 1000 --jq '.items[] | select(.content.type == "PullRequest") | .id' |
+  while read -r id; do gh project item-delete <番号> --owner <持ち主> --id "$id"; done
+```
 
 GraphQL には自動処理を有効・無効にする mutation が無い (`deleteProjectV2Workflow` だけがある。2026-11-10 にスキーマで確認)。
 
