@@ -223,3 +223,4 @@
 - [棄却] ホスト名で分けて、この mac にだけモジュールを入れる — 「ホスト名で設定を分けない」方針に例外を作るため
 - [決定] run が `done` 以外 (`blocked` / `failed` / `stopped` / `error`) で終わったときと、見回りが中断・停止したときは、`terminal-notifier` で mac に通知する。run の通知は、クリックで WezTerm を開いて `claude attach <id>` する — それまでは、ログと `claude agents` を自分で見に行かないと異常に気付けなかったため。この mac の前にいればすぐ気付ける (2026-11-11、ユーザーの判断)
 - [棄却] agent-loop 用の issue にコメントして知らせる — どこにいても気付けるが、業務のリポジトリにハーネスの事情が混ざるため
+- [決定] 通知のクリックで会話を開く処理 (`terminal-notifier -execute` で WezTerm を開いて `claude attach`) はやめ、通知の本文に `claude attach <id>` を載せる — この mac で試してクリックしても開かず、動かない処理を残すと説明と実際がずれるため (2026-11-11、ユーザーが確かめた)
