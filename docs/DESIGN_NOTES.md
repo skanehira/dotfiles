@@ -224,3 +224,9 @@
 - [決定] run が `done` 以外 (`blocked` / `failed` / `stopped` / `error`) で終わったときと、見回りが中断・停止したときは、`terminal-notifier` で mac に通知する。run の通知は、クリックで WezTerm を開いて `claude attach <id>` する — それまでは、ログと `claude agents` を自分で見に行かないと異常に気付けなかったため。この mac の前にいればすぐ気付ける (2026-11-11、ユーザーの判断)
 - [棄却] agent-loop 用の issue にコメントして知らせる — どこにいても気付けるが、業務のリポジトリにハーネスの事情が混ざるため
 - [決定] 通知のクリックで会話を開く処理 (`terminal-notifier -execute` で WezTerm を開いて `claude attach`) はやめ、通知の本文に `claude attach <id>` を載せる — この mac で試してクリックしても開かず、動かない処理を残すと説明と実際がずれるため (2026-11-11、ユーザーが確かめた)
+
+## 手元での起動と承認ゲート (2026-11-11)
+
+- [決定] スキル (`/dev-triage` / `/dev-feat-spec` / `/dev-impl` / `/dev-spec`) は agent-loop に依存させず、人が手元で 1 つずつ起動できるままにする。同じリポジトリで同じスキルを手元と agent-loop で同時に動かさないことは、仕組みでは防がず CLAUDE.md に書く — agent-loop は自分が起動した run しか見ないため。手元で起動するのは急ぐときだけで、そのあいだ agent-loop を止めれば足りるため (2026-11-11、ユーザーの判断)
+- [決定] agent-loop に登録したリポジトリでは、`/dev-spec` が `ready` で作った子の issue を、次の見回りで `/dev-impl` が実装し始めてよい。承認ゲートは「`/dev-spec` のフェーズ 10 で issue の作成に同意する時点」とする — 作成の前にドラフトを人が確認しているため (2026-11-11、ユーザーの判断)
+- [棄却] `/dev-spec` が子の issue を `design-review` で作り、人が `ready` を付けるまで実装させない — 作成に同意したうえで、もう一度ラベルを付ける手間が増えるため
