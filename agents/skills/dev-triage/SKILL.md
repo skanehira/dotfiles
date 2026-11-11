@@ -138,7 +138,7 @@ gh issue view <N> --repo <REPO_SLUG> --json body --jq .body > <SCRATCH>/issue-<N
 そのうえで、次の順に反映する。ラベルを最後に付けるのは、`## 優先度` が書かれる前に `dev-feat-spec` が拾わないようにするため。
 
 1. `## 優先度` を書く行なら、取り直した本文の末尾に足して `gh issue edit <N> --repo <REPO_SLUG> --body-file <ファイル>` で書き戻す。取り直した本文に足すのは、読んでから反映するまでに人が本文を直していた場合に、その変更を消さないため。緊急枠を置き換えるときは、`^## 優先度` の行から、次の `^## ` の行の直前 (無ければ末尾) までを消してから足す
-2. コメントを書く行なら、`references/templates.md` の型で 1 つだけ書く (`gh issue comment <N> --repo <REPO_SLUG> --body-file <ファイル>`)。末尾の `<!-- dev-triage -->` を必ず残す
+2. コメントを書く行なら、`references/templates.md` の型で 1 つだけ書く (`gh issue comment <N> --repo <REPO_SLUG> --body-file <ファイル>`)。末尾の `<!-- dev-triage -->` を必ず残す。`needs-human` を付けるコメントでは、`references/issue-states.md`「needs-human のコメントに載せる会話の入口」に従って会話の入口を足す
 3. 種別のラベルと状態のラベルを 1 回の `gh issue edit <N> --repo <REPO_SLUG> --add-label <a>,<b>` で付ける
 4. `PROJECT_OWNER` / `PROJECT_NUMBER` の変数があり、Project に `区分` の項目があれば (`dev-project-setup` が `--business` 付きで作る)、事業・運営の行では「事業・運営」に、それ以外では「開発」に設定する。変数か項目が無ければ設定せず、最終報告に書く。次のブロックは変数を行をまたいで使うので、**1 回の Bash の呼び出しで**実行する
 

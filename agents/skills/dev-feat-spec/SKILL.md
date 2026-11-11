@@ -141,7 +141,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 
 **修正方針のとき**: 書き直した本文を issue に反映し、ラベルを `needs-design` から `design-review` に付け替える。人が本文を読んで `ready` を付ける。
 
-**止める (判断待ち、または検査で high が残ったとき)**: `references/templates.md`「判断を求めるコメント」で issue にコメントし、`needs-human` を足す。`needs-design` は外さない (人が回答して `needs-human` を外せば、次の起動で設計し直すため)。ブランチを作っていたら消す。
+**止める (判断待ち、または検査で high が残ったとき)**: `references/templates.md`「判断を求めるコメント」で issue にコメントし、`needs-human` を足す。コメントには `~/.claude/skills/dev-triage/references/issue-states.md`「needs-human のコメントに載せる会話の入口」に従って会話の入口を足す。`needs-design` は外さない (人が回答して `needs-human` を外せば、次の起動で設計し直すため)。ブランチを作っていたら消す。
 
 ### 8. 最終報告
 

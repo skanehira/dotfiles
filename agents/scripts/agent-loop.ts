@@ -176,9 +176,14 @@ function isFinished(session: SessionInfo | undefined): boolean {
 
 /**
  * 終わったセッションの片付け方。done と一覧から消えたものだけを消す。ほかの終わり方 (人の返事待ち・
- * 失敗・人が止めた) は、人が理由を読めるよう会話と worktree を残す
+ * 失敗・人が止めた) と、人の判断を求めた run (heldForHuman) は、人があとで claude attach で読めるよう
+ * 会話と worktree を残す
  */
-export function cleanupMode(endState: string | undefined): "remove" | "keep" {
+export function cleanupMode(
+  endState: string | undefined,
+  heldForHuman: boolean,
+): "remove" | "keep" {
+  if (heldForHuman) return "keep";
   return endState === undefined || endState === "done" ? "remove" : "keep";
 }
 
@@ -317,6 +322,15 @@ async function run(
     stdout: dec.decode(out.stdout),
     stderr: dec.decode(out.stderr),
   };
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await Deno.stat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function runOk(
@@ -476,10 +490,16 @@ export function realDeps(logFile: string): Deps {
     },
     async cleanup(repo, rec, endState) {
       await run("claude", ["stop", rec.sessionId]);
-      if (cleanupMode(endState) === "keep") {
-        // 人の返事待ち・失敗・人が止めた run。rm すると理由ごと消えるので、会話と worktree を残す
+      // スキルは needs-human のコメントに claude attach <id> を載せたとき、ジョブのディレクトリに印を置く
+      const heldForHuman = await pathExists(
+        `${HOME}/.claude/jobs/${rec.sessionId}/needs-human`,
+      );
+      if (cleanupMode(endState, heldForHuman) === "keep") {
+        // rm すると、理由やコメントから開く会話ごと消えるので、会話と worktree を残す
         this.log(
-          `${repo.slug}: ${rec.name} は ${endState} で終わった。会話と worktree を残す (claude attach ${rec.sessionId})`,
+          `${repo.slug}: ${rec.name} は ${
+            heldForHuman ? "人の判断を求めて" : endState
+          } で終わった。会話と worktree を残す (claude attach ${rec.sessionId})`,
         );
         return;
       }

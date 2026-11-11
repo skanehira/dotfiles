@@ -477,6 +477,8 @@ gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label ne
 gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。未 merge の保留 high / medium と、設計差し戻しが必要な指摘があればその summary も列挙 (pending-review のファイルが merge されていないため)。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置><!-- dev-impl -->"
 ```
 
+駐車のコメントには、`~/.claude/skills/dev-triage/references/issue-states.md`「needs-human のコメントに載せる会話の入口」に従って会話の入口を足す (`<!-- dev-impl -->` の前)。
+
 ブランチと open PR は merge せず残す (人間が差分を確認でき、再開時に再利用できる)。**その issue に依存しない次の issue へ進む。**
 
 **run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する — このときも Step 3 の手順 2 (docs/pending-review/ の open と確認促し) を実行する (merge 済み issue の保留項目を停止で失わない)。

@@ -134,12 +134,18 @@ Deno.test("inputKey は番号の順に並べ、空なら空文字を返す", () 
 });
 
 Deno.test("cleanupMode は done と一覧から消えたものだけを消し、ほかの終わり方は会話と worktree を残す", () => {
-  assertEquals(cleanupMode("done"), "remove");
-  assertEquals(cleanupMode(undefined), "remove");
-  assertEquals(cleanupMode("blocked"), "keep");
-  assertEquals(cleanupMode("failed"), "keep");
-  assertEquals(cleanupMode("stopped"), "keep");
-  assertEquals(cleanupMode("error"), "keep");
+  assertEquals(cleanupMode("done", false), "remove");
+  assertEquals(cleanupMode(undefined, false), "remove");
+  assertEquals(cleanupMode("blocked", false), "keep");
+  assertEquals(cleanupMode("failed", false), "keep");
+  assertEquals(cleanupMode("stopped", false), "keep");
+  assertEquals(cleanupMode("error", false), "keep");
+});
+
+Deno.test("cleanupMode は、人の判断を求めた run なら done でも会話と worktree を残す", () => {
+  // needs-human のコメントに claude attach <id> を載せた run を消すと、コメントから開けなくなる
+  assertEquals(cleanupMode("done", true), "keep");
+  assertEquals(cleanupMode(undefined, true), "keep");
 });
 
 Deno.test("仕事のある種類だけを起動し、起動した記録を状態に残す", async () => {
