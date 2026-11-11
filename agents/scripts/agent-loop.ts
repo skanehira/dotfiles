@@ -94,8 +94,8 @@ export interface Deps {
     endState: string | undefined,
   ): Promise<void>;
   log(message: string): void;
-  /** 人に知らせる。attachId があれば、クリックでその run の会話を開く */
-  notify(title: string, message: string, attachId?: string): Promise<void>;
+  /** 人に知らせる (mac の通知センター) */
+  notify(title: string, message: string): Promise<void>;
 }
 
 const MEMBERS = ["OWNER", "MEMBER", "COLLABORATOR"];
@@ -257,8 +257,7 @@ async function tickRepo(
       if (endState !== undefined && endState !== "done") {
         await deps.notify(
           `agent-loop: ${repo.slug} ${kind}`,
-          `${run.name} が ${endState} で終わった。クリックで会話を開く`,
-          run.sessionId,
+          `${run.name} が ${endState} で終わった。会話は claude attach ${run.sessionId} で開ける`,
         );
       }
       rs.finished[kind] = { inputKey: run.inputKey, finishedAt: now };
@@ -343,12 +342,6 @@ async function pathExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/** PATH からコマンドの絶対パスを探す。通知のクリックで動くシェルは PATH を持たないため、絶対パスで渡す */
-async function which(cmd: string): Promise<string | null> {
-  const r = await run("/usr/bin/which", [cmd]);
-  return r.code === 0 ? r.stdout.trim() : null;
 }
 
 async function runOk(
@@ -584,20 +577,17 @@ export function realDeps(logFile: string): Deps {
       Deno.writeTextFileSync(logFile, line, { append: true });
       console.log(line.trimEnd());
     },
-    async notify(title, message, attachId) {
-      // mac の通知センターに出す。クリックしたら WezTerm で claude attach を開く
-      const args = ["-title", title, "-message", message, "-sound", "default"];
-      if (attachId) {
-        const wezterm = await which("wezterm");
-        const claude = await which("claude");
-        if (wezterm && claude) {
-          args.push(
-            "-execute",
-            `${wezterm} start -- ${claude} attach ${attachId}`,
-          );
-        }
-      }
-      const r = await run("terminal-notifier", args);
+    async notify(title, message) {
+      // mac の通知センターに出す。クリックで会話を開く (-execute) は、この mac で試して動かなかったので使わず、
+      // 開くコマンドを本文に載せる
+      const r = await run("terminal-notifier", [
+        "-title",
+        title,
+        "-message",
+        message,
+        "-sound",
+        "default",
+      ]);
       if (r.code !== 0) {
         this.log(
           `通知を出せなかった (terminal-notifier が exit ${r.code}): ${r.stderr.trim()}`,
@@ -654,12 +644,8 @@ async function main(): Promise<void> {
         return Promise.resolve();
       },
       log: (message) => console.log(message),
-      notify: (title, message, attachId) => {
-        console.log(
-          `[dry-run] 通知する: ${title} / ${message}${
-            attachId ? ` (claude attach ${attachId})` : ""
-          }`,
-        );
+      notify: (title, message) => {
+        console.log(`[dry-run] 通知する: ${title} / ${message}`);
         return Promise.resolve();
       },
     }

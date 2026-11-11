@@ -86,8 +86,8 @@ function fakeDeps(
     log: (message) => {
       logs.push(message);
     },
-    notify: (title, message, attachId) => {
-      notes.push(`${title} | ${message} | ${attachId ?? "-"}`);
+    notify: (title, message) => {
+      notes.push(`${title} | ${message}`);
       return Promise.resolve();
     },
   };
@@ -444,7 +444,7 @@ Deno.test("parseConfig は slug・path の欠けと知らない kinds を拒む"
   );
 });
 
-Deno.test("done 以外で終わった run は、会話を開く id 付きで人に通知し、done では通知しない", async () => {
+Deno.test("done 以外で終わった run は、会話を開くコマンド付きで人に通知し、done では通知しない", async () => {
   const { deps, notes } = fakeDeps({
     sessions: [
       { id: "a", state: "failed" },
@@ -466,8 +466,8 @@ Deno.test("done 以外で終わった run は、会話を開く id 付きで人�
   await tick([REPO], before, deps, NOW);
 
   assertEquals(notes, [
-    "agent-loop: acme/app triage | a が failed で終わった。クリックで会話を開く | a",
-    "agent-loop: acme/app impl | c が blocked で終わった。クリックで会話を開く | c",
+    "agent-loop: acme/app triage | a が failed で終わった。会話は claude attach a で開ける",
+    "agent-loop: acme/app impl | c が blocked で終わった。会話は claude attach c で開ける",
   ]);
 });
 
@@ -477,6 +477,6 @@ Deno.test("見回りがリポジトリで中断したときも、人に通知す
   await tick([{ ...REPO, kinds: ["design"] }], {}, deps, NOW);
 
   assertEquals(notes, [
-    "agent-loop: acme/app | 見回りを中断した: gh が落ちた | -",
+    "agent-loop: acme/app | 見回りを中断した: gh が落ちた",
   ]);
 });
