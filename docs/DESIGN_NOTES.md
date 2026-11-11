@@ -213,3 +213,5 @@
 - [決定] 見回りの間隔は 1 時間にする — 急ぐときは人がスキルを手元で起動すれば足り、10 分おきに見回る理由が無いため (2026-11-11、ユーザーの判断)
 - [決定] `/dev-impl` は、issue の close を確かめたら `in-progress` を必ず外す — close しても作業中のラベルは自動で外れず、閉じた issue が作業中に見えるため (2026-11-11、ユーザーの指示)
 - [決定] `agent-loop` から起動された run が `needs-human` のコメントを書くときは、`claude attach <id>` の行を足し、ジョブのディレクトリ (`CLAUDE_JOB_DIR`) に印のファイル `needs-human` を置く。`agent-loop` は印のあるセッションを `done` でも消さず、会話と worktree を残す — 人があとから会話を開いて判断の経緯を読めるようにするため。消すとコメントの行から開けなくなるため (2026-11-11、ユーザーの指示。`CLAUDE_JOB_DIR` と `CLAUDE_CODE_SESSION_ATTENDED=0` が `claude --bg` のセッションの環境にあることを確かめた)
+- [決定] Project のボードには issue だけを載せる。組み込みの「Auto-add to project」の絞り込みを `is:issue` にし、載っている PR のカードは外す。設計 PR や実装の PR は issue から辿る — PR は `issue-state-sync.yml` の対象外で Status が付かず、「No Status」に溜まっていたため。PR も同期すると 1 つの仕事にカードが 2 枚並ぶため (2026-11-11、ユーザーの判断。既存のリポジトリで PR のカード 213 件を外した)
+- [棄却] 組み込みの「Item added to project」で、作成時に「未整理」に入れる — 組み込みはラベルの付け替えで動けず、Actions と 2 か所で Status を書くと、ラベル付きで作った子 issue が「未整理」に上書きされるため
