@@ -15,6 +15,8 @@
 | **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装                                                | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-impl` を自分で起動する                                                                                                                                                                                                                                                                                                           |
 | **S: バグ修正・typo**                            | 直接依頼                                                                | スキル不要。グローバル指示 (CLAUDE.md) の「実装時」の rules を自分で Read して守る                                                                                                                                                                                                                                                                                                                                |
 
+**既存のプロダクトで issue から進める機能追加とバグ修正**は、規模ではなく issue の状態のラベルで入口が決まる。未整理は `/dev-triage`、`needs-design` は `/dev-feat-spec`、`ready` は `/dev-impl` で、設計 PR への指摘は `/dev-feat-spec <PR 番号>` で直させる。これらは dotfiles の `agent-loop` が 1 時間おきに起動するが、どれも agent-loop に依存せず、人が手元で 1 つずつ起動できる (issue 番号を渡すとその 1 件だけを扱う)。L の `/dev-spec` → `/dev-impl` も agent-loop の外で動く。全体の構成と、手元で起動するときの注意 (同じスキルを agent-loop と同時に動かさない、`/dev-spec` の子の issue は agent-loop が次の見回りで実装を始める) は dotfiles の `CLAUDE.md`「AI が issue を進める開発フロー (agent-loop)」にある。
+
 横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-pr` (PR 作成。`--draft` で Draft) / `/workflow-design-notes` (設計の壁打ち台帳 → dev-spec 互換 docs へ落とし込み)。
 
 ```
@@ -32,8 +34,9 @@
 │  決めが要る点はフェーズ 6・7 の中でその場で質問する            │
 │  クイックモード: 6〜10 のみ (不確実性があれば 4〜5 を通す)     │
 └──────────────────────────┬─────────────────────────────────────┘
-                           │ 人間が issue をざっと読んで GO
-                           │ (= /dev-impl を起動。自動遷移しない)
+                           │ 人間が issue をざっと読んで GO (= /dev-impl を起動)
+                           │ agent-loop に登録したリポジトリでは、
+                           │ 次の見回り (1 時間以内) で agent-loop が起動する
 ┌──────────────────────────▼─────────────────────────────────────┐
 │  /dev-impl — 実装ループ (model: opus、直接起動で切り替わる)    │
 │                                                                │

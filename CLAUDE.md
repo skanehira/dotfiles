@@ -485,9 +485,11 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 /dev-spec (設計ループ) → 承認ゲート (人間が起動) → /dev-impl (実装ループ)
 ```
 
+どのスキルも人が手元で起動する。`agent-loop` に登録したリポジトリでは、`/dev-spec` が作った `ready` の子の issue を次の見回りで `/dev-impl` が実装し始めるので、承認ゲートは「issue の作成に同意する時点」になる (→「AI が issue を進める開発フロー (agent-loop)」)。
+
 詳細は `agents/skills/README.md` を参照 (タスク規模別の入口・モデル方針を含む)。主要スキル:
 - `/dev-spec` — 設計ループ (ユーザーストーリー → ... → PoC 検証 → `docs/design/DESIGN.md` 1 枚 + `docs/design/features/` → GitHub issue をユースケース単位の親子 2 階層で生成 → 人間が確認)
-- `/dev-impl` — 実装ループ (`ready` ラベルの open issue を依存順に自律実装、`model: opus`)
+- `/dev-impl` — 実装ループ (`ready` ラベルの open issue を、依存を守ってスコアの高い順に自律実装、`model: opus`)
 - `/dev-impl-quick` — 軽量実装ループ (docs 不要。依頼文をタスク分解して直営 TDD → review-impl → タスク単位コミット)
 - `/workflow-review` (レビュー) / `/workflow-commit` (コミット) / `/workflow-create-pr` (PR 作成。`--draft` で Draft) / `/workflow-debate` (壁打ち)
 
@@ -495,12 +497,52 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 
 機能追加とバグ修正は、人が issue を作り、設計を確認するだけで進む。整理・設計・実装・merge は、`agent-loop` が起動する Claude Code が行う。Deploy は人が行う。決定の経緯は `docs/DESIGN_NOTES.md` にある。
 
+全体の構成は次のとおり。状態の正本は issue のラベルで、スキルはラベルだけを読み書きする。Project のボードは人が見るためのもので、Actions がラベルに合わせて動かす。
+
 ```text
-人が issue を作る
-  → /dev-triage    採点して状態のラベルを付ける (needs-design / needs-human / tracking)
-  → /dev-feat-spec 設計 PR か修正方針を出して design-review にする
-  → 人が設計 PR を merge する (Actions が ready を付ける) か、修正方針を読んで ready を付ける
-  → /dev-impl      依存を守ってスコアの高い順に実装し、PR を merge して issue を close する
+[このマシン] agent-loop を入れた mac 1 台
+│
+├─ launchd (local.agent-loop) が 1 時間おきに agents/scripts/agent-loop.ts を動かす (LLM を使わない)
+│    1. ~/.config/agent-loop/repos.yaml のリポジトリごとに、gh で仕事を探す
+│         triage: 状態のラベルが無い issue           → /dev-triage
+│         design: needs-design で設計 PR が無い issue → /dev-feat-spec
+│         impl  : ready か in-progress の issue       → /dev-impl
+│    2. 種類ごとに 1 つだけ起動する (前回と入力が同じなら起動しない。6 時間経てば 1 回だけ起動し直す)
+│         claude --bg --worktree <名前> --model opus --permission-mode bypassPermissions "/dev-…"
+│    3. 終わった run を片付ける
+│         done             → 会話と worktree を消す (worktree に未保存の作業があれば残す)
+│         それ以外か、needs-human の印がある → 残す (claude attach <id> で開ける)
+│    4. done 以外の終わり方と、見回りの中断を通知センターに出す (terminal-notifier)
+│
+└─ Claude Code のバックグラウンド run (<clone>/.claude/worktrees/<名前> で動く)
+     /dev-triage    採点して ## 優先度 を書き、状態のラベルを付ける
+     /dev-feat-spec 設計 PR か修正方針を出す
+     /dev-impl      実装して PR を merge し、issue を close する (worktree で最大 3 並列)
+     人の判断が要るときは needs-human を付け、コメントに claude attach <id> を載せる
+          │
+          │ gh でラベル・コメント・PR を読み書きする
+          ▼
+[GitHub] 対象のリポジトリ
+│
+├─ issue のラベル (状態の正本)
+│    なし (未整理) ── /dev-triage ──┬─▶ tracking     (親。子が全部閉じたら /dev-impl が close)
+│                                   ├─▶ needs-human  (人が答え、コメントに書かれた状態へ戻す)
+│                                   └─▶ needs-design
+│    needs-design ── /dev-feat-spec ──▶ design-review (判断が要るものは needs-human)
+│    design-review ── 人が設計 PR を merge (Actions が ready を付ける)
+│                     か、修正方針を読んで人が ready を付ける ──▶ ready
+│    ready ── /dev-impl ──▶ in-progress ──▶ close
+│
+├─ Actions (/dev-project-setup が置く)
+│    issue-state-sync.yml : ラベルに合わせて Project の Status を動かす。close で「完了」
+│    design-approved.yml  : Design-for: #N の設計 PR が merge されたら、その issue に ready を付ける
+│
+└─ Project (非公開のボード。issue だけを載せる。人が状況を見るためのもの)
+
+[人]
+  issue を作る / needs-human に答える / 設計 PR を merge する / Deploy する
+  見る: 通知、claude agents、claude attach <id>、issue のコメント、Project のボード
+  急ぐときや agent-loop の外で使うときは、スキルを手元で起動する (下の「手元で起動する」)
 ```
 
 | 状態のラベル | 次に動くもの | 状態の定義の正本 |
@@ -516,6 +558,11 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 - **知らせ**: run が `done` 以外 (`blocked` / `failed` / `stopped` / `error`) で終わったときと、見回りが中断・停止したときは、mac の通知センターに通知が出る (`terminal-notifier`)。run の通知の本文に、その run の会話を開くコマンド (`claude attach <id>`) が載る。通知が出ないときは、システム設定 → 通知 で terminal-notifier を許可する (通知を出せなかったことは、見回りのログに残る)
 - **見る**: `claude agents` (一覧)、`claude attach <名前>` (動いている画面)、`claude logs <名前>`。見回りのログは `~/.local/state/agent-loop/agent-loop.log` と `~/Library/Logs/agent-loop.log`、状態は `~/.local/state/agent-loop/state.json`
 - **入れる・止める**: agent-loop は動かすマシンを 1 台に限るので、nix では配らない。入れるのは `./agents/scripts/agent-loop-install.sh` (plist を書いて読み込む。何度実行してもよい)、外すのは `./agents/scripts/agent-loop-install.sh --uninstall`。一時的に止めるのは `launchctl bootout gui/$(id -u)/local.agent-loop`、再開は `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.agent-loop.plist`。動いているセッションは `claude stop <id>`。1 つのリポジトリだけ外すときは `repos.yaml` から消す
+- **手元で起動する**: スキルは agent-loop に依存しないので、対象のリポジトリの clone で人が 1 つずつ起動できる。agent-loop は定期的に起動する役を代わるだけで、ラベルと Actions (`/dev-project-setup` が置く) があれば、agent-loop に登録していないリポジトリでも同じ流れで進む
+  - `/dev-triage [issue 番号]` / `/dev-feat-spec [issue 番号]` / `/dev-impl [issue 番号]`: 次の見回りを待たずに進めたいとき。番号を渡すと、その issue だけを扱う (`/dev-impl` は未完了の依存先も含める)
+  - `/dev-feat-spec <PR 番号>`: 設計 PR への指摘を伝えて直させる。人が手元で起動するときだけ使い、agent-loop は起動しない
+  - `/dev-spec`: 新規プロダクトや大きい機能を、ユーザーストーリーから対話で設計して issue に落とす。agent-loop は起動しない。作った子の issue には `ready` が付くので、agent-loop に登録したリポジトリでは次の見回り (1 時間以内) で `/dev-impl` が実装を始める。issue を読んでから実装させたいときは、それまで agent-loop を止めておく
+  - 同時に動かさない: agent-loop は自分が起動した run しか見ない。同じリポジトリで同じスキルを手元と agent-loop で同時に動かすと、同じ issue を取り合う (たとえば `/dev-impl` は `in-progress` の issue を、中断からの再開として引き継ぐ)。手元で起動する前に `claude agents` で同じリポジトリの run が動いていないかを確かめ、動かしている間は agent-loop を一時的に止める (上の「入れる・止める」)
 - **手で 1 回動かす**: `./agents/scripts/agent-loop.ts --dry-run` で、起動せずに判定だけを見られる
 - **残った会話と worktree**: run が `done` 以外 (`blocked` = 最終報告で人に質問して止まった、`failed`、`stopped`) で終わったときと、run が `needs-human` のコメントに `claude attach <id>` を載せたとき (`~/.claude/jobs/<id>/needs-human` の印がある) は、`agent-loop` は会話と worktree を残し、`<名前> は <状態> で終わった。会話と worktree を残す (claude attach <id>)` をログに書く。`done` でも、worktree に未保存の作業がある (追跡中のファイルの変更・push していない HEAD・中に残った worktree) と残す。読み終えたら、`claude rm <id>` で消す。worktree が残るときは、`git -C <clone> worktree remove --force <clone>/.claude/worktrees/<名前>` と `git -C <clone> branch -D worktree-<名前>` で片付けてから、もう一度 `claude rm <id>` する (`claude rm` は、フックが作った worktree を消さずに `kept` と出して終わるため)
 
