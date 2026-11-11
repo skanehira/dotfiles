@@ -193,7 +193,7 @@
 
 ## agent-loop (2026-11-11)
 
-- [決定] `agent-loop` は Deno のスクリプト (`agents/scripts/agent-loop.ts`) にし、nix-darwin の launchd のユーザー用エージェント (`nix/modules/darwin/agent-loop.nix`、10 分おき) が動かす。どの仕事を起動するかの判定は純粋な関数にして、`gh` と `claude` を差し替えたテストで確かめる — dotfiles の他のスクリプトと同じ形で、`deno test agents/` で検証できるため
+- [決定] `agent-loop` は Deno のスクリプト (`agents/scripts/agent-loop.ts`) にし、nix-darwin の launchd のユーザー用エージェント (`nix/modules/darwin/agent-loop.nix`、10 分おき) が動かす。どの仕事を起動するかの判定は純粋な関数にして、`gh` と `claude` を差し替えたテストで確かめる — dotfiles の他のスクリプトと同じ形で、`deno test agents/` で検証できるため → 間隔は 1 時間に変更 (下の「agent-loop の運用の調整」)
 - [決定] Claude Code は tmux ではなく `claude --bg --name <名前> --worktree <名前>` で起動し、終わったかは `claude agents --json --all` の `state` (`done`) で知る。動いている画面は `claude attach <名前>` で見る。終わったら `claude stop` と `claude rm` で片付け、worktree の作成で切られたブランチを消す — Claude Code 自身のバックグラウンドのセッションと worktree の仕組みを使えば、tmux の窓の管理と完了の検出を自分で作らずに済み、リポジトリの WorktreeCreate フック (依存の導入) もそのまま効くため。台帳の「tmux のウィンドウ」の理由 (動いている画面を見られる) は `claude attach` で満たす
 - [棄却] tmux のウィンドウで `claude -p` を動かし、終了で完了を知る — 完了の検出とログの表示を自分で作る必要があり、worktree も自分で作ると Claude Code の信頼済みのディレクトリにならないため (`claude --bg` は信頼済みでないディレクトリでは起動しない。2026-11-11 に確かめた)
 - [決定] 起動のたびに `--model opus --permission-mode bypassPermissions` を渡す。`bypassPermissions` は worktree の中に閉じた run に限る — 省くと普段の既定のモード (plan) を引き継いで読み取りだけで終わる。許可の一覧はリポジトリごとに違い、無人の run で許可を求めると止まるため (2026-11-11、ユーザーの判断)
@@ -207,3 +207,9 @@
 - [決定] 1 つのリポジトリで問い合わせが失敗しても見回り全体を落とさず、そのリポジトリだけを中断してログに残す。状態のファイルは一時ファイルに書いてから置き換え、読めないときは見回りを止める — 落としたり空の状態から始めたりすると、動いている run の記録を失い、次の見回りで重ねて起動するため (2026-11-11、別のコンテキストのレビューの指摘)
 - [決定] 整理の入力は、未整理の issue の番号と更新時刻にする (`list-untriaged.sh --with-updated`) — 番号だけだと、人が `needs-human` に回答してラベルを外した issue が前回と同じ入力に見え、最長 6 時間整理されないため
 - [決定] `~/.config/agent-loop/repos.yaml` が無いマシンでは、何もせずログも書かない — nix-darwin のモジュールはすべての mac に入るため
+
+## agent-loop の運用の調整 (2026-11-11)
+
+- [決定] 見回りの間隔は 1 時間にする — 急ぐときは人がスキルを手元で起動すれば足り、10 分おきに見回る理由が無いため (2026-11-11、ユーザーの判断)
+- [決定] `/dev-impl` は、issue の close を確かめたら `in-progress` を必ず外す — close しても作業中のラベルは自動で外れず、閉じた issue が作業中に見えるため (2026-11-11、ユーザーの指示)
+- [決定] `agent-loop` から起動された run が `needs-human` のコメントを書くときは、`claude attach <id>` の行を足し、ジョブのディレクトリ (`CLAUDE_JOB_DIR`) に印のファイル `needs-human` を置く。`agent-loop` は印のあるセッションを `done` でも消さず、会話と worktree を残す — 人があとから会話を開いて判断の経緯を読めるようにするため。消すとコメントの行から開けなくなるため (2026-11-11、ユーザーの指示。`CLAUDE_JOB_DIR` と `CLAUDE_CODE_SESSION_ATTENDED=0` が `claude --bg` のセッションの環境にあることを確かめた)
