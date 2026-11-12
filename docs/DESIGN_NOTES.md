@@ -230,3 +230,9 @@
 - [決定] スキル (`/dev-triage` / `/dev-feat-spec` / `/dev-impl` / `/dev-spec`) は agent-loop に依存させず、人が手元で 1 つずつ起動できるままにする。同じリポジトリで同じスキルを手元と agent-loop で同時に動かさないことは、仕組みでは防がず CLAUDE.md に書く — agent-loop は自分が起動した run しか見ないため。手元で起動するのは急ぐときだけで、そのあいだ agent-loop を止めれば足りるため (2026-11-11、ユーザーの判断)
 - [決定] agent-loop に登録したリポジトリでは、`/dev-spec` が `ready` で作った子の issue を、次の見回りで `/dev-impl` が実装し始めてよい。承認ゲートは「`/dev-spec` のフェーズ 10 で issue の作成に同意する時点」とする — 作成の前にドラフトを人が確認しているため (2026-11-11、ユーザーの判断)
 - [棄却] `/dev-spec` が子の issue を `design-review` で作り、人が `ready` を付けるまで実装させない — 作成に同意したうえで、もう一度ラベルを付ける手間が増えるため
+
+## PR と issue の紐づけ (2026-11-12)
+
+- [決定] issue に対応する実装の PR は、本文の先頭行の `Closes #<N>` で issue の Development に必ず紐づける。`workflow-create-pr` が作成後に `closingIssuesReferences` で紐づきを確かめ、`/dev-impl` は merge の直前にも確かめて、紐づいていなければ merge せずに `needs-human` で止める — issue から実装の PR をたどれるようにするため (2026-11-12、ユーザーの指示)
+- [決定] 設計 PR は Development に紐づけない。`Design-for: #<N>` だけを書き、`Closes` などのキーワードを書かない — Development に紐づいた PR は、紐づけ方に関係なくデフォルトブランチへの merge で issue を close するので、`ready` が付いても `/dev-impl` が拾えなくなるため (2026-11-12、ユーザーの判断)
+- [棄却] 設計 PR も紐づけ、`design-approved.yml` で issue を reopen する — 設計の承認のたびに issue が一度閉じ、Project の Status も一度「完了」に動くため
