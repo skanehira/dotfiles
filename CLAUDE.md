@@ -775,7 +775,7 @@ done
 # 1 行も出なければ合格 (他ツールが入れたものは解決先が違うので出ない)
 ```
 
-生成方式へ戻すときは `53313c1` (配布方式の切り替え) 以降のコミットを `git revert` して `drs` / `hms` を流す。`.hm-backup` は revert しても残るので手で片付ける。
+生成方式へ戻すときは `a5ef5b8` (配布方式の切り替え) 以降のコミットを `git revert` して `drs` / `hms` を流す。`.hm-backup` は revert しても残るので手で片付ける。
 
 `~/.agents/skills` の他ツール由来スキル (例: `find-skills`。dotfiles への symlink ではない実ディレクトリ)、`~/.codex/skills` の同居物 (`.system` と、plugin や他ツール (`wrangler login` 等) が入れたもの)、`~/.config/opencode/` の同居物のうち `service.json` と V1 のプラグイン SDK の 4 つ (`node_modules` / `package.json` / `package-lock.json` / `.gitignore`) は触らない。同じディレクトリの `agents/` と `skills/` は上の `prune_manifest` が、`*.hm-backup` は上の完了条件が扱う (同居物の一覧は Directory Structure の `agents/bindings/opencode/` 項の「グローバル指示の確認と同居物」)。
 
