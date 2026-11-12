@@ -57,6 +57,7 @@ Design-for: #<issue 番号。issue を分けたときはこの行を書かず、
 ```
 
 - `Design-for:` の行は、行の先頭から `Design-for: #<番号>` だけを書く (`design-approved.yml` は 1 行に 1 件の番号だけを読む)
+- `Closes` / `Fixes` / `Resolves` などのキーワードは書かない。書くと PR が issue の Development に紐づき、merge で issue が close される (SKILL.md 手順 7)
 - 「確認点」はチェックボックスにする。人がレビューで 1 つずつ確かめた印になる
 - 「何を決めたか」「画面の変化」「確認点」は、上の「人が読む文章の書き方」に従う
 - 「確認点」は、設計書を読んでいない人が、その項目だけを読んで判断できるように書く

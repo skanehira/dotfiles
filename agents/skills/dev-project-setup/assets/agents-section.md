@@ -12,10 +12,12 @@ issue の状態はラベルで管理する。Project <!-- 記入: Project の UR
 
 | タイミング | ラベル |
 | --- | --- |
-| 設計 PR か修正方針を出した | `needs-design` を外して `design-review` を付ける。設計 PR の本文には `Design-for: #<issue 番号>` を書く |
+| 設計 PR か修正方針を出した | `needs-design` を外して `design-review` を付ける。設計 PR の本文には `Design-for: #<issue 番号>` を書き、`Closes` などのキーワードは書かない |
 | 人が承認した | `ready` (設計 PR の merge では GitHub Actions が付ける) |
 | 実装を始めた | `ready` を外して `in-progress` を付ける |
 | 人の判断が要って止めた | `needs-human` を付ける |
 | 人が `needs-human` に回答した | 人が回答を issue に書き、止めたスキルのコメントの案内に従う。`dev-feat-spec` が止めたものは `needs-human` を外すだけでよい。`dev-triage` が止めたものはコメントの案内に従う。`/dev-impl` が止めたものは、回答を本文か参照の docs に反映してから、`needs-human` を外して `ready` を付ける (`~/.claude/skills/dev-triage/references/issue-states.md`「状態の管理」) |
+
+issue に対応する実装の PR は、本文の先頭行に `Closes #<issue 番号>` を書き、issue の Development に必ず紐づける。設計 PR は紐づけない。Development に紐づいた PR は、デフォルトブランチへの merge で issue を close するため。
 
 Status を手で動かさない。ラベルと Status が食い違ったら、ラベルを正としてラベルを付け直す (付け直すと Actions が Status を揃える)。

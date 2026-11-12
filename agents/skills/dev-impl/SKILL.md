@@ -337,7 +337,7 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 3. **PR**: **push は毎回行う** (`git -C "$WORK_DIR" push -u origin "issue-$N"`)。再開でスキップしてよいのは PR の作成だけで、push を飛ばすと再開後に足した差分が PR に載らないまま merge される。push が失敗したら (前 run の同名 remote ブランチ残骸等)、原因を確認して解消できなければ 2.6 へ。
 
-   PR はスキル `workflow-create-pr` の非対話モードで作る。まず本文の下書きを `<SCRATCH>/pr-<N>.md` に Write する。「動作確認」節は書かない (スキルが証跡から足して、`🤖 Generated` の行の直前に入れる):
+   PR はスキル `workflow-create-pr` の非対話モードで作る。まず本文の下書きを `<SCRATCH>/pr-<N>.md` に Write する。「動作確認」節は書かない (スキルが証跡から足して、`🤖 Generated` の行の直前に入れる)。**先頭行の `Closes #<N>` は必ず書く。** この行で PR が issue の Development に紐づき、merge で issue が close される。紐づいたかはスキルが確かめる:
 
 ```markdown
 Closes #<N>
@@ -365,6 +365,7 @@ Closes #<N>
    | `PR_CREATED <url>` / `PR_UPDATED <url>` | 手順 4 へ |
    | `PR_FAILED secret_detected <ファイル>:<行>` | 証跡のマスク漏れ。報告される行は最終本文 (`<SCRATCH>/pr-<N>.md.final.md`) のものなので、その行の内容で `<SCRATCH>/evidence-<N>/api/` を `rg` して元の証跡ファイルを特定する。親がその箇所を `<masked>` にして、同じ引数で 1 回だけ再起動する。再発したら 2.6 へ |
    | `PR_FAILED attach_partial <url>` | PR はできたが本文に画像のローカルパスが残っている。同じ引数で 1 回だけ再起動する (同じ head の PR を更新する)。再発したら 2.6 へ |
+   | `PR_FAILED issue_link <url>` | PR はできたが issue の Development に紐づいていない。下書きの先頭行が `Closes #<N>` であることを確かめ、違っていれば直して同じ引数で 1 回だけ再起動する。下書きが正しいか、再発したら merge せずに 2.6 へ (人が issue の画面の Development から紐づける) |
    | それ以外の `PR_FAILED` | 理由を見て直せるもの (引数の渡し間違い) は直して 1 回だけ再起動し、直せなければ 2.6 へ |
 
 4. **CI ゲートと merge**: ローカル検証は手順 2 で済んでいるので、ここでは CI があればその pass を待ってから merge し、**状態で成功を確認する**。**まず PR 番号を引き直す**。手順 3 のスキルが返す URL は会話に残るだけで変数には入っておらず、再開経路 (Step 1 の再開表) では手順 3 自体を通っていないためである:
@@ -372,7 +373,11 @@ Closes #<N>
 ```bash
 PR_NUM=$(gh pr list --repo "$REPO_SLUG" --head "issue-$N" --json number -q '.[0].number')
 [ -n "$PR_NUM" ] || exit 1        # 空なら 2.6 へ (下記)
+gh pr view "$PR_NUM" --repo "$REPO_SLUG" --json closingIssuesReferences \
+  -q '.closingIssuesReferences[].number' | rg -qx "$N" || exit 1   # issue の Development に紐づいていなければ 2.6 へ
 ```
+
+紐づきの確認を merge の直前にも置くのは、再開経路 (Step 1 の再開表の「PR が open」) が手順 3 を通らず、前の run が作った PR をそのまま merge するためである。
 
 #### CI ゲート
 
@@ -470,7 +475,7 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ### 2.6 エスカレーション (needs-human 駐車)
 
-解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / 直せないコミットの失敗 / push の失敗 / 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR 作成、CI の `fail` / `cancel` / 60 分のタイムアウト、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
+解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / 直せないコミットの失敗 / push の失敗 / 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR 作成、issue の Development に紐づかない PR、CI の `fail` / `cancel` / 60 分のタイムアウト、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human

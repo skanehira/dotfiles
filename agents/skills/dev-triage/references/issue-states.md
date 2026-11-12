@@ -20,9 +20,9 @@
 | 判断待ち | `needs-human` | 判断待ち | 人 | 回答を issue に書き、`needs-human` を外した |
 
 - `ready` は人が仕様を承認した印で、`/dev-impl` の入力である。AI は自分で付けない
-- 設計 PR は本文に `Design-for: #<issue 番号>` の行を書く。人が merge すると、GitHub Actions (`.github/workflows/design-approved.yml`) が対象の issue に `ready` を付ける
+- 設計 PR は本文に `Design-for: #<issue 番号>` の行を書く。人が merge すると、GitHub Actions (`.github/workflows/design-approved.yml`) が対象の issue に `ready` を付ける。設計 PR は issue の Development に紐づけない (`Closes` などのキーワードを書かない)。紐づいた PR は merge で issue を close するため
 - 設計書の変更が要らない issue は、AI が issue の本文に修正方針を書いて `design-review` を付ける。人が確認して `ready` を付ける
-- 実装の PR は人が確認せず、AI が merge する。merge で issue は close され、Status は「完了」になる
+- 実装の PR は本文の先頭行に `Closes #<issue 番号>` を書き、issue の Development に必ず紐づける。人が確認せず、AI が merge する。merge で issue は close され、Status は「完了」になる
 - ラベルが変わると、GitHub Actions (`.github/workflows/issue-state-sync.yml`) が Project の Status を動かす。Status を手で動かさない
 - 親 issue は `tracking` を付ける。Status は「作業中」になり、進捗は子に任せる。親は実装の対象ではない
 - 種別はラベルで見る: `bug` / `enhancement` / `refactoring` / `question`。事業・運営を同じボードに置くプロジェクトでは `事業・運営` を付け、AI の整理と開発の対象から外す

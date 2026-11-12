@@ -134,7 +134,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 
 1. 分けたときは、先に子の issue を依存の上流から順に作る (`--label design-review`)。作るたびに、残りの下書きの `Depends on <子の下書きの名前>` を `Depends on #<番号>` へ置き換える。子を親の sub-issue に紐付ける (手順は `~/.claude/skills/dev-spec/references/issue-template.md`「親への紐付け」)
 2. 変更を Conventional Commit でコミットする (`📝 docs: [BEHAVIORAL] ...`。コミットの実行は `~/.claude/rules/core/orchestration.md`「委譲の判断」に従って haiku に委譲してよい。subject の照合は自分で行う)
-3. `git push -u origin design/issue-<N>` し、PR を作る。本文は `references/templates.md`「設計 PR の本文」で、`Design-for:` の行を必ず書く。分けなかったときは `Design-for: #<N>` の 1 行、分けたときは子の番号だけを 1 行ずつ書き、親は書かない。この行が無いと、merge しても `ready` が付かない
+3. `git push -u origin design/issue-<N>` し、PR を作る。本文は `references/templates.md`「設計 PR の本文」で、`Design-for:` の行を必ず書く。分けなかったときは `Design-for: #<N>` の 1 行、分けたときは子の番号だけを 1 行ずつ書き、親は書かない。この行が無いと、merge しても `ready` が付かない。**設計 PR は issue の Development に紐づけない**。本文に `Closes` などのキーワードを書かず、issue の画面からも紐づけない。Development に紐づいた PR は、デフォルトブランチへの merge で issue を close するので、`ready` が付いても /dev-impl が拾えなくなるため。issue の Development に載せるのは /dev-impl の実装 PR だけである
 4. 書き直した本文を issue に反映し、ラベルを付け替える
    - 分けなかったとき: `needs-design` を外して `design-review` を付ける
    - 分けたときの親: `needs-design` を外して `tracking` を付ける。`design-review` は付けない (親は実装の対象ではなく、状態のラベルを付けると、merge で `ready` が付いて /dev-impl の対象に紛れるため)

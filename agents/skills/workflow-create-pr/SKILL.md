@@ -240,6 +240,15 @@ git -C "$REPO_DIR" diff <base>...<head> --name-status
 - [ ] <作業内容から推測されるテスト項目>
 ```
 
+### 4.1.1 対応する issue への紐づけ
+
+**対応する issue がある PR は、必ず issue の Development に紐づける。** 本文の先頭行に `Closes #<issue 番号>` を書く (issue が複数なら 1 件につき 1 行)。GitHub はこの行を読んで PR を issue の Development に載せ、PR がデフォルトブランチへ merge されると issue を close する。紐づいていないと、issue から実装の PR をたどれず、merge しても issue が開いたまま残る。
+
+- **手動モード**: 対応する issue は、ユーザーの依頼に書かれた番号か、ブランチ名に入った番号 (`issue-42`、`42-fix-login` など) で決める。どちらでも決まらなければ、AskUserQuestion で「対応する issue の番号を入力する」「対応する issue は無い」の 2 択を 1 問だけ聞く (番号は「Other」で受け取る)。テンプレートを使うときも、先頭行に足す
+- **非対話モード**: 本文は呼び出し元が書くので、このスキルは足さない。紐づけの確認だけを「作成結果の確認」で行う
+- **紐づけない PR**: merge しても issue を close してはいけない PR (例: dev-feat-spec の設計 PR) は、`Closes` などのキーワードを書かない。Development に紐づいた PR は、紐づけ方に関係なく、デフォルトブランチへの merge で issue を close するため
+- **base がデフォルトブランチでないとき**: キーワードは効かず、Development に載らない。手動モードでは、作成後に issue の画面の Development から PR を手で紐づけるようユーザーに伝える
+
 ### 4.2 証跡の埋め込み
 
 **証跡マニフェストを決める。** `--evidence` があればそのファイルを使う。無いとき、手動モードでは AskUserQuestion で 1 問だけ聞く (「証跡マニフェスト `manifest.json` のパスを入力する」「証跡なしで作成する」の 2 択。パスは「Other」で受け取る)。このスキルは証跡を探しに行かず、撮りもしない。
@@ -448,6 +457,14 @@ gh pr view "<PR の URL か番号>" --repo "$REPO" --json body -q .body | rg -n 
 
 2 つ目のコマンドが何か出したら、画像参照にローカルの絶対パスが残っている (添付に失敗した画像)。画像ではないリンク (`[設計書](/docs/...)`) には反応しない。手動モードではユーザーに伝え、非対話モードでは `PR_FAILED attach_partial <PR の URL>` を返す。PR 自体はできているので、呼び出し元はこの URL で状況を確かめられる。
 
+本文に `Closes #<番号>` を書いたときは、issue の Development に紐づいたことを確かめる。
+
+```bash
+gh pr view "<PR の URL か番号>" --repo "$REPO" --json closingIssuesReferences -q '[.closingIssuesReferences[].number]'
+```
+
+本文に書いた番号がすべて出れば合格である (`Closes #20` を持つ PR で `[20]` が、キーワードの無い PR で `[]` が出ることを 2026-11-12 に確かめた。作成の直後に反映されるかは確かめていない)。足りなければ、手動モードでは足りない番号をユーザーに伝え、issue の画面の Development から手で紐づけるよう案内する。非対話モードでは `PR_FAILED issue_link <PR の URL>` を返す。
+
 手動モードの表示:
 
 ```
@@ -466,7 +483,7 @@ gh pr view "<PR の URL か番号>" --repo "$REPO" --json body -q .body | rg -n 
 | --- | --- |
 | `PR_CREATED <url>` | 新しく作成した |
 | `PR_UPDATED <url>` | 同じ head の既存 PR の本文と添付を更新した |
-| `PR_FAILED <理由> [詳細]` | 作成も更新もしていない (`attach_partial` だけは PR がある) |
+| `PR_FAILED <理由> [詳細]` | 作成も更新もしていない (`attach_partial` と `issue_link` だけは PR がある) |
 
 ### エラー時のハンドリング
 
