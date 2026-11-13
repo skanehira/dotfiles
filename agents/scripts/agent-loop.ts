@@ -65,10 +65,22 @@ export interface Finished {
   finishedAt: number;
 }
 
+/** 片付けで会話と worktree を残した run。PR がすべて終わったら worktree を消す */
+export interface KeptRecord {
+  sessionId: string;
+  name: string;
+}
+
 export interface RepoState {
   running?: Partial<Record<Kind, RunRecord>>;
   finished?: Partial<Record<Kind, Finished>>;
+  /** セッション ID ごと */
+  kept?: Record<string, KeptRecord>;
 }
+
+type ActiveRepoState =
+  & RepoState
+  & Required<Pick<RepoState, "running" | "finished">>;
 
 export type State = Record<string, RepoState>;
 
@@ -87,12 +99,19 @@ export interface Deps {
     kind: Kind,
     now: number,
   ): Promise<{ sessionId: string; name: string }>;
-  /** endState はセッションの最後の状態 (一覧から消えていれば undefined) */
+  /**
+   * endState はセッションの最後の状態 (一覧から消えていれば undefined)。
+   * 会話と worktree を人のために残したら "kept" を返す
+   */
   cleanup(
     repo: RepoConfig,
     run: RunRecord,
     endState: string | undefined,
-  ): Promise<void>;
+  ): Promise<"kept" | "removed">;
+  /** run が作った対象のリポジトリの PR の状態 (MERGED / CLOSED / OPEN)。記録を読めなければ null */
+  runPrStates(repo: RepoConfig, sessionId: string): Promise<string[] | null>;
+  /** 残した run の worktree とブランチを消す。未保存の作業があって消せなければ false */
+  releaseWorktree(repo: RepoConfig, kept: KeptRecord): Promise<boolean>;
   log(message: string): void;
   /** 人に知らせる (mac の通知センター) */
   notify(title: string, message: string): Promise<void>;
@@ -161,6 +180,28 @@ export function decideWorktreeRemoval(
   return { remove: true, reason: "未保存の作業が無い" };
 }
 
+/** run の作業が終わったか。PR を 1 つも作らずに止まった run は、人が読むために残す */
+export function prsFinished(states: string[] | null): boolean {
+  return states !== null && states.length > 0 &&
+    states.every((s) => s === "MERGED" || s === "CLOSED");
+}
+
+/**
+ * Claude Code がジョブのディレクトリに書く state.json の children から、対象のリポジトリの PR の番号を取り出す。
+ * children は会話に出てきた PR のリンクも含むので、関係の無い open の PR があると片付けが遅れる (消しすぎはしない)
+ */
+export function prNumbersFromJob(job: unknown, slug: string): number[] {
+  const children =
+    (job as { children?: { kind?: string; href?: string }[] } | null)
+      ?.children ?? [];
+  const prefix = `https://github.com/${slug}/pull/`;
+  return children.flatMap((c) => {
+    if (c.kind !== "pr" || !c.href?.startsWith(prefix)) return [];
+    const n = c.href.slice(prefix.length);
+    return /^\d+$/.test(n) ? [Number(n)] : [];
+  });
+}
+
 export function inputKey(items: Item[]): string {
   return [...items].sort((a, b) => a.number - b.number).map((i) =>
     `${i.number}@${i.updatedAt}`
@@ -215,9 +256,11 @@ export async function tick(
   const sessions = new Map((await deps.listSessions()).map((s) => [s.id, s]));
 
   for (const repo of repos) {
-    const rs: Required<RepoState> = {
-      running: next[repo.slug]?.running ?? {},
-      finished: next[repo.slug]?.finished ?? {},
+    const prev = next[repo.slug];
+    const rs: ActiveRepoState = {
+      running: prev?.running ?? {},
+      finished: prev?.finished ?? {},
+      ...(prev?.kept ? { kept: prev.kept } : {}),
     };
     next[repo.slug] = rs;
     // 1 つのリポジトリの失敗で見回り全体を落とさない。落とすと状態が保存されず、同じ見回りで
@@ -238,11 +281,12 @@ export async function tick(
 
 async function tickRepo(
   repo: RepoConfig,
-  rs: Required<RepoState>,
+  rs: ActiveRepoState,
   sessions: Map<string, SessionInfo>,
   deps: Deps,
   now: number,
 ): Promise<void> {
+  await releaseFinishedRuns(repo, rs, deps);
   const idle: Kind[] = [];
   for (const kind of repo.kinds) {
     const run = rs.running[kind];
@@ -252,7 +296,12 @@ async function tickRepo(
         continue;
       }
       const endState = sessions.get(run.sessionId)?.state;
-      await deps.cleanup(repo, run, endState);
+      if ((await deps.cleanup(repo, run, endState)) === "kept") {
+        rs.kept = {
+          ...rs.kept,
+          [run.sessionId]: { sessionId: run.sessionId, name: run.name },
+        };
+      }
       // 一覧から消えた (undefined) ものと done は正常な終わり。それ以外は人が理由を見る必要がある
       if (endState !== undefined && endState !== "done") {
         await deps.notify(
@@ -280,6 +329,45 @@ async function tickRepo(
     rs.running[kind] = { ...launched, inputKey: key, startedAt: now };
     deps.log(
       `${repo.slug} ${kind}: 起動した (${launched.name}, 入力 ${key})`,
+    );
+  }
+}
+
+/**
+ * 残した run のうち、PR がすべて merge か close されたものの worktree を消して記録から外す。
+ * 会話は消さない。1 つの run の失敗で、ほかの run と起動の判定を止めない
+ */
+async function releaseFinishedRuns(
+  repo: RepoConfig,
+  rs: ActiveRepoState,
+  deps: Deps,
+): Promise<void> {
+  for (const kept of Object.values(rs.kept ?? {})) {
+    let states: string[] | null;
+    try {
+      states = await deps.runPrStates(repo, kept.sessionId);
+    } catch (e) {
+      deps.log(
+        `${repo.slug}: ${kept.name} の PR を確かめられない: ${
+          e instanceof Error ? e.message : e
+        }`,
+      );
+      continue;
+    }
+    if (!prsFinished(states)) continue;
+    try {
+      if (!(await deps.releaseWorktree(repo, kept))) continue;
+    } catch (e) {
+      deps.log(
+        `${repo.slug}: ${kept.name} の worktree を消せない: ${
+          e instanceof Error ? e.message : e
+        }`,
+      );
+      continue;
+    }
+    delete rs.kept?.[kept.sessionId];
+    deps.log(
+      `${repo.slug}: ${kept.name} の PR がすべて merge か close されたので、worktree を消した (会話は claude attach ${kept.sessionId} で開ける)`,
     );
   }
 }
@@ -570,10 +658,10 @@ export function realDeps(logFile: string): Deps {
             heldForHuman ? "人の判断を求めて" : endState
           } で終わった。会話と worktree を残す (claude attach ${rec.sessionId})`,
         );
-        return;
+        return "kept";
       }
       const log = (m: string) => this.log(m);
-      if (!(await removeRunWorktree(repo, rec.name, log))) return;
+      if (!(await removeRunWorktree(repo, rec.name, log))) return "removed";
       const rm = await run("claude", ["rm", rec.sessionId]);
       if (rm.code !== 0 || /\bkept\b/.test(rm.stdout + rm.stderr)) {
         this.log(
@@ -583,6 +671,42 @@ export function realDeps(logFile: string): Deps {
         );
       }
       await deleteRunBranch(repo, rec.name, log);
+      return "removed";
+    },
+    async runPrStates(repo, sessionId) {
+      // ジョブのディレクトリは Claude Code の内部の形で、公式には安定していない。読めなければ片付けない
+      let job: unknown;
+      try {
+        job = JSON.parse(
+          await Deno.readTextFile(
+            `${HOME}/.claude/jobs/${sessionId}/state.json`,
+          ),
+        );
+      } catch {
+        return null;
+      }
+      const states: string[] = [];
+      for (const n of prNumbersFromJob(job, repo.slug)) {
+        const out = await runOk("gh", [
+          "pr",
+          "view",
+          String(n),
+          "--repo",
+          repo.slug,
+          "--json",
+          "state",
+          "--jq",
+          ".state",
+        ]);
+        states.push(out.trim());
+      }
+      return states;
+    },
+    async releaseWorktree(repo, kept) {
+      const log = (m: string) => this.log(m);
+      if (!(await removeRunWorktree(repo, kept.name, log))) return false;
+      await deleteRunBranch(repo, kept.name, log);
+      return true;
     },
     log(message) {
       const line = `${new Date().toISOString()} ${message}\n`;
@@ -653,7 +777,11 @@ async function main(): Promise<void> {
       },
       cleanup: (repo, rec, _endState) => {
         console.log(`[dry-run] 片付ける: ${repo.slug} ${rec.name}`);
-        return Promise.resolve();
+        return Promise.resolve("removed");
+      },
+      releaseWorktree: (repo, kept) => {
+        console.log(`[dry-run] worktree を消す: ${repo.slug} ${kept.name}`);
+        return Promise.resolve(true);
       },
       log: (message) => console.log(message),
       notify: (title, message) => {

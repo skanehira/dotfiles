@@ -512,6 +512,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
 │    3. 終わった run を片付ける
 │         done             → 会話と worktree を消す (worktree に未保存の作業があれば残す)
 │         それ以外か、needs-human の印がある → 残す (claude attach <id> で開ける)
+│         残した run の PR がすべて merge か close されたら → worktree だけを消す (会話は残す)
 │    4. done 以外の終わり方と、見回りの中断を通知センターに出す (terminal-notifier)
 │
 └─ Claude Code のバックグラウンド run (<clone>/.claude/worktrees/<名前> で動く)
@@ -564,7 +565,7 @@ deno test --allow-env --allow-run --allow-read --allow-write agents/
   - `/dev-spec`: 新規プロダクトや大きい機能を、ユーザーストーリーから対話で設計して issue に落とす。agent-loop は起動しない。作った子の issue には `ready` が付くので、agent-loop に登録したリポジトリでは次の見回り (1 時間以内) で `/dev-impl` が実装を始める。issue を読んでから実装させたいときは、それまで agent-loop を止めておく
   - 同時に動かさない: agent-loop は自分が起動した run しか見ない。同じリポジトリで同じスキルを手元と agent-loop で同時に動かすと、同じ issue を取り合う (たとえば `/dev-impl` は `in-progress` の issue を、中断からの再開として引き継ぐ)。手元で起動する前に `claude agents` で同じリポジトリの run が動いていないかを確かめ、動かしている間は agent-loop を一時的に止める (上の「入れる・止める」)
 - **手で 1 回動かす**: `./agents/scripts/agent-loop.ts --dry-run` で、起動せずに判定だけを見られる
-- **残った会話と worktree**: run が `done` 以外 (`blocked` = 人の返事を待って止まった。最終報告での質問のほか、subagent の Bash の権限確認でも起きる、`failed`、`stopped`) で終わったときと、run が `needs-human` のコメントに `claude attach <id>` を載せたとき (`~/.claude/jobs/<id>/needs-human` の印がある) は、`agent-loop` は会話と worktree を残し、`<名前> は <状態> で終わった。会話と worktree を残す (claude attach <id>)` をログに書く。`done` でも、worktree に未保存の作業がある (追跡中のファイルの変更・push していない HEAD・中に残った worktree) と残す。読み終えたら、`claude rm <id>` で消す。worktree が残るときは、`git -C <clone> worktree remove --force <clone>/.claude/worktrees/<名前>` と `git -C <clone> branch -D worktree-<名前>` で片付けてから、もう一度 `claude rm <id>` する (`claude rm` は、フックが作った worktree を消さずに `kept` と出して終わるため)。止まった impl の run の中に残った `issue-<N>` の worktree は、次の `/dev-impl` が、持ち主の run が動いていないことを `claude agents --json --all` で確かめてから、未コミットの差分ごと引き継ぐ (`agents/skills/dev-impl/SKILL.md` Step 1)
+- **残った会話と worktree**: run が `done` 以外 (`blocked` = 人の返事を待って止まった。最終報告での質問のほか、subagent の Bash の権限確認でも起きる、`failed`、`stopped`) で終わったときと、run が `needs-human` のコメントに `claude attach <id>` を載せたとき (`~/.claude/jobs/<id>/needs-human` の印がある) は、`agent-loop` は会話と worktree を残し、`<名前> は <状態> で終わった。会話と worktree を残す (claude attach <id>)` をログに書く。`done` でも、worktree に未保存の作業がある (追跡中のファイルの変更・push していない HEAD・中に残った worktree) と残す。残した run は状態の `kept` に記録し、見回りのたびに、その run の PR がすべて merge か close されたかを確かめる。そうなっていて worktree に未保存の作業が無ければ、worktree と `worktree-<名前>` のブランチを消し、`<名前> の PR がすべて merge か close されたので、worktree を消した` をログに書く。会話は消さない。run の PR は、Claude Code がジョブのディレクトリに書く `~/.claude/jobs/<id>/state.json` の `children` から、対象のリポジトリのものだけを読む。これは会話に出てきた PR のリンクも含むので、関係の無い open の PR があると消すのが遅れる。PR を 1 つも作らずに止まった run と、この記録を読めない run は残したままにする (公式に安定した形ではないので、読めなければ消さない)。読み終えたら、`claude rm <id>` で消す。worktree が残るときは、`git -C <clone> worktree remove --force <clone>/.claude/worktrees/<名前>` と `git -C <clone> branch -D worktree-<名前>` で片付けてから、もう一度 `claude rm <id>` する (`claude rm` は、フックが作った worktree を消さずに `kept` と出して終わるため)。止まった impl の run の中に残った `issue-<N>` の worktree は、次の `/dev-impl` が、持ち主の run が動いていないことを `claude agents --json --all` で確かめてから、未コミットの差分ごと引き継ぐ (`agents/skills/dev-impl/SKILL.md` Step 1)
 
 ### hooks (agents/hooks/)
 

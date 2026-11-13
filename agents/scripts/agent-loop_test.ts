@@ -7,6 +7,8 @@ import {
   inputKey,
   type Item,
   parseConfig,
+  prNumbersFromJob,
+  prsFinished,
   type RawIssue,
   type RepoConfig,
   type SessionInfo,
@@ -49,6 +51,14 @@ function fakeDeps(
     issues?: RawIssue[] | Error;
     designPrBodies?: string[];
     sessions?: SessionInfo[];
+    /** 片付けで会話と worktree を残すセッション。ほかは消したことにする */
+    keptOnCleanup?: string[];
+    /** セッションごとの PR の状態。null は記録を読めないこと */
+    prStates?: Record<string, string[] | null | Error>;
+    /** 未保存の作業があって worktree を消せないセッション */
+    unsavedWork?: string[];
+    /** worktree を消すときに失敗するセッション */
+    releaseErrors?: Record<string, Error>;
   } = {},
 ) {
   const calls: string[] = [];
@@ -81,7 +91,22 @@ function fakeDeps(
     },
     cleanup: (repo, run, endState) => {
       calls.push(`cleanup ${repo.slug} ${run.sessionId} ${endState}`);
-      return Promise.resolve();
+      return Promise.resolve(
+        opts.keptOnCleanup?.includes(run.sessionId) ? "kept" : "removed",
+      );
+    },
+    runPrStates: (repo, sessionId) => {
+      calls.push(`runPrStates ${repo.slug} ${sessionId}`);
+      const s = opts.prStates?.[sessionId];
+      return s instanceof Error
+        ? Promise.reject(s)
+        : Promise.resolve(s ?? null);
+    },
+    releaseWorktree: (repo, kept) => {
+      calls.push(`releaseWorktree ${repo.slug} ${kept.sessionId}`);
+      const err = opts.releaseErrors?.[kept.sessionId];
+      if (err) return Promise.reject(err);
+      return Promise.resolve(!opts.unsavedWork?.includes(kept.sessionId));
     },
     log: (message) => {
       logs.push(message);
@@ -479,4 +504,163 @@ Deno.test("見回りがリポジトリで中断したときも、人に通知す
   assertEquals(notes, [
     "agent-loop: acme/app | 見回りを中断した: gh が落ちた",
   ]);
+});
+
+Deno.test("prsFinished は、PR が 1 つ以上あり、すべて merge か close されたときだけ終わったとする", () => {
+  const cases: [string[] | null, boolean][] = [
+    [["MERGED", "CLOSED"], true],
+    [["MERGED"], true],
+    [["MERGED", "OPEN"], false],
+    [[], false],
+    [null, false],
+  ];
+  for (const [states, expected] of cases) {
+    assertEquals(prsFinished(states), expected, JSON.stringify(states));
+  }
+});
+
+Deno.test("prNumbersFromJob は、ジョブの記録から対象のリポジトリの PR の番号だけを取り出す", () => {
+  const job = {
+    children: [
+      { id: "571", href: "https://github.com/acme/app/pull/571", kind: "pr" },
+      { id: "9", href: "https://github.com/other/app/pull/9", kind: "pr" },
+      { id: "12", href: "https://github.com/acme/app-two/pull/12", kind: "pr" },
+      { id: "572", href: "https://github.com/acme/app/pull/572", kind: "pr" },
+      { id: "x", href: "https://github.com/acme/app/issues/3", kind: "issue" },
+      // slug と同じ長さの別のリポジトリ
+      { id: "9", href: "https://github.com/acme/apq/pull/9", kind: "pr" },
+      // PR の番号の後ろに続く URL
+      {
+        id: "571",
+        href: "https://github.com/acme/app/pull/571/files",
+        kind: "pr",
+      },
+      // PR の URL を持つ、PR ではない項目
+      { id: "c", href: "https://github.com/acme/app/pull/700", kind: "commit" },
+    ],
+  };
+
+  assertEquals(prNumbersFromJob(job, "acme/app"), [571, 572]);
+  assertEquals(prNumbersFromJob({ state: "stopped" }, "acme/app"), []);
+});
+
+Deno.test("片付けで会話と worktree を残した run は、あとで PR を確かめるために記録する", async () => {
+  const { deps } = fakeDeps({
+    sessions: [
+      { id: "a", state: "blocked" },
+      { id: "b", state: "stopped" },
+      { id: "c", state: "done" },
+    ],
+    keptOnCleanup: ["a", "b"],
+  });
+  const record = (sessionId: string, name: string) => ({
+    sessionId,
+    name,
+    inputKey: "k",
+    startedAt: NOW - HOUR,
+  });
+  const before: State = {
+    "acme/app": {
+      running: {
+        triage: record("a", "al-app-triage-1"),
+        design: record("b", "al-app-design-2"),
+        impl: record("c", "al-app-impl-3"),
+      },
+      finished: {},
+      kept: { old: { sessionId: "old", name: "al-app-design-0" } },
+    },
+  };
+
+  const state = await tick([REPO], before, deps, NOW);
+
+  assertEquals(state["acme/app"].kept, {
+    old: { sessionId: "old", name: "al-app-design-0" },
+    a: { sessionId: "a", name: "al-app-triage-1" },
+    b: { sessionId: "b", name: "al-app-design-2" },
+  });
+});
+
+Deno.test("残した run の PR がすべて merge か close されたら worktree を消して記録から外し、それ以外は残す", async () => {
+  const { deps, calls, logs } = fakeDeps({
+    prStates: {
+      done: ["MERGED", "CLOSED"],
+      open: ["MERGED", "OPEN"],
+      nopr: [],
+      unreadable: null,
+      unsaved: ["MERGED"],
+    },
+    unsavedWork: ["unsaved"],
+  });
+  const kept = (id: string) => ({ sessionId: id, name: `al-app-${id}` });
+  const before: State = {
+    "acme/app": {
+      running: {},
+      finished: {},
+      kept: {
+        done: kept("done"),
+        open: kept("open"),
+        nopr: kept("nopr"),
+        unreadable: kept("unreadable"),
+        unsaved: kept("unsaved"),
+      },
+    },
+  };
+
+  const state = await tick([{ ...REPO, kinds: [] }], before, deps, NOW);
+
+  assertEquals(calls.filter((c) => c.startsWith("releaseWorktree")), [
+    "releaseWorktree acme/app done",
+    "releaseWorktree acme/app unsaved",
+  ]);
+  assertEquals(state["acme/app"].kept, {
+    open: kept("open"),
+    nopr: kept("nopr"),
+    unreadable: kept("unreadable"),
+    unsaved: kept("unsaved"),
+  });
+  assertEquals(logs, [
+    "acme/app: al-app-done の PR がすべて merge か close されたので、worktree を消した (会話は claude attach done で開ける)",
+  ]);
+});
+
+Deno.test("残した run の PR の確認や worktree の削除に失敗しても、その run を残し、ほかの run と起動の判定は続ける", async () => {
+  const { deps, calls, logs } = fakeDeps({
+    untriaged: [u(3)],
+    prStates: {
+      broken: new Error("gh が落ちた"),
+      stuck: ["MERGED"],
+      done: ["MERGED"],
+    },
+    releaseErrors: { stuck: new Error("git worktree remove が exit 128") },
+  });
+  const before: State = {
+    "acme/app": {
+      running: {},
+      finished: {},
+      kept: {
+        broken: { sessionId: "broken", name: "al-app-broken" },
+        stuck: { sessionId: "stuck", name: "al-app-stuck" },
+        done: { sessionId: "done", name: "al-app-done" },
+      },
+    },
+  };
+
+  const state = await tick([REPO], before, deps, NOW);
+
+  assertEquals(state["acme/app"].kept, {
+    broken: { sessionId: "broken", name: "al-app-broken" },
+    stuck: { sessionId: "stuck", name: "al-app-stuck" },
+  });
+  assertEquals(calls.filter((c) => c.startsWith("launch")), [
+    "launch acme/app triage",
+  ]);
+  assertEquals(
+    logs.filter((l) =>
+      l.includes("al-app-broken") || l.includes("al-app-stuck")
+    ),
+    [
+      "acme/app: al-app-broken の PR を確かめられない: gh が落ちた",
+      "acme/app: al-app-stuck の worktree を消せない: git worktree remove が exit 128",
+    ],
+  );
 });
