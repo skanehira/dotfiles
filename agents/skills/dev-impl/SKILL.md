@@ -99,7 +99,32 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
   - スコアがどの issue にも無いとき (`/dev-spec` が作った issue だけのとき) は、番号の小さい順のトポロジカル順になる
 - 着手できる issue は互いに依存しないので、同時に着手してよい (2.0 の並列実行が使う)
 
-**`in-progress` が残っている、または対象 issue に残置ブランチ `issue-<N>` がある場合は前回の中断・駐車からの復帰。** その issue の状態を確認して再開位置を決める (needs-human から `ready` に戻された issue はラベルでは区別できないため、ブランチの有無で検出する):
+**`in-progress` が残っている、または対象 issue に残置ブランチ `issue-<N>` がある場合は前回の中断・駐車からの復帰。** その issue の状態を確認して再開位置を決める (needs-human から `ready` に戻された issue はラベルでは区別できないため、ブランチの有無で検出する)。
+
+**まず、ブランチ `issue-<N>` を checkout している worktree が残っていないかを確かめる。** 前の run が途中で止まると (agent-loop が `blocked` の run を止めたときなど)、未コミットの差分を抱えた worktree が残る。agent-loop の run は `<clone>/.claude/worktrees/<run の名前>` で動くので、その中の `.claude/worktrees/issue-<N>` に残る。このブランチは別の worktree が checkout しているので switch できず、origin にも無いことが多い。持ち主の run がまだ動いているかは、worktree のパスから run の名前を取り出し、`claude agents --json --all` の `name` と突き合わせて判定する:
+
+```bash
+WT=$(git -C "$REPO_DIR" worktree list --porcelain \
+  | awk -v b="branch refs/heads/issue-$N" '/^worktree /{p=substr($0,10)} $0==b{print p}')
+OWNER=$(printf '%s\n' "$WT" | sed -nE 's|.*/\.claude/worktrees/([^/]+)/\.claude/worktrees/issue-[0-9]+$|\1|p')
+claude agents --json --all | jq -r --arg n "$OWNER" '[.[] | select(.name == $n) | (.state // .status)] | join(",")'
+```
+
+| 結果 | 動作 |
+| --- | --- |
+| `WT` が空 | 下の再開表へ進む |
+| 最後のコマンドの出力に `working` / `blocked` / `busy` がある | 持ち主の run が動いているか、人の返事を待っている。この run ではこの issue に着手せず、最終報告の「着手できなかった issue」に `OWNER` と一緒に載せる |
+| それ以外 (`done` / `failed` / `stopped`、空 = 一覧に無いか `OWNER` を取り出せない) | 持ち主の run は止まっている。worktree を引き継ぐ (下記) |
+
+**worktree のファイルの更新時刻では判定しない。** 止まった run が残した worktree も、止まる直前まで書かれていれば新しく見える。2026-11-13 に、止まった run の worktree を「別の run が実装中」と判断して引き継がなかった run があり、issue が 6 時間以上 `in-progress` のまま放置された。`OWNER` を取り出せないのは、clone の直下で動いた run (人が手元で起動した `/dev-impl`) の worktree である。同じリポジトリで `/dev-impl` を 2 つ同時に動かさない (人が手元で起動するときは agent-loop を止める) 運用を前提に、止まった run の残骸として扱う。
+
+**引き継ぐときは `WORK_DIR=$WT` とし、新しい worktree を作らず、未コミットの差分も捨てない。** 直列実行でも同じにする (`$REPO_DIR` ではこのブランチへ switch できないため)。そのうえで下の再開表から再開位置を決め、次のように読み替える。
+
+- 「PR が open」の行: worktree を作り直さずに `$WT` を使う
+- 「ブランチのみ残存」の行: switch を飛ばし、基準は `BASE_SHA=$(git -C "$WT" merge-base "origin/$DEFAULT" HEAD)` で復元する。implementer に足す行は「ブランチと作業ツリー (未コミットの差分を含む) に前回の差分がある。既存差分を前提に続きから実装せよ」とする
+- 後片付け: 2.4 の merge の後と 2.6 の駐車では、並列実行の worktree と同じく `$WT` を `git -C "$REPO_DIR" worktree remove` で消す
+
+前の run の SCRATCH (review JSON や証跡) は引き継がない。SCRATCH は run ごとに新しく作るため、レビューは r1 から数え直す。
 
 | 状態 (`gh pr list --repo "$REPO_SLUG" --head issue-<N>` と、`git fetch origin` 後の `git branch --list issue-<N>` / `git branch -r --list "origin/issue-<N>"`) | 再開位置 |
 | --- | --- |
@@ -107,7 +132,7 @@ gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number
 | ブランチのみ残存 (ローカルまたは origin、PR なし) | ブランチへ switch し (origin のみに在る場合は `git switch issue-<N>` が追跡ブランチを作る)、`BASE_SHA=$(git merge-base origin/$DEFAULT HEAD)` で基準を復元して 2.2 から。implementer に渡す内容 (2.2) に「ブランチに前回の差分がある。既存差分を前提に続きから実装せよ」の行を足す |
 | どちらも無い | 最初から (2.1 から) |
 
-実装途中の**未コミット**差分はマシンローカルで、別マシンには引き継げない。ブランチも push されるまではマシンローカル (2.6 の駐車時は WIP を退避して push を試みる)。別マシンで再開して残置ブランチが origin に無い場合、その issue は最初からやり直しになる — これは仕様で、issue 単位が再開の粒度である。ローカルと origin の両方にブランチが在る場合は fetch 後に ahead/behind を確認し、behind ならローカルを origin に合わせ (`git switch -C "issue-<N>" "origin/issue-<N>"`)、ahead なら push してから続行する。
+実装途中の**未コミット**差分はマシンローカルで、別マシンには引き継げない (同じマシンなら、上の手順で worktree ごと引き継ぐ)。ブランチも push されるまではマシンローカル (2.6 の駐車時は WIP を退避して push を試みる)。別マシンで再開して残置ブランチが origin に無い場合、その issue は最初からやり直しになる — これは仕様で、issue 単位が再開の粒度である。ローカルと origin の両方にブランチが在る場合は fetch 後に ahead/behind を確認し、behind ならローカルを origin に合わせ (`git switch -C "issue-<N>" "origin/issue-<N>"`)、ahead なら push してから続行する。
 
 ## Step 2: issue ごとの実装サイクル
 
@@ -426,7 +451,7 @@ STATE=$(gh pr view --repo "$REPO_SLUG" "$PR_NUM" --json state -q .state)   # MER
 `MERGED` を確認したら後片付けをする。**ローカルブランチは直列・並列のどちらでも自分で消す**:
 
 ```bash
-git -C "$REPO_DIR" worktree remove "$WT"        # 並列実行のみ。branch -D より先に行う
+git -C "$REPO_DIR" worktree remove "$WT"        # 並列実行と、Step 1 で引き継いだ worktree。branch -D より先に行う
 git -C "$REPO_DIR" switch "$DEFAULT" 2>/dev/null || git -C "$REPO_DIR" switch --detach "origin/$DEFAULT"   # 直列実行のみ。チェックアウト中のブランチは消せない。$REPO_DIR が worktree で、既定ブランチを別の checkout が使っていると switch できないので detach する
 git -C "$REPO_DIR" branch -D "issue-$N"
 ```
@@ -475,7 +500,7 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 ### 2.6 エスカレーション (needs-human 駐車)
 
-解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / 直せないコミットの失敗 / push の失敗 / 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR 作成、issue の Development に紐づかない PR、CI の `fail` / `cancel` / 60 分のタイムアウト、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行ではこの退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
+解消できない issue (r2 後に残った `spec-compliance` / `e2e` の high と裁定不能な `test-weakening` / `escalate` / DoD 失敗 / テスト red / subagent の再失敗 / 直せないコミットの失敗 / push の失敗 / 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR 作成、issue の Development に紐づかない PR、CI の `fail` / `cancel` / 60 分のタイムアウト、rebase しても PR の state が `MERGED` にならない merge) は、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行と、Step 1 で引き継いだ worktree では、この退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human
