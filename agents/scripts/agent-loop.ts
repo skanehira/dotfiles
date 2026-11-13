@@ -424,6 +424,64 @@ async function worktreeFacts(
   };
 }
 
+/**
+ * run の worktree を、未保存の作業が無いときだけ消す。worktree が無いか消せたら true、
+ * 未保存の作業があって残したら false を返す
+ */
+async function removeRunWorktree(
+  repo: RepoConfig,
+  name: string,
+  log: (message: string) => void,
+): Promise<boolean> {
+  // claude rm は、フック (WorktreeCreate) が作った worktree に管理外のファイル (node_modules など)
+  // があると、worktree を消さずに "kept" と出して exit 0 で終わる。そのため worktree は自分で確かめて消す
+  const wt = await findWorktree(repo.path, name);
+  if (!wt) return true;
+  const decision = decideWorktreeRemoval(await worktreeFacts(repo.path, wt));
+  if (!decision.remove) {
+    log(`${repo.slug}: ${name} の worktree を残す (${decision.reason}): ${wt}`);
+    return false;
+  }
+  await runOk("git", ["-C", repo.path, "worktree", "remove", "--force", wt]);
+  return true;
+}
+
+/**
+ * worktree の作成で切られたブランチ (Claude Code の既定の名前) を消す。run がこのブランチに
+ * push していないコミットを積んでいることもあるので、先端がどこかの remote のブランチに含まれるときだけ消す
+ */
+async function deleteRunBranch(
+  repo: RepoConfig,
+  name: string,
+  log: (message: string) => void,
+): Promise<void> {
+  const branch = `worktree-${name}`;
+  const exists = await run("git", [
+    "-C",
+    repo.path,
+    "rev-parse",
+    "--verify",
+    "--quiet",
+    `refs/heads/${branch}`,
+  ]);
+  if (exists.code !== 0) return;
+  const pushed = await run("git", [
+    "-C",
+    repo.path,
+    "branch",
+    "-r",
+    "--contains",
+    `refs/heads/${branch}`,
+  ]);
+  if (pushed.code === 0 && pushed.stdout.trim() !== "") {
+    await run("git", ["-C", repo.path, "branch", "-D", branch]);
+  } else {
+    log(
+      `${repo.slug}: ${branch} に push していないコミットがあるので、ブランチを残す`,
+    );
+  }
+}
+
 function sessionName(repo: RepoConfig, kind: Kind, now: number): string {
   const stamp = new Date(now).toISOString().replace(/[-:]/g, "").slice(0, 13); // 20261111T1200
   return `al-${repo.slug.split("/")[1]}-${kind}-${stamp}`;
@@ -514,28 +572,8 @@ export function realDeps(logFile: string): Deps {
         );
         return;
       }
-      // claude rm は、フック (WorktreeCreate) が作った worktree に管理外のファイル (node_modules など)
-      // があると、worktree を消さずに "kept" と出して exit 0 で終わる。そのため worktree は自分で確かめて消す
-      const wt = await findWorktree(repo.path, rec.name);
-      if (wt) {
-        const decision = decideWorktreeRemoval(
-          await worktreeFacts(repo.path, wt),
-        );
-        if (!decision.remove) {
-          this.log(
-            `${repo.slug}: ${rec.name} の worktree を残す (${decision.reason}): ${wt}`,
-          );
-          return;
-        }
-        await runOk("git", [
-          "-C",
-          repo.path,
-          "worktree",
-          "remove",
-          "--force",
-          wt,
-        ]);
-      }
+      const log = (m: string) => this.log(m);
+      if (!(await removeRunWorktree(repo, rec.name, log))) return;
       const rm = await run("claude", ["rm", rec.sessionId]);
       if (rm.code !== 0 || /\bkept\b/.test(rm.stdout + rm.stderr)) {
         this.log(
@@ -544,33 +582,7 @@ export function realDeps(logFile: string): Deps {
           }`,
         );
       }
-      // worktree の作成で切られたブランチ (Claude Code の既定の名前) を消す。run がこのブランチに
-      // push していないコミットを積んでいることもあるので、先端がどこかの remote のブランチに含まれるときだけ消す
-      const branch = `worktree-${rec.name}`;
-      const exists = await run("git", [
-        "-C",
-        repo.path,
-        "rev-parse",
-        "--verify",
-        "--quiet",
-        `refs/heads/${branch}`,
-      ]);
-      if (exists.code !== 0) return;
-      const pushed = await run("git", [
-        "-C",
-        repo.path,
-        "branch",
-        "-r",
-        "--contains",
-        `refs/heads/${branch}`,
-      ]);
-      if (pushed.code === 0 && pushed.stdout.trim() !== "") {
-        await run("git", ["-C", repo.path, "branch", "-D", branch]);
-      } else {
-        this.log(
-          `${repo.slug}: ${branch} に push していないコミットがあるので、ブランチを残す`,
-        );
-      }
+      await deleteRunBranch(repo, rec.name, log);
     },
     log(message) {
       const line = `${new Date().toISOString()} ${message}\n`;
