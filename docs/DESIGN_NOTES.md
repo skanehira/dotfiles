@@ -245,3 +245,14 @@
 - [決定] `/dev-impl` は、再開する issue のブランチを checkout している worktree が残っていたら、worktree のパスから持ち主の run の名前を取り出し、`claude agents --json --all` の `name` と突き合わせる。持ち主が `working` / `blocked` / `busy` ならその issue に着手せず、それ以外なら worktree を未コミットの差分ごと引き継ぐ。更新時刻では判定しない — 止まった run の worktree も、止まる直前まで書かれていれば新しく見えるため。確認待ち以外の原因で止まった run も同じ経路で引き継げるため (2026-11-13、ユーザーの判断)
 - [棄却] agent-loop が `blocked` の run を止めずに残し、見回りのたびに通知する — 人が答えればその run が続くが、答えるまで同じリポジトリの次の impl を起動できないため
 - [棄却] agent-loop が impl の run を `done` 以外で片付けたとき、`in-progress` の issue に `needs-human` を付ける — 止まったことはボードで分かるが、人が戻すまで自動で再開せず、上の引き継ぎの決定と逆向きになるため
+
+## 残した run の worktree の片付け (2026-11-13)
+
+- [事実] agent-loop が `done` 以外で終わった run と `needs-human` の印のある run の会話と worktree を残すと、そのまま誰も片付けなかった。業務のリポジトリでは、PR が merge 済みで未保存の作業も無い worktree が 6 つ溜まっていた
+- [決定] 残した run を状態の `kept` に記録し、見回りのたびに、その run の PR がすべて merge か close されたかを確かめる。そうなっていれば、worktree と `worktree-<名前>` のブランチを、`done` の片付けと同じ条件 (未保存の作業が無いとき) で消す — 作業が終わった run の worktree を、人が手で片付けなくてよいようにするため (2026-11-13、ユーザーの指示)
+- [決定] 会話は消さない — `needs-human` のコメントに載せた `claude attach <id>` から、あとでも経緯を読めるようにするため。会話は人が読み終えてから `claude rm` で消す (2026-11-13、ユーザーの判断)
+- [棄却] worktree・ブランチと一緒に会話も消す — `done` の片付けと揃うが、コメントの `claude attach <id>` から開けなくなるため
+- [決定] run の PR は、Claude Code がジョブのディレクトリに書く `~/.claude/jobs/<id>/state.json` の `children` (`kind: "pr"`) から、対象のリポジトリのものだけを読む。読めなければ消さない — 会話に出てきた PR のリンクも含むので消すのが遅れることはあるが、消しすぎることはないため。公式に安定した形ではないので、形が変わったら残す側に倒れる (2026-11-13、ユーザーの判断)
+- [棄却] worktree の中で切ったブランチの名前 (git の reflog) から PR を探す — git だけで判定できるが、`/dev-impl` が入れ子の worktree で作った PR を拾えないため
+- [決定] merge と、merge されずに close された PR の両方を「終わった」とみなす。PR を 1 つも作らずに止まった run は残す — close も作業の終わりで、PR の無い run は人が質問を読むために残しているため (2026-11-13、ユーザーの判断)
+- [棄却] merge だけを「終わった」とみなす — close された PR のある run が、いつまでも残るため
