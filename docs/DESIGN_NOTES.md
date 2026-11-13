@@ -236,3 +236,12 @@
 - [決定] issue に対応する実装の PR は、本文の先頭行の `Closes #<N>` で issue の Development に必ず紐づける。`workflow-create-pr` が作成後に `closingIssuesReferences` で紐づきを確かめ、`/dev-impl` は merge の直前にも確かめて、紐づいていなければ merge せずに `needs-human` で止める — issue から実装の PR をたどれるようにするため (2026-11-12、ユーザーの指示)
 - [決定] 設計 PR は Development に紐づけない。`Design-for: #<N>` だけを書き、`Closes` などのキーワードを書かない — Development に紐づいた PR は、紐づけ方に関係なくデフォルトブランチへの merge で issue を close するので、`ready` が付いても `/dev-impl` が拾えなくなるため (2026-11-12、ユーザーの判断)
 - [棄却] 設計 PR も紐づけ、`design-approved.yml` で issue を reopen する — 設計の承認のたびに issue が一度閉じ、Project の Status も一度「完了」に動くため
+
+## 中断した run の引き継ぎ (2026-11-13)
+
+- [事実] 2026-11-13、impl の run の実装 subagent が、`rm -rf "$E"/* && … && bash …; ls …; for … done` の 1 行で 25 分止まった。`bypassPermissions` でも Claude Code は「変数が空ならルートを消す」危険な削除として確認を出し、バックグラウンドの run ではその確認が人の返事待ち (`blocked`) になる。同じ 1 行を `claude -p --permission-mode bypassPermissions` で流すと確認の対象として拒否され、`rm -rf "${E:?}"/*` に書き換えると通った。環境変数 `CLAUDE_CODE_DISABLE_SUBSTITUTION_RM_PROMPT=1` では拒否が消えなかった。`blocked` は最終報告での質問だけでなく、権限確認でも起きる (上の「agent-loop」の `blocked` の決定を補う)
+- [事実] agent-loop は決定どおりこの run を `blocked` として止めて通知した。次の impl の run は、止まった run の worktree の中に残った `issue-<N>` の worktree を、ファイルの更新時刻から「別の run が実装中」と判断して引き継がなかった。この判断は `/dev-impl` の手順に無く、run がその場で決めたものだった。入力が変わらないので、issue は 6 時間以上 `in-progress` のまま残った
+- [決定] 変数や glob を含むパスの `rm` は、`"${DIR:?}"` で空の変数を弾くか、パスをそのまま書くと、全エージェント共通の指示 (`agents/AGENTS.md`) に書く — 確認が出る形を書かなければ、無人の run が止まらないため。rules ではなく共通の指示に置くのは、rules が必要なときに読む方式で、証跡のスクリプトを書く場面で読まれる保証が無いため。守らせる機械的な仕組みは無い (2026-11-13、ユーザーの判断)
+- [決定] `/dev-impl` は、再開する issue のブランチを checkout している worktree が残っていたら、worktree のパスから持ち主の run の名前を取り出し、`claude agents --json --all` の `name` と突き合わせる。持ち主が `working` / `blocked` / `busy` ならその issue に着手せず、それ以外なら worktree を未コミットの差分ごと引き継ぐ。更新時刻では判定しない — 止まった run の worktree も、止まる直前まで書かれていれば新しく見えるため。確認待ち以外の原因で止まった run も同じ経路で引き継げるため (2026-11-13、ユーザーの判断)
+- [棄却] agent-loop が `blocked` の run を止めずに残し、見回りのたびに通知する — 人が答えればその run が続くが、答えるまで同じリポジトリの次の impl を起動できないため
+- [棄却] agent-loop が impl の run を `done` 以外で片付けたとき、`in-progress` の issue に `needs-human` を付ける — 止まったことはボードで分かるが、人が戻すまで自動で再開せず、上の引き継ぎの決定と逆向きになるため
