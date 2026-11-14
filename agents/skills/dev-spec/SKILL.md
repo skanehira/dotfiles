@@ -200,7 +200,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 sh ~/.claude/skills/dev-spec/scripts/dep-depth.sh [--serial] <scratchpad>
 ```
 
-出力の 1 行目が `依存段数:` の行で、2 行目以降が段ごとの子である (形式と閾値は issue-template.md「依存の段数」)。0 以外で終わったら (ドラフトに無い連番への依存・循環・1 行に複数並べた依存)、標準エラーに挙がった行に従ってドラフトを直し、実行し直す。
+出力の 1 行目が `依存段数:` の行で、2 行目以降が段ごとの子である (形式と閾値は issue-template.md「依存の段数」)。0 以外で終わったら、issue-template.md「依存の段数」の終了コードの表に従う (2〜4 はドラフトの誤りなので、標準エラーに挙がった行に従ってドラフトを直し、実行し直す)。
 
 続けて、`general-purpose` subagent (**モデル: opus を明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合・相互の重複漏れ・UC 帰属はセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 6 項目を指示文に転記し (観点 3 が参照する「依存の段数」の書く基準・閾値と、`dep-depth.sh` の出力の全行も一緒に転記する)、`<scratchpad>/titles.tsv`・USECASES.md (あれば)・機能設計書と DESIGN.md のパスを渡して照合させる。完了を待ってから結果の分岐へ進む。出力形式はフェーズ 8 と同じ。`依存段数:` の行は、`dep-depth.sh` の出力をそのまま使う (段数は severity を持たない情報なので findings の形式に載らない)。
 
@@ -218,7 +218,7 @@ sh ~/.claude/skills/dev-spec/scripts/dep-depth.sh [--serial] <scratchpad>
 
 | 選択肢 | 意味 |
 | --- | --- |
-| 作成 | <owner/name> に親 issue <m> 件 + 子 issue <n> 件を作成し、各子を対応する親の sub-issue として紐付ける (旧構成の単一親があれば、issue-template.md「issue 作成手順」の「スクリプトが行うこと」の手順 7 に従って子を貼り替え、旧親を close する) |
+| 作成 | <owner/name> に親 issue <m> 件 + 子 issue <n> 件を作成し、各子を対応する親の sub-issue として紐付ける (旧構成の単一親があれば、issue-template.md「issue 作成手順」の「スクリプトが行うこと」の手順 7 に従って子を貼り替え、子が残らなければ旧親を close する) |
 | ドラフトを見せて | ドラフト全文を表示してから再確認 |
 | 中止 | ここで終了 (docs とドラフトは残る。issue は作成しない) |
 
@@ -230,7 +230,7 @@ sh ~/.claude/skills/dev-spec/scripts/create-issues.sh <scratchpad>
 
    人間が `NEEDS_HUMAN:` の行に「旧親のまま残す」などと答えたら、その親の番号を `--keep <番号>` で渡して再実行する (`sh ~/.claude/skills/dev-spec/scripts/create-issues.sh --keep <番号> <scratchpad>`)。
 
-   スクリプトは、ラベル用意 → 既存 issue との突き合わせ (タイトルの完全一致。冪等) → 親の用意 → 子を依存の上流から用意 (作る直前に `Depends on issue-<連番>` を番号に置き換える) → 既存 issue の本文の比較と更新 → 旧構成の単一親からの移行 → 親への sub-issue 紐付け、を行う。終了コードごとの扱い (0 最終報告 / 1 途中で止まった / 3 人間の判断が要る / 4 ドラフトの誤り) と、`NEEDS_HUMAN:` の行ごとの操作は issue-template.md「issue 作成手順」にある。最終報告に「どのドラフトとも一致しない open の既存の子」があれば、close するかを人間に聞く
+   スクリプトは、既存 issue との突き合わせ (タイトルの完全一致。冪等) → ラベル用意 → 親の用意 → 子を依存の上流から用意 (作る直前に `Depends on issue-<連番>` を番号に置き換える) → 既存 issue の本文の比較と更新 → 旧構成の単一親からの移行 → 親への sub-issue 紐付け、を行う。終了コードごとの扱い (0 最終報告 / 1 途中で止まった / 3 人間の判断が要る / 4 ドラフトの誤り) と、`NEEDS_HUMAN:` の行ごとの操作は issue-template.md「issue 作成手順」にある。最終報告に「どのドラフトとも一致しない open の既存の子」があれば、close するかを人間に聞く
 4. 結果を報告し、次を案内する:
 
 ```
