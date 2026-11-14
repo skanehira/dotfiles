@@ -112,7 +112,7 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 | 最も下流の既存成果物                        | 再開フェーズ                                                   |
 | ------------------------------------------- | -------------------------------------------------------------- |
 | USER_STORIES.md                             | 2 (UI スケッチ)。cli モードでは 3                              |
-| UI_SKETCH.html (完了の印 `<!-- ui-sketch: finalized -->` なし) | 2 (UI スケッチの途中で中断した)。ui-sketch.md の手順 1 から始め、既存の UI_SKETCH.html から読み取れる決定は確認だけで済ませる |
+| UI_SKETCH.html (完了の印 `<!-- ui-sketch: finalized -->` なし) | 2 (UI スケッチの途中で中断した)。ui-sketch.md の手順 1 から始め、既存の UI_SKETCH.html から読み取れる決定は確認だけで済ませる。ただし frontend-design の痕跡の行 (`<!-- frontend-design: `) が無ければ、手順 5.3 の作り込みは確認で済ませずに実行する (ui-sketch.md「frontend-design の起動のしかた」) |
 | UI_SKETCH.html (完了の印あり)               | 3 (ユースケース)                                               |
 | USECASES.md                                 | 4 (実現可能性)。ただし USER_STORIES.md もあり、`~/.claude/scripts/check-ac-coverage.ts docs/design/USER_STORIES.md docs/design/USECASES.md` が NG を出すなら 3 (ユースケースの途中で中断したか、書き戻しと被覆チェックが済んでいない。受け入れ基準を持たない旧形式の docs もここに入る) |
 | FEASIBILITY.md                              | 6 (横断設計)。1 を通過しているので未解決の `blocker=true` は無い。`blocker=false` の計画だけが unresolved で残っていても 6 へ進み、design-doc.md「入力と転記」の規則 3 がマーカーにする |

@@ -606,6 +606,7 @@ hook を追加したくなったときの置き場は次のとおり。
 | E2E の中で確かめるもの・確かめないもの (文言・書式・計算結果・API の応答・DB の値は下の段のテストで確かめ、流れの途中を API の直接呼び出しで済ませない) | `agents/rules/core/testing.md`「E2E で確かめること」 | 文言や計算を変えるたびに遅い E2E が落ちる。画面を通らない判定では、画面が送る要求と API のつなぎ目が確かめられないまま通る | `review-impl` の検査項目 4 が、画面を通らない判定を `high` / `e2e`、下の段で確かめるべきものの比較を `medium` / `test-quality` で指摘する |
 | subagent 起動時の `model` 明示 | `agents/rules/core/orchestration.md` | 未指定だと agent 定義の frontmatter ではなく親のセッションモデルを継承する。検証器が実行器より弱くなりうる | **無い**。セッションのログを人が読むしかない |
 | utility-doc-audit の起動経路 (ユーザー起動と `/workflow-design-notes` の落とし込みのみ) | `agents/skills/utility-doc-audit/SKILL.md` | 普段の作業で監査が自発起動し、観点サブエージェントの fan-out 分のトークンを消費する | **無い**。`disable-model-invocation` を使わない判断のため、SKILL.md の description と本文の記述が唯一の抑止 |
+| dev-spec で UI スケッチを最初に作るとき、frontend-design を Skill ツールで起動すること (既存のスケッチに画面を足す・直すときは起動しない) | `agents/skills/dev-spec/references/ui-sketch.md` の手順 5.3「frontend-design の起動のしかた」 | 記憶にあるデザインの知識で作り込み、ジェネリックな見た目のスケッチが実装の手本になる | `UI_SKETCH.html` の痕跡の行 `<!-- frontend-design: ... -->` と、ui-sketch.md 手順 8 のレビュー観点 8 (方針の見た目が全画面に出ているか)。痕跡の行は起動しなくても書けるので、起動したことの証明にはならない |
 | OpenCode が共通の正本を Read すること | `agents/bindings/opencode/AGENTS.md` | OpenCode は `~/.claude/CLAUDE.md` を自動では読まないため、指示を守らないと**エラーも警告も出さずに共通ハーネス無しで走る** | **無い**。セッションのログを人が読むしかない |
 
 ### subagents (agents/subagents/)
