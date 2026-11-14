@@ -19,6 +19,8 @@
 
 横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-pr` (PR 作成。`--draft` で Draft) / `/workflow-design-notes` (設計の壁打ち台帳 → dev-spec 互換 docs へ落とし込み)。
 
+Neovim プラグインの UI 確認は `/utility-nvim-ui-capture` を使う。新しい WezTerm ウィンドウでアプリウィンドウだけをキャプチャする。
+
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │  /dev-spec — 設計ループ (賢いモデルのセッションで起動)         │
