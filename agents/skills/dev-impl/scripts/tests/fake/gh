@@ -1,0 +1,24 @@
+#!/bin/sh
+# next-issues.sh のテスト用の偽の gh。issue の一覧の呼び出しだけを真似る。
+# 状態は $GH_FAKE_DIR/issues/<番号>/state (OPEN|CLOSED)・labels (カンマ区切り)・body に置く。
+# 本物の gh の @tsv と同じく、本文の改行は \n、CR は \r、タブは \t の 2 文字、バックスラッシュは \\ にして 1 行で出す。
+# 呼び出しは $GH_FAKE_DIR/calls.log に記録する。
+set -u
+D=${GH_FAKE_DIR:?}
+printf '%s\n' "$*" >>"$D/calls.log"
+case "$1 $2" in
+  "repo view")
+    echo "o/r"
+    ;;
+  "issue list")
+    for dir in "$D"/issues/*; do
+      [ -d "$dir" ] || continue
+      body=$(awk '{ gsub(/\\/, "\\\\"); gsub(/\r/, "\\r"); gsub(/\t/, "\\t"); printf "%s%s", (NR > 1 ? "\\n" : ""), $0 }' "$dir/body")
+      printf '%s\t%s\t%s\t%s\n' "$(basename "$dir")" "$(cat "$dir/state")" "$(cat "$dir/labels")" "$body"
+    done
+    ;;
+  *)
+    echo "fake gh: 知らない呼び出し: $*" >&2
+    exit 99
+    ;;
+esac

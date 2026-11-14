@@ -78,27 +78,38 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 
 ## Step 1: issue の収集と着手順
 
+着手順はスクリプトで計算する。対象 issue を集めて `$SCRATCH/issues.tsv` (スナップショット) に書き、着手順を出す。`$ARGUMENTS` で issue 番号が指定されていれば、番号だけを空白区切りで渡す (例: `42 43`。`#42` と書くとシェルが `#` 以降をコメントとして捨て、全件が対象になる):
+
 ```bash
-gh issue list --repo "$REPO_SLUG" --state open --label ready --json number,title,body --limit 200
-gh issue list --repo "$REPO_SLUG" --state open --label in-progress --json number,title,body --limit 200
+sh ~/.claude/skills/dev-impl/scripts/next-issues.sh collect "$SCRATCH/issues.tsv" <番号...>
 ```
 
-取得件数が limit に達したら limit を上げて再取得する (無音の取りこぼしは実装漏れになる)。
+出力は 1 行に 1 issue のタブ区切りで、行の種類ごとに次のように扱う。終了コードが 0 でなければ、標準エラーの内容を添えて停止する。渡した番号のうち対象にならないもの (closed・needs-human・tracking・ready でない・存在しない) は、標準エラーに `#<番号> は対象にならない` と出るので、最終報告に載せる。
 
-- 各 issue の `## 依存` 節から `Depends on #<番号>` を読み、依存グラフを作る (着手の順は下の「着手順」で決める)。依存先が open のままの issue は、依存先が close されるまで着手しない。依存に循環があれば、その issue 群には着手せず、最終報告に載せる
-- `needs-human` の issue は着手しない
-- `$ARGUMENTS` で issue 番号が指定されていれば、その issue (と未完了の依存先) だけを対象にする
-- `tracking` ラベルの親 issue (ユースケース単位のトラッキング) は実装対象にしない
-- 各対象 issue の**実効スコア**を求める。実効スコアは、自分と、自分に直接・間接に依存する全ての対象 issue のスコアの最大値である (スコアの低い依存先が後回しになって、スコアの高い issue が塞がれるのを防ぐため)
-  - スコアは本文の `## 優先度` の `スコア <数値>` で、書式は `~/.claude/skills/dev-triage/references/priority.md`「issue への書き方」にある。緊急枠の行 (行の先頭が `緊急枠 (`) がある issue は、どのスコアよりも高い値として扱う。そのため、緊急枠の issue と、その直接・間接の依存先が先頭に来る
-  - 引き継ぐ元は対象 issue (`ready` / `in-progress`) に限る。`needs-design` などのこの run で着手できない issue のスコアで順を動かしても、その issue はこの run では実装されないため
-  - どの issue からもスコアを得られない issue (`/dev-spec` が作った issue など) は実効スコア無しとし、実効スコアのある issue の後ろに置く
-- **着手順**: 依存先がすべて close された issue (**着手できる issue**) の中から、実効スコアの高い順、同じなら番号の小さい順に選ぶ
-  - `priority.md`「判定の流れ」の「差が 2 割以内なら人が決める」は使わない。実装の途中で人に聞けないので、値と番号で決める
-  - 前回の run から再開する issue (下の表) は、新しく着手する issue より先に入れる
-  - 着手できる issue は、2.5 の完了処理 (close の確認) か 2.6 の駐車のたびに、Step 1 で集めた対象から計算し直す。GitHub から一覧を取り直さない (run の途中で付いた `ready` は拾わない)
-  - スコアがどの issue にも無いとき (`/dev-spec` が作った issue だけのとき) は、番号の小さい順のトポロジカル順になる
-- 着手できる issue は互いに依存しないので、同時に着手してよい (2.0 の並列実行が使う)
+| 行 | 意味 | 扱い |
+| --- | --- | --- |
+| `start <番号> <実効スコア>` | 着手できる issue。上から着手順に並ぶ | 上から着手する (2.0 の並列実行では上から枠を埋める)。互いに依存しないので同時に着手してよい。着手したら `mark <番号> started` を書く (下記) |
+| `wait <番号> <依存先>` | close されていない依存先が残る | 依存先が close されるまで着手しない |
+| `cycle <番号>` | 依存が循環している | 着手せず、最終報告に載せる |
+| `unknown <番号> <依存先>` | どこにも無い issue に依存している | 着手せず、最終報告に載せる |
+| `badline <番号> <行>` | `Depends on` で始まるのに読めない行がある (1 行に複数並べたなど) | 着手せず、最終報告に載せる |
+
+スクリプトが決めていること (規則の正本はこの節。実装は `next-issues.sh` の先頭のコメントと一致させる):
+
+- **対象**: open で `ready` か `in-progress` が付き、`needs-human` と `tracking` が付いていない issue。番号を渡したときは、その issue と、まだ終わっていない依存先だけ
+- **依存**: 本文の `Depends on #<番号>` の行。依存先がすべて close された issue が着手できる
+- **実効スコア**: 自分と、自分に直接・間接に依存する対象 issue のスコアの最大値 (スコアの低い依存先が後回しになって、スコアの高い issue が塞がれるのを防ぐため)。スコアは本文の `## 優先度` の `スコア <数値>` で、行の先頭が `緊急枠 (` の行があれば、どのスコアよりも高い (`U` と出る。書式は `~/.claude/skills/dev-triage/references/priority.md`「issue への書き方」)。引き継ぐ元は対象 issue に限る (この run で着手できない issue のスコアで順を動かさない)。どこからもスコアを得られない issue (`/dev-spec` が作った issue など) は `-` で、スコアのある issue の後ろに置く
+- **着手順**: 前回の run から再開する issue (`in-progress` か、`issue-<番号>` のブランチが手元か origin に残るもの) が先、続いて実効スコアの高い順、同じなら番号の小さい順。`priority.md`「判定の流れ」の「差が 2 割以内なら人が決める」は使わない (実装の途中で人に聞けないので、値と番号で決める)
+
+**issue の状態が変わるたびに、スナップショットに書いて計算し直す。** GitHub から一覧を取り直さない (run の途中で付いた `ready` は拾わない):
+
+```bash
+sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <番号> started  # 2.1 で着手した (並列実行で枠を埋め直すとき、実行中の issue を start に出さない)
+sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <番号> closed   # 2.5 で close を確かめた
+sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <番号> parked   # 2.6 で needs-human に駐車した
+```
+
+`mark` も着手順を出し直す。スナップショットを書き換えずに今の着手順を見るときは `sh ~/.claude/skills/dev-impl/scripts/next-issues.sh order "$SCRATCH/issues.tsv"` を使う。
 
 **`in-progress` が残っている、または対象 issue に残置ブランチ `issue-<N>` がある場合は前回の中断・駐車からの復帰。** その issue の状態を確認して再開位置を決める (needs-human から `ready` に戻された issue はラベルでは区別できないため、ブランチの有無で検出する)。
 
@@ -190,6 +201,7 @@ BASE_SHA=$(git -C "$WORK_DIR" rev-parse HEAD)
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label ready --add-label in-progress
 gh issue comment "$N" --repo "$REPO_SLUG" --body "実装を開始します (dev-impl)"
+sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" "$N" started >/dev/null
 ```
 
 ### 2.2 実装 (implementer subagent)
@@ -497,7 +509,7 @@ gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の 
 
 `sub_issues_summary` は API 側が数える値なので、自前で子を列挙して数え直さない (取りこぼしによる誤 close を避ける)。merge 直後は `Closes #N` の自動 close が非同期で、最後の子でも `completed` が古い値のことがある — **再試行はしない**。取りこぼしは Step 3 の掃き掃除が回収する。
 
-次の issue へ進む (Step 2 の先頭へ)。
+次の issue へ進む (Step 2 の先頭へ)。次の issue は `sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" "$N" closed` が出す着手順で決める (Step 1)。
 
 ### 2.6 エスカレーション (needs-human 駐車)
 
@@ -510,7 +522,7 @@ gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が
 
 駐車のコメントには、`~/.claude/skills/dev-triage/references/issue-states.md`「needs-human のコメントに載せる会話の入口」に従って会話の入口を足す (`<!-- dev-impl -->` の前)。
 
-ブランチと open PR は merge せず残す (人間が差分を確認でき、再開時に再利用できる)。**その issue に依存しない次の issue へ進む。**
+ブランチと open PR は merge せず残す (人間が差分を確認でき、再開時に再利用できる)。**その issue に依存しない次の issue へ進む。** 次の issue は `sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" "$N" parked` が出す着手順で決める (Step 1)。
 
 **run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する — このときも Step 3 の手順 2 (docs/pending-review/ の open と確認促し) を実行する (merge 済み issue の保留項目を停止で失わない)。
 
