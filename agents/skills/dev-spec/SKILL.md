@@ -192,9 +192,17 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 
 ## フェーズ 9: issue ドラフト + ドラフトチェック
 
-`references/issue-template.md` を Read し、テンプレートに従って**親 <m> 件 + 子 <n> 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。**ファイル名は子が `issue-<連番>.md`、親が `parent-<識別子>.md`** (フェーズ 10 の作成手順と同じ規約。子の連番はドラフト段階の依存 `Depends on issue-<連番>` と観点 3 の段数算出が参照する)。タイトルはドラフトのファイルに入らないので、全ドラフトのファイル名とタイトルを `<scratchpad>/titles.tsv` に書き出す (形式は issue-template.md「タイトル一覧ファイル」)。子のタイトルは、GitHub に既存の子 issue があれば issue-template.md「子 issue テンプレート」の引き継ぎ規則で既存のタイトルを使う (docs から作り直したドラフトの言い回しがずれると、フェーズ 10 のタイトル突き合わせが外れて子が二重に作られるため)。親は USECASES.md の UC 1 件につき 1 件。例外 (基盤親・UC 統合親・クイックモードのフォールバック) は issue-template.md「親 issue テンプレート」の表に従う。再実行時 (issue への反映・別セッションからの再開) もドラフトは docs から再生成する — 前セッションの scratchpad は残っていない。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。**依存は「依存先が merge した成果物が無いと DoD が失敗する」ものだけに絞り、並行して着手できる形を優先する** (基準と段数の算出は issue-template.md「依存の段数」。依存の段数がそのまま実装ループの所要時間の下限になる)。
+`references/issue-template.md` を Read し、テンプレートに従って**親 <m> 件 + 子 <n> 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。**ファイル名は子が `issue-<連番>.md`、親が `parent-<識別子>.md`** (フェーズ 10 の作成手順と同じ規約。子の連番はドラフト段階の依存 `Depends on issue-<連番>` と `dep-depth.sh` の段数の計算が参照する)。タイトルはドラフトのファイルに入らないので、全ドラフトのファイル名とタイトルを `<scratchpad>/titles.tsv` に書き出す (形式は issue-template.md「タイトル一覧ファイル」)。子のタイトルは、GitHub に既存の子 issue があれば issue-template.md「子 issue テンプレート」の引き継ぎ規則で既存のタイトルを使う (docs から作り直したドラフトの言い回しがずれると、フェーズ 10 のタイトル突き合わせが外れて子が二重に作られるため)。親は USECASES.md の UC 1 件につき 1 件。例外 (基盤親・UC 統合親・クイックモードのフォールバック) は issue-template.md「親 issue テンプレート」の表に従う。再実行時 (issue への反映・別セッションからの再開) もドラフトは docs から再生成する — 前セッションの scratchpad は残っていない。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。**依存は「依存先が merge した成果物が無いと DoD が失敗する」ものだけに絞り、並行して着手できる形を優先する** (基準と段数の算出は issue-template.md「依存の段数」。依存の段数がそのまま実装ループの所要時間の下限になる)。
 
-全ドラフトが揃ったら、`general-purpose` subagent (**モデル: opus を明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合・相互の重複漏れ・UC 帰属はセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 6 項目を指示文に転記し (観点 3 が参照する「依存の段数」の基準・算出手順・閾値も一緒に転記する。閾値判定の前提になる並列実行の条件は、dev-impl の SKILL.md「2.0 並列実行の可否と枠組み」を Read してその本文を転記する)、`<scratchpad>/titles.tsv`・USECASES.md (あれば)・機能設計書と DESIGN.md のパスを渡して照合させる。完了を待ってから結果の分岐へ進む。出力形式はフェーズ 8 と同じで、**その前に観点 3 の `依存段数:` の 1 行を置かせる** (段数は severity を持たない情報なので findings の形式に載らない)。
+全ドラフトが揃ったら、先に依存の段数を計算する。dev-impl の SKILL.md (`~/.claude/skills/dev-impl/SKILL.md`)「2.0 並列実行の可否と枠組み」を Read して、対象のリポジトリが並列実行の条件を満たすかを判定し、満たさなければ `--serial` を付ける:
+
+```bash
+sh ~/.claude/skills/dev-spec/scripts/dep-depth.sh [--serial] <scratchpad>
+```
+
+出力の 1 行目が `依存段数:` の行で、2 行目以降が段ごとの子である (形式と閾値は issue-template.md「依存の段数」)。0 以外で終わったら (ドラフトに無い連番への依存・循環・1 行に複数並べた依存)、標準エラーに挙がった行に従ってドラフトを直し、実行し直す。
+
+続けて、`general-purpose` subagent (**モデル: opus を明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合・相互の重複漏れ・UC 帰属はセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 6 項目を指示文に転記し (観点 3 が参照する「依存の段数」の書く基準・閾値と、`dep-depth.sh` の出力の全行も一緒に転記する)、`<scratchpad>/titles.tsv`・USECASES.md (あれば)・機能設計書と DESIGN.md のパスを渡して照合させる。完了を待ってから結果の分岐へ進む。出力形式はフェーズ 8 と同じ。`依存段数:` の行は、`dep-depth.sh` の出力をそのまま使う (段数は severity を持たない情報なので findings の形式に載らない)。
 
 分岐も同じ (**最大 2 周**): high は修正して再実行、2 周で残れば人間に提示、無ければフェーズ 10 へ。**`依存段数:` の行と、段数超過の medium は、フェーズ 10 の作成同意を取る前にユーザーへ提示する** (依存をどう削るかは設計判断なので、他の medium と違って自動では反映しない)。
 
@@ -210,15 +218,24 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 
 | 選択肢 | 意味 |
 | --- | --- |
-| 作成 | <owner/name> に親 issue <m> 件 + 子 issue <n> 件を作成し、各子を対応する親の sub-issue として紐付ける (旧構成の単一親があれば、issue-template.md「旧構成 (run 全体で親 1 件) からの移行」の条件に従って子を貼り替え、旧親を close する) |
+| 作成 | <owner/name> に親 issue <m> 件 + 子 issue <n> 件を作成し、各子を対応する親の sub-issue として紐付ける (旧構成の単一親があれば、issue-template.md「issue 作成手順」の「スクリプトが行うこと」の手順 7 に従って子を貼り替え、旧親を close する) |
 | ドラフトを見せて | ドラフト全文を表示してから再確認 |
 | 中止 | ここで終了 (docs とドラフトは残る。issue は作成しない) |
 
-3. issue-template.md の「issue 作成手順」どおり作成する: ラベル用意 → 既存 issue との突き合わせ (冪等。タイトルは `<scratchpad>/titles.tsv` から引く。「タイトル → 番号」の対応表を作り、番号が分かる依存をドラフトで置換する。どのドラフトとも一致しない open の既存の子は最終報告に挙げて close するかを人間に聞く) → 親の特定/作成 → 子を依存順に作成 (作成の直前に残りの依存を置換する) → 既存 issue の本文更新 (置換の後に比較する) → 対応する親へ sub-issue 紐付け (旧構成の単一親があれば、issue-template.md の移行の条件に従って貼り替えて close)
+3. スクリプトで作成する。`<scratchpad>` はフェーズ 9 がドラフトを書いたディレクトリで、対象のリポジトリの中で実行する:
+
+```bash
+sh ~/.claude/skills/dev-spec/scripts/create-issues.sh <scratchpad>
+```
+
+   人間が `NEEDS_HUMAN:` の行に「旧親のまま残す」などと答えたら、その親の番号を `--keep <番号>` で渡して再実行する (`sh ~/.claude/skills/dev-spec/scripts/create-issues.sh --keep <番号> <scratchpad>`)。
+
+   スクリプトは、ラベル用意 → 既存 issue との突き合わせ (タイトルの完全一致。冪等) → 親の用意 → 子を依存の上流から用意 (作る直前に `Depends on issue-<連番>` を番号に置き換える) → 既存 issue の本文の比較と更新 → 旧構成の単一親からの移行 → 親への sub-issue 紐付け、を行う。終了コードごとの扱い (0 最終報告 / 1 途中で止まった / 3 人間の判断が要る / 4 ドラフトの誤り) と、`NEEDS_HUMAN:` の行ごとの操作は issue-template.md「issue 作成手順」にある。最終報告に「どのドラフトとも一致しない open の既存の子」があれば、close するかを人間に聞く
 4. 結果を報告し、次を案内する:
 
 ```
-✓ issue を作成しました: 親 <m> 件 + 子 <n> 件 (新規 <a> / 更新 <b> / スキップ <c>)
+✓ issue を作成しました:
+<create-issues.sh の最終報告をそのまま貼る>
 
 GitHub で issue をざっと確認し、docs のコミットを origin のデフォルトブランチへ入れてください (push。保護ブランチなら PR を merge)。/dev-impl は origin のデフォルトブランチの docs を読みます。問題がなければ実装ループを起動します:
 

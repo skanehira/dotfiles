@@ -1,0 +1,122 @@
+#!/bin/sh
+# create-issues.sh のテスト用の偽の gh。create-issues.sh が使う呼び出しの形だけを真似る。
+# 状態は $GH_FAKE_DIR に置く:
+#   issues/<番号>/title・state (OPEN|CLOSED)・labels (カンマ区切り)・body・parent (親の番号。無ければファイルが無い)
+#   next (次に作る番号)、calls.log (状態を変えた呼び出しの記録)
+# GitHub は本文を受け取ったとおりに (末尾の改行も含めて) 保存し、gh -q は末尾に改行を 1 つ足して出す。
+# 偽物もそう振る舞う (2026-11-14 に ro-ai-dojo/rehearsal-flashcards の issue で確かめた)。
+# GH_FAKE_FAIL_LINK=1 なら、親への紐付けを HTTP 422 で失敗させる。
+set -u
+D=${GH_FAKE_DIR:?}
+mkdir -p "$D/issues"
+[ -f "$D/next" ] || echo 1 >"$D/next"
+log() { printf '%s\n' "$*" >>"$D/calls.log"; }
+
+store_body() { # $1: 番号 $2: 本文のファイル
+  cat "$2" >"$D/issues/$1/body"
+}
+
+arg_after() { # $1: 探すオプション 残り: 引数
+  want=$1
+  shift
+  while [ $# -gt 0 ]; do
+    if [ "$1" = "$want" ]; then
+      printf '%s' "$2"
+      return 0
+    fi
+    shift
+  done
+  return 1
+}
+
+case "$1 $2" in
+  "repo view")
+    echo "o/r"
+    ;;
+  "label create")
+    log "label $3"
+    ;;
+  "issue list")
+    for dir in "$D"/issues/*; do
+      [ -d "$dir" ] || continue
+      n=$(basename "$dir")
+      if grep -q '^対応 UC:' "$dir/body" 2>/dev/null; then uc=uc; else uc=-; fi
+      printf '%s\t%s\t%s\t%s\t%s\n' "$n" "$(cat "$dir/state")" "$(cat "$dir/labels")" "$uc" "$(cat "$dir/title")"
+    done
+    ;;
+  "issue create")
+    n=$(cat "$D/next")
+    echo $((n + 1)) >"$D/next"
+    mkdir -p "$D/issues/$n"
+    arg_after --title "$@" >"$D/issues/$n/title"
+    arg_after --label "$@" >"$D/issues/$n/labels"
+    echo OPEN >"$D/issues/$n/state"
+    store_body "$n" "$(arg_after --body-file "$@")"
+    log "create #$n $(cat "$D/issues/$n/title") [$(cat "$D/issues/$n/labels")]"
+    echo "https://github.com/o/r/issues/$n"
+    ;;
+  "issue view")
+    cat "$D/issues/$3/body"
+    echo
+    ;;
+  "issue edit")
+    store_body "$3" "$(arg_after --body-file "$@")"
+    log "edit #$3"
+    ;;
+  "issue reopen")
+    echo OPEN >"$D/issues/$3/state"
+    log "reopen #$3"
+    ;;
+  "issue close")
+    echo CLOSED >"$D/issues/$3/state"
+    log "close #$3"
+    ;;
+  api*)
+    shift
+    [ "$1" = "--paginate" ] && shift
+    path=$1
+    shift
+    case $path in
+      */sub_issues\?per_page=100)
+        p=$(printf '%s' "$path" | sed 's#.*/issues/\([0-9]*\)/sub_issues.*#\1#')
+        for dir in "$D"/issues/*; do
+          [ -f "$dir/parent" ] && [ "$(cat "$dir/parent")" = "$p" ] && basename "$dir"
+        done | sort -n
+        ;;
+      */sub_issues)
+        p=$(printf '%s' "$path" | sed 's#.*/issues/\([0-9]*\)/sub_issues#\1#')
+        id=$(arg_after -F "$@" | sed 's/^sub_issue_id=//')
+        child=$((id - 1000))
+        replace=0
+        case " $* " in *" replace_parent=true "*) replace=1 ;; esac
+        if [ "${GH_FAKE_FAIL_LINK:-0}" = 1 ] || { [ -f "$D/issues/$child/parent" ] && [ "$replace" = 0 ]; }; then
+          echo "gh: Validation Failed (HTTP 422)" >&2
+          exit 1
+        fi
+        echo "$p" >"$D/issues/$child/parent"
+        if [ "$replace" = 1 ]; then log "relink #$child -> #$p"; else log "link #$child -> #$p"; fi
+        ;;
+      */parent)
+        n=$(printf '%s' "$path" | sed 's#.*/issues/\([0-9]*\)/parent#\1#')
+        if [ -f "$D/issues/$n/parent" ]; then
+          cat "$D/issues/$n/parent"
+        else
+          echo "gh: Not Found (HTTP 404)" >&2
+          exit 1
+        fi
+        ;;
+      */issues/*)
+        n=${path##*/}
+        echo $((1000 + n))
+        ;;
+      *)
+        echo "fake gh: 知らない api: $path" >&2
+        exit 99
+        ;;
+    esac
+    ;;
+  *)
+    echo "fake gh: 知らない呼び出し: $*" >&2
+    exit 99
+    ;;
+esac
