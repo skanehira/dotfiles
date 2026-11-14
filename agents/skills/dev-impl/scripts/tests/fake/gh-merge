@@ -1,0 +1,136 @@
+#!/bin/sh
+# merge-pr.sh のテスト用の偽の gh。テストが PATH の先頭のディレクトリに gh という名前で置く。
+# 状態は $GH_FAKE_DIR に置く:
+#   issue            対象の issue の番号。gh pr list の --head が issue-<番号> でなければ何も返さない
+#   pr_open          open の PR の番号 (空なら無い)
+#   pr_merged        merge 済みの PR の番号 (空なら無い)
+#   closing          PR が close する issue の番号 (1 行に 1 件)
+#   head_sha         PR の HEAD のコミット。呼ばれるたびに 1 行進む (最後の行を使い続ける)
+#   rollup           statusCheckRollup の件数。呼ばれるたびに 1 行進む (最後の行を使い続ける)
+#   checks.<n>.tsv   n 回目の gh pr checks の結果 (名前<TAB>bucket<TAB>link)。無ければ最後の回の結果
+#   checks_rc        あれば、gh pr checks をこの終了コードで失敗させる (出力なし)
+#   merge_rc         gh pr merge の終了コード (無ければ 0)
+#   merge_merges     1 なら gh pr merge で PR が MERGED になる (無ければ 1)
+#   mergeable        gh pr view の mergeable と mergeStateStatus (空白区切り)
+#   pr_state         gh pr view --json state の値 (merge で MERGED になる)
+#   issue_state      issue の状態 (OPEN|CLOSED)
+#   issue_labels     issue のラベル (1 行に 1 件)
+#   issue_view_fail  あれば、gh issue view を失敗させる
+#   parent           親の「番号<TAB>state<TAB>完了/全体」(無ければ HTTP 404)
+#   parent_error     あれば、親の問い合わせを HTTP 403 で失敗させる
+# 状態を変えた呼び出しと gh pr checks の呼び出しは calls.log に記録する。
+set -u
+D=${GH_FAKE_DIR:?}
+log() { printf '%s\n' "$*" >>"$D/calls.log"; }
+
+next_line() { # $1: 状態のファイル。呼ばれるたびに次の行を出し、最後の行を使い続ける
+  c=$(cat "$D/$1.count" 2>/dev/null || echo 0)
+  c=$((c + 1))
+  echo "$c" >"$D/$1.count"
+  total=$(wc -l <"$D/$1" | tr -d ' ')
+  [ "$c" -le "$total" ] || c=$total
+  sed -n "${c}p" "$D/$1"
+}
+
+arg_after() { # $1: 探すオプション 残り: 引数
+  want=$1
+  shift
+  while [ $# -gt 0 ]; do
+    if [ "$1" = "$want" ]; then
+      printf '%s' "$2"
+      return 0
+    fi
+    shift
+  done
+  return 1
+}
+
+has_arg() { # $1: 探す引数 残り: 引数
+  want=$1
+  shift
+  for a in "$@"; do [ "$a" = "$want" ] && return 0; done
+  return 1
+}
+
+q=$(arg_after -q "$@" || arg_after --jq "$@" || true)
+
+case "$1 $2" in
+  "repo view")
+    case $q in
+      *nameWithOwner*) echo "o/r" ;;
+      *defaultBranchRef*) echo "main" ;;
+    esac
+    ;;
+  "pr list")
+    [ "$(arg_after --head "$@")" = "issue-$(cat "$D/issue")" ] || exit 0
+    case $(arg_after --state "$@") in
+      open) cat "$D/pr_open" ;;
+      merged) cat "$D/pr_merged" 2>/dev/null || true ;;
+    esac
+    ;;
+  "pr view")
+    case $q in
+      *closingIssuesReferences*) cat "$D/closing" ;;
+      *statusCheckRollup*) next_line rollup ;;
+      .headRefOid) next_line head_sha ;;
+      *mergeable*) cat "$D/mergeable" ;;
+      .state) cat "$D/pr_state" ;;
+      *) echo "fake gh: 知らない pr view: $q" >&2; exit 99 ;;
+    esac
+    ;;
+  "pr checks")
+    log "pr checks"
+    [ -f "$D/checks_rc" ] && exit "$(cat "$D/checks_rc")"
+    c=$(cat "$D/checks.count" 2>/dev/null || echo 0)
+    c=$((c + 1))
+    echo "$c" >"$D/checks.count"
+    while [ "$c" -gt 1 ] && [ ! -f "$D/checks.$c.tsv" ]; do c=$((c - 1)); done
+    cat "$D/checks.$c.tsv"
+    if grep -q "	pending	" "$D/checks.$c.tsv"; then exit 8; fi
+    if grep -Eq "	(fail|cancel)	" "$D/checks.$c.tsv"; then exit 1; fi
+    ;;
+  "pr merge")
+    missing=""
+    has_arg --squash "$@" || missing="$missing --squash"
+    has_arg --delete-branch "$@" || missing="$missing --delete-branch"
+    [ "$(arg_after --match-head-commit "$@")" = "$(tail -n 1 "$D/head_sha")" ] || missing="$missing --match-head-commit"
+    if [ -n "$missing" ]; then
+      log "pr merge $3 (引数が足りない:$missing)"
+      exit 1
+    fi
+    log "pr merge $3"
+    if [ "$(cat "$D/merge_merges" 2>/dev/null || echo 1)" = 1 ]; then echo MERGED >"$D/pr_state"; fi
+    exit "$(cat "$D/merge_rc" 2>/dev/null || echo 0)"
+    ;;
+  "issue view")
+    [ -f "$D/issue_view_fail" ] && { echo "gh: HTTP 502" >&2; exit 1; }
+    case $q in
+      *labels*) cat "$D/issue_labels" ;;
+      *) cat "$D/issue_state" ;;
+    esac
+    ;;
+  "issue close")
+    log "issue close $3"
+    [ "$3" = "$(cut -f 1 "$D/parent" 2>/dev/null)" ] || echo CLOSED >"$D/issue_state"
+    ;;
+  "issue edit")
+    log "issue edit $3 $4 $5"
+    ;;
+  api*)
+    if [ -f "$D/parent_error" ]; then
+      echo "gh: Resource not accessible by integration (HTTP 403)" >&2
+      exit 1
+    fi
+    if [ -f "$D/parent" ]; then
+      cat "$D/parent"
+    else
+      echo '{"message":"No parent issue found","status":"404"}'
+      echo "gh: No parent issue found (HTTP 404)" >&2
+      exit 1
+    fi
+    ;;
+  *)
+    echo "fake gh: 知らない呼び出し: $*" >&2
+    exit 99
+    ;;
+esac

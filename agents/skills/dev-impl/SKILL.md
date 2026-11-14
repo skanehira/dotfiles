@@ -134,13 +134,13 @@ claude agents --json --all | jq -r --arg n "$OWNER" '[.[] | select(.name == $n) 
 
 - 「PR が open」の行: worktree を作り直さずに `$WT` を使う
 - 「ブランチのみ残存」の行: switch を飛ばし、基準は `BASE_SHA=$(git -C "$WT" merge-base "origin/$DEFAULT" HEAD)` で復元する。implementer に足す行は「ブランチと作業ツリー (未コミットの差分を含む) に前回の差分がある。既存差分を前提に続きから実装せよ」とする
-- 後片付け: 2.4 の merge の後と 2.6 の駐車では、並列実行の worktree と同じく `$WT` を `git -C "$REPO_DIR" worktree remove` で消す
+- 後片付け: 2.4 の merge の後は `merge-pr.sh --worktree "$WT"` が消す。2.6 の駐車では、並列実行の worktree と同じく `$WT` を `git -C "$REPO_DIR" worktree remove` で消す
 
 前の run の SCRATCH (review JSON や証跡) は引き継がない。SCRATCH は run ごとに新しく作るため、レビューは r1 から数え直す。
 
 | 状態 (`gh pr list --repo "$REPO_SLUG" --head issue-<N>` と、`git fetch origin` 後の `git branch --list issue-<N>` / `git branch -r --list "origin/issue-<N>"`) | 再開位置 |
 | --- | --- |
-| PR が open | 2.4 手順 4 (CI ゲート・merge と状態確認) から。手順 4 の先頭が `PR_NUM` を引き直すので番号の復元は要らないが、**並列実行では worktree を作り直して `$WORK_DIR` を再設定してから入る** (rebase 分岐が使う)。検証は push 前に済んでいる前提なので繰り返さないが、`gh pr view --json headRefOid` と `git -C "$WORK_DIR" rev-parse HEAD` が一致しなければ PR 作成後に差分が足されているので、手順 2 の検証を 1 巡し、push してから CI ゲートを通して merge する (push で CI が新しい HEAD で走り直すため、push より前の CI の結果は使わない)。PR の動作確認の証跡は作成時点のもので、この run では取り直せない (implementer を起動していない)。merge の前に `gh pr comment` で「`<PR 作成時の headRefOid>` 以降の差分は動作確認の証跡を取っていない」と 1 件残す。レビュー未実施が疑われる場合は 2.3 から |
+| PR が open | 2.4 手順 4 (CI ゲート・merge と状態確認) から。`merge-pr.sh` が PR の番号を引き直すので番号の復元は要らないが、**並列実行では worktree を作り直して `$WORK_DIR` を再設定してから入る** (rebase 分岐が使う)。検証は push 前に済んでいる前提なので繰り返さないが、`gh pr view --json headRefOid` と `git -C "$WORK_DIR" rev-parse HEAD` が一致しなければ PR 作成後に差分が足されているので、手順 2 の検証を 1 巡し、push してから CI ゲートを通して merge する (push で CI が新しい HEAD で走り直すため、push より前の CI の結果は使わない)。PR の動作確認の証跡は作成時点のもので、この run では取り直せない (implementer を起動していない)。merge の前に `gh pr comment` で「`<PR 作成時の headRefOid>` 以降の差分は動作確認の証跡を取っていない」と 1 件残す。レビュー未実施が疑われる場合は 2.3 から |
 | ブランチのみ残存 (ローカルまたは origin、PR なし) | ブランチへ switch し (origin のみに在る場合は `git switch issue-<N>` が追跡ブランチを作る)、`BASE_SHA=$(git merge-base origin/$DEFAULT HEAD)` で基準を復元して 2.2 から。implementer に渡す内容 (2.2) に「ブランチに前回の差分がある。既存差分を前提に続きから実装せよ」の行を足す |
 | どちらも無い | 最初から (2.1 から) |
 
@@ -181,7 +181,7 @@ worktree には git 管理外のファイル (`.env` 系・ローカル設定) �
 
 - **`.claude/worktrees/` が `.gitignore` に無いプロジェクトでは並列にしない**。worktree を作った時点で親の作業ツリーが dirty になり、2.1 の clean チェックが全 issue で失敗する。並列を使うなら先に `.gitignore` へ追加する (それ自体を 1 コミットにしてよい)
 - ポートは**スロット番号から決めて渡す** (例: 基準ポート + s × 10)。implementer と review-impl には起動時の `port` の行で渡し (2.2・2.3)、Haiku に委譲する検証ではプロジェクトの worktree セットアップ手順が定める形でコマンドに含める (モデル方針「Haiku への委譲」)
-- issue が終わったら `git -C "$REPO_DIR" worktree remove "$WT"` で片付ける。駐車 (2.6) した issue の worktree は、WIP を push したうえで削除する (残すと次回の clean チェックに掛かる)
+- merge した issue の worktree は、`merge-pr.sh --worktree "$WT"` (2.4 手順 4) が消す。駐車 (2.6) した issue の worktree は、WIP を push したうえで `git -C "$REPO_DIR" worktree remove "$WT"` で削除する (残すと次回の clean チェックに掛かる)
 
 ### 2.1 着手
 
@@ -406,76 +406,54 @@ Closes #<N>
    | `PR_FAILED issue_link <url>` | PR はできたが issue の Development に紐づいていない。下書きの先頭行が `Closes #<N>` であることを確かめ、違っていれば直して同じ引数で 1 回だけ再起動する。下書きが正しいか、再発したら merge せずに 2.6 へ (人が issue の画面の Development から紐づける) |
    | それ以外の `PR_FAILED` | 理由を見て直せるもの (引数の渡し間違い) は直して 1 回だけ再起動し、直せなければ 2.6 へ |
 
-4. **CI ゲートと merge**: ローカル検証は手順 2 で済んでいるので、ここでは CI があればその pass を待ってから merge し、**状態で成功を確認する**。**まず PR 番号を引き直す**。手順 3 のスキルが返す URL は会話に残るだけで変数には入っておらず、再開経路 (Step 1 の再開表) では手順 3 自体を通っていないためである:
+4. **CI ゲートと merge**: ローカル検証は手順 2 で済んでいるので、ここでは CI があればその pass を待ってから merge し、後片付けと 2.5 の完了処理までを、スクリプトで行う。直列実行は clone の中で、並列実行と Step 1 で引き継いだ worktree では親の clone の中で `--worktree "$WT"` を付けて実行する:
 
 ```bash
-PR_NUM=$(gh pr list --repo "$REPO_SLUG" --head "issue-$N" --json number -q '.[0].number')
-[ -n "$PR_NUM" ] || exit 1        # 空なら 2.6 へ (下記)
-gh pr view "$PR_NUM" --repo "$REPO_SLUG" --json closingIssuesReferences \
-  -q '.closingIssuesReferences[].number' | rg -qx "$N" || exit 1   # issue の Development に紐づいていなければ 2.6 へ
+sh ~/.claude/skills/dev-impl/scripts/merge-pr.sh "$N" [--worktree "$WT"]
 ```
 
-紐づきの確認を merge の直前にも置くのは、再開経路 (Step 1 の再開表の「PR が open」) が手順 3 を通らず、前の run が作った PR をそのまま merge するためである。
+CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超えうる。**バックグラウンドで実行し、終わりの通知を待ってから**終了コードで分岐する。CI の待ちは出力が小さいので Haiku に委譲しない。**並列実行でも merge はここで 1 件ずつ直列に行う**: 前の `merge-pr.sh` の終わりの通知を受けるまで、次の `merge-pr.sh` を起動しない。同時に merge するとデフォルトブランチが競合し、残りの worktree がまとめて rebase 待ちになる。他の issue が実装・レビュー中でも、merge の順番待ちだけを直列化すればよい。gh の 1 回の呼び出しが応答しないまま固まった場合はスクリプトの上限が効かないので、通知が上限 (既定 60 分) を大きく過ぎても来なければ、バックグラウンドのタスクを止めて 2.6 へ進む。
 
-#### CI ゲート
-
-**CI の有無は PR に登録された checks の件数で判定する。** `gh pr checks` は checks が 1 件も無い PR で `no checks reported on the '<branch>' branch` を出して exit 1 を返し、`--json` を付けても同じなので、exit code では「CI なし」と「CI が fail」を区別できない (gh 2.102.0 で実測)。件数は `statusCheckRollup` から取る。GitHub Actions の check run と外部 CI の commit status の両方が入る:
-
-```bash
-ci_count() { gh pr view --repo "$REPO_SLUG" "$PR_NUM" --json statusCheckRollup -q '.statusCheckRollup | length'; }
-```
-
-1. **登録を待つ**: push の直後は checks の登録が遅れる。`git -C "$WORK_DIR" ls-files '.github/workflows/*.yml' '.github/workflows/*.yaml'` が 1 件以上なら、`ci_count` が 0 より大きくなるまで 10 秒おきに最大 12 回 (2 分) 引き直す。workflow ファイルが無ければ `ci_count` を 1 回だけ引く
-2. **CI なし**: `ci_count` が 0 のままなら CI なしとして、手順 2 のローカル検証を根拠に merge へ進む。workflow ファイルがあっても `paths:` などの条件でこの PR では走らない構成はここに当たる。2.5 の完了コメントに「CI: なし (checks 未登録)」と書く
-3. **CI あり**: 終わるまで待つ。`gh pr checks --repo "$REPO_SLUG" "$PR_NUM" --watch --fail-fast` を Bash ツールの最大タイムアウト (600000 ms) で実行する。`--watch` 自体はタイムアウトを持たないので、ツールのタイムアウトで切れることがある。**切れても失敗と読まず**、`gh pr checks --repo "$REPO_SLUG" "$PR_NUM" --json name,bucket` に `pending` が残っていれば `--watch` を再実行する。待ちの合計が 60 分を超えたら 2.6 へ (CI のタイムアウト)
-4. **判定**: `--watch` の exit code では判定しない。終わったら次のコマンドの `bucket` で判定する。`--required` は付けない (branch protection が必須にした checks だけでなく全 checks を見る)
-
-```bash
-gh pr checks --repo "$REPO_SLUG" "$PR_NUM" --json name,bucket,link
-```
-
-| `bucket` | 動作 |
-| --- | --- |
-| 全件が `pass` か `skipping` | merge へ進む。2.5 の完了コメントに「CI: pass」と check 名を書く |
-| `fail` か `cancel` が 1 件以上 | merge せず 2.6 へ。fix のラウンドは回さない。ローカル検証が green で CI だけが red なのは環境差の疑いが強く、どちらを正とするかは人間が決める。駐車コメントに該当 check の `name` と `link` を列挙する |
-
-CI の待ちは出力が小さいので Haiku に委譲しない。
-
-#### merge
-
-```bash
-gh pr merge --repo "$REPO_SLUG" "$PR_NUM" --squash --delete-branch
-MERGE_RC=$?   # 次のコマンドで $? が上書きされる前に捕まえる
-STATE=$(gh pr view --repo "$REPO_SLUG" "$PR_NUM" --json state -q .state)   # MERGED を期待
-```
-
-**`PR_NUM` が空のまま先へ進んではならない。** `gh pr merge --repo X "" --squash` は位置引数が空だと**カレントブランチの PR にフォールバックする**ので、別の issue のブランチに居ると無関係な PR を merge しうる。引けなければ 2.6 へ。
-
-**`gh pr merge` の exit code だけで判定しない。** `--delete-branch` の副作用は gh のバージョンと引数によって変わり (下記)、成功しても非ゼロを返す構成がありうる。**2.5 へ進む条件は `$STATE` が `MERGED`** (大文字。`gh ... view --json` は大文字を返す) であることとし、exit code (`$MERGE_RC`) は下の rebase 分岐を起こすかどうかの判断にだけ使う。
-
-| `$MERGE_RC` | `$STATE` | 動作 |
+| 終了コード | 意味 | 動作 |
 | --- | --- | --- |
-| 任意 | `MERGED` | 2.5 へ |
-| 非ゼロ | `MERGED` 以外 | 下記の rebase 復旧を試みる |
-| 0 | `MERGED` 以外 (`OPEN` / 空) | `gh pr view` を 1 回だけ再試行する。それでも `MERGED` にならなければ 2.6 へ (branch protection・マージキュー・API の遅延など、rebase では解けない原因が疑われる) |
+| 0 | merge と完了処理を終えた | 出力の `CI:` の行を、2.5 の完了コメントにそのまま使う。2.5 へ |
+| 10 | `issue-$N` の PR が無い (`NO_PR`) か、PR が issue を close しない (`NOT_LINKED`) | 2.6 へ |
+| 11 | CI が失敗した (`CI_FAIL:` の行に check の名前とリンク) | merge せず 2.6 へ。fix のラウンドは回さない。ローカル検証が green で CI だけが red なのは環境差の疑いが強く、どちらを正とするかは人間が決める。駐車コメントに `CI_FAIL:` の行を列挙する |
+| 12 | CI が上限 (既定 60 分) までに終わらない (`CI_TIMEOUT`) | merge せず 2.6 へ (CI のタイムアウト) |
+| 13 | PR がコンフリクトしていて merge できない (`CONFLICT`。`mergeable` が `CONFLICTING`、または `mergeStateStatus` が `DIRTY` か `BEHIND`) | 下記の rebase 復旧を **1 回だけ**試みる。復旧の後も 13 なら 2.6 へ |
+| 14 | merge できない・`MERGED` にならない (`NOT_MERGED`) | 2.6 へ (branch protection・権限・マージキュー・API の遅延など、rebase では解けない原因が疑われる。出力の `mergeable` と `mergeStateStatus` を駐車コメントに書く) |
+| 15 | merge は済んだが、後片付けか完了処理に失敗したものがある (`MERGED_INCOMPLETE`) | **駐車しない** (merge は済んでいる)。同じコマンドを 1 回だけ再実行する (open の PR が無いので merge 済みの PR を引き直し、後片付けと完了処理だけをやり直す)。それでも 15 なら、失敗した行を Step 3 の最終報告に載せて次の issue へ進む |
+| 16 | PR の HEAD が手元のブランチの HEAD にならない (`HEAD_MISMATCH`) | 手元の HEAD を push したかを確かめる。push していなければ push して 1 回だけ再実行する。push 済みで違うなら、手元に無いコミットが PR にある (人か別の run が push した) ので 2.6 へ |
+| 1 | gh か git が失敗した (merge の前) | 標準エラーを添えて 2.6 へ |
 
-**並列実行でも merge はここで 1 件ずつ直列に行う。** 同時に merge するとデフォルトブランチが競合し、残りの worktree がまとめて rebase 待ちになる。他の issue が実装・レビュー中でも、merge の順番待ちだけを直列化すればよい。
+スクリプトが守っている規則 (変えるときは `merge-pr.sh` も同じに直す):
 
-`MERGED` を確認したら後片付けをする。**ローカルブランチは直列・並列のどちらでも自分で消す**:
+- **PR の番号を引き直し、空なら何もしない**: PR は `issue-$N` のブランチから引き直す (手順 3 のスキルが返す URL は会話に残るだけで、再開経路では手順 3 自体を通っていない)。`gh pr merge --repo X "" --squash` は位置引数が空だと**カレントブランチの PR にフォールバックする**ので、別の issue のブランチに居ると無関係な PR を merge しうる
+- **PR が issue を close することを merge の直前に確かめる**: 再開経路 (Step 1 の再開表の「PR が open」) は手順 3 を通らず、前の run が作った PR をそのまま merge するため
+- **CI を確かめたコミットを merge する**: PR の HEAD (`headRefOid`) が手元のブランチの HEAD に追いつくまで 10 秒おきに最大 12 回待ち、`gh pr merge --match-head-commit` でそのコミットに限って merge する。rebase と force-push の直後や再開経路では、PR の HEAD の反映が遅れることがあり、古いコミットの checks を見て新しいコミットを merge しうるため
+- **CI の有無は、PR に登録された checks の件数 (`statusCheckRollup`) で判定する**: `gh pr checks` は checks が 1 件も無い PR で `no checks reported` を出して exit 1 を返し、`--json` を付けても同じなので、exit code では「CI なし」と「CI が fail」を区別できない (gh 2.102.0 で実測)。push の直後は checks の登録が遅れるので、workflow のファイルがあれば 10 秒おきに最大 12 回 (2 分) 待つ。0 件のままなら CI なし (`paths:` などの条件でこの PR では走らない構成を含む) として、手順 2 のローカル検証を根拠に merge する
+- **CI の待ちには上限を設ける**: `gh pr checks --watch` は上限を持たないので使わず、30 秒おきに `bucket` を引き直す。全件が `pass` か `skipping` なら merge、`fail` か `cancel` が 1 件でもあれば (pending が残っていても) 止まる。知らない `bucket` は終わっていないものとして待つ。上限 (`--ci-timeout <分>`、既定 60 分) は、checks の登録を待ち始めてからの経過時間で数え、過ぎても終わらなければ止まる。`gh pr checks` の一時的な失敗は 3 回まで続けて許す。`--required` は付けない (branch protection が必須にした checks だけでなく全 checks を見る)
+- **merge の成否は PR の状態が `MERGED` かで判定する**: `--delete-branch` の副作用は gh のバージョンと引数によって変わり、成功しても非ゼロを返す構成がありうる。exit code が非ゼロで `MERGED` でなければ、`mergeable` と `mergeStateStatus` でコンフリクト (13) かそれ以外 (14) かを分ける。exit code が 0 で `MERGED` でなければ、状態を 1 回だけ引き直す
+- **merge の後は止めない**: 後片付けと完了処理は、失敗しても最後まで進め、失敗があれば 15 を返す。merge 済みの issue を駐車すると、再実行しても open の PR が無く、完了処理に戻れないため
+- **手元のブランチは自分で消す**: `gh pr merge --repo <slug> --delete-branch` はリモートのブランチしか消さない (gh 2.97.0 で実測。`--repo` を指定するとローカル削除の経路を丸ごと無効化する)。残すと Step 1 の再開判定が「中断からの復帰」として誤発火し、次回の `worktree add -b issue-$N` も失敗する。worktree をブランチより先に消し、チェックアウト中なら既定のブランチへ switch してから消す。消せなければ**駐車はせず** (merge は済んでいる) 出力の `BRANCH:` の行を最終報告の残存ブランチに載せる
 
-```bash
-git -C "$REPO_DIR" worktree remove "$WT"        # 並列実行と、Step 1 で引き継いだ worktree。branch -D より先に行う
-git -C "$REPO_DIR" switch "$DEFAULT" 2>/dev/null || git -C "$REPO_DIR" switch --detach "origin/$DEFAULT"   # 直列実行のみ。チェックアウト中のブランチは消せない。$REPO_DIR が worktree で、既定ブランチを別の checkout が使っていると switch できないので detach する
-git -C "$REPO_DIR" branch -D "issue-$N"
-```
-
-**`gh pr merge --repo <slug> --delete-branch` はリモートのブランチしか消さない** (実測: gh 2.97.0 は `--repo` が指定されるとローカル削除の経路を丸ごと無効化する)。残したままにすると Step 1 の再開判定が「中断からの復帰」として誤発火し、次回の `worktree add -b issue-$N` も失敗する。`branch -D` が失敗したら (worktree が残っている・チェックアウト中)、その原因を解消して 1 回だけ再試行し、それでも消えなければ**駐車はせず** (merge は済んでいる) 最終報告に残存ブランチとして列挙する。
-
-**`$MERGE_RC` が非ゼロで、かつ `$STATE` が `MERGED` でない場合**は、コンフリクトを疑って復旧する (駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合)。`git -C "$WORK_DIR" fetch origin` で先行 merge を取り込んでから `git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで手順 2 の検証をもう 1 巡回して green を確認してから** `git -C "$WORK_DIR" push --force-with-lease origin "issue-$N"` で押し直す (rebase 後は履歴が書き変わっており、素の push は non-fast-forward で必ず拒否される)。先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない。解消できなければ 2.6 へ。rebase では動作確認の証跡を取り直さない (この issue 自身の差分は変わらない)。押し直したら `gh pr comment` で「rebase 後の HEAD は `<sha>`。動作確認の証跡は rebase 前の `<sha>` で取ったもの」と 1 件残す。押し直すと CI が新しい HEAD で走り直すので、**CI ゲートを最初 (登録を待つ) からやり直して**から merge する。
+**終了コード 13 (コンフリクトの疑い) の復旧**: 駐車 → 再開の間や、並列の先行 merge でデフォルトブランチが進んだ場合に起きる。`git -C "$WORK_DIR" fetch origin` で先行 merge を取り込んでから `git -C "$WORK_DIR" rebase origin/$DEFAULT` を試み、**その作業ツリーで手順 2 の検証をもう 1 巡回して green を確認してから** `git -C "$WORK_DIR" push --force-with-lease origin "issue-$N"` で押し直す (rebase 後は履歴が書き変わっており、素の push は non-fast-forward で必ず拒否される)。先行 merge の内容と組み合わせて壊れていないかは、rebase 後に実行するまで分からない。解消できなければ 2.6 へ。rebase では動作確認の証跡を取り直さない (この issue 自身の差分は変わらない)。押し直したら `gh pr comment` で「rebase 後の HEAD は `<sha>`。動作確認の証跡は rebase 前の `<sha>` で取ったもの」と 1 件残す。押し直すと CI が新しい HEAD で走り直すので、`merge-pr.sh` をもう一度実行する (PR の HEAD が押し直したコミットに追いつくのを待ち、CI ゲートの最初、checks の登録を待つところからやり直す)。復旧は 1 回までとし、もう一度 13 が出たら 2.6 へ。
 
 ### 2.5 完了処理
 
-merge により `Closes #N` で issue は自動 close される (されていなければ `gh issue close` する)。close を確かめたら、**`in-progress` を必ず外す** (`gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress`)。close しても作業中のラベルは自動では外れず、残ると閉じた issue が作業中に見え、`in-progress` で探す再開の判定 (Step 1) にも紛れるため。完了コメントを 1 件残す:
+`merge-pr.sh` (2.4 手順 4) が、merge の後に次を済ませている。出力の行で結果を確かめる:
+
+- **issue の close**: merge の `Closes #N` で自動 close されていなければ close する (`ISSUE:` の行)
+- **`in-progress` を外す**: close しても作業中のラベルは自動では外れず、残ると閉じた issue が作業中に見え、`in-progress` で探す再開の判定 (Step 1) にも紛れる (`LABEL:` の行。外せなかったら手で外す)
+- **親 (tracking issue) の close**: 親を逆引きし、親が open で子がすべて完了していれば close する (`PARENT:` の行)。子の数は API が数える `sub_issues_summary` を使い、自前で子を列挙して数え直さない (取りこぼしによる誤 close を避ける)。merge 直後は `Closes #N` の自動 close が非同期で、最後の子でも完了数が古い値のことがある — **再試行はしない**。取りこぼしは Step 3 の掃き掃除が回収する。API の挙動の正本は `~/.claude/skills/dev-spec/references/issue-template.md`「親への紐付け (GitHub sub-issues API)」の実測表
+
+| `PARENT:` の行 | 動作 |
+| --- | --- |
+| `#<親> を close した` / `#<親> は open のまま` / `#<親> は close 済み` | 何もしない |
+| `なし (親に紐付いていない)` | **正常系**。ただし dev-spec の紐付け漏れの兆候なので、番号を控えて Step 3 の最終報告に載せる |
+| `確かめられない (...)` か `#<親> を close できなかった` | 親の close をスキップし、番号を控えて Step 3 の最終報告に載せる (紐付いていない場合と同じ扱いに丸めない) |
+
+完了コメントは、中身を知っているエージェントが 1 件残す (`CI:` の行は `merge-pr.sh` の出力をそのまま書く):
 
 ```
 実装完了 (dev-impl)
@@ -488,26 +466,6 @@ merge により `Closes #N` で issue は自動 close される (されていな
 - 設計差し戻しが必要な指摘: <`medium` / `category: e2e` の「対象動線未指定」。各 1 行。なければ「なし」>
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
-
-親 (tracking issue) を逆引きし、その親の子が全て完了していれば親も close する。API の挙動の正本は `~/.claude/skills/dev-spec/references/issue-template.md`「親への紐付け」の実測表:
-
-```bash
-gh api "repos/$REPO_SLUG/issues/$N/parent" \
-  --jq '"\(.number)\t\(.state)\t\(.sub_issues_summary.completed)/\(.sub_issues_summary.total)"' 2>&1
-```
-
-| 結果 | 動作 |
-| --- | --- |
-| 出力に `(HTTP 404)` を含む (親に紐付いていない子) | close はしない。**正常系** (`gh` は非ゼロで終了しエラー行を出すが、エラーとして扱わない)。ただし dev-spec の紐付け漏れの兆候なので、番号を控えて Step 3 の最終報告に載せる |
-| `state` が open (小文字) かつ `completed == total` | close する |
-| `completed < total` (残り子がある) | 親は open のまま次へ進む |
-| それ以外の失敗 (403・5xx・`gh` が sub-issues API 非対応など) | 親 close をスキップし、番号を控えて Step 3 の最終報告に載せる (404 と同じ扱いに丸めない) |
-
-```bash
-gh issue close "<親番号>" --repo "$REPO_SLUG" --comment "この親 issue の sub-issue がすべて完了したため close する (dev-impl)"
-```
-
-`sub_issues_summary` は API 側が数える値なので、自前で子を列挙して数え直さない (取りこぼしによる誤 close を避ける)。merge 直後は `Closes #N` の自動 close が非同期で、最後の子でも `completed` が古い値のことがある — **再試行はしない**。取りこぼしは Step 3 の掃き掃除が回収する。
 
 次の issue へ進む (Step 2 の先頭へ)。次の issue は `sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" "$N" closed` が出す着手順で決める (Step 1)。
 
