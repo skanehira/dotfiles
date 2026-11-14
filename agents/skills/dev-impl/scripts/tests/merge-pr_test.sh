@@ -259,6 +259,16 @@ test_merge_that_does_not_reach_merged_stops() {
   assert_file_contains_line "$T/out.txt" 'NOT_MERGED: PR #12 が MERGED にならない (状態: OPEN)'
 }
 
+# merge の後に PR の状態を取れなければ、merge したかが分からないので止まる (終了コード 1)。再実行で確かめ直せる
+test_unknown_state_after_merge_stops() {
+  setup
+  touch "$GH_FAKE_DIR/pr_state_fail"
+  run 5
+  assert_eq 1 "$(cat "$T/rc.txt")"
+  assert_file_contains_line "$T/out.txt" 'MERGE_UNKNOWN: PR #12 を merge したかを確かめられない。同じコマンドを再実行すると確かめ直す'
+  assert_eq issue-5 "$(git -C "$REPO" branch --show-current)"
+}
+
 # merge が非ゼロを返しても、MERGED なら成功として進む
 test_merged_state_wins_over_exit_code() {
   setup
@@ -353,15 +363,31 @@ test_removes_worktree_then_branch() {
   assert_file_contains_line "$T/out.txt" 'BRANCH: issue-5 を消した'
 }
 
-# worktree の中から --worktree なしで実行しても、本体の clone からその worktree とブランチを消す
-test_run_inside_worktree_uses_main_clone() {
+# issue の worktree (名前が issue-<番号>) の中で --worktree なしに実行したら、何も変えずに止まる (終了コード 1)
+test_run_inside_issue_worktree_stops() {
   setup
   g switch -q main
-  git -C "$REPO" worktree add -q "$T/wt" issue-5
-  run_in "$T/wt" 5
+  git -C "$REPO" worktree add -q "$T/issue-5" issue-5
+  run_in "$T/issue-5" 5
+  assert_eq 1 "$(cat "$T/rc.txt")"
+  assert_file_contains_line "$T/err.txt" "issue-5 の worktree の中で実行している。dev-impl の REPO_DIR で --worktree $(cd "$T/issue-5" && pwd -P) を付けて実行する"
+  calls
+  : >"$T/empty.txt"
+  assert_file_eq "$T/empty.txt" "$T/calls.txt"
+}
+
+# agent-loop の run の worktree (名前が issue-<番号> でない) の中で実行したら、そこを REPO_DIR として扱う。
+# run の worktree は消さず、既定のブランチは本体の clone が使っているので detach してから issue のブランチを消す
+test_run_inside_run_worktree_keeps_it() {
+  setup
+  g switch -q main
+  git -C "$REPO" worktree add -q -b worktree-run "$T/run" main
+  git -C "$T/run" switch -q issue-5
+  run_in "$T/run" 5
   assert_eq 0 "$(cat "$T/rc.txt")"
+  [ -d "$T/run" ] || { echo '    run の worktree が消えた'; CASE_FAILED=1; }
   assert_eq '' "$(git -C "$REPO" branch --list issue-5)"
-  assert_file_contains_line "$T/out.txt" 'BRANCH: issue-5 を消した'
+  assert_eq '' "$(git -C "$T/run" branch --show-current)"
 }
 
 # 既定のブランチを別の worktree が使っていて switch できなければ、origin の既定のブランチに detach してから消す

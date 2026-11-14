@@ -21,7 +21,11 @@
 #   unknown<TAB>番号<TAB>依存先     どこにも無い issue に依存している issue。着手しない
 #   badline<TAB>番号<TAB>行         「Depends on」で始まるのに読めない行 (1 行に複数並べたなど) がある open の issue。着手しない
 #
-# 終了コード: 0 出せた / 1 使い方の誤り・gh の失敗
+# 対象: open で ready か in-progress が付き、needs-human と tracking が付かず、読めない依存の行が無い issue。
+#   番号を渡したときは、その issue と、まだ終わっていない依存先だけ。
+# 実効スコア: 自分と、自分に直接・間接に依存する対象 issue の「## 優先度」のスコア (緊急枠は U) の最大値。
+#
+# 終了コード: 0 出せた / 1 使い方の誤り・gh の失敗・issue が上限 (環境変数 ISSUE_LIST_LIMIT、既定 1000 件) 以上ある
 #
 # POSIX の sh で書く (macOS の sh と Ubuntu の dash で動かすため。bash だけの書き方を使わない)。
 set -u
@@ -69,12 +73,13 @@ case $CMD in
       ARGS="$ARGS $a"
     done
     REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner </dev/null) || die 1 "GitHub のリポジトリを決められない"
-    LIMIT=1000
+    LIMIT=${ISSUE_LIST_LIMIT:-1000}
+    case $LIMIT in '' | *[!0-9]* | 0*) die 1 "ISSUE_LIST_LIMIT には 1 以上の数を渡す: $LIMIT" ;; esac
     # 1 行に: 番号 / 状態 (OPEN|CLOSED) / ラベル (カンマ区切り) / 本文 (@tsv なので改行は \n の 2 文字)
     gh issue list --repo "$REPO" --state all --limit "$LIMIT" --json number,state,labels,body \
       --jq '.[] | [(.number | tostring), .state, ([.labels[].name] | join(",")), (.body // "")] | @tsv' \
       </dev/null >"$TMP/raw.tsv" || die 1 "issue の一覧を取れない"
-    [ "$(wc -l <"$TMP/raw.tsv")" -lt "$LIMIT" ] || die 1 "issue が $LIMIT 件以上あり、取りこぼす。LIMIT を上げて再実行する"
+    [ "$(wc -l <"$TMP/raw.tsv")" -lt "$LIMIT" ] || die 1 "issue が $LIMIT 件以上あり、取りこぼす。環境変数 ISSUE_LIST_LIMIT を $LIMIT より大きくして再実行する"
     # 前回の run が残した issue-<番号> のブランチ (手元か origin)。その issue は再開として先に回す
     git for-each-ref --format='%(refname)' refs/heads/ refs/remotes/origin/ 2>/dev/null |
       sed -n -e 's#^refs/heads/issue-\([0-9][0-9]*\)$#\1#p' -e 's#^refs/remotes/origin/issue-\([0-9][0-9]*\)$#\1#p' |

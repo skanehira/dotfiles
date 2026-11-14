@@ -1,6 +1,7 @@
 #!/bin/sh
 # dev-spec のフェーズ 10: ドラフトから GitHub の issue (親と子) を作り、子を親に紐付ける。
-# 手順の規則の正本は references/issue-template.md「issue 作成手順」。何度実行しても同じ結果になる (冪等)。
+# 規則の正本は references/issue-template.md「issue 作成手順」の「スクリプトが行うこと」で、下の節の番号は
+# その手順の番号と同じ。何度実行しても同じ結果になる (冪等)。
 #
 # 使い方: sh create-issues.sh [--keep <番号>]... <ドラフトのディレクトリ>
 #   ディレクトリには titles.tsv・parent-<識別子>.md・issue-<連番>.md を置く (フェーズ 9 が書く)
@@ -10,7 +11,8 @@
 #
 # 終了コード:
 #   0 作成と紐付けを終えた。最終報告を標準出力に出す
-#   1 gh の失敗などで途中で止まった。状態を標準エラーに出す。同じコマンドの再実行で続きから進む
+#   1 使い方の誤り・gh の失敗などで止まった。状態を標準エラーに出す。原因を直して同じコマンドを再実行すると続きから進む
+#     既存の issue が上限 (環境変数 ISSUE_LIST_LIMIT、既定 1000 件) 以上あるときも 1 で止まる
 #   3 人間の判断が要る。NEEDS_HUMAN: で始まる行を出す。GitHub には何もしていない
 #   4 ドラフトの誤り。標準エラーに挙げる。GitHub には何もしていない
 #
@@ -148,19 +150,20 @@ fi
 # 依存の上流から並べた子
 awk -F '\t' '{ print "issue-" $2 ".md" }' "$TMP/levels.txt" >"$TMP/children.list"
 
-# --- 2. 既存の issue を読む (まだ何も変えない) ---------------------------------
+# --- 2. 既存の issue と突き合わせる (まだ何も変えない) ---------------------------
 
 REPO=$(run_gh repo view --json nameWithOwner -q .nameWithOwner) ||
   die 1 "GitHub のリポジトリを決められない (git リポジトリでない・GitHub のリモートが無い・gh が未認証)。リポジトリを用意してから再実行する"
 
-LIMIT=1000
+LIMIT=${ISSUE_LIST_LIMIT:-1000}
+case $LIMIT in '' | *[!0-9]* | 0*) die 1 "ISSUE_LIST_LIMIT には 1 以上の数を渡す: $LIMIT" ;; esac
 # 1 行に: 番号 / 状態 (OPEN|CLOSED) / ラベル (カンマ区切り) / 本文に「対応 UC:」行があれば uc、無ければ - / タイトル
 run_gh issue list --repo "$REPO" --state all --limit "$LIMIT" --json number,title,state,labels,body \
   --jq '.[] | [(.number | tostring), .state, ([.labels[].name] | join(",")), (if ((.body // "") | test("(?m)^対応 UC:")) then "uc" else "-" end), .title] | @tsv' \
   >"$TMP/existing_raw.tsv" || die 1 "既存の issue の一覧を取れない"
 # gh は新しい順に返す。報告の順を決めるため番号の昇順に並べる
 sort -t "$TAB" -k1,1n "$TMP/existing_raw.tsv" >"$TMP/existing.tsv"
-[ "$(wc -l <"$TMP/existing.tsv")" -lt "$LIMIT" ] || die 1 "既存の issue が $LIMIT 件以上あり、取りこぼす。LIMIT を上げて再実行する"
+[ "$(wc -l <"$TMP/existing.tsv")" -lt "$LIMIT" ] || die 1 "既存の issue が $LIMIT 件以上あり、取りこぼす。環境変数 ISSUE_LIST_LIMIT を $LIMIT より大きくして再実行する"
 
 existing_by_title() { awk -F '\t' -v t="$1" '$5 == t { print $1 }' "$TMP/existing.tsv"; }
 state_of() { awk -F '\t' -v n="$1" '$1 == n { print $2; exit }' "$TMP/existing.tsv"; }
@@ -227,7 +230,7 @@ if [ -s "$TMP/needs_human.txt" ]; then
   exit 3
 fi
 
-# --- 3. ラベルと親 -----------------------------------------------------------
+# --- 3. ラベルを用意する -----------------------------------------------------
 
 run_gh label create ready --repo "$REPO" --force --color 0E8A16 --description "着手可能" >/dev/null || die 1 "ラベル ready を作れない"
 run_gh label create in-progress --repo "$REPO" --force --color 1D76DB --description "dev-impl が実装中" >/dev/null || die 1 "ラベル in-progress を作れない"
@@ -248,6 +251,8 @@ create_issue() { # $1: ドラフト $2: ラベル
   printf '%s\tOPEN\n' "$created" >>"$TMP/states.tsv"
 }
 
+# --- 4. 親を用意する ---------------------------------------------------------
+
 while IFS= read -r p; do
   n=$(matched_num "$p")
   if [ -n "$n" ]; then
@@ -258,7 +263,7 @@ while IFS= read -r p; do
   fi
 done <"$TMP/parents.list"
 
-# --- 4. 子を依存の上流から作る (作る直前に依存を番号に置き換える) ---------------
+# --- 5. 子を依存の上流から用意する (作る直前に依存を番号に置き換える) -----------
 
 replace_dependencies() { # $1: ドラフト
   awk -F '\t' '
@@ -290,7 +295,7 @@ if grep -n '^Depends on issue-[0-9]' "$DIR"/issue-*.md >"$TMP/left.txt"; then
   die 1 "番号に置き換えられなかった依存が残っている (上の行)"
 fi
 
-# --- 5. 既存の issue の本文を、依存を置き換えた後のドラフトと比べる -------------
+# --- 6. 既存の issue の本文を、依存を置き換えた後のドラフトと比べる -------------
 
 # 比べる前に、CR と末尾の空行を落とす。GitHub は本文を末尾の改行も含めて保存し、gh -q はさらに改行を
 # 1 つ足して出す。Web の画面で編集された本文は CRLF になり、末尾の改行の数も変わる
@@ -317,7 +322,7 @@ while IFS="$TAB" read -r f n; do
   fi
 done <"$NUMBERS"
 
-# --- 6. 親への紐付け ---------------------------------------------------------
+# --- 7. 旧構成から移行する・8. 子を親に紐付ける ---------------------------------
 
 parent_num_for_keys() { # 標準入力のキーから親の番号を出す。1 つにまとまらなければ何も出さない
   while IFS= read -r k; do
@@ -424,7 +429,7 @@ while IFS="$TAB" read -r n _ t; do
   if [ -n "$p" ]; then link "$n" "$p"; else echo "#$n" >>"$TMP/unknown_uc.txt"; fi
 done <"$TMP/strays.tsv"
 
-# --- 7. 最終報告 -------------------------------------------------------------
+# --- 9. 最終報告 -------------------------------------------------------------
 
 joined() { tr '\n' ' ' <"$1" | sed 's/ $//'; }
 

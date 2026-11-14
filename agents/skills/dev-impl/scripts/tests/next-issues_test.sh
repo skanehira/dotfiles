@@ -219,6 +219,21 @@ test_arguments_accept_hash_and_reject_garbage() {
   assert_eq 1 "$(cat "$T/rc.txt")"
 }
 
+# issue が上限の件数に達したら止まる。上限は ISSUE_LIST_LIMIT で上げられる
+test_issue_list_limit_is_configurable() {
+  setup
+  issue 1 OPEN ready '依存なし'
+  issue 2 OPEN ready '依存なし'
+  export ISSUE_LIST_LIMIT=2
+  collect
+  assert_eq 1 "$(cat "$T/rc.txt")"
+  assert_file_contains_line "$T/err.txt" 'issue が 2 件以上あり、取りこぼす。環境変数 ISSUE_LIST_LIMIT を 2 より大きくして再実行する'
+  export ISSUE_LIST_LIMIT=3
+  collect
+  assert_eq 0 "$(cat "$T/rc.txt")"
+  unset ISSUE_LIST_LIMIT
+}
+
 # mark started で実装中の issue を start から外し、依存元は待たせたままにする
 test_mark_started_removes_from_start() {
   setup

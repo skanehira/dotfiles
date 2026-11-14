@@ -13,6 +13,7 @@
 #   merge_merges     1 なら gh pr merge で PR が MERGED になる (無ければ 1)
 #   mergeable        gh pr view の mergeable と mergeStateStatus (空白区切り)
 #   pr_state         gh pr view --json state の値 (merge で MERGED になる)
+#   pr_state_fail    あれば、gh pr view --json state を失敗させる
 #   issue_state      issue の状態 (OPEN|CLOSED)
 #   issue_labels     issue のラベル (1 行に 1 件)
 #   issue_view_fail  あれば、gh issue view を失敗させる
@@ -74,7 +75,10 @@ case "$1 $2" in
       *statusCheckRollup*) next_line rollup ;;
       .headRefOid) next_line head_sha ;;
       *mergeable*) cat "$D/mergeable" ;;
-      .state) cat "$D/pr_state" ;;
+      .state)
+        [ -f "$D/pr_state_fail" ] && { echo "gh: HTTP 502" >&2; exit 1; }
+        cat "$D/pr_state"
+        ;;
       *) echo "fake gh: 知らない pr view: $q" >&2; exit 99 ;;
     esac
     ;;

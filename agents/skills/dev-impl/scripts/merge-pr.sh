@@ -2,9 +2,9 @@
 # dev-impl の 2.4 手順 4 (CI ゲートと merge) と 2.5 (完了処理) を行う。規則の正本は SKILL.md の同じ節。
 #
 # 使い方: sh merge-pr.sh <issue 番号> [--worktree <パス>] [--ci-timeout <分>]
-#   対象のリポジトリの clone か、その worktree の中で実行する
-#   --worktree <パス>: 並列実行と、Step 1 で引き継いだ worktree。省くと、worktree の中で実行したときはその worktree を使う。
-#                     merge の後、ブランチより先に消す
+#   dev-impl の REPO_DIR (clone の直下か、agent-loop の run の worktree) で実行する。実行した場所を REPO_DIR として扱う
+#   --worktree <パス>: 並列実行と、Step 1 で引き継いだ issue の worktree。merge の後、ブランチより先に消す。
+#                     issue の worktree (名前が issue-<番号>) の中で --worktree なしに実行すると、何も変えずに止まる
 #   --ci-timeout <分>: CI の待ちの上限 (既定 60 分)。checks の登録を待ち始めてからの経過時間で数える
 #
 # 行うこと:
@@ -23,7 +23,7 @@
 #
 # 終了コード:
 #   0  merge と完了処理を終えた
-#   1  使い方の誤り・gh や git の失敗 (merge の前)
+#   1  使い方の誤り・gh や git の失敗 (merge の前)。merge の後に PR の状態を取れないときも 1 (MERGE_UNKNOWN)
 #   10 PR が無い (NO_PR) か、PR が issue を close しない (NOT_LINKED)。何も変えていない
 #   11 CI が失敗した (CI_FAIL: <名前><TAB><bucket><TAB><リンク> を 1 行ずつ)。merge していない
 #   12 CI が上限までに終わらない (CI_TIMEOUT)。merge していない
@@ -85,16 +85,16 @@ run_gh() { gh "$@" </dev/null; }
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/merge-pr.XXXXXX") || die 1 "一時ディレクトリを作れない"
 trap 'rm -rf "$TMP"' EXIT
 
-# 本体の clone は、worktree の中で実行しても git-common-dir の親になる
-COMMON=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || die 1 "git のリポジトリの中で実行する"
-REPO_DIR=$(cd "$COMMON/.." && pwd -P) || die 1 "本体の clone を決められない"
-TOP=$(cd "$(git rev-parse --show-toplevel)" && pwd -P) || die 1 "作業ツリーを決められない"
+# 実行した場所 (dev-impl の REPO_DIR) を基準にする。agent-loop は dev-impl を run の worktree の中で動かすので、
+# 本体の clone を探して使うと、run の worktree を issue の worktree と取り違えて消しうる
+TOPLEVEL=$(git rev-parse --show-toplevel 2>/dev/null) || die 1 "git のリポジトリの中で実行する"
+REPO_DIR=$(cd "$TOPLEVEL" && pwd -P) || die 1 "作業ツリーを決められない"
 if [ -n "$WT" ]; then
   [ -d "$WT" ] || die 1 "--worktree のディレクトリが無い: $WT"
   WT=$(cd "$WT" && pwd -P)
-  [ "$WT" != "$REPO_DIR" ] || die 1 "--worktree に本体の clone を渡している: $WT"
-elif [ "$TOP" != "$REPO_DIR" ]; then
-  WT=$TOP
+  [ "$WT" != "$REPO_DIR" ] || die 1 "--worktree に実行した場所 (REPO_DIR) を渡している: $WT"
+elif [ "$(basename "$REPO_DIR")" = "issue-$N" ]; then
+  die 1 "issue-$N の worktree の中で実行している。dev-impl の REPO_DIR で --worktree $REPO_DIR を付けて実行する"
 fi
 WORK_DIR=${WT:-$REPO_DIR}
 
@@ -208,7 +208,18 @@ else
   run_gh pr merge "$PR" --repo "$REPO" --squash --delete-branch --match-head-commit "$LOCAL_SHA" \
     >/dev/null 2>"$TMP/merge_err.txt"
   merge_rc=$?
-  state=$(run_gh pr view "$PR" --repo "$REPO" --json state -q .state) || die 1 "PR #$PR の状態を取れない"
+  # merge の後に状態を取れなければ、merge したかが分からない。再実行すると open の PR か merge 済みの PR を引き直す
+  read_pr_state() { # PR の状態を $state に入れる。2 回続けて取れなければ止まる
+    run_gh pr view "$PR" --repo "$REPO" --json state -q .state >"$TMP/state.txt" 2>/dev/null || {
+      nap 5
+      run_gh pr view "$PR" --repo "$REPO" --json state -q .state >"$TMP/state.txt" 2>/dev/null
+    } || {
+      echo "MERGE_UNKNOWN: PR #$PR を merge したかを確かめられない。同じコマンドを再実行すると確かめ直す"
+      exit 1
+    }
+    state=$(cat "$TMP/state.txt")
+  }
+  read_pr_state
   if [ "$state" != MERGED ]; then
     if [ "$merge_rc" -ne 0 ]; then
       run_gh pr view "$PR" --repo "$REPO" --json mergeable,mergeStateStatus -q '.mergeable + " " + .mergeStateStatus' \
@@ -225,7 +236,7 @@ else
       exit 14
     fi
     nap 5
-    state=$(run_gh pr view "$PR" --repo "$REPO" --json state -q .state) || die 1 "PR #$PR の状態を取れない"
+    read_pr_state
     if [ "$state" != MERGED ]; then
       echo "NOT_MERGED: PR #$PR が MERGED にならない (状態: $state)"
       exit 14

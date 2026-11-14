@@ -365,6 +365,23 @@ test_dependency_cycle_exits_4() {
   assert_file_eq "$T/empty.txt" "$GH_FAKE_DIR/calls.log"
 }
 
+# 既存の issue が上限の件数に達したら、取りこぼすので止まる。上限は ISSUE_LIST_LIMIT で上げられる
+test_issue_list_limit_is_configurable() {
+  setup
+  parent quick 'T トラッキング'
+  child 1 'A' '基盤'
+  existing 7 OPEN ready 'x' 'x'
+  existing 8 OPEN ready 'y' 'y'
+  export ISSUE_LIST_LIMIT=2
+  run
+  assert_eq 1 "$(cat "$T/rc.txt")"
+  assert_file_contains_line "$T/err.txt" '既存の issue が 2 件以上あり、取りこぼす。環境変数 ISSUE_LIST_LIMIT を 2 より大きくして再実行する'
+  export ISSUE_LIST_LIMIT=3
+  run
+  assert_eq 0 "$(cat "$T/rc.txt")"
+  unset ISSUE_LIST_LIMIT
+}
+
 # --- 失敗 --------------------------------------------------------------------
 
 # 紐付けに失敗したら、作った番号と紐付けられなかった組を出して終了コード 1
