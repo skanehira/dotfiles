@@ -450,7 +450,7 @@ subagent は 3 者で唯一**書式変換が避けられない**要素である 
 deno test --allow-env --allow-run --allow-read --allow-write agents/
 ```
 
-dev-spec と dev-impl の skill に置いたスクリプト (`agents/skills/dev-spec/scripts/` の issue 作成・依存の段数、`agents/skills/dev-impl/scripts/` の着手順) は、deno ではなく POSIX の sh と awk で書く。研修のプラグイン (`ro-ai-dojo/dojo-harness`) で、deno の無い受講者の PC (macOS と Ubuntu) にも配るためである。触ったら、macOS の awk・GNU awk・dash と、docker の Ubuntu (dash と mawk) でテストを回す。`SH=dash` を付けると、テストが呼ぶスクリプトも dash で動く (付けないと macOS では `sh` = bash で動く)。テストは偽の gh (`tests/fake/gh`) を使い、`gh` が偽物を指していなければ何もせずに止まる。
+dev-spec と dev-impl の skill に置いたスクリプト (`agents/skills/dev-spec/scripts/` の issue 作成・依存の段数、`agents/skills/dev-impl/scripts/` の着手順・CI 待ちと merge) は、deno ではなく POSIX の sh と awk で書く。研修のプラグイン (`ro-ai-dojo/dojo-harness`) で、deno の無い受講者の PC (macOS と Ubuntu) にも配るためである。触ったら、macOS の awk・GNU awk・dash と、docker の Ubuntu (dash と mawk) でテストを回す。`SH=dash` を付けると、テストが呼ぶスクリプトも dash で動く (付けないと macOS では `sh` = bash で動く)。テストは偽の gh (`tests/fake/gh` と、merge のテスト用の `tests/fake/gh-merge`) を使い、`gh` が偽物を指していなければ何もせずに止まる。
 
 ```bash
 for t in agents/skills/dev-spec/scripts/tests/*_test.sh agents/skills/dev-impl/scripts/tests/*_test.sh; do
@@ -458,7 +458,7 @@ for t in agents/skills/dev-spec/scripts/tests/*_test.sh agents/skills/dev-impl/s
   mkdir -p /tmp/bsdawk && ln -sf /usr/bin/awk /tmp/bsdawk/awk && PATH=/tmp/bsdawk:$PATH sh "$t" </dev/null
 done
 docker run --rm -v "$PWD/agents/skills":/skills:ro ubuntu:24.04 sh -c 'apt-get update -qq && apt-get install -y -qq git >/dev/null && cd /tmp && for t in /skills/*/scripts/tests/*_test.sh; do sh "$t" </dev/null; done'
-shellcheck -x -P SCRIPTDIR -s sh agents/skills/dev-spec/scripts/*.sh agents/skills/dev-spec/scripts/tests/*.sh agents/skills/dev-impl/scripts/*.sh agents/skills/dev-impl/scripts/tests/*.sh
+shellcheck -x -P SCRIPTDIR -s sh agents/skills/dev-spec/scripts/*.sh agents/skills/dev-spec/scripts/tests/*.sh agents/skills/dev-impl/scripts/*.sh agents/skills/dev-impl/scripts/tests/*.sh agents/skills/dev-impl/scripts/tests/fake/gh-merge
 ```
 
 ### スキルの配布先の限定 (`~/.agents/skills` への配布から除外)
