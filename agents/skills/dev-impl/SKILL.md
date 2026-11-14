@@ -63,11 +63,12 @@ repo_dir: <WORK_DIR> (すべてのコマンドを cd <WORK_DIR> && ... の形で
 ```bash
 REPO_DIR=$(git rev-parse --show-toplevel)
 REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-DEFAULT=$(git symbolic-ref --short refs/remotes/origin/HEAD | sed 's|origin/||')
+DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
 rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>/dev/null
 ```
 
 - git / gh が解決できない → 停止して案内する
+- 既定ブランチは `git symbolic-ref refs/remotes/origin/HEAD` ではなく GitHub から取る。`origin/HEAD` は clone したときにしか作られず、`gh repo create --source . --push` で作ったリポジトリでは `fatal: ref refs/remotes/origin/HEAD is not a symbolic ref` で空になり、以降の `origin/$DEFAULT` がすべて壊れる
 - `POC_NEEDED: ... blocker=true` が 1 件以上 → 実装に入らず、`/dev-spec` のフェーズ 5 (PoC 検証) への差し戻しを案内して停止する (未検証の技術前提の上に実装しない)
 - ラベル 4 種を冪等に用意する (dev-spec を経ずに用意された issue でも 2.1 のラベル操作が失敗しないように。コマンドは `~/.claude/skills/dev-spec/references/issue-template.md`「ラベルの用意」と同一)
 - **docs が push 済みか確認する**: ローカルに `docs/design/DESIGN.md` があるのに `git log origin/$DEFAULT -1 -- docs/design/DESIGN.md docs/design/features/` が空なら、ブランチ基点 (origin) に設計 docs が無い。docs を含むコミットの push を人間に依頼して停止する (2.1 のブランチは origin から切るため、push されていないと implementer が docs を読めない)
