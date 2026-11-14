@@ -176,6 +176,16 @@ dev-spec のフェーズ 9 は上記 6 項目を検査 subagent の指示文に�
 
 ## issue 作成手順 (dev-spec のフェーズ 10)
 
+この節のコマンドは、Claude Code の Bash ツールが利用者のログインシェルで実行する (macOS は zsh、Ubuntu などは bash)。**bash にしか無い書き方を使わない。** とくに連想配列 (`declare -A` と `${!配列[@]}`) は、zsh では `bad substitution` で止まる。issue を作るループの途中で止まると、親だけ、または子の一部だけが作られたまま残る。
+
+下で作る 2 つの対応表は、シェルの変数ではなくファイルに持つ。「タイトル → 番号」は `<scratchpad>/numbers.tsv`、「対応 UC → 親 issue 番号」は `<scratchpad>/parents.tsv` で、どちらも 1 行に `<キー><TAB><番号>` を書く。番号が分かるたびに追記し、引くときは `awk` を使う:
+
+```bash
+MAP=<scratchpad>/numbers.tsv
+printf '%s\t%s\n' "$TITLE" "$ISSUE_NUM" >> "$MAP"
+DEP_NUM=$(awk -F'\t' -v t="$DEP_TITLE" '$1==t{print $2}' "$MAP")
+```
+
 ### 前提条件
 
 ```bash
