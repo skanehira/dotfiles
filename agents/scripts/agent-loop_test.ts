@@ -1,10 +1,12 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert@1";
 import {
+  type ClaimInfo,
   classifyIssues,
   cleanupMode,
   decideWorktreeRemoval,
   type Deps,
   inputKey,
+  isClaudeProcess,
   type Item,
   parseConfig,
   prNumbersFromJob,
@@ -59,6 +61,8 @@ function fakeDeps(
     unsavedWork?: string[];
     /** worktree を消すときに失敗するセッション */
     releaseErrors?: Record<string, Error>;
+    /** 動いている別のセッションが担当の印を持つ issue */
+    liveClaims?: ClaimInfo[];
   } = {},
 ) {
   const calls: string[] = [];
@@ -81,6 +85,10 @@ function fakeDeps(
       return Promise.resolve(opts.designPrBodies ?? []);
     },
     listSessions: () => Promise.resolve(opts.sessions ?? []),
+    listLiveClaims: (repo) => {
+      calls.push(`listLiveClaims ${repo.slug}`);
+      return Promise.resolve(opts.liveClaims ?? []);
+    },
     launch: (repo, kind) => {
       seq += 1;
       calls.push(`launch ${repo.slug} ${kind}`);
@@ -663,4 +671,60 @@ Deno.test("残した run の PR の確認や worktree の削除に失敗して�
       "acme/app: al-app-stuck の worktree を消せない: git worktree remove が exit 128",
     ],
   );
+});
+
+Deno.test("動いている別のセッションが担当中の issue を実装の仕事に数えず、ほかの issue だけで起動を決める", async () => {
+  const { deps, calls, logs } = fakeDeps({
+    issues: [
+      issue(1, ["in-progress"]),
+      issue(2, ["ready"], { updatedAt: "t2" }),
+    ],
+    liveClaims: [{ number: 1, sessionId: "manual-session" }],
+  });
+
+  const state = await tick([{ ...REPO, kinds: ["impl"] }], {}, deps, NOW);
+
+  assertEquals(calls.filter((c) => c.startsWith("launch")), [
+    "launch acme/app impl",
+  ]);
+  assertEquals(state["acme/app"].running?.impl?.inputKey, "2@t2");
+  assertEquals(
+    logs.includes(
+      "acme/app impl: 別のセッションが担当中の issue を除いた (#1 manual-session)",
+    ),
+    true,
+  );
+});
+
+Deno.test("実装の仕事がすべて別のセッションの担当中なら、実装の run を起動しない", async () => {
+  const { deps, calls, logs } = fakeDeps({
+    issues: [issue(1, ["in-progress"])],
+    liveClaims: [{ number: 1, sessionId: "manual-session" }],
+  });
+
+  await tick([{ ...REPO, kinds: ["impl"] }], {}, deps, NOW);
+
+  assertEquals(calls.filter((c) => c.startsWith("launch")), []);
+  assertEquals(logs.includes("acme/app impl: 起動しない (仕事なし)"), true);
+});
+
+Deno.test("実装を見回らないときは、担当の印を読まない", async () => {
+  const { deps, calls } = fakeDeps({
+    issues: [issue(1, ["needs-design"])],
+    liveClaims: [{ number: 1, sessionId: "manual-session" }],
+  });
+
+  await tick([{ ...REPO, kinds: ["design"] }], {}, deps, NOW);
+
+  assertEquals(calls.filter((c) => c.startsWith("listLiveClaims")), []);
+});
+
+Deno.test("isClaudeProcess は、ps -o comm= の先頭の語が claude のプロセスだけを Claude Code とみなす", () => {
+  assertEquals(isClaudeProcess("claude"), true);
+  assertEquals(isClaudeProcess("claude bg-spare"), true);
+  assertEquals(isClaudeProcess("/Users/a/.local/bin/claude"), true);
+  // Claude Code が起動したシェルは、コマンドラインに ~/.claude/ を含むが Claude Code ではない
+  assertEquals(isClaudeProcess("/bin/zsh"), false);
+  assertEquals(isClaudeProcess("claude-helper"), false);
+  assertEquals(isClaudeProcess(""), false);
 });

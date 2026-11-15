@@ -3,11 +3,11 @@
  * agent-loop: launchd から 1 時間おきに 1 回呼ばれ、対象のリポジトリごとに仕事を探して、
  * 仕事の種類ごとに新しい Claude Code をバックグラウンドで起動する。LLM は使わない。
  *
- * | 種類   | 仕事があるとき                                   | 起動するスキル   |
- * | ------ | ------------------------------------------------ | ---------------- |
- * | triage | dev-triage の list-untriaged.sh が番号を返す     | /dev-triage      |
- * | design | needs-design の issue (設計 PR が無いもの) がある | /dev-feat-spec   |
- * | impl   | ready か in-progress の issue がある              | /dev-impl        |
+ * | 種類   | 仕事があるとき                                                               | 起動するスキル |
+ * | ------ | ---------------------------------------------------------------------------- | -------------- |
+ * | triage | dev-triage の list-untriaged.sh が番号を返す                                 | /dev-triage    |
+ * | design | needs-design の issue (設計 PR が無いもの) がある                             | /dev-feat-spec |
+ * | impl   | ready か in-progress の issue がある (動いている Claude Code の担当分を除く) | /dev-impl      |
  *
  * tmux ではなく `claude --bg -w <名前>` で起動する。Claude Code が worktree を作り (リポジトリに
  * WorktreeCreate フックがあればそれが作る)、`claude attach <名前>` で動いている画面を見られる。
@@ -89,11 +89,22 @@ export interface SessionInfo {
   state: string;
 }
 
+export interface ClaimInfo {
+  number: number;
+  sessionId: string;
+}
+
 export interface Deps {
   listUntriaged(repo: RepoConfig): Promise<Item[]>;
   listIssues(repo: RepoConfig): Promise<RawIssue[]>;
   listOpenPrBodies(repo: RepoConfig): Promise<string[]>;
   listSessions(): Promise<SessionInfo[]>;
+  /**
+   * 動いている Claude Code のセッションが担当の印を持つ issue。印は /dev-impl の next-issues.sh が書く
+   * (clone の共通の git ディレクトリの dev-impl-claims/<番号>)。手元で動かしている /dev-impl の issue を
+   * 実装の仕事に数えないために読む
+   */
+  listLiveClaims(repo: RepoConfig): Promise<ClaimInfo[]>;
   launch(
     repo: RepoConfig,
     kind: Kind,
@@ -372,6 +383,37 @@ async function releaseFinishedRuns(
   }
 }
 
+/**
+ * `ps -p <pid> -o comm=` の出力が Claude Code のプロセスか。先頭の語のファイル名で見る
+ * (コマンドライン全体で見ないのは、Claude Code が起動したシェルも ~/.claude/ を含むため)。
+ * 判定は next-issues.sh の claim_alive と揃える
+ */
+export function isClaudeProcess(comm: string): boolean {
+  const exe = comm.trim().split(/\s+/)[0] ?? "";
+  return exe.split("/").pop() === "claude";
+}
+
+/** 動いている別のセッションが担当中の issue を、実装の仕事から外す */
+async function excludeClaimed(
+  repo: RepoConfig,
+  items: Item[],
+  deps: Deps,
+): Promise<Item[]> {
+  if (items.length === 0) return items;
+  const claims = new Map(
+    (await deps.listLiveClaims(repo)).map((c) => [c.number, c.sessionId]),
+  );
+  const claimed = items.filter((i) => claims.has(i.number));
+  if (claimed.length > 0) {
+    deps.log(
+      `${repo.slug} impl: 別のセッションが担当中の issue を除いた (${
+        claimed.map((i) => `#${i.number} ${claims.get(i.number)}`).join(", ")
+      })`,
+    );
+  }
+  return items.filter((i) => !claims.has(i.number));
+}
+
 async function snapshotKeys(
   repo: RepoConfig,
   kinds: Kind[],
@@ -389,7 +431,9 @@ async function snapshotKeys(
     ]);
     const classified = classifyIssues(issues, prBodies);
     if (kinds.includes("design")) keys.design = inputKey(classified.design);
-    if (kinds.includes("impl")) keys.impl = inputKey(classified.impl);
+    if (kinds.includes("impl")) {
+      keys.impl = inputKey(await excludeClaimed(repo, classified.impl, deps));
+    }
   }
   return keys;
 }
@@ -614,6 +658,31 @@ export function realDeps(logFile: string): Deps {
       return out.split("\n").filter((l) => l.trim() !== "").map((l) =>
         JSON.parse(l) as string
       );
+    },
+    async listLiveClaims(repo) {
+      const common = (await runOk("git", [
+        "-C",
+        repo.path,
+        "rev-parse",
+        "--path-format=absolute",
+        "--git-common-dir",
+      ])).trim();
+      const dir = `${common}/dev-impl-claims`;
+      if (!(await pathExists(dir))) return [];
+      const claims: ClaimInfo[] = [];
+      for await (const entry of Deno.readDir(dir)) {
+        if (!entry.isFile || !/^\d+$/.test(entry.name)) continue;
+        const [pid, sessionId = ""] =
+          (await Deno.readTextFile(`${dir}/${entry.name}`))
+            .split("\n")[0].split("\t");
+        if (!/^\d+$/.test(pid)) continue;
+        // pid が別のプロセスに使い回されていても止まらないよう、Claude Code のプロセスだけを生きているとみなす
+        const ps = await run("ps", ["-p", pid, "-o", "comm="]);
+        if (ps.code === 0 && isClaudeProcess(ps.stdout)) {
+          claims.push({ number: Number(entry.name), sessionId });
+        }
+      }
+      return claims;
     },
     async listSessions() {
       const out = await runOk("claude", ["agents", "--json", "--all"]);

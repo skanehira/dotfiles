@@ -1,5 +1,5 @@
 #!/bin/sh
-# next-issues.sh のテスト。偽の gh (tests/fake/gh) を PATH の先頭に置いて動かす
+# next-issues.sh のテスト。偽の gh と ps (tests/fake/) を PATH の先頭に置いて動かす
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
 SCRIPT="$HERE/../next-issues.sh"
@@ -10,9 +10,30 @@ setup() {
   export GH_FAKE_DIR="$T/gh"
   mkdir -p "$GH_FAKE_DIR/issues"
   : >"$GH_FAKE_DIR/calls.log"
+  export PS_FAKE_DIR="$T/ps"
+  mkdir -p "$PS_FAKE_DIR"
   PATH="$HERE/fake:$PATH"
   export PATH
   SNAP="$T/snapshot.tsv"
+  # テストを動かしている Claude Code のセッションの値を持ち込まない (担当の印をテストの外へ書かないため)
+  unset CLAUDE_PID CLAUDE_CODE_SESSION_ID
+}
+
+# 担当の印を置く git リポジトリを $T/repo に作る。印の置き場所は $CLAIMS
+claims_repo() {
+  git init -q "$T/repo"
+  CLAIMS="$T/repo/.git/dev-impl-claims"
+}
+
+# 別のセッションの担当の印を置く。使い方: claim <番号> <pid> <セッション ID>
+claim() {
+  mkdir -p "$CLAIMS"
+  printf '%s\t%s\n' "$2" "$3" >"$CLAIMS/$1"
+}
+
+# 動いているプロセスを偽の ps に置く。使い方: live_process <pid> <実行ファイル名 (ps -o comm= の出力)>
+live_process() {
+  printf '%s\n' "$2" >"$PS_FAKE_DIR/$1"
 }
 
 # issue を置く。使い方: issue <番号> <OPEN|CLOSED> <ラベル> [本文の行...]
@@ -241,9 +262,213 @@ test_mark_started_removes_from_start() {
   issue 2 OPEN ready 'Depends on #1'
   issue 3 OPEN ready '依存なし'
   collect
-  ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >"$T/out.txt"
+  ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >"$T/out.txt" 2>/dev/null
   printf 'start\t3\t-\nwait\t2\t1\n' >"$T/exp.txt"
   assert_file_eq "$T/exp.txt" "$T/out.txt"
+}
+
+# 動いている別の Claude のセッションが担当の印を持つ issue は着手せず claimed に出し、依存元を待たせる
+test_issue_claimed_by_live_session_is_not_started() {
+  setup
+  claims_repo
+  issue 1 OPEN in-progress '依存なし'
+  issue 2 OPEN ready 'Depends on #1'
+  issue 3 OPEN ready '依存なし'
+  claim 1 4242 other-session
+  live_process 4242 'claude bg-spare'
+  issue 4 OPEN ready '依存なし'
+  claim 4 4245 another-session
+  live_process 4245 'claude'
+  # 番号の並びは文字列の順や awk の配列の順に頼らず、数の小さい順にする
+  issue 12 OPEN ready '依存なし'
+  claim 12 4246 twelfth-session
+  live_process 4246 'claude'
+  export CLAUDE_PID=1000
+  (cd "$T/repo" && collect)
+  assert_eq 0 "$(cat "$T/rc.txt")"
+  printf 'start\t3\t-\nwait\t2\t1\nclaimed\t1\tother-session\nclaimed\t4\tanother-session\nclaimed\t12\ttwelfth-session\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$T/out.txt"
+}
+
+# 番号を指定したときも、担当中の issue は claimed に出し、「対象にならない」とは言わない
+test_asked_issue_claimed_by_live_session_is_reported_as_claimed() {
+  setup
+  claims_repo
+  issue 1 OPEN ready '依存なし'
+  claim 1 4242 other-session
+  live_process 4242 '/Users/a/.local/bin/claude'
+  (cd "$T/repo" && collect 1)
+  printf 'claimed\t1\tother-session\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$T/out.txt"
+  : >"$T/empty.txt"
+  assert_file_eq "$T/empty.txt" "$T/err.txt"
+}
+
+# 印の持ち主が終わった (プロセスが無い・同じ番号の別のプロセスに変わった) issue と、自分の印の issue は着手する
+test_claim_of_ended_or_own_session_does_not_block() {
+  setup
+  claims_repo
+  issue 1 OPEN in-progress '依存なし'
+  issue 2 OPEN in-progress '依存なし'
+  issue 3 OPEN in-progress '依存なし'
+  issue 4 OPEN in-progress '依存なし'
+  claim 1 4242 ended-session
+  claim 2 4243 reused-pid
+  # Claude Code が起動したシェルは、コマンドラインに ~/.claude/ のパスを含むが Claude ではない
+  live_process 4243 '/bin/zsh'
+  # 実行ファイル名が claude で始まるだけの別のプログラムも Claude Code ではない
+  claim 4 4244 helper
+  live_process 4244 '/usr/local/bin/claude-helper'
+  claim 3 1000 own-session
+  live_process 1000 'claude'
+  export CLAUDE_PID=1000
+  (cd "$T/repo" && collect)
+  printf 'start\t1\t-\nstart\t2\t-\nstart\t3\t-\nstart\t4\t-\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$T/out.txt"
+}
+
+# mark started は自分の担当の印を書き、closed は消し、parked は残す (駐車しても対応中として扱う)
+test_mark_writes_claim_on_start_removes_on_close_and_keeps_on_park() {
+  setup
+  claims_repo
+  issue 1 OPEN ready '依存なし'
+  issue 2 OPEN ready '依存なし'
+  export CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=my-session
+  (cd "$T/repo" && collect)
+  (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >/dev/null)
+  printf '777\tmy-session\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$CLAIMS/1"
+  (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 closed >/dev/null)
+  assert_eq "なし" "$([ -e "$CLAIMS/1" ] && echo あり || echo なし)"
+  (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 2 started >/dev/null && ${SH:-sh} "$SCRIPT" mark "$SNAP" 2 parked >/dev/null)
+  printf '777\tmy-session\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$CLAIMS/2"
+}
+
+# Claude Code の外 (CLAUDE_PID が無い) では印を書けないことを知らせ、着手順はいつもどおり出す
+test_mark_started_outside_claude_code_warns_and_writes_no_claim() {
+  setup
+  claims_repo
+  issue 1 OPEN ready '依存なし'
+  issue 2 OPEN ready '依存なし'
+  (cd "$T/repo" && collect)
+  (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >"$T/out.txt" 2>"$T/err.txt")
+  assert_eq 0 $?
+  printf 'start\t2\t-\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$T/out.txt"
+  assert_file_contains_line "$T/err.txt" '#1 の担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある'
+  assert_eq "なし" "$([ -e "$CLAIMS/1" ] && echo あり || echo なし)"
+}
+
+
+# collect の後に別のセッションが印を書いた issue は、mark の出力で start に出さず、mark started も印を上書きせずに 3 で終わる
+test_issue_claimed_after_collect_is_not_started() {
+  setup
+  claims_repo
+  issue 1 OPEN ready '依存なし'
+  issue 2 OPEN ready '依存なし'
+  live_process 1000 'claude'
+  live_process 2000 'claude'
+  export CLAUDE_PID=1000 CLAUDE_CODE_SESSION_ID=A
+  (cd "$T/repo" && collect)
+  claim 2 2000 B
+  (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >"$T/out.txt")
+  printf 'claimed\t2\tB\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$T/out.txt"
+  (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 2 started >"$T/out.txt")
+  assert_eq 3 $?
+  assert_file_eq "$T/exp.txt" "$T/out.txt"
+  printf '2000\tB\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$CLAIMS/2"
+}
+
+# 印は clone の共通の git ディレクトリに置く。worktree で書いた印を clone の直下から、直下で書いた印を worktree から読める
+test_claim_is_shared_between_clone_root_and_worktree() {
+  setup
+  claims_repo
+  git -C "$T/repo" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m init
+  git -C "$T/repo" worktree add -q "$T/repo/.claude/worktrees/run" -b run 2>/dev/null
+  issue 1 OPEN ready '依存なし'
+  issue 2 OPEN ready '依存なし'
+  live_process 777 'claude'
+  live_process 888 'claude'
+  for pair in "$T/repo/.claude/worktrees/run:$T/repo" "$T/repo:$T/repo/.claude/worktrees/run"; do
+    writer=${pair%%:*}
+    reader=${pair#*:}
+    rm -rf "$CLAIMS"
+    (cd "$writer" && CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=writer collect && CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=writer ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >/dev/null)
+    (cd "$reader" && CLAUDE_PID=888 collect)
+    printf 'start\t2\t-\nclaimed\t1\twriter\n' >"$T/exp.txt"
+    assert_file_eq "$T/exp.txt" "$T/out.txt"
+  done
+}
+
+# git リポジトリの外では印を読み書きできないことを知らせる
+test_outside_git_warns_that_claims_are_not_used() {
+  setup
+  issue 1 OPEN ready '依存なし'
+  mkdir -p "$T/plain"
+  export CLAUDE_PID=777 GIT_CEILING_DIRECTORIES="$T"
+  (cd "$T/plain" && collect)
+  assert_file_contains_line "$T/err.txt" '担当の印を読めない (git リポジトリの外で動いている)。別のセッションが担当中の issue も着手順に出る'
+  (cd "$T/plain" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >/dev/null 2>"$T/err.txt")
+  assert_file_contains_line "$T/err.txt" '#1 の担当の印を残せない (git リポジトリの外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある'
+  unset GIT_CEILING_DIRECTORIES
+}
+
+
+# 死んだ印 (プロセスが無い・claude ではない) のある issue は、mark started が自分の印に置き換えて着手する
+test_mark_started_replaces_dead_claim() {
+  setup
+  claims_repo
+  issue 1 OPEN in-progress '依存なし'
+  issue 2 OPEN in-progress '依存なし'
+  claim 1 4242 ended-session
+  claim 2 4243 reused-pid
+  live_process 4243 '/bin/zsh'
+  export CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=my-session
+  (cd "$T/repo" && collect)
+  for n in 1 2; do
+    (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" "$n" started >/dev/null)
+    assert_eq 0 $?
+    printf '777\tmy-session\n' >"$T/exp.txt"
+    assert_file_eq "$T/exp.txt" "$CLAIMS/$n"
+  done
+}
+
+# mark closed は、動いている別のセッションの印を消さない
+test_mark_closed_keeps_claim_of_live_other_session() {
+  setup
+  claims_repo
+  issue 1 OPEN ready '依存なし'
+  export CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=my-session
+  (cd "$T/repo" && collect)
+  claim 1 4242 other-session
+  live_process 4242 'claude'
+  (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 closed >/dev/null)
+  printf '4242\tother-session\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$CLAIMS/1"
+}
+
+# 死んだ印のある issue を 2 つのセッションが同時に取りに来ても、片方だけが取れる (もう片方は 3 で終わる)
+test_two_sessions_replacing_dead_claim_at_once_only_one_wins() {
+  setup
+  claims_repo
+  issue 1 OPEN in-progress '依存なし'
+  claim 1 999 ended-session
+  : >"$PS_FAKE_DIR/999.slow"
+  live_process 1000 'claude'
+  live_process 2000 'claude'
+  (cd "$T/repo" && CLAUDE_PID=1000 collect)
+  cp "$SNAP" "$T/snap-b.tsv"
+  (cd "$T/repo" && CLAUDE_PID=1000 CLAUDE_CODE_SESSION_ID=A ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >/dev/null 2>&1; echo $? >"$T/rc-a.txt") &
+  # 先に取った側が印を作り終えた後に、遅れた側が死んだ印の判定を終える時間差にする
+  sleep 0.5
+  (cd "$T/repo" && CLAUDE_PID=2000 CLAUDE_CODE_SESSION_ID=B ${SH:-sh} "$SCRIPT" mark "$T/snap-b.tsv" 1 started >/dev/null 2>&1; echo $? >"$T/rc-b.txt") &
+  wait
+  assert_eq "0 3" "$(sort "$T/rc-a.txt" "$T/rc-b.txt" | tr '\n' ' ' | sed 's/ $//')"
+  if [ "$(cat "$T/rc-a.txt")" = 0 ]; then printf '1000\tA\n' >"$T/exp.txt"; else printf '2000\tB\n' >"$T/exp.txt"; fi
+  assert_file_eq "$T/exp.txt" "$CLAIMS/1"
 }
 
 run_tests

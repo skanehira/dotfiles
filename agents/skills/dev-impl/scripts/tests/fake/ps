@@ -1,0 +1,14 @@
+#!/bin/sh
+# next-issues.sh のテスト用の偽の ps。`ps -p <pid> -o comm=` だけを真似る。
+# 動いているプロセスは $PS_FAKE_DIR/<pid> に置き、中身をそのプロセスの実行ファイル名として出す。無ければ終了コード 1。
+# $PS_FAKE_DIR/<pid>.slow があると 1 秒待ってから答える (2 つのセッションが同時に印を取りに来る状況を作るため)
+set -u
+D=${PS_FAKE_DIR:?}
+if [ "$#" -eq 4 ] && [ "$1" = "-p" ] && [ "$3" = "-o" ] && [ "$4" = "comm=" ]; then
+  [ -f "$D/$2.slow" ] && sleep 1
+  [ -f "$D/$2" ] || exit 1
+  cat "$D/$2"
+  exit 0
+fi
+echo "fake ps: 知らない呼び出し: $*" >&2
+exit 99

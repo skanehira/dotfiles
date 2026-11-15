@@ -227,7 +227,7 @@
 
 ## 手元での起動と承認ゲート (2026-11-11)
 
-- [決定] スキル (`/dev-triage` / `/dev-feat-spec` / `/dev-impl` / `/dev-spec`) は agent-loop に依存させず、人が手元で 1 つずつ起動できるままにする。同じリポジトリで同じスキルを手元と agent-loop で同時に動かさないことは、仕組みでは防がず CLAUDE.md に書く — agent-loop は自分が起動した run しか見ないため。手元で起動するのは急ぐときだけで、そのあいだ agent-loop を止めれば足りるため (2026-11-11、ユーザーの判断)
+- [決定] スキル (`/dev-triage` / `/dev-feat-spec` / `/dev-impl` / `/dev-spec`) は agent-loop に依存させず、人が手元で 1 つずつ起動できるままにする。同じリポジトリで同じスキルを手元と agent-loop で同時に動かさないことは、仕組みでは防がず CLAUDE.md に書く — agent-loop は自分が起動した run しか見ないため。手元で起動するのは急ぐときだけで、そのあいだ agent-loop を止めれば足りるため (2026-11-11、ユーザーの判断) → `/dev-impl` は担当の印で防ぐ形に変更 (下の 2026-11-15 の決定)
 - [決定] agent-loop に登録したリポジトリでは、`/dev-spec` が `ready` で作った子の issue を、次の見回りで `/dev-impl` が実装し始めてよい。承認ゲートは「`/dev-spec` のフェーズ 10 で issue の作成に同意する時点」とする — 作成の前にドラフトを人が確認しているため (2026-11-11、ユーザーの判断)
 - [棄却] `/dev-spec` が子の issue を `design-review` で作り、人が `ready` を付けるまで実装させない — 作成に同意したうえで、もう一度ラベルを付ける手間が増えるため
 
@@ -242,7 +242,7 @@
 - [事実] 2026-11-13、impl の run の実装 subagent が、`rm -rf "$E"/* && … && bash …; ls …; for … done` の 1 行で 25 分止まった。`bypassPermissions` でも Claude Code は「変数が空ならルートを消す」危険な削除として確認を出し、バックグラウンドの run ではその確認が人の返事待ち (`blocked`) になる。同じ 1 行を `claude -p --permission-mode bypassPermissions` で流すと確認の対象として拒否され、`rm -rf "${E:?}"/*` に書き換えると通った。環境変数 `CLAUDE_CODE_DISABLE_SUBSTITUTION_RM_PROMPT=1` では拒否が消えなかった。`blocked` は最終報告での質問だけでなく、権限確認でも起きる (上の「agent-loop」の `blocked` の決定を補う)
 - [事実] agent-loop は決定どおりこの run を `blocked` として止めて通知した。次の impl の run は、止まった run の worktree の中に残った `issue-<N>` の worktree を、ファイルの更新時刻から「別の run が実装中」と判断して引き継がなかった。この判断は `/dev-impl` の手順に無く、run がその場で決めたものだった。入力が変わらないので、issue は 6 時間以上 `in-progress` のまま残った
 - [決定] 変数や glob を含むパスの `rm` は、`"${DIR:?}"` で空の変数を弾くか、パスをそのまま書くと、全エージェント共通の指示 (`agents/AGENTS.md`) に書く — 確認が出る形を書かなければ、無人の run が止まらないため。rules ではなく共通の指示に置くのは、rules が必要なときに読む方式で、証跡のスクリプトを書く場面で読まれる保証が無いため。守らせる機械的な仕組みは無い (2026-11-13、ユーザーの判断)
-- [決定] `/dev-impl` は、再開する issue のブランチを checkout している worktree が残っていたら、worktree のパスから持ち主の run の名前を取り出し、`claude agents --json --all` の `name` と突き合わせる。持ち主が `working` / `blocked` / `busy` ならその issue に着手せず、それ以外なら worktree を未コミットの差分ごと引き継ぐ。更新時刻では判定しない — 止まった run の worktree も、止まる直前まで書かれていれば新しく見えるため。確認待ち以外の原因で止まった run も同じ経路で引き継げるため (2026-11-13、ユーザーの判断)
+- [決定] `/dev-impl` は、再開する issue のブランチを checkout している worktree が残っていたら、worktree のパスから持ち主の run の名前を取り出し、`claude agents --json --all` の `name` と突き合わせる。持ち主が `working` / `blocked` / `busy` ならその issue に着手せず、それ以外なら worktree を未コミットの差分ごと引き継ぐ。更新時刻では判定しない — 止まった run の worktree も、止まる直前まで書かれていれば新しく見えるため。確認待ち以外の原因で止まった run も同じ経路で引き継げるため (2026-11-13、ユーザーの判断) → 担当の印に変更 (下の 2026-11-15 の決定)
 - [棄却] agent-loop が `blocked` の run を止めずに残し、見回りのたびに通知する — 人が答えればその run が続くが、答えるまで同じリポジトリの次の impl を起動できないため
 - [棄却] agent-loop が impl の run を `done` 以外で片付けたとき、`in-progress` の issue に `needs-human` を付ける — 止まったことはボードで分かるが、人が戻すまで自動で再開せず、上の引き継ぎの決定と逆向きになるため
 
@@ -256,3 +256,13 @@
 - [棄却] worktree の中で切ったブランチの名前 (git の reflog) から PR を探す — git だけで判定できるが、`/dev-impl` が入れ子の worktree で作った PR を拾えないため
 - [決定] merge と、merge されずに close された PR の両方を「終わった」とみなす。PR を 1 つも作らずに止まった run は残す — close も作業の終わりで、PR の無い run は人が質問を読むために残しているため (2026-11-13、ユーザーの判断)
 - [棄却] merge だけを「終わった」とみなす — close された PR のある run が、いつまでも残るため
+
+## 手元の `/dev-impl` と agent-loop の二重実装 (2026-11-15)
+
+- [事実] 2026-11-15、手元の対話セッションが `/dev-impl` で issue を実装している間に、agent-loop が `in-progress` の同じ issue を仕事と見て impl の run を起動した。agent-loop は自分が起動した run しか見ない。run の `/dev-impl` は、`issue-<N>` を checkout している worktree が無かったので放置されたブランチと判断し、実装を始めた。手元の clone は、実装の subagent が main に切り替えたまま戻っておらず、`issue-<N>` にいなかった
+- [決定] `/dev-impl` は、着手する issue に担当の印を残す。印は clone の共通の git ディレクトリの `dev-impl-claims/<番号>` に、Claude Code のプロセスの pid (`CLAUDE_PID`) とセッション ID を書く。`next-issues.sh mark started` が印ごとのロック (`mkdir`) の中で判定・置き換えをして取り、`mark closed` が消す。pid のプロセスが動いていて、実行ファイル名が `claude` の印を生きているとみなし、自分以外の生きている印のある issue には `collect`・`mark`・`order` のどれも着手させない。agent-loop も同じ印を読み、その issue を実装の仕事に数えない。これは 2026-11-11 の「同時に動かさないことは仕組みでは防がない」と、2026-11-13 の「worktree のパスから持ち主の run を取り出して突き合わせる」を、`/dev-impl` について置き換える — 手元のセッションはどちらの判定にも現れず、clone が一時的に別のブランチにいるだけで二重実装になるため
+- [決定] 駐車 (`needs-human`) では印を消さない — 駐車した issue も、そのセッションが動いている間は対応中として扱う (2026-11-15、ユーザーの判断)
+- [決定] `/dev-triage` と `/dev-feat-spec` は、これまでどおり手元と agent-loop で同時に動かさない (印の対象は `/dev-impl` だけ)
+- [棄却] 担当者を `claude agents --json` のセッションの状態で判定する — 対話のセッションは `id` も `state` も持たず、jq の無い環境 (研修の受講者の PC) で POSIX の sh から読めないため。pid とプロセスの実行ファイル名なら `ps` だけで判定できる
+- [棄却] プロセスのコマンドライン全体に `claude` を含むかで判定する — Claude Code が起動したシェルもコマンドラインに `~/.claude/` を含み、生きていると誤る (2026-11-15 に実測)
+- [棄却] 印を issue のラベルやコメントで表す — 別のマシンからも見えるが、持ち主が動いているかを確かめられないため。agent-loop は 1 台でしか動かさないので、同じマシンの印で足りる

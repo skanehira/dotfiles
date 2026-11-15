@@ -8,7 +8,9 @@
 #   sh next-issues.sh mark <スナップショット> <番号> <started|closed|parked>
 #       着手した (started)・merge して close した (closed)・needs-human に駐車した (parked) ことを
 #       スナップショットに書き、着手順を出し直す。started と parked の issue は start に出さず、依存元を待たせる。
-#       GitHub は読み直さない (run の途中で ready が付いた issue は拾わない)
+#       GitHub は読み直さない (run の途中で ready が付いた issue は拾わない)。
+#       started は着手の前に担当の印を取る。動いている別のセッションが印を持っていれば、印もスナップショットも
+#       変えずに着手順を出し、終了コード 3 で終わる (その issue には着手しない)
 #   sh next-issues.sh order <スナップショット>
 #       スナップショットから着手順を出す
 #
@@ -20,12 +22,24 @@
 #   cycle<TAB>番号                  依存が循環している issue。着手しない
 #   unknown<TAB>番号<TAB>依存先     どこにも無い issue に依存している issue。着手しない
 #   badline<TAB>番号<TAB>行         「Depends on」で始まるのに読めない行 (1 行に複数並べたなど) がある open の issue。着手しない
+#   claimed<TAB>番号<TAB>セッション  動いている別の Claude Code のセッションが担当の印を持つ issue。着手しない。
+#                                   番号の小さい順に最後に出す。collect の後に印が書かれた issue も、mark と order が出す
 #
-# 対象: open で ready か in-progress が付き、needs-human と tracking が付かず、読めない依存の行が無い issue。
-#   番号を渡したときは、その issue と、まだ終わっていない依存先だけ。
+# 対象: open で ready か in-progress が付き、needs-human と tracking が付かず、読めない依存の行が無く、
+#   動いている別のセッションの担当の印が無い issue。番号を渡したときは、その issue と、まだ終わっていない依存先だけ。
+# 担当の印: clone の共通の git ディレクトリの dev-impl-claims/<番号>。中身は「pid<TAB>セッション ID」の 1 行。
+#   mark started が CLAUDE_PID と CLAUDE_CODE_SESSION_ID で書き、mark closed が消す。mark parked は残す
+#   (駐車した issue も、そのセッションが動いている間は対応中として扱う)。pid のプロセスが動いていて、
+#   実行ファイル名が claude のときだけ印を生きているとみなす (pid が別のプロセスに使い回されたときに止まらないため)。
+#   バックグラウンドのセッションは done になってもプロセスが残るので、claude stop するまで印は生きている。
+#   pid が別の Claude Code のプロセスに使い回されると、そのプロセスが終わるまで死んだ印も生きて見える (止まる側に倒れ、
+#   claimed の行にセッション ID が出るので人は気付ける)。
+#   自分の pid (CLAUDE_PID) の印は自分のものなので着手してよい。agent-loop.ts も同じ印を読む。
+#   Claude Code の外 (CLAUDE_PID が無い) と git リポジトリの外では印を使えず、標準エラーで知らせる。
 # 実効スコア: 自分と、自分に直接・間接に依存する対象 issue の「## 優先度」のスコア (緊急枠は U) の最大値。
 #
-# 終了コード: 0 出せた / 1 使い方の誤り・gh の失敗・issue が上限 (環境変数 ISSUE_LIST_LIMIT、既定 1000 件) 以上ある
+# 終了コード: 0 出せた / 1 使い方の誤り・gh の失敗・issue が上限 (環境変数 ISSUE_LIST_LIMIT、既定 1000 件) 以上ある /
+#   3 mark started で、動いている別のセッションが印を持っていた
 #
 # POSIX の sh で書く (macOS の sh と Ubuntu の dash で動かすため。bash だけの書き方を使わない)。
 set -u
@@ -42,17 +56,124 @@ shift 2
 
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/next-issues.XXXXXX") || die 1 "一時ディレクトリを作れない"
 trap 'rm -rf "$TMP"' EXIT
+TAB=$(printf '\t')
 
-# スナップショットの列: 番号 / 状態 (target・open・closed) / スコア / 依存先 / 再開 (1|0) / 読めない依存の行
+# 担当の印の置き場所。git リポジトリの外では空
+claims_dir() {
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 0
+  printf '%s/dev-impl-claims\n' "$common"
+}
+
+# 印の pid のプロセスが動いていて、Claude Code のものか。実行ファイル名 (comm) の先頭の語で見る。
+# コマンドライン全体で見ないのは、Claude Code が起動したシェルもコマンドラインに ~/.claude/ を含むため
+claim_alive() {
+  comm=$(ps -p "$1" -o comm= 2>/dev/null) || return 1
+  comm=${comm%% *}
+  [ "${comm##*/}" = claude ]
+}
+
+# 印のファイルを読み、CLAIM_PID と CLAIM_SID に入れる。読めない・pid が数でなければ失敗
+read_claim() {
+  CLAIM_PID=""
+  CLAIM_SID=""
+  IFS=$TAB read -r CLAIM_PID CLAIM_SID <"$1" 2>/dev/null
+  case $CLAIM_PID in '' | *[!0-9]*) return 1 ;; esac
+}
+
+# 動いている別のセッションの印か (持ち主は CLAIM_SID に入る)
+held_by_other() {
+  read_claim "$1" || return 1
+  [ "$CLAIM_PID" != "${CLAUDE_PID:-}" ] && claim_alive "$CLAIM_PID"
+}
+
+# 担当の印を取る。0 取れた (印を使えないときは知らせて 0) / 3 動いている別のセッションが持つ (持ち主は CLAIM_SID)
+take_claim() {
+  dir=$(claims_dir)
+  if [ -z "$dir" ]; then
+    echo "#$1 の担当の印を残せない (git リポジトリの外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある" >&2
+    return 0
+  fi
+  if [ -z "${CLAUDE_PID:-}" ]; then
+    echo "#$1 の担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある" >&2
+    return 0
+  fi
+  f="$dir/$1"
+  mkdir -p "$dir" || {
+    echo "#$1 の担当の印を書けない: $f" >&2
+    return 0
+  }
+  if ! lock_claim "$dir" "$1"; then
+    CLAIM_SID="不明 (印の操作が 30 秒以上混み合っている)"
+    return 3
+  fi
+  rc=0
+  if [ -f "$f" ] && held_by_other "$f"; then
+    rc=3
+  else
+    # 死んだ印は消して置き換える。中身を書き終えた一時ファイルを ln で置くので、空の印が見える瞬間が無い
+    rm -f "$f"
+    tmp="$dir/.tmp-$CLAUDE_PID-$1"
+    printf '%s\t%s\n' "$CLAUDE_PID" "${CLAUDE_CODE_SESSION_ID:-}" >"$tmp" && ln "$tmp" "$f" 2>/dev/null ||
+      echo "#$1 の担当の印を書けない: $f" >&2
+    rm -f "$tmp"
+  fi
+  rmdir "$dir/.lock-$1"
+  return $rc
+}
+
+# 印ごとの排他。mkdir は既にあると失敗するので、印の判定・削除・作成をほかのセッションと交錯させない。
+# 持ち主が操作の途中で落ちたロックは 1 分で壊す。30 秒待っても取れなければ失敗する
+lock_claim() {
+  lock="$1/.lock-$2"
+  waited=0
+  while ! mkdir "$lock" 2>/dev/null; do
+    if [ -n "$(find "$lock" -prune -mmin +1 2>/dev/null)" ]; then
+      rmdir "$lock" 2>/dev/null
+      continue
+    fi
+    waited=$((waited + 1))
+    [ "$waited" -le 30 ] || return 1
+    sleep 1
+  done
+}
+
+# 自分の担当の印を消す。動いている別のセッションの印は消さない
+release_claim() {
+  dir=$(claims_dir)
+  [ -n "$dir" ] && [ -f "$dir/$1" ] || return 0
+  held_by_other "$dir/$1" && return 0
+  rm -f "$dir/$1"
+}
+
+# 動いている別のセッションの印を「番号<TAB>セッション ID」で並べる
+live_claims() {
+  dir=$(claims_dir)
+  [ -n "$dir" ] && [ -d "$dir" ] || return 0
+  for f in "$dir"/*; do
+    [ -f "$f" ] || continue
+    n=${f##*/}
+    case $n in '' | *[!0-9]*) continue ;; esac
+    held_by_other "$f" && printf '%s\t%s\n' "$n" "$CLAIM_SID"
+  done
+  return 0
+}
+
+# スナップショットの列: 番号 / 状態 (target・open・closed) / スコア / 依存先 / 再開 (1|0) / 読めない依存の行 /
+#   collect の時点で担当していた別のセッション (deps.awk は 4 列目までしか読まない)
 print_order() {
   [ -f "$SNAP" ] || die 1 "スナップショットが無い: $SNAP"
   awk -F '\t' -v mode=order -f "$SPEC/deps.awk" "$SNAP" >"$TMP/order.txt" || die 1 "着手順を計算できない"
+  live_claims >"$TMP/live.txt"
+  # collect の後に別のセッションが印を取った issue も、start に出さず claimed に回す
   awk -F '\t' '
-    FILENAME == ARGV[1] {
+    FILENAME == ARGV[1] { live[$1] = $2; next }
+    FILENAME == ARGV[2] {
       if ($5 == "1") resume[$1] = 1
       if ($6 != "") bad[++nb] = $1 "\t" $6
+      if ($7 != "" && $2 != "closed") claimed[$1] = $7
       next
     }
+    $1 == "start" && ($2 in live) { claimed[$2] = live[$2]; next }
     $1 == "start" && ($2 in resume) { print; next }
     $1 == "start" { starts[++ns] = $0; next }
     { others[++no] = $0 }
@@ -60,8 +181,16 @@ print_order() {
       for (i = 1; i <= ns; i++) print starts[i]
       for (i = 1; i <= no; i++) print others[i]
       for (i = 1; i <= nb; i++) print "badline\t" bad[i]
+      nc = 0
+      for (x in claimed) {
+        v = x + 0
+        for (j = nc; j > 0 && cl[j] > v; j--) cl[j + 1] = cl[j]
+        cl[j + 1] = v
+        nc++
+      }
+      for (i = 1; i <= nc; i++) print "claimed\t" cl[i] "\t" claimed[cl[i]]
     }
-  ' "$SNAP" "$TMP/order.txt"
+  ' "$TMP/live.txt" "$SNAP" "$TMP/order.txt"
 }
 
 case $CMD in
@@ -84,8 +213,13 @@ case $CMD in
     git for-each-ref --format='%(refname)' refs/heads/ refs/remotes/origin/ 2>/dev/null |
       sed -n -e 's#^refs/heads/issue-\([0-9][0-9]*\)$#\1#p' -e 's#^refs/remotes/origin/issue-\([0-9][0-9]*\)$#\1#p' |
       sort -u | tr '\n' ' ' >"$TMP/branches.txt"
-    awk -F '\t' -v args="$ARGS" -v branches="$(cat "$TMP/branches.txt")" '
+    # 動いている別のセッションが担当する issue。対象から外し、スナップショットの 7 列目に持ち主を書く
+    [ -n "$(claims_dir)" ] || echo "担当の印を読めない (git リポジトリの外で動いている)。別のセッションが担当中の issue も着手順に出る" >&2
+    live_claims | tr "\t\n" ": " >"$TMP/claims.txt"
+    awk -F '\t' -v args="$ARGS" -v branches="$(cat "$TMP/branches.txt")" -v claims="$(cat "$TMP/claims.txt")" '
       BEGIN {
+        ncl = split(claims, cls, " ")
+        for (i = 1; i <= ncl; i++) { c = index(cls[i], ":"); cl[substr(cls[i], 1, c - 1) + 0] = substr(cls[i], c + 1) }
         nbr = split(branches, br, " ")
         for (i = 1; i <= nbr; i++) has_branch[br[i] + 0] = 1
       }
@@ -122,13 +256,19 @@ case $CMD in
       }
       END {
         if (args == "") {
-          for (i = 1; i <= cnt; i++) if (eligible[ids[i]]) target[ids[i]] = 1
+          for (i = 1; i <= cnt; i++) {
+            x = ids[i]
+            if (!eligible[x]) continue
+            if (x in cl) busy[x] = 1
+            else target[x] = 1
+          }
         } else {
           q = split(args, queue, " ")
           for (h = 1; h <= q; h++) asked[queue[h] + 0] = 1
           for (h = 1; h <= q; h++) {
             x = queue[h] + 0
             if (seen[x]++ || !eligible[x]) continue
+            if (x in cl) { busy[x] = 1; continue }
             target[x] = 1
             k = split(dp[x], ds, ",")
             for (j = 1; j <= k; j++) {
@@ -138,14 +278,14 @@ case $CMD in
           }
         }
         for (x in asked) {
-          if (!(x in target)) printf "#%d は対象にならない (open で ready か in-progress が付き、needs-human と tracking が付いていない issue だけが対象)\n", x | "cat 1>&2"
+          if (!(x in target) && !(x in busy)) printf "#%d は対象にならない (open で ready か in-progress が付き、needs-human と tracking が付いていない issue だけが対象)\n", x | "cat 1>&2"
         }
         for (i = 1; i <= cnt; i++) {
           x = ids[i]
           if (st[x] == "CLOSED") s = "closed"
           else if (x in target) s = "target"
           else s = "open"
-          printf "%d\t%s\t%s\t%s\t%d\t%s\n", x, s, sc[x], dp[x], (s == "target" && (inprog[x] || (x in has_branch))), bd[x]
+          printf "%d\t%s\t%s\t%s\t%d\t%s\t%s\n", x, s, sc[x], dp[x], (s == "target" && (inprog[x] || (x in has_branch))), bd[x], ((x in busy) ? cl[x] : "")
         }
       }
     ' "$TMP/raw.tsv" >"$SNAP" || die 1 "スナップショットを書けない: $SNAP"
@@ -156,10 +296,18 @@ case $CMD in
     case $2 in started | closed | parked) ;; *) die 1 "$USAGE" ;; esac
     [ -f "$SNAP" ] || die 1 "スナップショットが無い: $SNAP"
     awk -F '\t' -v n="$1" '$1 == n { found = 1 } END { exit !found }' "$SNAP" || die 1 "スナップショットに #$1 が無い"
+    if [ "$2" = started ]; then
+      take_claim "$1"
+      if [ $? -eq 3 ]; then
+        print_order
+        exit 3
+      fi
+    fi
     awk -F '\t' -v OFS='\t' -v n="$1" -v how="$2" '
       $1 == n { $2 = (how == "closed" ? "closed" : "open"); $5 = 0 }
       { print }
     ' "$SNAP" >"$TMP/snap.tsv" && cat "$TMP/snap.tsv" >"$SNAP"
+    [ "$2" = closed ] && release_claim "$1"
     print_order
     ;;
   order)

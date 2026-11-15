@@ -86,19 +86,28 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 sh ~/.claude/skills/dev-impl/scripts/next-issues.sh collect "$SCRATCH/issues.tsv" <番号...>
 ```
 
-出力は 1 行に 1 issue のタブ区切りで、行の種類ごとに次のように扱う。終了コードが 0 でなければ、標準エラーの内容を添えて停止する。渡した番号のうち対象にならないもの (closed・needs-human・tracking・ready でない・存在しない・読めない `Depends on` の行がある) は、標準エラーに `#<番号> は対象にならない` と出るので、最終報告に載せる。
+`next-issues.sh` は、`collect`・`mark`・`order` のどれも clone の中 (`$REPO_DIR` か、その worktree) をカレントディレクトリにして実行する。担当の印を clone の git ディレクトリに置くためで、git リポジトリの外では印を使えず、標準エラーで知らせる。
+
+出力は 1 行に 1 issue のタブ区切りで、行の種類ごとに次のように扱う。終了コードが 0 でなければ、標準エラーの内容を添えて停止する。渡した番号のうち対象にならないもの (closed・needs-human・tracking・ready でない・存在しない・読めない `Depends on` の行がある) は、標準エラーに `#<番号> は対象にならない` と出るので、最終報告に載せる。動いている別のセッションが担当する issue は、標準エラーではなく `claimed` の行に出る。
 
 | 行 | 意味 | 扱い |
 | --- | --- | --- |
-| `start <番号> <実効スコア>` | 着手できる issue。上から着手順に並ぶ | 上から着手する (2.0 の並列実行では上から枠を埋める)。互いに依存しないので同時に着手してよい。着手したら `mark <番号> started` を書く (下記) |
+| `start <番号> <実効スコア>` | 着手できる issue。上から着手順に並ぶ | 上から着手する (2.0 の並列実行では上から枠を埋める)。互いに依存しないので同時に着手してよい。着手の最初に `mark <番号> started` で担当の印を取る (2.1 の手順 0) |
 | `wait <番号> <依存先>` | close されていない依存先が残る | 依存先が close されるまで着手しない |
 | `cycle <番号>` | 依存が循環している | 着手せず、最終報告に載せる |
 | `unknown <番号> <依存先>` | どこにも無い issue に依存している | 着手せず、最終報告に載せる |
 | `badline <番号> <行>` | `Depends on` で始まるのに読めない行がある (1 行に複数並べたなど)。対象かどうかに関わらず、open の issue すべてに出る | 着手せず、最終報告に載せる |
+| `claimed <番号> <セッション>` | 動いている別の Claude Code のセッション (手元の `/dev-impl` か agent-loop の run) が担当の印を持つ。`collect` の後に印が書かれた issue も、`mark` と `order` が出す | 着手せず (依存元も待たせたまま)、最終報告の「着手できなかった issue」にセッション ID と一緒に載せる |
 
 スクリプトが決めていること (規則の正本はこの節。実装は `next-issues.sh` の先頭のコメントと一致させる):
 
-- **対象**: open で `ready` か `in-progress` が付き、`needs-human` と `tracking` が付かず、読めない `Depends on` の行が無い issue。番号を渡したときは、その issue と、まだ終わっていない依存先だけ
+- **対象**: open で `ready` か `in-progress` が付き、`needs-human` と `tracking` が付かず、読めない `Depends on` の行が無く、動いている別のセッションの担当の印が無い issue。番号を渡したときは、その issue と、まだ終わっていない依存先だけ
+- **担当の印**: 同じ issue を 2 つのセッションが実装しないための印で、clone の共通の git ディレクトリ (`git rev-parse --git-common-dir`) の `dev-impl-claims/<番号>` に、Claude Code のプロセスの pid (`CLAUDE_PID`) とセッション ID (`CLAUDE_CODE_SESSION_ID`) を 1 行で書く。clone の直下・各 worktree・agent-loop のどこから見ても同じ場所である
+  - `mark <番号> started` が取り、`mark <番号> closed` が消す。取るときは印ごとのロック (`dev-impl-claims/.lock-<番号>`。`mkdir` で作る) の中で判定・置き換えをするので、2 つのセッションが同時に取りに来ても片方だけが取れる。動いている別のセッションが持っていれば、印もスナップショットも変えずに終了コード 3 で終わる。`mark <番号> parked` は残す (駐車した issue も、そのセッションが動いている間は対応中として扱う。人が `ready` に戻しても、agent-loop や別のセッションは拾わない)
+  - pid のプロセスが動いていて、実行ファイル名 (`ps -o comm=` の先頭の語) が `claude` のときだけ、印を生きているとみなす。Claude Code のプロセスが終われば印は死んだ扱いになり、別のセッションが引き継げる。バックグラウンドのセッション (`claude --bg`) は done になってもプロセスが残るので、`claude stop` するまで印は生きている (agent-loop の run は、agent-loop が片付けで stop する)。pid が別の Claude Code のプロセスに使い回されると、そのプロセスが終わるまで死んだ印も生きて見える (着手しない側に倒れる。`claimed` の行のセッション ID で人が気付ける)
+  - 自分の pid の印は自分のもので、着手の妨げにならない
+  - agent-loop (dotfiles の `agents/scripts/agent-loop.ts`) も同じ印を読み、生きている印のある issue を実装の仕事に数えない
+  - Claude Code の外 (`CLAUDE_PID` が無い) と git リポジトリの外では印を使えず、`collect` と `mark` が標準エラーで知らせる。その場合は、手元で動かしている間 agent-loop を止める
 - **依存**: 本文の `Depends on #<番号>` の行。依存先がすべて close された issue が着手できる
 - **実効スコア**: 自分と、自分に直接・間接に依存する対象 issue のスコアの最大値 (スコアの低い依存先が後回しになって、スコアの高い issue が塞がれるのを防ぐため)。スコアは本文の `## 優先度` の `スコア <数値>` で、行の先頭が `緊急枠 (` の行があれば、どのスコアよりも高い (`U` と出る。書式は `~/.claude/skills/dev-triage/references/priority.md`「issue への書き方」)。引き継ぐ元は対象 issue に限る (この run で着手できない issue のスコアで順を動かさない)。どこからもスコアを得られない issue (`/dev-spec` が作った issue など) は `-` で、スコアのある issue の後ろに置く
 - **着手順**: 前回の run から再開する issue (`in-progress` か、`issue-<番号>` のブランチが手元か origin に残るもの) が先、続いて実効スコアの高い順、同じなら番号の小さい順。`priority.md`「判定の流れ」の「スコアの差が 2 割以内なら同順位として、人が決める」は使わない (実装の途中で人に聞けないので、値と番号で決める)
@@ -106,9 +115,9 @@ sh ~/.claude/skills/dev-impl/scripts/next-issues.sh collect "$SCRATCH/issues.tsv
 **issue の状態が変わるたびに、スナップショットに書いて計算し直す。** GitHub から一覧を取り直さない (run の途中で付いた `ready` は拾わない):
 
 ```bash
-sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <番号> started  # 2.1 で着手した (並列実行で枠を埋め直すとき、実行中の issue を start に出さない)
-sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <番号> closed   # 2.5 で close を確かめた
-sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <番号> parked   # 2.6 で needs-human に駐車した
+sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <番号> started  # 2.1 の手順 0 で着手する (並列実行で枠を埋め直すとき、実行中の issue を start に出さない)。担当の印を取る。取れなければ終了コード 3
+sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <番号> closed   # 2.5 で close を確かめた。担当の印を消す
+sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <番号> parked   # 2.6 で needs-human に駐車した。担当の印は残す
 ```
 
 `mark` も着手順を出し直す。スナップショットを書き換えずに今の着手順を見るときは `sh ~/.claude/skills/dev-impl/scripts/next-issues.sh order "$SCRATCH/issues.tsv"` を使う。
@@ -117,22 +126,16 @@ sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <
 
 **`in-progress` が残っている、または対象 issue に残置ブランチ `issue-<N>` がある場合は前回の中断・駐車からの復帰。** その issue の状態を確認して再開位置を決める (needs-human から `ready` に戻された issue はラベルでは区別できないため、ブランチの有無で検出する)。
 
-**まず、ブランチ `issue-<N>` を checkout している worktree が残っていないかを確かめる。** 前の run が途中で止まると (agent-loop が `blocked` の run を止めたときなど。agent-loop は dotfiles の `agents/scripts/agent-loop.ts` が定期的に起動する run で、使わない環境では関係ない)、未コミットの差分を抱えた worktree が残る。agent-loop の run は `<clone>/.claude/worktrees/<run の名前>` で動くので、その中の `.claude/worktrees/issue-<N>` に残る。このブランチは別の worktree が checkout しているので switch できず、origin にも無いことが多い。持ち主の run がまだ動いているかは、worktree のパスから run の名前を取り出し、`claude agents --json --all` の `name` と突き合わせて判定する:
+**動いている別のセッションが担当する issue は、ここまで来ない。** `collect` が担当の印を見て `claimed` に出し、対象から外している (上の「担当の印」)。対象に残った issue は、印が無いか、印の持ち主のセッションが終わっているので、前のセッションの残したものを引き継いでよい。ブランチや worktree の有無、ファイルの更新時刻からは担当者を推し量らない (手元の `/dev-impl` の clone が一時的に別のブランチにいるだけでも、放置されたブランチに見えるため)。
+
+**まず、ブランチ `issue-<N>` を checkout している worktree が残っていないかを確かめる。** 前のセッションが途中で止まると (agent-loop が `blocked` の run を止めたときなど。agent-loop は dotfiles の `agents/scripts/agent-loop.ts` が定期的に起動する run で、使わない環境では関係ない)、未コミットの差分を抱えた worktree が残る。agent-loop の run は `<clone>/.claude/worktrees/<run の名前>` で動くので、その中の `.claude/worktrees/issue-<N>` に残る。このブランチは別の worktree が checkout しているので switch できず、origin にも無いことが多い:
 
 ```bash
 WT=$(git -C "$REPO_DIR" worktree list --porcelain \
   | awk -v b="branch refs/heads/issue-$N" '/^worktree /{p=substr($0,10)} $0==b{print p}')
-OWNER=$(printf '%s\n' "$WT" | sed -nE 's|.*/\.claude/worktrees/([^/]+)/\.claude/worktrees/issue-[0-9]+$|\1|p')
-claude agents --json --all | jq -r --arg n "$OWNER" '[.[] | select(.name == $n) | (.state // .status)] | join(",")'
 ```
 
-| 結果 | 動作 |
-| --- | --- |
-| `WT` が空 | 下の再開表へ進む |
-| 最後のコマンドが成功し (終了コード 0)、出力が空 (一覧に無いか `OWNER` を取り出せない) か、`done` / `failed` / `stopped` / `crashed` だけ | 持ち主の run は止まっている。worktree を引き継ぐ (下記) |
-| それ以外 (`working` / `blocked` / `busy` / `running` / `waiting` や、知らない値。コマンドが失敗したときも含む) | 持ち主の run が動いているか、人の返事を待っている。この run ではこの issue に着手せず、`sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" <番号> started` を書いて着手順から外し (依存元は待たせたまま)、最終報告の「着手できなかった issue」に `OWNER` と一緒に載せる。知らない状態を「止まっている」と読むと、動いている run の worktree を引き継いでしまうので、止まっている状態を列挙する側に倒す |
-
-**worktree のファイルの更新時刻では判定しない。** 止まった run が残した worktree も、止まる直前まで書かれていれば新しく見えるので、動いている run の worktree と誤り、issue が `in-progress` のまま放置される。`OWNER` を取り出せないのは、clone の直下で動いた run (人が手元で起動した `/dev-impl`) の worktree である。同じリポジトリで `/dev-impl` を 2 つ同時に動かさない (人が手元で起動するときは agent-loop を止める) 運用を前提に、止まった run の残骸として扱う。
+`WT` が空なら下の再開表へ進む。空でなければ、その worktree を引き継ぐ (下記)。
 
 **引き継ぐときは `WORK_DIR=$WT` とし、新しい worktree を作らず、未コミットの差分も捨てない。** 直列実行でも同じにする (`$REPO_DIR` ではこのブランチへ switch できないため)。そのうえで下の再開表から再開位置を決め、次のように読み替える。
 
@@ -164,7 +167,7 @@ claude agents --json --all | jq -r --arg n "$OWNER" '[.[] | select(.name == $n) 
 2. テスト・E2E が**固定ポートを共有しない**こと。dev server を起動する検証がある場合、ポートを外から指定でき、指定したポートで起動できなければ失敗する (既存サーバに相乗りしない) 契約になっていること。**相乗りする設定 (Playwright の `reuseExistingServer: true` + 固定 `baseURL` など) のまま並列にすると、別の worktree のサーバに対してテストが通り、静かに誤った green を出す**。worktree セットアップ手順に、並列で使う基準ポートが書かれていること
 3. `.claude/worktrees/` が `.gitignore` にあること。無いと、worktree を作った時点で親の作業ツリーが dirty になり、2.1 の clean チェックが全 issue で失敗する。並列を使うなら先に `.gitignore` へ追加する (それ自体を 1 コミットにしてよい)
 
-満たす場合、空いている枠 (スロット) をすべて、Step 1 の着手順の上から埋めて流す。2.5 の完了処理か 2.6 の駐車で枠が空くたびに、着手できる issue を計算し直し、空いた枠をすべて埋め直す (1 件の merge で複数の issue が着手できるようになることがあるため)。issue を割り当てるたびに、次の手順で worktree を作る:
+満たす場合、空いている枠 (スロット) をすべて、Step 1 の着手順の上から埋めて流す。2.5 の完了処理か 2.6 の駐車で枠が空くたびに、着手できる issue を計算し直し、空いた枠をすべて埋め直す (1 件の merge で複数の issue が着手できるようになることがあるため)。issue を割り当てる前に、2.1 の手順 0 で担当の印を取る。取れなければ (終了コード 3) その issue は割り当てず、着手順の次の issue に移る。印を取れた issue にだけ、次の手順で worktree を作る:
 
 ```bash
 # スロット s (0 始まり、最大 3) に issue N を割り当てる
@@ -202,6 +205,14 @@ fi
 
 以下の `$WORK_DIR` は、直列実行なら `$REPO_DIR`、並列実行なら 2.0 で作った worktree のパス。**implementer・review-impl には `repo_dir` としてこの `$WORK_DIR` を渡す** (どちらも絶対パスで受ける契約なので、直列・並列で指示の形は変わらない)。
 
+0. 担当の印を取る。ブランチ・worktree・ラベルに触れる前に行う (印を取る前に触ると、同じ issue を取りに来た別のセッションと手順が交錯する)。並列実行では 2.0 で worktree を作る前にここを行う:
+
+```bash
+sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" "$N" started
+```
+
+終了コードが 3 なら、別のセッションが先に印を取っている。この issue には着手せず、出力の着手順で次の issue へ進み、最終報告の「着手できなかった issue」に `claimed` の行のセッション ID と一緒に載せる。0 なら続ける (標準エラーに「担当の印を残せない」と出たら、印は無いまま進むことになるので、最終報告に載せる)
+
 1. `git -C "$WORK_DIR" status --porcelain` が空であることを確認する。残骸があれば run を止めて人間に報告する (前作業の未コミット差分の上に実装しない)。人間は差分を commit か stash してから本スキルを再実行する
 2. ブランチを origin のデフォルトブランチ最新から切り、基準 SHA を控える。並列実行では 2.0 の `worktree add -b` で既にブランチが作られているので `switch` は行わず、`fetch` と `BASE_SHA` の取得だけを行う:
 
@@ -216,7 +227,6 @@ BASE_SHA=$(git -C "$WORK_DIR" rev-parse HEAD)
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label ready --add-label in-progress
 gh issue comment "$N" --repo "$REPO_SLUG" --body "実装を開始します (dev-impl)"
-sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" "$N" started >/dev/null
 ```
 
 ### 2.2 実装 (implementer subagent)
@@ -546,7 +556,7 @@ done
    - 保留にした medium を「早見表にあった種類か」で分ける。早見表 (`dev-impl-implementer.md`「実装後のセルフチェック」) に無かった種類は、次回の早見表に足す候補として最終報告に列挙する (表に足すかは人間が決める)
 3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
    - 実装した issue と PR の一覧
-   - 着手できなかった issue を理由ごとに: 塞いでいる open の依存先 (番号とラベル。ラベルは `gh issue view <番号> --json labels` で引く)、依存の循環 (`cycle`)、どこにも無い依存先 (`unknown`)、読めない依存の行 (`badline`)、対象にならない番号 (`#<番号> は対象にならない`)、他の run が実行中 (`OWNER`)
+   - 着手できなかった issue を理由ごとに: 塞いでいる open の依存先 (番号とラベル。ラベルは `gh issue view <番号> --json labels` で引く)、依存の循環 (`cycle`)、どこにも無い依存先 (`unknown`)、読めない依存の行 (`badline`)、対象にならない番号 (`#<番号> は対象にならない`)、別のセッションが担当中 (`claimed`。セッション ID も書く)
    - close した親 (tracking) issue と、open のまま残した親 (子が残っている / 子ゼロ / 判定不能の別に)
    - 2.5 で親 close を判定できなかった子 issue の番号 (親に紐付いていない 404 の子と、API 失敗の子を分けて)
    - 消せなかったブランチ・worktree (`merge-pr.sh` の `BRANCH:` の行) と、merge の後の処理に失敗した issue (終了コード 15 の 2 回目の `ISSUE:`・`LABEL:` の行)
