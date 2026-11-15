@@ -71,17 +71,25 @@ const [screen, setScreen] = useState(
 - 変わる画面を直す。ボタン・見出し・入力欄の名前と、案内・エラーの文言は、機能設計書に書いたものと同じにする
 - 機能設計書の表に書いた状態のうち、レビューで見てほしいもの (モーダル・エラーの表示など) を `<画面 ID>--<状態>` の画面として足す
 - スケッチの冒頭に変更履歴のコメントを書くプロジェクトでは、同じ形で 1 行足す
+- **変わった要素に印を付ける。** 足した・変えた要素を包む要素に `data-sketch-change="<issue 番号>:<ラベル>"` を付ける。ラベルは変わり方を 10 字前後で書く (例: `追加するボタン`、`新しいモーダル`、`今日の日付が入る`)。部品が属性を受け取らないときは `<span className="inline-flex">` か `<div>` で包む。印は撮影のときだけ枠になり、スケッチの見た目は変えない。前の設計 PR の印は消さなくてよい (撮影は issue 番号の合う印にだけ枠を付ける)
+
+```jsx
+<span data-sketch-change="12:追加するボタン" className="inline-flex">
+  <Btn tone="outline">商品を追加</Btn>
+</span>
+```
 
 ### 4. 変更後を撮る
 
 ```bash
-~/.claude/skills/dev-feat-spec/scripts/capture-sketch.sh docs/design/UI_SKETCH.html <画面 ID> <SCRATCH>/issue-<N>/screens/after-<slug>.png
+~/.claude/skills/dev-feat-spec/scripts/capture-sketch.sh docs/design/UI_SKETCH.html <画面 ID> <SCRATCH>/issue-<N>/screens/after-<slug>.png --highlight <N>
 ```
 
-スクリプトは画面を包む要素だけを撮る。幅は 1280 px で、スマートフォン向けの画面は第 4 引数に `390` を渡す。終了コードが 0 でなければ、出力の 1 行目で原因を見る。
+スクリプトは画面を包む要素だけを撮る。`--highlight <N>` を渡すと、`data-sketch-change="<N>:..."` の要素に赤い枠と、その上にラベルを重ねて撮る。モーダルの背景の下に隠れた要素 (中心に別の要素が重なっているもの) には枠を付けない。変更前は `--highlight` を付けずに撮る。幅は 1280 px で、スマートフォン向けの画面は `--width 390` を渡す。終了コードが 0 でなければ、出力の 1 行目で原因を見る。
 
 | 出力 | 原因 | 直し方 |
 | --- | --- | --- |
+| `no element with data-sketch-change="<N>:..."` | その画面に、見えている印が 1 つも無い | 手順 3 の印を付ける。新しく描いた画面全体を見せたいときは、画面を包む要素に印を付ける |
 | `TimeoutError: locator.waitFor` | 画面 ID がスケッチに無い、口が無い、またはスケッチが描画の前に壊れた | 画面 ID と口を確かめる。ブラウザで `#screen=<ID>` を付けて開くと、どこで止まるかが見える |
 | `page error: ...` | スケッチの JavaScript が例外を投げた | スケッチを直す。エラーの出たまま撮った画像は使わない |
 | `Executable doesn't exist` | Chromium が無い | `npx playwright@1.65.1 install chromium` |
@@ -91,6 +99,7 @@ const [screen, setScreen] = useState(
 撮った png をすべて Read で開き、次を確かめる。
 
 - 変更前と変更後で、設計で変えた箇所が見て分かる (足したボタン、開いたモーダル、出したエラーなど)
+- 変更後の枠が、変えた箇所をすべて囲み、変えていない箇所を囲んでいない。ラベルが枠の中身や大事な文字を隠していない
 - 文言が機能設計書と同じである
 - 表示が崩れていない (文字の重なり、はみ出し、読み込みの途中の画面)
 
@@ -102,6 +111,8 @@ const [screen, setScreen] = useState(
 
 ```markdown
 ## 画面の変化
+
+画像は UI スケッチから撮ったもので、例のデータは架空です。変更後の画像の赤い枠が、この PR で変わる箇所です。
 
 ### 商品一覧 (管理者)
 
@@ -158,4 +169,5 @@ gh pr view <PR 番号> --repo "$REPO_SLUG" --json body -q .body | rg -n '!\[[^]]
 | `gh pr create --attach` は 2.99.0 から使え、本文の `![alt](<path>)` のうち添付と同じファイルを指す参照をアップロード先の URL に書き換える | `workflow-create-pr` の SKILL.md「添付できる gh か」「gh pr create の実行」 | 2026-11-16 に同書を読んだ |
 | `gh pr edit --attach` も本文の画像参照をアップロード先の URL (`https://github.com/user-attachments/assets/...`) に書き換える | gh 2.103.3 で、既存の設計 PR の本文を 3 枚の画像つきで差し替え、本文にローカルのパスが残らないことを `gh pr view --json body` で確かめた | 2026-11-16 |
 | 撮影のスクリプトは、口のあるスケッチの既知の画面 ID で exit 0 になり、知らない画面 ID・口の無いスケッチ・ページの例外で exit 1 になる | 業務アプリのスケッチ (React 19 + Tailwind の CDN 版、約 210 KB) の写しで実行 (既知の ID は約 4 秒で撮影) | 2026-11-16 |
+| `--highlight <N>` は、見えている印に枠とラベルを重ね、モーダルの背景の下に隠れた印には付けない。合う印が 0 件 (issue 番号の違い、印の無い画面) なら exit 1 になり、`--highlight` を付けなければ枠は写らない | 同じスケッチで、一覧とモーダルを開いた状態の 2 画面を撮って画像を開き、枠の位置を目で確かめた | 2026-11-16 |
 | Playwright 1.65.1 は、`utility-nvim-ui-capture` と同じ版で、ダウンロード済みの Chromium を共有する | `utility-nvim-ui-capture/scripts/nvim-ui-capture.sh` の `playwright@1.65.1` | 2026-11-16 |

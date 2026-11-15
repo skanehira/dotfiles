@@ -1,11 +1,11 @@
 #!/bin/sh
 # UI_SKETCH.html の 1 画面を png に撮る (references/sketch-capture.md「撮る」)。
-# 使い方: capture-sketch.sh <UI_SKETCH.html> <画面 ID> <出力 png> [幅 (既定 1280)]
+# 使い方: capture-sketch.sh <UI_SKETCH.html> <画面 ID> <出力 png> [--width N (既定 1280)] [--highlight <key>]
 # Playwright は初回だけキャッシュに入れる。Chromium は ~/Library/Caches/ms-playwright (Linux は ~/.cache/ms-playwright) を使う。
 set -eu
 
 if [ "$#" -lt 3 ]; then
-  echo "usage: capture-sketch.sh <UI_SKETCH.html> <画面 ID> <出力 png> [幅]" >&2
+  echo "usage: capture-sketch.sh <UI_SKETCH.html> <画面 ID> <出力 png> [--width N] [--highlight <key>]" >&2
   exit 2
 fi
 
@@ -26,7 +26,10 @@ if [ ! -f "$playwright_home/node_modules/playwright/package.json" ]; then
   }
 fi
 
-NODE_PATH="$playwright_home/node_modules" node "$script_dir/capture-sketch.cjs" "$html" "$2" "$3" "${4:-1280}" || {
+screen=$2
+out=$3
+shift 3
+NODE_PATH="$playwright_home/node_modules" node "$script_dir/capture-sketch.cjs" "$html" "$screen" "$out" "$@" || {
   status=$?
   echo "capture failed. Chromium が無ければ: npx playwright@$playwright_version install chromium" >&2
   exit "$status"
