@@ -9,7 +9,6 @@
     "CLAUDE_CODE_DISABLE_INLINE_SHELL_RM_PROMPT": "1"
   },
   "includeCoAuthoredBy": true,
-  "idleCompaction": false,
   "permissions": {
     "allow": [
       "Read",
@@ -78,8 +77,8 @@
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "claude-security@claude-plugins-official": true,
     "stripe@claude-plugins-official": true,
-    "recap-plus@claude-recap-plus": true,
-    "html-plan@claude-community": true
+    "html-plan@claude-community": true,
+    "timeline@claude-timeline": true
   },
   "extraKnownMarketplaces": {
     "agent-plugins-for-aws": {
@@ -143,11 +142,12 @@
         "repo": "aieo-product/claude_qamods"
       }
     },
-    "claude-recap-plus": {
+    "claude-timeline": {
       "source": {
         "source": "github",
-        "repo": "skanehira/claude-recap-plus"
-      }
+        "repo": "skanehira/claude-timeline"
+      },
+      "autoUpdate": true
     },
     "claude-community": {
       "source": {
@@ -172,6 +172,7 @@
   "skipWorkflowUsageWarning": true,
   "verbose": true,
   "preferredNotifChannel": "terminal_bell",
+  "idleCompaction": false,
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": true,
