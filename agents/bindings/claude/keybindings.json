@@ -18,7 +18,8 @@
       "context": "Chat",
       "bindings": {
         "ctrl+x b": "app:cycleDiffBase",
-        "ctrl+x i": "abovePrompt:toggle"
+        "ctrl+x i": "abovePrompt:toggle",
+        "ctrl+x t": "app:toggleDiffPreSession"
       }
     }
   ]
