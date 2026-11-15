@@ -513,7 +513,7 @@ shellcheck -x -P SCRIPTDIR -s sh agents/skills/dev-spec/scripts/*.sh agents/skil
 ```text
 [このマシン] agent-loop を入れた mac 1 台
 │
-├─ launchd (local.agent-loop) が 1 時間おきに agents/scripts/agent-loop.ts を動かす (LLM を使わない)
+├─ launchd (local.agent-loop) が 30 分おきに agents/scripts/agent-loop.ts を動かす (LLM を使わない)
 │    1. ~/.config/agent-loop/repos.yaml のリポジトリごとに、gh で仕事を探す
 │         triage: 状態のラベルが無い issue           → /dev-triage
 │         design: needs-design で設計 PR が無い issue → /dev-feat-spec
@@ -566,7 +566,7 @@ shellcheck -x -P SCRIPTDIR -s sh agents/skills/dev-spec/scripts/*.sh agents/skil
 | `ready` / `in-progress` | `/dev-impl` | 同上 |
 
 - **リポジトリの準備**: `/dev-project-setup` がラベル・Project・Actions 2 本・`AGENTS.md` の運用の節を用意する。優先度などの定義は dev-triage の references にあり、プロジェクト固有の定義があるときだけ `docs/ISSUE_TRIAGE.md` を置く
-- **agent-loop の動き**: launchd のユーザー用エージェント (`local.agent-loop`) が 1 時間おきに `agents/scripts/agent-loop.ts` を動かす (急ぐときは、人がスキルを手元で起動する)。スクリプトは LLM を使わず、`~/.config/agent-loop/repos.yaml` の各リポジトリで仕事を探し、種類ごとに `claude --bg --worktree <名前> --model opus --permission-mode bypassPermissions "/dev-triage"` のように起動する。同じリポジトリの同じ種類は同時に 1 つだけで、前回の run と入力が同じなら起動しない (6 時間経てば 1 回だけ起動し直す)。仕組みの詳細はスクリプトの冒頭にある
+- **agent-loop の動き**: launchd のユーザー用エージェント (`local.agent-loop`) が 30 分おきに `agents/scripts/agent-loop.ts` を動かす (急ぐときは、人がスキルを手元で起動する)。スクリプトは LLM を使わず、`~/.config/agent-loop/repos.yaml` の各リポジトリで仕事を探し、種類ごとに `claude --bg --worktree <名前> --model opus --permission-mode bypassPermissions "/dev-triage"` のように起動する。同じリポジトリの同じ種類は同時に 1 つだけで、前回の run と入力が同じなら起動しない (6 時間経てば 1 回だけ起動し直す)。仕組みの詳細はスクリプトの冒頭にある
 - **対象のリポジトリの追加**: `~/.config/agent-loop/repos.yaml` に足す (書式は `agents/scripts/agent-loop.repos.example.yaml`)。このファイルは dotfiles の外にあり、git 管理しない (業務のリポジトリの名前が入るため)。clone は Claude Code の trust を受け入れ済みであること
 - **知らせ**: run が `done` 以外 (`blocked` / `failed` / `stopped` / `error`) で終わったときと、見回りが中断・停止したときは、mac の通知センターに通知が出る (`terminal-notifier`)。run の通知の本文に、その run の会話を開くコマンド (`claude attach <id>`) が載る。通知が出ないときは、システム設定 → 通知 で terminal-notifier を許可する (通知を出せなかったことは、見回りのログに残る)
 - **見る**: `claude agents` (一覧)、`claude attach <名前>` (動いている画面)、`claude logs <名前>`。見回りのログは `~/.local/state/agent-loop/agent-loop.log` と `~/Library/Logs/agent-loop.log`、状態は `~/.local/state/agent-loop/state.json`
@@ -574,7 +574,7 @@ shellcheck -x -P SCRIPTDIR -s sh agents/skills/dev-spec/scripts/*.sh agents/skil
 - **手元で起動する**: スキルは agent-loop に依存しないので、対象のリポジトリの clone で人が 1 つずつ起動できる。agent-loop は定期的に起動する役を代わるだけで、ラベルと Actions (`/dev-project-setup` が置く) があれば、agent-loop に登録していないリポジトリでも同じ流れで進む
   - `/dev-triage [issue 番号]` / `/dev-feat-spec [issue 番号]` / `/dev-impl [issue 番号]`: 次の見回りを待たずに進めたいとき。番号を渡すと、その issue だけを扱う (`/dev-impl` は未完了の依存先も含める)
   - `/dev-feat-spec <PR 番号>`: 設計 PR への指摘を伝えて直させる。人が手元で起動するときだけ使い、agent-loop は起動しない
-  - `/dev-spec`: 新規プロダクトや大きい機能を、ユーザーストーリーから対話で設計して issue に落とす。agent-loop は起動しない。作った子の issue には `ready` が付くので、agent-loop に登録したリポジトリでは次の見回り (1 時間以内) で `/dev-impl` が実装を始める。issue を読んでから実装させたいときは、それまで agent-loop を止めておく
+  - `/dev-spec`: 新規プロダクトや大きい機能を、ユーザーストーリーから対話で設計して issue に落とす。agent-loop は起動しない。作った子の issue には `ready` が付くので、agent-loop に登録したリポジトリでは次の見回り (30 分以内) で `/dev-impl` が実装を始める。issue を読んでから実装させたいときは、それまで agent-loop を止めておく
   - `/dev-impl` は、手元と agent-loop で同時に動かしてよい: `/dev-impl` は着手した issue に担当の印 (clone の共通の git ディレクトリの `dev-impl-claims/<番号>`。Claude Code のプロセスの pid とセッション ID) を残し、merge で消す。駐車しても消さない。agent-loop と別の `/dev-impl` は、印の持ち主の Claude Code が動いている issue を拾わない (`agents/skills/dev-impl/SKILL.md` Step 1「担当の印」)。Claude Code の外から `/dev-impl` を動かすと印を書けないので、そのときは agent-loop を一時的に止める (上の「入れる・止める」)
   - `/dev-triage` と `/dev-feat-spec` は同時に動かさない: agent-loop は、これらについては自分が起動した run しか見ない。手元と agent-loop で同時に動かすと、同じ issue を取り合う。手元で起動する前に `claude agents` で同じリポジトリの run が動いていないかを確かめ、動かしている間は agent-loop を一時的に止める
 - **手で 1 回動かす**: `./agents/scripts/agent-loop.ts --dry-run` で、起動せずに判定だけを見られる

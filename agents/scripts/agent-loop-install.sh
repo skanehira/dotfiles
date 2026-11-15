@@ -45,7 +45,7 @@ cat >"$plist" <<EOF
     <string>$HOME/.local/bin:$HOME/.deno/bin:/etc/profiles/per-user/$USER/bin:/run/current-system/sw/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
   </dict>
   <key>StartInterval</key>
-  <integer>3600</integer>
+  <integer>1800</integer>
   <key>RunAtLoad</key>
   <true/>
   <key>ProcessType</key>
