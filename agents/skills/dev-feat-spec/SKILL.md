@@ -92,7 +92,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,body,files
 - **機能設計書**: 既存の `docs/design/features/<機能名>.md` を変えるか、新しく作る。型と記入基準は `~/.claude/skills/dev-spec/references/feature-doc.md` に従う (/dev-impl の implementer と review-impl がこの型で読むため)。「決めが要る点はその場で聞く」の基準だけは、このスキルでは「質問せずに決めて確認点に書く」に読み替える
 - **受け入れ基準**: 振る舞いを足すか変えるときは、`USECASES.md` (あれば) の受け入れ基準を足すか直し、機能設計書の「テスト方針」の表へ写す。ID の振り方はプロジェクトの規約に従う
 - **横断の設計**: スキーマ、API の共通規約、横断の決まりが変わるときは `docs/design/DESIGN.md` の該当の節を直す。触れる範囲に「既知の制約」があれば、機能設計書から節名で参照する
-- **ユーザーから見た変化**: 画面が変わるときは、機能設計書の「入出力と振る舞い」に、操作と画面に起きることの表を書く。PR の本文には、変わる画面の変更前と変更後を、テキストの簡単な図で載せる (レビューする人が、設計書を全部読まずに見た目の変化をつかめるようにするため)
+- **ユーザーから見た変化**: 画面が変わるときは、機能設計書の「入出力と振る舞い」に、操作と画面に起きることの表を書く。あわせて `docs/design/UI_SKETCH.html` を設計どおりに直し、変わる画面の変更前と変更後をスクリーンショットに撮る。PR の本文には、その画像を貼る (レビューする人が、設計書を全部読まずに見た目の変化をつかめるようにするため。テキストの図は全角と罫線の表示幅で崩れて読みにくい)。変更前はスケッチを直す前に撮るので、設計書を書き始める前に `references/sketch-capture.md` を Read し、その手順 1〜5 に従う。スケッチが無いプロジェクトと、gh が画像の添付に対応していないときの扱いも同書にある
 - **既存の実装と合わせる**: 「実装の配置」は、実際のコードを読んで、既存のどのファイルとどの層を変えるかまで書く。既存の実装と食い違う設計にするなら、理由を設計書に書く
 
 書いたら、ドキュメントの整合性パス (`~/.claude/rules/core/documentation.md`「編集後の整合性パス」の 1 と 2) を行う。
@@ -122,6 +122,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 6. **着手可能の基準**: issue の本文が基準をすべて満たすか。DoD が空虚でないか
 7. **確認点の網羅と読みやすさ**: 設計で AI が決めた細部と仮定のうち、利用者から見える違いを生むものが、PR の本文の「確認点」に並んでいるか。各項目が `references/templates.md`「設計 PR の本文」の確認点の型 (起きる場面・この設計での動き・別の案) を満たし、設計書を読んでいない人がその項目だけで判断できるか。API のパス、関数や変数の名前、設計書の中だけの言い回しで書いていないか (確認点の下書きと `references/templates.md` も渡す)。その項目だけで判断できないものは medium とする (確認点は人が判断する材料で、読めなければ判断が抜けるため。下の low の「読みやすさ」には入れない)
 8. **人が読む文章**: PR の本文の「何を決めたか」「画面の変化」と、issue の「ゴール」の説明が、`references/templates.md`「人が読む文章の書き方」に従っているか。設計書を読んでいない人が読んで分かるか (PR の本文の下書きと `references/templates.md` も渡す)。分からない箇所は medium とする (観点 7 と同じ理由)
+9. **画面の画像**: 画面が変わる設計では、撮った png (`<SCRATCH>/issue-<N>/screens/` の全件のパスを渡す) を開き、変更後の画像に機能設計書の「入出力と振る舞い」の変化が写っているか、文言が機能設計書と同じか、表示が崩れていないかを見る。`UI_SKETCH.html` の変更が機能設計書と食い違っていないかも見る。変化が写っていない、または文言が違うものは medium とする (レビューする人が画像で判断するため)
 
 出力の形式は `[severity] 該当箇所 / 問題の一文 / 修正案の一文` (high = 実装が詰まるか、承認しても正しく実装できない / medium = 曖昧さが残る / low = 読みやすさ)。
 
@@ -133,8 +134,8 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 **設計 PR のとき**:
 
 1. 分けたときは、先に子の issue を依存の上流から順に作る (`--label design-review`)。作るたびに、残りの下書きの `Depends on <子の下書きの名前>` を `Depends on #<番号>` へ置き換える。子を親の sub-issue に紐付ける (手順は `~/.claude/skills/dev-spec/references/issue-template.md`「親への紐付け」)
-2. 変更を Conventional Commit でコミットする (`📝 docs: [BEHAVIORAL] ...`。コミットの実行は `~/.claude/rules/core/orchestration.md`「委譲の判断」に従って haiku に委譲してよい。subject の照合は自分で行う)
-3. `git push -u origin design/issue-<N>` し、PR を作る。本文は `references/templates.md`「設計 PR の本文」で、`Design-for:` の行を必ず書く。分けなかったときは `Design-for: #<N>` の 1 行、分けたときは子の番号だけを 1 行ずつ書き、親は書かない。この行が無いと、merge しても `ready` が付かない。**設計 PR は issue の Development に紐づけない**。本文に `Closes` などのキーワードを書かず、issue の画面からも紐づけない。Development に紐づいた PR は、デフォルトブランチへの merge で issue を close するので、`ready` が付いても /dev-impl が拾えなくなるため。issue の Development に載せるのは /dev-impl の実装 PR だけである
+2. 変更を Conventional Commit でコミットする (`📝 docs: [BEHAVIORAL] ...`。スケッチに口といまの画面を足したときは、そのコミット (`[STRUCTURAL]`。`references/sketch-capture.md` の手順 1) が先に積まれている。コミットの実行は `~/.claude/rules/core/orchestration.md`「委譲の判断」に従って haiku に委譲してよい。subject の照合は自分で行う)
+3. `git push -u origin design/issue-<N>` し、PR を作る。本文は `references/templates.md`「設計 PR の本文」で、`Design-for:` の行を必ず書く。分けなかったときは `Design-for: #<N>` の 1 行、分けたときは子の番号だけを 1 行ずつ書き、親は書かない。この行が無いと、merge しても `ready` が付かない。**設計 PR は issue の Development に紐づけない**。本文に `Closes` などのキーワードを書かず、issue の画面からも紐づけない。Development に紐づいた PR は、デフォルトブランチへの merge で issue を close するので、`ready` が付いても /dev-impl が拾えなくなるため。issue の Development に載せるのは /dev-impl の実装 PR だけである。画面の画像があるときは、`gh pr create` に撮った png を全件 `--attach` で渡し、作った後に本文にローカルのパスが残っていないことを確かめる (`references/sketch-capture.md`「添付して PR を作る」)
 4. 書き直した本文を issue に反映し、ラベルを付け替える
    - 分けなかったとき: `needs-design` を外して `design-review` を付ける
    - 分けたときの親: `needs-design` を外して `tracking` を付ける。`design-review` は付けない (親は実装の対象ではなく、状態のラベルを付けると、merge で `ready` が付いて /dev-impl の対象に紛れるため)
@@ -158,8 +159,9 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
    - `Design-for:` の issue の本文 (ゴール、設計、DoD、非スコープ、依存)
    - 子の issue。分け方が変わったら、足りない子を作り、要らなくなった子は close して理由をコメントする
    - PR の本文の `Design-for:` の行、「仮定」「採らなかった案」「確認点」
+   - 画面が変わる指摘なら、`docs/design/UI_SKETCH.html` と PR の本文の「画面の変化」の画像 (`references/sketch-capture.md`「直しのモード」)
 4. 設計モードの手順 6 の検査をやり直す
-5. コミットして push し、受けた指摘と直した内容を PR にコメントで残す (指摘がチャットにしか無いと、あとから PR を読む人が経緯を追えないため)
+5. コミットして push し (画像を撮り直したときは `gh pr edit --attach` で本文も更新する)、受けた指摘と直した内容を PR にコメントで残す (指摘がチャットにしか無いと、あとから PR を読む人が経緯を追えないため)
 6. 人に、直した内容と残った確認点を報告する。merge は人が行う
 
 ## 関連
