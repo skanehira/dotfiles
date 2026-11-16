@@ -44,6 +44,7 @@ jobs:
           OWNER: ${{ vars.PROJECT_OWNER }}
           NUMBER: ${{ vars.PROJECT_NUMBER }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
           ISSUE_STATE: ${{ github.event.issue.state }}
           LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
         run: |
@@ -59,13 +60,36 @@ jobs:
           elif has needs-design; then status=設計待ち
           else status=未整理
           fi
-          project_id=$(gh project view "$NUMBER" --owner "$OWNER" --format json --jq .id)
-          item_id=$(gh project item-add "$NUMBER" --owner "$OWNER" --url "$ISSUE_URL" --format json --jq .id)
-          read -r field_id option_id < <(gh project field-list "$NUMBER" --owner "$OWNER" --format json \
-            --jq ".fields[]|select(.name==\"Status\")|.id as \$f|.options[]|select(.name==\"$status\")|\"\(\$f) \(.id)\"")
-          if [ -z "${option_id:-}" ]; then
+          found=$(gh api graphql -f owner="$OWNER" -F number="$NUMBER" -f issue="$ISSUE_NODE_ID" -f query='
+            query($owner: String!, $number: Int!, $issue: ID!) {
+              repositoryOwner(login: $owner) {
+                ... on ProjectV2Owner {
+                  projectV2(number: $number) {
+                    id
+                    field(name: "Status") { ... on ProjectV2SingleSelectField { id options { id name } } }
+                  }
+                }
+              }
+              node(id: $issue) { ... on Issue { projectItems(first: 100) { nodes { id project { id } } } } }
+            }')
+          project_id=$(jq -r '.data.repositoryOwner.projectV2.id' <<<"$found")
+          field_id=$(jq -r '.data.repositoryOwner.projectV2.field.id // empty' <<<"$found")
+          option_id=$(jq -r --arg s "$status" '.data.repositoryOwner.projectV2.field.options[]? | select(.name == $s) | .id' <<<"$found")
+          if [ -z "$option_id" ]; then
             echo "::error::Status に列「$status」が無い。dev-project-setup を実行し直す"
             exit 1
           fi
-          gh project item-edit --project-id "$project_id" --id "$item_id" --field-id "$field_id" --single-select-option-id "$option_id" >/dev/null
+          item_id=$(jq -r --arg p "$project_id" 'first(.data.node.projectItems.nodes[] | select(.project.id == $p) | .id) // empty' <<<"$found")
+          if [ -z "$item_id" ]; then
+            item_id=$(gh api graphql -f project="$project_id" -f issue="$ISSUE_NODE_ID" --jq .data.addProjectV2ItemById.item.id -f query='
+              mutation($project: ID!, $issue: ID!) {
+                addProjectV2ItemById(input: { projectId: $project, contentId: $issue }) { item { id } }
+              }')
+          fi
+          gh api graphql -f project="$project_id" -f item="$item_id" -f field="$field_id" -f option="$option_id" -f query='
+            mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $project, itemId: $item, fieldId: $field, value: { singleSelectOptionId: $option }
+              }) { projectV2Item { id } }
+            }' >/dev/null
           echo "$ISSUE_URL -> $status"
