@@ -1,4 +1,4 @@
-# issue の状態のラベルに合わせて、Project の Status を動かす。
+# issue の状態のラベルに合わせて、Project の Status を動かす。閉じた issue は完了の列の先頭に置く。
 # 生成元: dev-project-setup スキル。状態の定義は dotfiles の agents/skills/dev-triage/references/issue-states.md「状態の管理」。
 name: Issue state sync
 
@@ -46,6 +46,7 @@ jobs:
           ISSUE_URL: ${{ github.event.issue.html_url }}
           ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
           ISSUE_STATE: ${{ github.event.issue.state }}
+          EVENT_ACTION: ${{ github.event.action }}
           LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
         run: |
           set -euo pipefail
@@ -92,4 +93,13 @@ jobs:
                 projectId: $project, itemId: $item, fieldId: $field, value: { singleSelectOptionId: $option }
               }) { projectV2Item { id } }
             }' >/dev/null
+          # status=完了 ではなく閉じた瞬間だけで判定する: 閉じたあとのラベルの付け外しでも完了に同期され、
+          # そのたびに古い issue が先頭へ戻ってくるため
+          if [ "$EVENT_ACTION" = closed ]; then
+            # afterId を省くと Project 全体の先頭に移る。ボードは並び順の指定が無いので、列の先頭に出る
+            gh api graphql -f project="$project_id" -f item="$item_id" -f query='
+              mutation($project: ID!, $item: ID!) {
+                updateProjectV2ItemPosition(input: { projectId: $project, itemId: $item }) { clientMutationId }
+              }' >/dev/null
+          fi
           echo "$ISSUE_URL -> $status"

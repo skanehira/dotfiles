@@ -59,7 +59,7 @@ bash "$SKILL_DIR/scripts/setup-project.sh" "$REPO" [--business] [--project <番�
 
 ### 3. ワークフローを置く
 
-`assets/workflows/` の 2 本を `.github/workflows/` に複製する。どちらも `actions/create-github-app-token` で GitHub App のトークンを作り、ランナーに入っている `gh` で操作する。`issue-state-sync.yml` は、Status の変更を `gh api graphql` の問い合わせ 1 回 (Project・Status の選択肢・issue の項目をまとめて取る) と変更 1〜2 回 (項目が無いときだけ追加し、Status を設定する) で行う。`gh project` を 4 回続けて呼ぶ形より速い (ある self-hosted runner の実測で、このステップは 8 秒から 1 秒になった)。`runs-on` は `${{ vars.RUNNER || 'ubuntu-latest' }}` で、リポジトリ変数 `RUNNER` があればその self-hosted runner で、無ければ GitHub のランナーで動く。self-hosted runner のイメージには `gh` と `jq` が要る。
+`assets/workflows/` の 2 本を `.github/workflows/` に複製する。どちらも `actions/create-github-app-token` で GitHub App のトークンを作り、ランナーに入っている `gh` で操作する。`issue-state-sync.yml` は、Status の変更を `gh api graphql` の問い合わせ 1 回 (Project・Status の選択肢・issue の項目をまとめて取る) と変更 1〜3 回 (項目が無いときだけ追加し、Status を設定し、閉じたときだけ項目を Project 全体の先頭へ移す) で行う。先頭へ移すのは、閉じた issue を「完了」の列の先頭に出すためである。ボードのビューに並び順の指定 (Sort) があると列の中の並びはそちらに従うので、指定を空のままにしておく。`gh project` を 4 回続けて呼ぶ形より速い (ある self-hosted runner の実測で、このステップは 8 秒から 1 秒になった)。`runs-on` は `${{ vars.RUNNER || 'ubuntu-latest' }}` で、リポジトリ変数 `RUNNER` があればその self-hosted runner で、無ければ GitHub のランナーで動く。self-hosted runner のイメージには `gh` と `jq` が要る。
 
 雛形の `uses:` は、tag ではなく commit SHA と版のコメント (`@<40 桁の SHA> # v3.3.0`) で固定してある。tag は付け替えられるので、tag で書くと同じ行のまま実行されるコードが変わりうるためである。雛形の action の版を上げるときは、`assets/workflows/` で `pinact run --update` を流し、`GITHUB_TOKEN=$(gh auth token) pinact run --check --verify-comment` が exit 0 になることを確かめる。
 
