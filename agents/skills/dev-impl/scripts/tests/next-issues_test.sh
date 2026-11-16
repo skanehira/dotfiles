@@ -333,8 +333,9 @@ test_mark_writes_claim_on_start_removes_on_close_and_keeps_on_park() {
   claims_repo
   issue 1 OPEN ready '依存なし'
   issue 2 OPEN ready '依存なし'
-  export CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=my-session
+  # collect も印を取るので、collect は印を取らせずに流し、mark started が書くことを確かめる
   (cd "$T/repo" && collect)
+  export CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=my-session
   (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >/dev/null)
   printf '777\tmy-session\n' >"$T/exp.txt"
   assert_file_eq "$T/exp.txt" "$CLAIMS/1"
@@ -343,6 +344,43 @@ test_mark_writes_claim_on_start_removes_on_close_and_keeps_on_park() {
   (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 2 started >/dev/null && ${SH:-sh} "$SCRIPT" mark "$SNAP" 2 parked >/dev/null)
   printf '777\tmy-session\n' >"$T/exp.txt"
   assert_file_eq "$T/exp.txt" "$CLAIMS/2"
+}
+
+# collect は対象の issue すべての印を取る。依存先を待つ issue も取るので、別のセッション (agent-loop の run など) は
+# 依存先が close された直後でもその issue を拾わない
+test_collect_claims_all_targets_including_waiting() {
+  setup
+  claims_repo
+  issue 1 OPEN ready '依存なし'
+  issue 2 OPEN ready 'Depends on #1'
+  issue 3 OPEN '' '依存なし'
+  issue 4 OPEN ready '依存なし'
+  live_process 777 'claude'
+  export CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=my-session
+  (cd "$T/repo" && collect 1 2)
+  printf 'start\t1\t-\nwait\t2\t1\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$T/out.txt"
+  printf '777\tmy-session\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$CLAIMS/1"
+  assert_file_eq "$T/exp.txt" "$CLAIMS/2"
+  assert_eq "なし なし" "$([ -e "$CLAIMS/3" ] && echo あり || echo なし) $([ -e "$CLAIMS/4" ] && echo あり || echo なし)"
+  (cd "$T/repo" && CLAUDE_PID=888 CLAUDE_CODE_SESSION_ID=loop collect)
+  printf 'start\t4\t-\nclaimed\t1\tmy-session\nclaimed\t2\tmy-session\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$T/out.txt"
+}
+
+# Claude Code の外では collect も印を書けないことを 1 行だけ知らせ、着手順はいつもどおり出す
+test_collect_outside_claude_code_warns_once_and_writes_no_claim() {
+  setup
+  claims_repo
+  issue 1 OPEN ready '依存なし'
+  issue 2 OPEN ready 'Depends on #1'
+  (cd "$T/repo" && collect)
+  printf 'start\t1\t-\nwait\t2\t1\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$T/out.txt"
+  printf '担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$T/err.txt"
+  assert_eq "なし" "$([ -d "$CLAIMS" ] && ls "$CLAIMS" | head -1 | sed 's/^$/なし/' || echo なし)"
 }
 
 # Claude Code の外 (CLAUDE_PID が無い) では印を書けないことを知らせ、着手順はいつもどおり出す
@@ -396,7 +434,7 @@ test_claim_is_shared_between_clone_root_and_worktree() {
     writer=${pair%%:*}
     reader=${pair#*:}
     rm -rf "$CLAIMS"
-    (cd "$writer" && CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=writer collect && CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=writer ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >/dev/null)
+    (cd "$writer" && CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=writer collect 1 && CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=writer ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >/dev/null)
     (cd "$reader" && CLAUDE_PID=888 collect)
     printf 'start\t2\t-\nclaimed\t1\twriter\n' >"$T/exp.txt"
     assert_file_eq "$T/exp.txt" "$T/out.txt"
@@ -426,8 +464,9 @@ test_mark_started_replaces_dead_claim() {
   claim 1 4242 ended-session
   claim 2 4243 reused-pid
   live_process 4243 '/bin/zsh'
-  export CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=my-session
+  # collect も死んだ印を置き換えるので、collect は印を取らせずに流し、mark started が置き換えることを確かめる
   (cd "$T/repo" && collect)
+  export CLAUDE_PID=777 CLAUDE_CODE_SESSION_ID=my-session
   for n in 1 2; do
     (cd "$T/repo" && ${SH:-sh} "$SCRIPT" mark "$SNAP" "$n" started >/dev/null)
     assert_eq 0 $?
@@ -459,7 +498,8 @@ test_two_sessions_replacing_dead_claim_at_once_only_one_wins() {
   : >"$PS_FAKE_DIR/999.slow"
   live_process 1000 'claude'
   live_process 2000 'claude'
-  (cd "$T/repo" && CLAUDE_PID=1000 collect)
+  # collect が死んだ印を先に置き換えると取り合いが起きないので、collect は印を取らせずに流す
+  (cd "$T/repo" && collect)
   cp "$SNAP" "$T/snap-b.tsv"
   (cd "$T/repo" && CLAUDE_PID=1000 CLAUDE_CODE_SESSION_ID=A ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >/dev/null 2>&1; echo $? >"$T/rc-a.txt") &
   # 先に取った側が印を作り終えた後に、遅れた側が死んだ印の判定を終える時間差にする

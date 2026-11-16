@@ -28,7 +28,8 @@
 # 対象: open で ready か in-progress が付き、needs-human と tracking が付かず、読めない依存の行が無く、
 #   動いている別のセッションの担当の印が無い issue。番号を渡したときは、その issue と、まだ終わっていない依存先だけ。
 # 担当の印: clone の共通の git ディレクトリの dev-impl-claims/<番号>。中身は「pid<TAB>セッション ID」の 1 行。
-#   mark started が CLAUDE_PID と CLAUDE_CODE_SESSION_ID で書き、mark closed が消す。mark parked は残す
+#   collect が対象の issue (依存先を待つものも含む) のすべてに、mark started が着手する issue に、
+#   CLAUDE_PID と CLAUDE_CODE_SESSION_ID で書く。mark closed が消す。mark parked は残す
 #   (駐車した issue も、そのセッションが動いている間は対応中として扱う)。pid のプロセスが動いていて、
 #   実行ファイル名が claude のときだけ印を生きているとみなす (pid が別のプロセスに使い回されたときに止まらないため)。
 #   バックグラウンドのセッションは done になってもプロセスが残るので、claude stop するまで印は生きている。
@@ -289,6 +290,15 @@ case $CMD in
         }
       }
     ' "$TMP/raw.tsv" >"$SNAP" || die 1 "スナップショットを書けない: $SNAP"
+    # mark started まで印を待たない: 依存先を待つ issue に印が無いと、依存先が close された直後に別のセッションが拾う
+    TARGETS=$(awk -F '\t' '$2 == "target" { print $1 }' "$SNAP")
+    if [ -n "$TARGETS" ] && [ -n "$(claims_dir)" ]; then
+      if [ -z "${CLAUDE_PID:-}" ]; then
+        echo "担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある" >&2
+      else
+        for n in $TARGETS; do take_claim "$n"; done
+      fi
+    fi
     print_order
     ;;
   mark)
