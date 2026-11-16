@@ -61,6 +61,8 @@ bash "$SKILL_DIR/scripts/setup-project.sh" "$REPO" [--business] [--project <番�
 
 `assets/workflows/` の 2 本を `.github/workflows/` に複製する。どちらも `actions/create-github-app-token` で GitHub App のトークンを作り、ランナーに入っている `gh` で操作する。`runs-on` は `${{ vars.RUNNER || 'ubuntu-latest' }}` で、リポジトリ変数 `RUNNER` があればその self-hosted runner で、無ければ GitHub のランナーで動く。self-hosted runner のイメージには `gh` と `jq` が要る。
 
+雛形の `uses:` は、tag ではなく commit SHA と版のコメント (`@<40 桁の SHA> # v3.3.0`) で固定してある。tag は付け替えられるので、tag で書くと同じ行のまま実行されるコードが変わりうるためである。雛形の action の版を上げるときは、`assets/workflows/` で `pinact run --update` を流し、`GITHUB_TOKEN=$(gh auth token) pinact run --check --verify-comment` が exit 0 になることを確かめる。
+
 リポジトリが `gh actions-lock` の lockfile (`.github/workflows/actions.lock`) を使っているなら、`gh actions-lock` を実行して lockfile を更新し、同じ PR に含める。lockfile に行の無いワークフローは `gh actions-lock --verify` で失敗する。
 
 既に同名のファイルがあって中身が違うときは、差分を見せて上書きしてよいかを聞く。リポジトリ側で直している可能性があるため。
