@@ -32,11 +32,12 @@ if (!html || !screen || !out || !options.width || options.highlight === undefine
 /** 印の付いた要素に枠とラベルを重ね、重ねた数を返す (ブラウザの中で動く)。 */
 function drawHighlights({ screen, key }) {
   const root = document.querySelector(`[data-sketch-screen="${screen}"]`);
-  const rootRect = root.getBoundingClientRect();
   const prefix = `${key}:`;
   // モーダルの背景の下に隠れた要素 (中心に別の要素が重なっているもの) には枠を付けない。
   // 付けると、見えていない要素の枠がモーダルの上に浮いて写る。
+  // elementFromPoint は表示領域の外では null を返すので、測る前にその要素まで動かす。
   const visibleOnTop = (el) => {
+    el.scrollIntoView({ block: "center", inline: "center" });
     const r = el.getBoundingClientRect();
     const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     return hit !== null && (el === hit || el.contains(hit));
@@ -67,7 +68,6 @@ function drawHighlights({ screen, key }) {
     tag.textContent = label;
     Object.assign(tag.style, {
       position: "absolute",
-      left: `${r.left + scrollX - 4}px`,
       background: color,
       color: "#fff",
       font: "bold 12px/1.4 sans-serif",
@@ -78,10 +78,14 @@ function drawHighlights({ screen, key }) {
       zIndex: "2147483647",
     });
     document.body.appendChild(tag);
-    // 枠の上に置き、画面の上端からはみ出すときだけ枠の下に置く (撮る範囲から切れないように)
-    const above = r.top - 4 - tag.offsetHeight - 2;
-    const top = above >= rootRect.top ? above : r.bottom + 4 + 2;
+    // ラベルは枠の上辺にまたがせて右端に寄せる。枠の真上に置くと、左上にあることの多い見出しや
+    // 項目名に重なって読めなくなるため。画面の上端からはみ出すときだけ枠の下辺に置く。
+    const straddle = r.top - 4 - tag.offsetHeight / 2;
+    // 測る前にスクロールしているので、画面の位置もここで測り直す (表示領域の座標で比べるため)
+    const rootTop = root.getBoundingClientRect().top;
+    const top = straddle >= rootTop ? straddle : r.bottom + 4 - tag.offsetHeight / 2;
     tag.style.top = `${top + scrollY}px`;
+    tag.style.left = `${r.right + scrollX + 4 - tag.offsetWidth - 8}px`;
   }
   return targets.length;
 }
