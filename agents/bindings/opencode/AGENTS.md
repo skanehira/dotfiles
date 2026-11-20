@@ -7,7 +7,7 @@
 
 ## 共通ハーネスの適用
 
-- リポジトリやタスクの内容によらず、すべてのセッションで必ず `~/.claude/CLAUDE.md` を Read し、その内容 (評価関数、不変則、エスカレーション、オーケストレーションとモデル階層、実装時の手順) に従う。
+- リポジトリやタスクの内容によらず、すべてのセッションで必ず `~/.claude/CLAUDE.md` を Read し、その内容 (エスカレーション、オーケストレーションとモデル階層、実装時の手順) に従う。
 - これは Claude Code 専用の文書ではない。正本は `dotfiles/agents/AGENTS.md` で、`~/.claude/CLAUDE.md` はその symlink である。
 - `~/.claude/rules/...` も同じ正本 (`dotfiles/agents/rules/`) への symlink で、OpenCode 用に別の版は無い。**ルールは Claude 綴りで書かれているので、下の「Claude 綴りの読み替え」に従って読む。**
 - スキルも共有である。`~/.agents/skills/<name>` と `~/.claude/skills/<name>` は、どちらも `dotfiles/agents/skills/<name>` と同じ実体を指す。
