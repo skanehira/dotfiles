@@ -8,6 +8,7 @@
 ## 共通ハーネスの適用
 
 - リポジトリやタスクの内容によらず、すべてのセッションで必ず `~/.claude/CLAUDE.md` を Read し、その内容 (エスカレーション、オーケストレーションとモデル階層、実装時の手順) に従う。
+- この Read は、セッションの最初のツール呼び出しで行う。エージェントが plan でも build でも行い、依頼が簡単なときや計画だけを返すときも省かない。
 - これは Claude Code 専用の文書ではない。正本は `dotfiles/agents/AGENTS.md` で、`~/.claude/CLAUDE.md` はその symlink である。
 - `~/.claude/guidelines/...` も同じ正本 (`dotfiles/agents/guidelines/`) への symlink で、OpenCode 用に別の版は無い。**ルールは Claude 綴りで書かれているので、下の「Claude 綴りの読み替え」に従って読む。**
 - `~/.claude/CLAUDE.md` が `@guidelines/core/<name>.md` の形で取り込んでいる 3 本 (`collaboration.md` / `orchestration.md` / `documentation.md`) は、Claude Code は起動時に展開するが OpenCode は展開しない。`~/.claude/CLAUDE.md` を Read したら、続けてこの 3 本を `~/.claude/guidelines/core/` から Read する。
