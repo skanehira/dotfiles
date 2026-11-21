@@ -227,7 +227,7 @@ if (typeof window !== 'undefined') {
 }
 ```
 
-初期化の完了を待って描画を切り替えたいとき (読み込みの Promise を待つなど) も `useEffect` で待たない。`use` と Suspense、または SWR などのデータ取得ライブラリで待つ (@data-fetching.md)。
+初期化の完了を待って描画を切り替えたいとき (読み込みの Promise を待つなど) も `useEffect` で待たない。SWR などのデータ取得ライブラリで待つ (@data-fetching.md)。
 
 ### 9. 親への state 変更通知
 
