@@ -463,7 +463,7 @@ opencode --standalone                      # 常駐サービスを使わず、�
 
 - `cli.json` は起動しただけでは書き換わらない (2026-10-03 に symlink で置いて TUI を 2 回起動し、symlink のまま中身も変わらないことを実測)。旧い名前のキーバインドが入っているとき (2026-10-03 に実測) と、テーマなどを TUI で変えたとき (v2.0.22 のソースで確認) は一時ファイルの rename で書き換えるので、symlink が実ファイルに化けて repo との同期が黙って切れる。設定は repo 側を編集して変え、TUI では変えない。`cli.json` を symlink で配る前の dotfiles が初回にコピーした実ファイルが残っていることもある
   - 直し方: dotfiles で `diff ~/.config/opencode/cli.json agents/bindings/opencode/cli.json` を見て残したい変更を repo 側へ取り込み、実ファイルを消して `drs` / `hms` で張り直す
-  - 消さずに `drs` を打つと mac は `cli.json.hm-backup` へ退避するが、それが既にあると `would be clobbered by backing up` で止まる。Linux の `hms` は退避の設定が無いので、実ファイルがあるだけで止まる (→ dotfiles の `CLAUDE.md`「配布方式の移行」)
+  - 消さずに `drs` を打つと mac は `cli.json.hm-backup` へ退避するが、それが既にあると `would be clobbered by backing up` で止まる。Linux の `hms` は退避の設定が無いので、実ファイルがあるだけで止まる (→ dotfiles の `CLAUDE.md` の Directory Structure の `agents/bindings/opencode/` 項の `cli.json`)
   - `drs` の前に `test -e ~/.config/opencode/cli.json.hm-backup` で古い退避を見る (2026-10-04 時点のこの Mac には無い)。あれば `diff ~/.config/opencode/cli.json.hm-backup agents/bindings/opencode/cli.json` (dotfiles で実行) が何も出さないことを確かめてから消す
   - wezterm の Cmd+p は alt+p を送り、`cli.json` の `command.palette.show` (`alt+p,super+p`) に当たる
 - CLI: トップレベルの `--model` は無い。`run` と `mini` にはあり、形式は `run` が `provider/model#variant`、`mini` が `provider/model` (`#variant` を取らない)。`run --dir` は無く、カレントディレクトリで動く (2026-10-03 に `--help` で確認)
