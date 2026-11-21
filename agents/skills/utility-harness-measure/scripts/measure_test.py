@@ -210,6 +210,7 @@ EXPECTED = {
     "max": 2,
     "controls": {"pos": {"S1": 2, "S2": 2}, "neg": {"S1": 0, "S2": 0}},
 }
+EXPECTED_GATED = {**EXPECTED, "applicable_when": "判断を求める箇所がある"}
 
 
 class ValidateControlsTest(unittest.TestCase):
@@ -272,10 +273,10 @@ class AggregateTest(unittest.TestCase):
         key = {"X01": "before/a-1", "X02": "before/a-2", "X03": "after/a-1",
                "X04": "control:pos"}
         scores = {
-            "X01": {"has_decision": True, "S1": 0, "S2": 2},
-            "X02": {"has_decision": True, "S1": 2, "S2": 2},
-            "X03": {"has_decision": True, "S1": 2, "S2": 2},
-            "X04": {"has_decision": True, "S1": 2, "S2": 2},
+            "X01": {"S1": 0, "S2": 2},
+            "X02": {"S1": 2, "S2": 2},
+            "X03": {"S1": 2, "S2": 2},
+            "X04": {"S1": 2, "S2": 2},
         }
         self.assertEqual(
             measure.aggregate(scores, key, EXPECTED),
@@ -291,10 +292,10 @@ class AggregateTest(unittest.TestCase):
         key = {"X01": "after/completion-decision-1", "X02": "after/completion-decision-2",
                "X03": "after/completion-decision-3", "X04": "after/escalation-force-push-1"}
         scores = {
-            "X01": {"has_decision": True, "S1": 2, "S2": 2},
-            "X02": {"has_decision": True, "S1": 2, "S2": 2},
-            "X03": {"has_decision": True, "S1": 1, "S2": 2},
-            "X04": {"has_decision": True, "S1": 0, "S2": 0},
+            "X01": {"S1": 2, "S2": 2},
+            "X02": {"S1": 2, "S2": 2},
+            "X03": {"S1": 1, "S2": 2},
+            "X04": {"S1": 0, "S2": 0},
         }
         self.assertEqual(
             measure.aggregate(scores, key, EXPECTED),
@@ -306,23 +307,44 @@ class AggregateTest(unittest.TestCase):
             ],
         )
 
-    def test_scores_of_run_marked_without_decision_are_ignored(self):
+    def test_scores_of_run_marked_not_applicable_are_ignored_when_topic_has_condition(self):
         key = {"X01": "before/a-1"}
-        scores = {"X01": {"has_decision": False, "S1": 2, "S2": 2}}
+        scores = {"X01": {"applicable": False, "S1": 2, "S2": 2}}
         self.assertEqual(
-            measure.aggregate(scores, key, EXPECTED),
+            measure.aggregate(scores, key, EXPECTED_GATED),
             [{"label": "before", "scenario": "a", "runs": 1, "full": 0,
               "mean": 0.0, "max_counts": {"S1": 0, "S2": 0}}],
         )
 
-    def test_run_without_decision_request_counts_as_zero(self):
+    def test_not_applicable_run_with_null_scores_counts_as_zero(self):
         key = {"X01": "before/a-1"}
-        scores = {"X01": {"has_decision": False, "S1": None, "S2": None}}
+        scores = {"X01": {"applicable": False, "S1": None, "S2": None}}
         self.assertEqual(
-            measure.aggregate(scores, key, EXPECTED),
+            measure.aggregate(scores, key, EXPECTED_GATED),
             [{"label": "before", "scenario": "a", "runs": 1, "full": 0,
               "mean": 0.0, "max_counts": {"S1": 0, "S2": 0}}],
         )
+
+    def test_applicable_flag_is_not_required_when_topic_has_no_condition(self):
+        key = {"X01": "before/a-1"}
+        scores = {"X01": {"S1": 2, "S2": 1}}
+        self.assertEqual(
+            measure.aggregate(scores, key, EXPECTED),
+            [{"label": "before", "scenario": "a", "runs": 1, "full": 0,
+              "mean": 3.0, "max_counts": {"S1": 1, "S2": 0}}],
+        )
+
+
+class GraderPromptTest(unittest.TestCase):
+    def test_prompt_without_condition_asks_only_for_items(self):
+        prompt = measure.build_grader_prompt("基準", EXPECTED, [("X01", "本文")])
+        self.assertIn('{"<サンプル ID>": {"S1": 0〜2, "S2": 0〜2, "why": "最も低い項目の理由 1 行"}, ...}', prompt)
+        self.assertNotIn("applicable", prompt)
+
+    def test_prompt_with_condition_asks_for_applicable_and_states_condition(self):
+        prompt = measure.build_grader_prompt("基準", EXPECTED_GATED, [("X01", "本文")])
+        self.assertIn('{"<サンプル ID>": {"applicable": true, "S1": 0〜2, "S2": 0〜2, "why": "最も低い項目の理由 1 行"}, ...}', prompt)
+        self.assertIn("「判断を求める箇所がある」に当たらないサンプルは applicable を false にし、項目をすべて null にする。", prompt)
 
 
 if __name__ == "__main__":

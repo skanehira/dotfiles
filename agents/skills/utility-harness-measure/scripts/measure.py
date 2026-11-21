@@ -175,7 +175,8 @@ def aggregate(scores, key, expected):
         totals, full = [], 0
         counts = {item: 0 for item in expected["items"]}
         for s in runs:
-            vals = [(s.get(i) or 0) if s.get("has_decision") else 0 for i in expected["items"]]
+            applicable = s.get("applicable") if "applicable_when" in expected else True
+            vals = [(s.get(i) or 0) if applicable else 0 for i in expected["items"]]
             totals.append(sum(vals))
             full += all(v == expected["max"] for v in vals)
             for item, v in zip(expected["items"], vals):
@@ -283,10 +284,13 @@ def cmd_check(args):
 
 def build_grader_prompt(rubric, expected, samples):
     items = ", ".join(f'"{i}": 0〜{expected["max"]}' for i in expected["items"])
+    condition = expected.get("applicable_when")
+    head = '"applicable": true, ' if condition else ""
     fmt = ("\n\n## 出力\nツールは使わず、JSON だけを出力する (コードフェンス不要)。形式:\n"
-           f'{{"<サンプル ID>": {{"has_decision": true, {items}, "why": "最も低い項目の理由 1 行"}}, ...}}\n'
-           "判断を求める箇所が無いサンプルは has_decision を false にし、項目をすべて null にする。"
-           "各サンプルは独立に評価し、サンプル間で情報を補わない。\n")
+           f'{{"<サンプル ID>": {{{head}{items}, "why": "最も低い項目の理由 1 行"}}, ...}}\n')
+    if condition:
+        fmt += f"「{condition}」に当たらないサンプルは applicable を false にし、項目をすべて null にする。"
+    fmt += "各サンプルは独立に評価し、サンプル間で情報を補わない。\n"
     body = "".join(f"\n===== サンプル {sid} 開始 =====\n{text}\n===== サンプル {sid} 終了 =====\n"
                    for sid, text in samples)
     return rubric + fmt + body

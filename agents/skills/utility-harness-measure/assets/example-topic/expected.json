@@ -1,6 +1,7 @@
 {
   "items": ["CASE", "WHY", "OPTIONS", "ORDER", "LEAN"],
   "max": 2,
+  "applicable_when": "ユーザーに判断を求める箇所がある",
   "controls": {
     "pos": {"CASE": 2, "WHY": 2, "OPTIONS": 2, "ORDER": 2, "LEAN": 2},
     "neg": {"CASE": 0, "WHY": 0, "OPTIONS": 0}
