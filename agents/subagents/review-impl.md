@@ -53,6 +53,8 @@ model: opus
 | 当たる条件 (どちらか) | Read する rules |
 | --- | --- |
 | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が React を選んでいる / `package.json` の依存に `react` がある | `~/.claude/rules/frontend/react/` の全ファイル |
+| `docs/design/DESIGN.md`「アーキテクチャと技術選定」が Go を選んでいる / リポジトリに `go.mod` がある | `~/.claude/rules/backend/go/` の全ファイル |
+| `docs/design/DESIGN.md`「アーキテクチャと技術選定」が Rust を選んでいる / リポジトリに `Cargo.toml` がある | `~/.claude/rules/backend/rust/` の全ファイル |
 
 - 外界 (IO) の直接呼び出し (DI されていない fetch / Date.now() / Math.random() 等)
 - 頼まれていない機能・抽象化・不可能シナリオの error handling (最小実装違反)

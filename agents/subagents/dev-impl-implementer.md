@@ -39,6 +39,8 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
    | 当たる条件 (どちらか) | Read する rules |
    | --- | --- |
    | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が React を選んでいる / `package.json` の依存に `react` がある | `$HOME/.claude/rules/frontend/react/` の全ファイル |
+   | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が Go を選んでいる / リポジトリに `go.mod` がある | `$HOME/.claude/rules/backend/go/` の全ファイル |
+   | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が Rust を選んでいる / リポジトリに `Cargo.toml` がある | `$HOME/.claude/rules/backend/rust/` の全ファイル |
 5. **証跡の集め方**: `$HOME/.claude/skills/workflow-create-pr/references/evidence.md`。画面または HTTP API に触れる issue のときだけ読む。どちらにも触れない issue でも `manifest.json` は書く (下記「動作確認の証跡」)
 
 ## 作業ディレクトリの制約 (最重要)
