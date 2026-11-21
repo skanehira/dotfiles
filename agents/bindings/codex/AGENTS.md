@@ -7,7 +7,8 @@
 
 - リポジトリやタスクの内容によらず、すべてのセッションで必ず `~/.claude/CLAUDE.md` を参照し、その内容 (エスカレーション、オーケストレーションとモデル階層、実装時の手順) に従う。
 - これは Claude Code 専用の文書ではない。正本は `dotfiles/agents/AGENTS.md` で、`~/.claude/CLAUDE.md` はその symlink である。
-- `~/.claude/rules/...` も同じ正本 (`dotfiles/agents/rules/`) への symlink で、Codex 用に別の版は無い。**ルールは Claude 綴りで書かれているので、下の「Claude 綴りの読み替え」に従って読む。**
+- `~/.claude/guidelines/...` も同じ正本 (`dotfiles/agents/guidelines/`) への symlink で、Codex 用に別の版は無い。**ルールは Claude 綴りで書かれているので、下の「Claude 綴りの読み替え」に従って読む。**
+- `~/.claude/CLAUDE.md` が `@guidelines/core/<name>.md` の形で取り込んでいる 3 本 (`collaboration.md` / `orchestration.md` / `documentation.md`) は、Claude Code は起動時に展開するが Codex は展開しない。`~/.claude/CLAUDE.md` を Read したら、続けてこの 3 本を `~/.claude/guidelines/core/` から Read する。
 - スキルも共有である。`~/.agents/skills/<name>` は `dotfiles/agents/skills/<name>` への symlink で、Claude Code が読む `~/.claude/skills/<name>` と同じ実体を指す。
 
 ## 基本方針
@@ -27,10 +28,10 @@
 | このグローバル指示 | `~/.codex/AGENTS.md` | `agents/bindings/codex/AGENTS.md` | 即反映 (symlink) |
 | スキル | `~/.agents/skills/<name>` (Codex の skill root `r1`) | `agents/skills/<name>` | 中身の編集は即反映。**追加と削除は `drs` / `hms` が要る** (個別 symlink の張り直し) |
 | subagent | `~/.codex/agents/*.toml` | `agents/subagents/*.md` を書式変換したもの | **変更も追加も `drs` / `hms` が要る** (TOML の再生成) |
-| ルール | `~/.claude/rules/` を絶対パスで直接 Read する (Codex 側に複製は無い) | `agents/rules/` | 即反映 (symlink) |
+| ルール | `~/.claude/guidelines/` を絶対パスで直接 Read する (Codex 側に複製は無い) | `agents/guidelines/` | 即反映 (symlink) |
 | MCP | `/etc/codex/config.toml` の `[mcp_servers.*]` | `agents/bindings/codex/config.toml` | 即反映 (symlink)。全マシン共通のサーバだけを system レイヤーに置き、マシン固有のものは Codex 自身が `~/.codex/config.toml` (user レイヤー) に書く |
 
-`~/.claude/CLAUDE.md` / `~/.claude/rules` / `~/.claude/skills` / `~/.agents/skills` はすべて dotfiles への symlink なので、本文の編集は `drs` / `hms` を待たずに反映される。
+`~/.claude/CLAUDE.md` / `~/.claude/guidelines` / `~/.claude/skills` / `~/.agents/skills` はすべて dotfiles への symlink なので、本文の編集は `drs` / `hms` を待たずに反映される。
 
 **hooks はこの表に無い。** このハーネスが自分で書いた hook は 1 本も配っていない (→「hooks は Codex には配られていない」節)。
 
@@ -44,7 +45,7 @@
 # dotfiles のスキルを指す symlink の数。git 管理のスキル 47 本から除外の 1 本を引いた 46 になる
 find ~/.agents/skills -mindepth 1 -maxdepth 1 | while read -r d; do readlink -f "$d"; done | rg -c '/dotfiles/agents/skills/'
 ls ~/.codex/agents                     # subagent の .toml がある
-readlink -f ~/.claude/rules            # dotfiles の agents/rules に解決する
+readlink -f ~/.claude/guidelines            # dotfiles の agents/guidelines に解決する
 readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/config.toml に解決する
 ```
 
@@ -71,7 +72,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 | `run_in_background` | バックグラウンド実行 (結果を受け取らないまま先へ進む起動)。付けない起動は、起動した subagent の完了を待ってから次の手順へ進む (互いに独立な複数の起動は並列でよい) |
 | `claude -p` | `codex exec` |
 | `CLAUDE.md` (指示ファイル名として) | `AGENTS.md`。ただし共通の正本を指す記述は `~/.claude/CLAUDE.md` をそのまま読む |
-| `~/.claude/rules` | 同じパスをそのまま読む (同一実体) |
+| `~/.claude/guidelines` | 同じパスをそのまま読む (同一実体) |
 | `~/.claude/skills` | `~/.agents/skills` |
 | `~/.claude/agents` | `~/.codex/agents` |
 | `~/.claude/scripts` | 同じパスをそのまま実行する (同一実体。Claude Code 用のパスに見えても同じマシン上のファイル) |

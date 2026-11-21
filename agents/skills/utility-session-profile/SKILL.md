@@ -203,7 +203,7 @@ python3 ~/.claude/skills/utility-session-profile/scripts/serve.py \
   打刻があるときだけ出る。`ext.timing_used` で判別できる
 - **並列度は「働いているエージェント」だけを数える。** 要求モデルが `haiku` のエージェント
   (テスト実行・コミットの代行) を除く。名前ではなく要求モデルで判別するのは、
-  `~/.claude/rules/core/orchestration.md` が機械実行を haiku へ委譲すると定めているためで、
+  `~/.claude/guidelines/core/orchestration.md` が機械実行を haiku へ委譲すると定めているためで、
   エージェント名は run ごとに変わりうる
 - **エージェント種別は `.meta.json` の `agentType` から取る。** `impl-104` → `impl`。
   名前の付け方が違うオーケストレータでは種別がばらけるので、その場合はレポートで種別に触れない

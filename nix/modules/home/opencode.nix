@@ -19,7 +19,7 @@
   #
   # OpenCode は DGX Spark 専用で、接続先は Tailscale の MagicDNS 名 (spark-head) に固定
   # している。自宅 LAN の mDNS 名は使わない。vLLM が認証を要求しないので API キーは
-  # 持たない (詳細は agents/rules/infra/dgx-spark.md)。
+  # 持たない (詳細は agents/guidelines/infra/dgx-spark.md)。
   home.file.".config/opencode/opencode.json".source =
     config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/bindings/opencode/opencode.json";
 

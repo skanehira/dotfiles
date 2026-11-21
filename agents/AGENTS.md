@@ -6,43 +6,44 @@
 
 ## 全タスク共通
 
-- サブエージェントを起動するときのモデル選択と委譲の判断 → `~/.claude/rules/core/orchestration.md`。原則は**実行器のモデル ≤ 検証器のモデル**
+- サブエージェントを起動するときのモデル選択と委譲の判断 → @guidelines/core/orchestration.md 。原則は**実行器のモデル ≤ 検証器のモデル**
 - 論理的かつ批判的な姿勢で会話・調査・実装する。質問への回答を持っていない場合は必要な情報を収集してから回答する
 - 依頼スコープを超えた論点・情報・代替案（採用しない選択肢の詳細・依頼にない翻訳・作業で生じた周辺課題など）は問われるまで提示しない。依頼に含まれない論点を出す前に、それが依頼の中で必要か確認する
 - 回答はユーザが知っておくべき点を簡潔に。ユーザが指示した場合は丁寧に解説する
 - 返答は結論から書く。最初の 1 文を問いへの答えにし、理由・根拠・具体例をその後に置く。結論が具体物 (ファイルパス・エラー文・数値) なら抽象化せずそのまま先頭に置く
-- 返答を前置きから書き始めない。「承知しました」「まず〜を確認します」の類は情報量が 0 なので書かない。判断を求める質問に添える背景も前置きに当たらない (規定は `~/.claude/rules/core/collaboration.md`「質問・提案の形式」)
+- 返答を前置きから書き始めない。「承知しました」「まず〜を確認します」の類は情報量が 0 なので書かない。判断を求める質問に添える背景も前置きに当たらない (規定は `~/.claude/guidelines/core/collaboration.md`「質問・提案の形式」)
 - 返答では直接言えることを比喩で飾らない (✅「変えるべき値」 ❌「調整すべきつまみ」)。比喩は読み手の負担を増やし、書き手が選んでいない含意を持ち込む
 - 1 文で 1 つの論点を扱い、一文の中に主語述語の関係を幾つも作らない。箇条書きは並列する項目に使い、因果・議論・経緯は散文で書く
 - 説明・要約・ドキュメントでは抽象的な記述で止めず具体例を併記する。簡潔さは「冗長な前置きを削ること」であって「結論を支える具体例を削ること」ではない。表の数値列には単位を、選択肢列には取りうる値の例を書き、「詳細は別途確認」のような記述を単独で残さない
 - 次のものは簡潔さの対象外とし、短縮も要約もしない: エラーの全文 / セキュリティ警告 / 破壊的操作の確認 / コード / ファイルパス / 数値と単位。この歯止めが無いと、短いが使えない返答になる
 - grep は rg コマンドを使う
 - 変数や glob を含むパスを `rm` で消すときは、`rm -rf "${DIR:?}"/*` のように空の変数を弾く形にするか、パスをそのまま書く。Claude Code は `rm -rf "$DIR"/*` を、同じ行のほかのコマンドによっては「変数が空ならルートを消す」危険な削除と判定し、`bypassPermissions` でも確認を出す。誰も答えないバックグラウンドの run はそこで止まる (2026-11-13 に、実装の subagent が `rm -rf "$E"/* && …; for …` の 1 行で 25 分止まり、run ごと止められた)
-- 質問の出し方・委任の受け方・報告の粒度・提案の姿勢 → `~/.claude/rules/core/collaboration.md`
-- ドキュメントの作成・修正 → @rules/core/documentation.md (「全体整合 > 差分最小」がコードの外科的変更ルールを上書きする)。修正依頼では修正後の文章だけを残す。「以前は○○だったが○○に変更」といった過程の記録は指示がない限り書かない
+- 質問の出し方・委任の受け方・報告の粒度・提案の姿勢 → @guidelines/core/collaboration.md
+- ドキュメントの作成・修正 → @guidelines/core/documentation.md (「全体整合 > 差分最小」がコードの外科的変更ルールを上書きする)。修正依頼では修正後の文章だけを残す。「以前は○○だったが○○に変更」といった過程の記録は指示がない限り書かない
 - 要件・挙動は実装語を使わず、文章だけで何が起きるか分かるように書く
 
 ## エスカレーション (停止と前進の判断)
 
 - **対話モード**: ゴール / 検証手段が依頼から自明でなければ着手前に確認し、不明点は止まって質問する (1 行の typo 修正や宣言的な設定変更など、ゴールも検証手段も自明なタスクでは確認不要)。前提は明示し、複数解釈があるなら勝手に選ばず提示する
-- **自律モード** (一括委任「全部やって」「のこりを実装して」・headless `claude -p`): 停止してよいのは (1) 概要設計の破綻 (2) 破壊的・不可逆な操作 (force push / 削除 / 外部公開) (3) ゴール達成が原理的に不可能と判明 (同一アプローチの失敗が続き、切り替え候補が尽きた場合を含む。→ `~/.claude/rules/core/collaboration.md`) の 3 つだけ。それ以外は選択と根拠を出力・ログに明示して前進する (事後にユーザーがレビューで乖離に気付ける状態を保つ)
+- **自律モード** (一括委任「全部やって」「のこりを実装して」・headless `claude -p`): 停止してよいのは (1) 概要設計の破綻 (2) 破壊的・不可逆な操作 (force push / 削除 / 外部公開) (3) ゴール達成が原理的に不可能と判明 (同一アプローチの失敗が続き、切り替え候補が尽きた場合を含む。→ `~/.claude/guidelines/core/collaboration.md`) の 3 つだけ。それ以外は選択と根拠を出力・ログに明示して前進する (事後にユーザーがレビューで乖離に気付ける状態を保つ)
 
 ## 実装時
 
 実装系ルールは即時展開しない (セッション・subagent spawn ごとのコンテキスト固定費削減のため遅延参照)。**着手前に下記の必要なものを Read する** (機械的なリマインドは無いので自律遵守する):
 
-- TDD 手順 (RED→GREEN→REFACTOR / バグ修正プロセス / Tidy First) → `~/.claude/rules/core/tdd.md`
-- 実装手続き (TDD 適用判断 / 動作検証の手段 / 外科的変更 / コードコメント / 多段タスクの DoD) → `~/.claude/rules/core/implementation.md`
-- 検証コマンドの規律 (陽性・陰性対照) → `~/.claude/rules/core/verification.md`
-- 設計原則 (SOLID / YAGNI / 凝集度・結合度・コロケーション / 外界 DI) → `~/.claude/rules/core/design.md`
-- テスト方針 (戦略 / ピラミッド / シナリオ網羅 / 待ち時間を作らない / E2E のログインの使い回し) → `~/.claude/rules/core/testing.md`
-- コミット規約 → `~/.claude/rules/core/commit.md` (subject 形式を検証する機械ゲートは無い。自律遵守する)
-- 実装はメインループ直営で行い、テスト実行 (巨大出力のみ) とコミット実行は Haiku に委譲する (判断基準は `~/.claude/rules/core/orchestration.md`「委譲の判断」)
-- 実装が一段落したらレビュー subagent で事後検証する (起動条件は `~/.claude/rules/core/implementation.md`)
+- TDD 手順 (RED→GREEN→REFACTOR / バグ修正プロセス / Tidy First) → `~/.claude/guidelines/core/tdd.md`
+- 実装手続き (TDD 適用判断 / 動作検証の手段 / 外科的変更 / コードコメント / 多段タスクの DoD) → `~/.claude/guidelines/core/implementation.md`
+- 検証コマンドの規律 (陽性・陰性対照) → `~/.claude/guidelines/core/verification.md`
+- 設計原則 (SOLID / YAGNI / 凝集度・結合度・コロケーション / 外界 DI) → `~/.claude/guidelines/core/design.md`
+- テスト方針 (戦略 / ピラミッド / シナリオ網羅 / 待ち時間を作らない / E2E のログインの使い回し) → `~/.claude/guidelines/core/testing.md`
+- コミット規約 → `~/.claude/guidelines/core/commit.md` (subject 形式を検証する機械ゲートは無い。自律遵守する)
+- 言語・フレームワーク別の規約 (触るコードに当たるものの全ファイル): React (`*.tsx` / `*.jsx`) → `~/.claude/guidelines/frontend/react/`、Go → `~/.claude/guidelines/backend/go/`、Rust → `~/.claude/guidelines/backend/rust/`
+- 実装はメインループ直営で行い、テスト実行 (巨大出力のみ) とコミット実行は Haiku に委譲する (判断基準は `~/.claude/guidelines/core/orchestration.md`「委譲の判断」)
+- 実装が一段落したらレビュー subagent で事後検証する (起動条件は `~/.claude/guidelines/core/implementation.md`)
 
 ## 調査時
 
-調査着手前に `~/.claude/rules/core/investigation.md` を Read する (網羅的な調べ尽くし・多段原因の追跡・報告の作法)。
+調査着手前に `~/.claude/guidelines/core/investigation.md` を Read する (網羅的な調べ尽くし・多段原因の追跡・報告の作法)。
 
 ## 深掘り・壁打ちが必要なとき
 
@@ -50,7 +51,7 @@
 
 ## ローカル LLM バックエンド (DGX Spark)
 
-自宅に DGX Spark 2 台のローカル LLM クラスタ (`spark-head` / `spark-worker`) がある。Spark・ローカル LLM に関わる作業では、着手前に `~/.claude/rules/infra/dgx-spark.md` (共通: 接続先 / 系統の切り替え / 性能特性 / 既知の制約) と、対象の系統の `~/.claude/rules/infra/dgx-spark/<系統>.md` を Read する。系統ファイルの一覧と、配信中の系統の調べ方は共通ファイルの冒頭にある。
+自宅に DGX Spark 2 台のローカル LLM クラスタ (`spark-head` / `spark-worker`) がある。Spark・ローカル LLM に関わる作業では、着手前に `~/.claude/guidelines/infra/dgx-spark.md` (共通: 接続先 / 系統の切り替え / 性能特性 / 既知の制約) と、対象の系統の `~/.claude/guidelines/infra/dgx-spark/<系統>.md` を Read する。系統ファイルの一覧と、配信中の系統の調べ方は共通ファイルの冒頭にある。
 
 ## 依拠する外部事実
 
@@ -60,6 +61,6 @@
 | --- | --- | --- |
 | 共通の正本・ルール・スキルの配布と subagent の生成 | dotfiles の `CLAUDE.md`「配布」「live edit の範囲」、`nix/modules/home/claude.nix` / `codex.nix` / `opencode.nix` | 同ガイドの「配布の確認」で symlink と生成物を照合する。Codex / OpenCode の subagent 本文は書式変換後の生成物と比べる |
 | ランタイムごとのツール・パスの読み替え | `agents/bindings/codex/AGENTS.md` / `agents/bindings/opencode/AGENTS.md` | 実行中のランタイムに対応する binding の読み替え表と制約を読む |
-| モデル割当と subagent のモデル継承 | `agents/rules/core/orchestration.md`、各 binding の `AGENTS.md`、`agents/scripts/subagent-format.ts`、`agents/bindings/codex/config.toml` | 割当規約、生成物に出すキー、ランタイム側のモデル設定を分けて確認する。実際の起動でモデルを確認していなければ、継承の規定だけからモデル名を断定しない |
-| テスト・レビュー・コミットの検証手段 | `agents/rules/core/implementation.md` / `verification.md` / `commit.md`、各プロジェクトの指示・CI、使用するスキル | 規定元と実行コマンド・結果を対応づける。dotfiles の CI 対象とハーネスのゲート一覧は同リポジトリの `CLAUDE.md` にある |
-| Spark の接続先・配信系統・検証コマンド | `agents/rules/infra/dgx-spark.md` と `agents/rules/infra/dgx-spark/<系統>.md` の「依拠する外部事実」 | 同表の確認方法で現在値を取得し、日付付きの過去の実測値と区別する。認証情報を出力しない |
+| モデル割当と subagent のモデル継承 | `agents/guidelines/core/orchestration.md`、各 binding の `AGENTS.md`、`agents/scripts/subagent-format.ts`、`agents/bindings/codex/config.toml` | 割当規約、生成物に出すキー、ランタイム側のモデル設定を分けて確認する。実際の起動でモデルを確認していなければ、継承の規定だけからモデル名を断定しない |
+| テスト・レビュー・コミットの検証手段 | `agents/guidelines/core/implementation.md` / `verification.md` / `commit.md`、各プロジェクトの指示・CI、使用するスキル | 規定元と実行コマンド・結果を対応づける。dotfiles の CI 対象とハーネスのゲート一覧は同リポジトリの `CLAUDE.md` にある |
+| Spark の接続先・配信系統・検証コマンド | `agents/guidelines/infra/dgx-spark.md` と `agents/guidelines/infra/dgx-spark/<系統>.md` の「依拠する外部事実」 | 同表の確認方法で現在値を取得し、日付付きの過去の実測値と区別する。認証情報を出力しない |

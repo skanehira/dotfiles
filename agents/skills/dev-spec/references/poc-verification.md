@@ -51,7 +51,7 @@ dev-spec のフェーズ 6 のゲートはこの行を `rg 'POC_STATUS:.*blocker
 対象の PoC 計画 1 件につき、サブエージェント `tech-investigation` を 1 本起動する (モデル: opus を明示)。互いに独立な調査なので全件を並列に起動し、全件の完了を待ってから手順 3 へ進む。手順 4 の「再試行」から戻ったときは、再試行を選んだ計画だけを起動する。
 
 - 説明: `PoC: <id>`
-- モデルを明示する理由: 調査 fan-out は opus を明示する (~/.claude/rules/core/orchestration.md の割当表)。agent 側 frontmatter も opus だが、明示を忘れると無音でセッションモデルの継承に落ちるので二重に指定する
+- モデルを明示する理由: 調査 fan-out は opus を明示する (~/.claude/guidelines/core/orchestration.md の割当表)。agent 側 frontmatter も opus だが、明示を忘れると無音でセッションモデルの継承に落ちるので二重に指定する
 - 次の指示文を渡す。`scope` は計画の `**目的**` 行、`risk` は `**risk**` 行、`blocker` は POC_STATUS 行から取る:
 
 ```

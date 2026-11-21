@@ -33,7 +33,7 @@ git リポジトリでない場合は「git リポジトリではありません
 
 ### Step 2: review-impl の起動
 
-サブエージェント `review-impl` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む。検証器は一律 opus を明示する (`~/.claude/rules/core/orchestration.md` の割当表)。
+サブエージェント `review-impl` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む。検証器は一律 opus を明示する (`~/.claude/guidelines/core/orchestration.md` の割当表)。
 
 - 説明 (起動時に付ける表示用の短いラベル): `working tree のレビュー`
 - 次の内容を渡す:

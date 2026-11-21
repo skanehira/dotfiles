@@ -32,7 +32,8 @@
   # home.file.X.source = ./path だと /nix/store にコピーされ drs 必須になる。
   home.file = {
     ".claude/CLAUDE.md".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/AGENTS.md";
-    ".claude/rules".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/rules";
+    ".claude/guidelines".source =
+      config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/guidelines";
     ".claude/skills".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/skills";
     # Codex は TOML しか読めない subagent だけ、codex.nix の activation が .toml へ変換する
     ".claude/agents".source = config.lib.file.mkOutOfStoreSymlink "${dotfilesRoot}/agents/subagents";

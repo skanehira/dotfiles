@@ -29,7 +29,7 @@ Android 16 以降の標準「Linux ターミナル」(Android Virtualization Fra
 | PC | 任意。手順 2 のプロセスキラー対策が端末の設定だけで効かないときに adb を打つ用途 |
 | 所要時間 | Phase 0 が 30 分程度、Phase 1 の初回 switch は回線と発熱しだいで 1 時間以上 |
 
-Docker はこの構成では使えない。proot はホストのカーネルを共有するだけで名前空間を作れないため。コンテナが必要な作業は DGX Spark (`agents/rules/infra/dgx-spark.md`) か VPS へ SSH する。
+Docker はこの構成では使えない。proot はホストのカーネルを共有するだけで名前空間を作れないため。コンテナが必要な作業は DGX Spark (`agents/guidelines/infra/dgx-spark.md`) か VPS へ SSH する。
 
 ## Phase 0: 端末 spike
 

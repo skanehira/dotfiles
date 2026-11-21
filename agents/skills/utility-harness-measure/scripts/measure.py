@@ -200,7 +200,7 @@ def scenarios_of(topic, names):
 
 
 def harness_revision():
-    root = Path.home() / ".claude" / "rules"
+    root = Path.home() / ".claude" / "guidelines"
     repo = root.resolve()
     try:
         top = subprocess.run(["git", "-C", str(repo), "rev-parse", "--show-toplevel"],

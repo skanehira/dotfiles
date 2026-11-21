@@ -88,7 +88,7 @@ issue の本文の「設計」節に書く。
 
 ## 判断を求めるコメント
 
-`needs-human` を足すときに issue へ書く。読む人は、この issue のことを覚えていない前提で書く (`~/.claude/rules/core/collaboration.md`「質問・提案の形式」)。
+`needs-human` を足すときに issue へ書く。読む人は、この issue のことを覚えていない前提で書く (`~/.claude/guidelines/core/collaboration.md`「質問・提案の形式」)。
 
 ```markdown
 **<何を決めてほしいかを 1 文で>**

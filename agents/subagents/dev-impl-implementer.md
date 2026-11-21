@@ -34,13 +34,13 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 1. **issue 本文**: `gh issue view <issue_number> --json title,body` で取得する。`## ゴール` / `## 設計` / `## DoD` / `## 非スコープ` / `## 依存` の節構成
 2. **issue の `## 設計` が参照する docs**: 通常は `docs/design/features/<機能名>.md` と、言及があれば `docs/design/DESIGN.md` の該当節。webapp のアプリシェルの子は機能設計書を持たず、`docs/design/DESIGN.md`「横断規約」のアプリシェルの項を指す。**契約 (入出力・API・エッジケースの決定) はここが正本**。以下で「設計文書」と書くときは、この 2. で読んだ文書を指す
 3. **`docs/design/DESIGN.md`「開発・検証コマンド」**: セットアップ・テスト実行・lint の方法はここに従う (DESIGN.md が無い構成では issue の DoD に書かれたコマンドから読み取る)
-4. **rules**: `$HOME/.claude/rules/core/` の tdd.md / design.md / testing.md / implementation.md / verification.md と、下の表で当たる技術別の rules の全ファイル。**親の hooks も CLAUDE.md も継承されず、rules の `paths` による自動読み込みも届かないため、これを読まずに実装しない**
+4. **guidelines**: `$HOME/.claude/guidelines/core/` の tdd.md / design.md / testing.md / implementation.md / verification.md と、下の表で当たる技術別の guidelines の全ファイル。**親の hooks も CLAUDE.md も継承されず、guidelines は自動では読み込まれないため、これを読まずに実装しない**
 
-   | 当たる条件 (どちらか) | Read する rules |
+   | 当たる条件 (どちらか) | Read する guidelines |
    | --- | --- |
-   | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が React を選んでいる / `package.json` の依存に `react` がある | `$HOME/.claude/rules/frontend/react/` の全ファイル |
-   | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が Go を選んでいる / リポジトリに `go.mod` がある | `$HOME/.claude/rules/backend/go/` の全ファイル |
-   | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が Rust を選んでいる / リポジトリに `Cargo.toml` がある | `$HOME/.claude/rules/backend/rust/` の全ファイル |
+   | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が React を選んでいる / `package.json` の依存に `react` がある | `$HOME/.claude/guidelines/frontend/react/` の全ファイル |
+   | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が Go を選んでいる / リポジトリに `go.mod` がある | `$HOME/.claude/guidelines/backend/go/` の全ファイル |
+   | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が Rust を選んでいる / リポジトリに `Cargo.toml` がある | `$HOME/.claude/guidelines/backend/rust/` の全ファイル |
 5. **証跡の集め方**: `$HOME/.claude/skills/workflow-create-pr/references/evidence.md`。画面または HTTP API に触れる issue のときだけ読む。どちらにも触れない issue でも `manifest.json` は書く (下記「動作確認の証跡」)
 
 ## 作業ディレクトリの制約 (最重要)
@@ -55,8 +55,8 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
    - **REFACTOR**: green のときだけ。重複排除と命名
    - `## 非スコープ` に書かれたことには触れない
    - 設計文書の「テスト方針」の表の行を、表が割り当てたレベル (単体 / 結合) のテストで 1 行ずつ固定する。対象は issue の `## ゴール` に「担う受け入れ基準」行があればその行だけ、無ければ設計文書の表の全行。レベルが E2E の行は手順 2 で扱う。レベルが `なし (<理由>)` の行はテストを書かない
-   - 表の行に無いテストを足すとき (内部の関数・部品の単体テストなど) は、書く前に `~/.claude/rules/core/testing.md`「テストを書くかを先に決める」で要否を決める。props や `data-*` 属性を素通しするだけのテストは書かない
-2. **UI に触れる issue** (docs/design/DESIGN.md のスタンプが `webapp` で、画面の振る舞いを変える場合) は、設計文書の「テスト方針」にある `E2E 対象動線:` 行が指定する golden path の **Playwright E2E** を書く (資産として残す。golden path のみ — E2E を増やしすぎない)。`E2E 対象動線: なし (<理由>)` のときは E2E を書かない。E2E の中で何を確かめ、何を確かめないかは `~/.claude/rules/core/testing.md`「E2E で確かめること」に従う。文言・書式・計算結果・境界値・API の応答・DB の値は E2E で比べず、同節の表の確かめ先のテストで固定する。受け入れ基準の行が文言を含むときの分担も同節にある
+   - 表の行に無いテストを足すとき (内部の関数・部品の単体テストなど) は、書く前に `~/.claude/guidelines/core/testing.md`「テストを書くかを先に決める」で要否を決める。props や `data-*` 属性を素通しするだけのテストは書かない
+2. **UI に触れる issue** (docs/design/DESIGN.md のスタンプが `webapp` で、画面の振る舞いを変える場合) は、設計文書の「テスト方針」にある `E2E 対象動線:` 行が指定する golden path の **Playwright E2E** を書く (資産として残す。golden path のみ — E2E を増やしすぎない)。`E2E 対象動線: なし (<理由>)` のときは E2E を書かない。E2E の中で何を確かめ、何を確かめないかは `~/.claude/guidelines/core/testing.md`「E2E で確かめること」に従う。文言・書式・計算結果・境界値・API の応答・DB の値は E2E で比べず、同節の表の確かめ先のテストで固定する。受け入れ基準の行が文言を含むときの分担も同節にある
 3. **UI に触れる issue で、プロジェクトが視覚テストを持つ場合** (`package.json` に `test:visual` 相当があり `*.visual.test.tsx` が存在する) は、該当画面の視覚テストを追加/更新して実行し、**生成された png を `Read` で自分で見る**。E2E とは役割が違う — E2E は振る舞い、視覚テストは見た目を受け持つ。**幅を変えて撮る** (崩れは幅に依存することが多く、1 つの幅だけでは見逃す)
 4. `## DoD` のコマンドと、変更範囲のテスト・lint・フォーマット検査を実行し、exit code 0 を確認する (自己申告ではなく実行結果で判定)
 5. **実装後のセルフチェック**を行い、結果を報告に残す (下記「実装後のセルフチェック」)
@@ -69,7 +69,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 
 ### 1. 基本のチェック (変更の種類に関係なく、いつも行う)
 
-1. **増えた振る舞い**: 新しく利用者が見られる振る舞いは何か。それをテストで固定したか。逆に、書いたテストのそれぞれについて、失敗したとき利用者にとって何が壊れたかを言えるか (`~/.claude/rules/core/testing.md` のリトマス試験 A)。言えないテストは消すか、利用者に見える振る舞いを確かめる形に書き直す
+1. **増えた振る舞い**: 新しく利用者が見られる振る舞いは何か。それをテストで固定したか。逆に、書いたテストのそれぞれについて、失敗したとき利用者にとって何が壊れたかを言えるか (`~/.claude/guidelines/core/testing.md` のリトマス試験 A)。言えないテストは消すか、利用者に見える振る舞いを確かめる形に書き直す
 2. **減った・変わった振る舞い**: 消したもの・変えたものは何か。既存のテストは落ちるか、設計書や利用ガイドは古くなっていないか
 3. **触った仕様**: API・DB・画面・文言・権限・監査・CI のどれに触ったか。それぞれのテストや検査を決めたか
 4. **増えた分岐・値・列・ロール・エラー**: 何が増えたか。同じ形の箇所をすべて確認し、テストで固定したか
@@ -88,7 +88,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 | 画面・E2E・機能名を消した/変えた | `git grep` で `docs/design/` と `docs/user-guide/` を探し、古い記述を直す |
 | 画面の見た目を変えた | 視覚テストの画像を開き、同じ行の下端・幅・ラベルの位置・複数の幅で確かめる |
 | E2E を足した/変えた | 「E2E で確かめないもの」(文言・書式・計算・DB の値) を比べていないか |
-| lint の規則を外すコメントを足した | 理由をコメントに書いたか。その理由が技術別の rules とプロジェクトの規約 (`CLAUDE.md` / `AGENTS.md`) の許す場面に当たるか。規約が外すことを禁じている規則 (例: レイヤ境界) なら外さずに設計を直す |
+| lint の規則を外すコメントを足した | 理由をコメントに書いたか。その理由が技術別の guidelines とプロジェクトの規約 (`CLAUDE.md` / `AGENTS.md`) の許す場面に当たるか。規約が外すことを禁じている規則 (例: レイヤ境界) なら外さずに設計を直す |
 
 ### 3. 表にない変更 (その他)
 
@@ -109,7 +109,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 
 ### 4. コメントの自己点検
 
-`~/.claude/rules/core/implementation.md`「コードコメント」の自己点検を行う。差分から追加したコメント行を抽出し、1 行ずつ「書く / 書かない / 対象外」に分け、「書かない」に当たる行を消す。結果 (追加した行数・消した行数・残した理由) を報告の `self_review.comments` に残す。
+`~/.claude/guidelines/core/implementation.md`「コードコメント」の自己点検を行う。差分から追加したコメント行を抽出し、1 行ずつ「書く / 書かない / 対象外」に分け、「書かない」に当たる行を消す。結果 (追加した行数・消した行数・残した理由) を報告の `self_review.comments` に残す。
 
 ## 手順 (mode: fix)
 
@@ -185,7 +185,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 }
 ```
 
-該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。`ui_evidence` と `evidence` は役割が違うので両方埋める。`ui_evidence` は、手順 3 で自分が開いて見た視覚テストの png の記録である。`evidence` は PR 本文に載せる動作確認の証跡で、`status` が `done` のときは必ず `manifest.json` を指す。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` に加え、`basic_checks` の 4 つが空でないこと、`change_types` が空でないことを検収してから done と扱う。`change_types` に「その他」がある場合は `other` の各項目に `summary` / `axes` (`spec` / `layer` / `artifact`) / `answers` (4 問い) が埋まっていること、差分にコメントを足した場合は `comments` が記録されていることも確かめる。**UI に触れる issue では `ui_evidence.screenshots` が空でないことも検収対象**になる。親は画像を開かない。差分で追加・更新された基準画像は、別のコンテキストの review-impl が開いて見る (検査項目 5)。`self_review` は、報告の直前に「実装後のセルフチェック」と `~/.claude/rules/core/testing.md`「セルフレビューチェックリスト」を自分の差分とテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して確認レビューで残存と判定されるだけ)。`basic_checks` は該当が無くても「なし」と書いて 4 つすべてを埋める。
+該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。`ui_evidence` と `evidence` は役割が違うので両方埋める。`ui_evidence` は、手順 3 で自分が開いて見た視覚テストの png の記録である。`evidence` は PR 本文に載せる動作確認の証跡で、`status` が `done` のときは必ず `manifest.json` を指す。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` に加え、`basic_checks` の 4 つが空でないこと、`change_types` が空でないことを検収してから done と扱う。`change_types` に「その他」がある場合は `other` の各項目に `summary` / `axes` (`spec` / `layer` / `artifact`) / `answers` (4 問い) が埋まっていること、差分にコメントを足した場合は `comments` が記録されていることも確かめる。**UI に触れる issue では `ui_evidence.screenshots` が空でないことも検収対象**になる。親は画像を開かない。差分で追加・更新された基準画像は、別のコンテキストの review-impl が開いて見る (検査項目 5)。`self_review` は、報告の直前に「実装後のセルフチェック」と `~/.claude/guidelines/core/testing.md`「セルフレビューチェックリスト」を自分の差分とテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して確認レビューで残存と判定されるだけ)。`basic_checks` は該当が無くても「なし」と書いて 4 つすべてを埋める。
 
 ## 範囲外 (やらないこと)
 

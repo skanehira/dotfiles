@@ -9,7 +9,8 @@
 
 - リポジトリやタスクの内容によらず、すべてのセッションで必ず `~/.claude/CLAUDE.md` を Read し、その内容 (エスカレーション、オーケストレーションとモデル階層、実装時の手順) に従う。
 - これは Claude Code 専用の文書ではない。正本は `dotfiles/agents/AGENTS.md` で、`~/.claude/CLAUDE.md` はその symlink である。
-- `~/.claude/rules/...` も同じ正本 (`dotfiles/agents/rules/`) への symlink で、OpenCode 用に別の版は無い。**ルールは Claude 綴りで書かれているので、下の「Claude 綴りの読み替え」に従って読む。**
+- `~/.claude/guidelines/...` も同じ正本 (`dotfiles/agents/guidelines/`) への symlink で、OpenCode 用に別の版は無い。**ルールは Claude 綴りで書かれているので、下の「Claude 綴りの読み替え」に従って読む。**
+- `~/.claude/CLAUDE.md` が `@guidelines/core/<name>.md` の形で取り込んでいる 3 本 (`collaboration.md` / `orchestration.md` / `documentation.md`) は、Claude Code は起動時に展開するが OpenCode は展開しない。`~/.claude/CLAUDE.md` を Read したら、続けてこの 3 本を `~/.claude/guidelines/core/` から Read する。
 - スキルも共有である。`~/.agents/skills/<name>` と `~/.claude/skills/<name>` は、どちらも `dotfiles/agents/skills/<name>` と同じ実体を指す。
 
 ## 基本方針
@@ -28,7 +29,7 @@
 | このグローバル指示 | `~/.config/opencode/AGENTS.md` | `agents/bindings/opencode/AGENTS.md` | 即反映 (symlink) |
 | スキル | `~/.agents/skills/<name>` と `~/.claude/skills/<name>` (OpenCode は両方を読む) | `agents/skills/<name>` | 中身の編集は即反映。`~/.agents/skills` 側の追加と削除は `drs` / `hms` が要る (個別 symlink の張り直し) |
 | subagent | `~/.config/opencode/agents/*.md` | `agents/subagents/*.md` を書式変換したもの | **変更も追加も `drs` / `hms` が要る** (Markdown の再生成) |
-| ルール | `~/.claude/rules/` を絶対パスで直接 Read する (OpenCode 側に複製は無い) | `agents/rules/` | 即反映 (symlink) |
+| ルール | `~/.claude/guidelines/` を絶対パスで直接 Read する (OpenCode 側に複製は無い) | `agents/guidelines/` | 即反映 (symlink) |
 | Spark の provider 設定 | `~/.config/opencode/opencode.json` | `agents/bindings/opencode/opencode.json` | 即反映 (symlink。常駐サービスが変更を検知して読み直す実装がソースにあるが、反映を実際に確かめてはおらず、読み直しを外から観測する手段も確かめていない。変更が効いていないように見えたら `opencode service restart`) |
 | 配信中モデルの選択 (プラグイン) | `~/.config/opencode/plugins/spark-served.ts` | `agents/bindings/opencode/plugins/spark-served.ts` | 即反映 (symlink。読み直しの確度は上の行と同じ) |
 | TUI のキーバインドとテーマ | `~/.config/opencode/cli.json` | `agents/bindings/opencode/cli.json` | 即反映 (symlink)。**TUI でテーマなどを変えると symlink が実ファイルに置き換わり repo との同期が切れる**ので、変えるときは repo 側を編集する |
@@ -57,7 +58,7 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
 done
 
 ls ~/.config/opencode/agents               # ~/.claude/agents と同じ名前の .md が並ぶ
-readlink -f ~/.claude/rules                # dotfiles の agents/rules に解決する
+readlink -f ~/.claude/guidelines                # dotfiles の agents/guidelines に解決する
 ```
 
 スキルの件数は次の和になる。2026-10-03 のこのマシンでは 61 件だった。
@@ -96,7 +97,7 @@ readlink -f ~/.claude/rules                # dotfiles の agents/rules に解決
 | `run_in_background` | バックグラウンド実行 (結果を受け取らないまま先へ進む起動)。付けない起動は、起動した subagent の完了を待ってから次の手順へ進む (互いに独立な複数の起動は並列でよい) |
 | `claude -p` | `opencode run` |
 | `CLAUDE.md` (指示ファイル名として) | `AGENTS.md`。ただし共通の正本を指す記述は `~/.claude/CLAUDE.md` をそのまま Read する |
-| `~/.claude/rules` | 同じパスをそのまま読む (同一実体) |
+| `~/.claude/guidelines` | 同じパスをそのまま読む (同一実体) |
 | `~/.claude/skills` | 同じパスか `~/.agents/skills` (どちらも同一実体) |
 | `~/.claude/agents` | `~/.config/opencode/agents` |
 | `~/.claude/scripts` | 同じパスをそのまま実行する (同一実体。Claude Code 用のパスに見えても同じマシン上のファイル) |

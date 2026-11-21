@@ -29,7 +29,7 @@ frontmatter の `model` が効くのは、ユーザーが `/dev-impl` を直接�
 
 ### Haiku への委譲
 
-`~/.claude/rules/core/orchestration.md`「委譲の判断」に従い、コミットの実行と、出力が巨大になるテスト実行 (E2E 等) だけを Haiku に委譲してよい。委譲するのはコマンドの実行だけで、コミットメッセージの起草・ステージ対象の決定・結果の判定は親が行う。委譲先にはファイルを編集させない。
+`~/.claude/guidelines/core/orchestration.md`「委譲の判断」に従い、コミットの実行と、出力が巨大になるテスト実行 (E2E 等) だけを Haiku に委譲してよい。委譲するのはコマンドの実行だけで、コミットメッセージの起草・ステージ対象の決定・結果の判定は親が行う。委譲先にはファイルを編集させない。
 
 コミットの実行 (2.4 手順 1) は、**コミット 1 件につき 1 回**、サブエージェント `general-purpose` を起動する (モデル: haiku を明示)。完了を待ってから次の手順 (次のコミットの起動を含む) へ進む。1 issue のコミット列が複数のコミットになるときは、この起動をコミットの数だけ順に繰り返す。
 
@@ -45,7 +45,7 @@ repo_dir: <WORK_DIR> (すべてのコマンドを cd <WORK_DIR> && ... の形で
 
 返ってきた結果は親が次のように扱う (委譲先は照合者にならない):
 
-- subject を `~/.claude/rules/core/commit.md` の形式と照合する。合わなければ、push 前に親が `git -C "$WORK_DIR" commit --amend` で直す
+- subject を `~/.claude/guidelines/core/commit.md` の形式と照合する。合わなければ、push 前に親が `git -C "$WORK_DIR" commit --amend` で直す
 - コミットが失敗した (pre-commit hook の失敗・ステージ対象が空など) ときは、返された出力を親が読んで原因を直し、もう一度委譲する。直せなければ 2.6 へ
 
 巨大出力のテスト実行 (2.4 手順 2) は、サブエージェント `general-purpose` を起動する (モデル: haiku を明示)。完了を待ってから次の手順へ進む。
@@ -351,7 +351,7 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 **駐車 category と保留 category が混在したら、issue 全体を 2.6 へ駐車する** (保留 category のぶんは駐車コメントに列挙する。壊れた契約を抱えた issue を merge しないことが優先する)。
 
-`test-quality` の high を保留して merge するのは、no-op に置き換えても通るテスト (`~/.claude/rules/core/testing.md` のリトマス試験 B に落ちるもの) を抱えたまま先へ進むことを意味する。**これは意図した受容**なので、保留リストと完了コメントでは high を medium と分けて先に出し、ユーザーが気付ける状態にする。
+`test-quality` の high を保留して merge するのは、no-op に置き換えても通るテスト (`~/.claude/guidelines/core/testing.md` のリトマス試験 B に落ちるもの) を抱えたまま先へ進むことを意味する。**これは意図した受容**なので、保留リストと完了コメントでは high を medium と分けて先に出し、ユーザーが気付ける状態にする。
 
 **3 周目に入りたくなったら、それは「収束していない」という信号**なので、上の表に従う。**この上限を強制する機械ゲートは無い。自律遵守する。** 上限は機械ゲートが無い状態で実際に破られる (実測: 22 issue 中 6 件が 3 周目以降に入り、規定超過分だけで 5.7h を消費した)。破らないための手立ては、review JSON のファイル名にあるラウンド番号を毎回自分で読むことだけである。3 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)。
 
@@ -382,9 +382,9 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 ### 2.4 コミット・検証・PR・merge
 
-1. **コミット**: 変更を論理単位で Conventional Commit (`~/.claude/rules/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針「Haiku への委譲」)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.md` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
+1. **コミット**: 変更を論理単位で Conventional Commit (`~/.claude/guidelines/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針「Haiku への委譲」)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.md` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
 
-   コミットが手順 2 の検証より前に来るのは、検証対象を「積み終えた差分」に固定するためである。`~/.claude/rules/core/commit.md` のコミット条件 (全テスト green) は、implementer の `test_result` / `dod_result` が exit 0 であること (2.2 の検収で確認済み) を根拠に満たす。**手順 2 が red だった場合、このコミットは merge されない駐車ブランチ上の記録として扱う** (2.6 の WIP 退避と同じ例外)。
+   コミットが手順 2 の検証より前に来るのは、検証対象を「積み終えた差分」に固定するためである。`~/.claude/guidelines/core/commit.md` のコミット条件 (全テスト green) は、implementer の `test_result` / `dod_result` が exit 0 であること (2.2 の検収で確認済み) を根拠に満たす。**手順 2 が red だった場合、このコミットは merge されない駐車ブランチ上の記録として扱う** (2.6 の WIP 退避と同じ例外)。
 
 2. **検証 (1 巡)**: 最後のコミットを積んだ後・push の前に、**プロジェクトのテストスイート全体 + lint + フォーマット検査 + issue の `## DoD` のコマンド**をまとめて 1 回実行し、すべて exit code 0 であることを確認する。**CI の有無に関わらずこのローカル検証を行う**。issue の DoD は CI に含まれないのでここでしか検証されず、red のまま push すると CI の実行を 1 回無駄にするためである。CI の結果は手順 4 の CI ゲートで merge の前に待つ。**実行は `$WORK_DIR` で行う** (並列実行では worktree の中。Haiku subagent に委譲する場合は `cd <WORK_DIR> && ...` の形でコマンドを渡さないと別の作業ツリーを検証することになる)。出力が巨大になると実行前に分かっているもの (E2E と、出力が数千行を超えると分かっているスイート) は実行だけ委譲し、pass/fail 件数と失敗の要点を受け取る (起動と渡す内容はモデル方針「Haiku への委譲」)。Bash ツールの上限 (600000 ms = 10 分) を超えうる検証は、委譲先でも同じ上限に当たるので、バックグラウンドで実行して終わりの通知を待ち、exit code で判定する。
 
@@ -576,7 +576,7 @@ done
    - close しなかった、dev-spec の形でないタイトルの `tracking` の親 (手順 1)
    - 保留レビュー項目 (保留 high・medium) の件数とチェックリストのパス、および設計差し戻しが必要な指摘
    - 早見表に無かった指摘の種類 (次回の表に足す候補)
-   - `needs-human` で駐車した issue と、人間がすべき決定。報告を読む時点のユーザーは issue の中身を覚えていない前提で、issue ごとに `~/.claude/rules/core/collaboration.md`「質問・提案の形式」に従って書く。どの件の話かは issue の番号とタイトルで示す
+   - `needs-human` で駐車した issue と、人間がすべき決定。報告を読む時点のユーザーは issue の中身を覚えていない前提で、issue ごとに `~/.claude/guidelines/core/collaboration.md`「質問・提案の形式」に従って書く。どの件の話かは issue の番号とタイトルで示す
    - 実装中の設計判断・docs 更新の要約
 
 ## エスカレーション回答後の再開
@@ -585,7 +585,7 @@ done
 
 ## 参照ルール
 
-- コミット規約: `~/.claude/rules/core/commit.md` / 委譲の判断: `~/.claude/rules/core/orchestration.md`
+- コミット規約: `~/.claude/guidelines/core/commit.md` / 委譲の判断: `~/.claude/guidelines/core/orchestration.md`
 - implementer・review-impl の入出力契約は各 agent 定義 (`~/.claude/agents/dev-impl-implementer.md` / `review-impl.md`) が正本
 
 ## 関連スキル・エージェント

@@ -4,7 +4,7 @@
 - 生成者: dev-triage (手順 3 の振り分けで `needs-human` にする行と、手順 5 の「失敗したとき」)
 - 消費者: `needs-human` の issue に回答する人。dev-triage の次の起動 (末尾の `<!-- dev-triage -->` より後の人のコメントを回答として読む。SKILL.md 手順 2「以前の整理への回答」)
 
-コメントは 1 件の issue につき 1 回の整理で 1 つだけ書く。読む人は、この issue のことを覚えていない前提で書く (`~/.claude/rules/core/collaboration.md`「質問・提案の形式」)。どの型でも、末尾の `<!-- dev-triage -->` を消さない。
+コメントは 1 件の issue につき 1 回の整理で 1 つだけ書く。読む人は、この issue のことを覚えていない前提で書く (`~/.claude/guidelines/core/collaboration.md`「質問・提案の形式」)。どの型でも、末尾の `<!-- dev-triage -->` を消さない。
 
 ## 判断を求めるコメント
 

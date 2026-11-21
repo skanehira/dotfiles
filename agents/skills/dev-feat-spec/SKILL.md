@@ -95,7 +95,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,body,files
 - **ユーザーから見た変化**: 画面が変わるときは、機能設計書の「入出力と振る舞い」に、操作と画面に起きることの表を書く。あわせて `docs/design/UI_SKETCH.html` を設計どおりに直し、変わる画面の変更前と変更後をスクリーンショットに撮る。PR の本文には、その画像を貼る (レビューする人が、設計書を全部読まずに見た目の変化をつかめるようにするため。テキストの図は全角と罫線の表示幅で崩れて読みにくい)。変更前はスケッチを直す前に撮るので、設計書を書き始める前に `references/sketch-capture.md` を Read し、その手順 1〜5 に従う。スケッチが無いプロジェクトと、gh が画像の添付に対応していないときの扱いも同書にある
 - **既存の実装と合わせる**: 「実装の配置」は、実際のコードを読んで、既存のどのファイルとどの層を変えるかまで書く。既存の実装と食い違う設計にするなら、理由を設計書に書く
 
-書いたら、ドキュメントの整合性パス (`~/.claude/rules/core/documentation.md`「編集後の整合性パス」の 1 と 2) を行う。
+書いたら、ドキュメントの整合性パス (`~/.claude/guidelines/core/documentation.md`「編集後の整合性パス」の 1 と 2) を行う。
 
 ### 5. issue の本文を書き直す
 
@@ -114,7 +114,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 
 書き手は自分の書き漏れを見つけにくいので、`general-purpose` の subagent を**モデル: opus を明示**して 1 本起動し、完了を待つ。渡すもの: 変えた設計書のパス (と `git diff origin/$DEFAULT` の出力のファイル)、書き直した issue の本文 (子があれば子も) のファイル、着手可能の基準 (`~/.claude/skills/dev-triage/references/issue-states.md`「着手可能の基準」と、対象リポジトリの `docs/ISSUE_TRIAGE.md` があればその基準)。指示文に含める観点:
 
-1. **落とし漏れ**: issue が求めることが、設計書と受け入れ基準にすべて現れているか。足した受け入れ基準が「テスト方針」の表に写っているか。レベルを `なし (<理由>)` にした行の理由が `~/.claude/rules/core/testing.md`「テストを書くかを先に決める」の 2 つの軸に沿っているか。表でレベルを E2E にした行が、すべて `E2E 対象動線:` の行に同じ文面で書き写されているか (漏れは medium。その画面が PR の動作確認のスクリーンショットに載らなくなるため)
+1. **落とし漏れ**: issue が求めることが、設計書と受け入れ基準にすべて現れているか。足した受け入れ基準が「テスト方針」の表に写っているか。レベルを `なし (<理由>)` にした行の理由が `~/.claude/guidelines/core/testing.md`「テストを書くかを先に決める」の 2 つの軸に沿っているか。表でレベルを E2E にした行が、すべて `E2E 対象動線:` の行に同じ文面で書き写されているか (漏れは medium。その画面が PR の動作確認のスクリーンショットに載らなくなるため)
 2. **矛盾**: 変えた設計書と、DESIGN.md や他の機能設計書とが食い違っていないか
 3. **未定義・参照切れ**: 用語、テーブル、エンドポイント、節名の参照先が実在するか
 4. **エッジケース**: 起こるのに決定が書かれていないエッジケースが無いか (feature-doc.md の観点リスト)
@@ -134,7 +134,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 **設計 PR のとき**:
 
 1. 分けたときは、先に子の issue を依存の上流から順に作る (`--label design-review`)。作るたびに、残りの下書きの `Depends on <子の下書きの名前>` を `Depends on #<番号>` へ置き換える。子を親の sub-issue に紐付ける (手順は `~/.claude/skills/dev-spec/references/issue-template.md`「親への紐付け」)
-2. 変更を Conventional Commit でコミットする (`📝 docs: [BEHAVIORAL] ...`。スケッチに口といまの画面を足したときは、そのコミット (`[STRUCTURAL]`。`references/sketch-capture.md` の手順 1) が先に積まれている。コミットの実行は `~/.claude/rules/core/orchestration.md`「委譲の判断」に従って haiku に委譲してよい。subject の照合は自分で行う)
+2. 変更を Conventional Commit でコミットする (`📝 docs: [BEHAVIORAL] ...`。スケッチに口といまの画面を足したときは、そのコミット (`[STRUCTURAL]`。`references/sketch-capture.md` の手順 1) が先に積まれている。コミットの実行は `~/.claude/guidelines/core/orchestration.md`「委譲の判断」に従って haiku に委譲してよい。subject の照合は自分で行う)
 3. `git push -u origin design/issue-<N>` し、PR を作る。本文は `references/templates.md`「設計 PR の本文」で、`Design-for:` の行を必ず書く。分けなかったときは `Design-for: #<N>` の 1 行、分けたときは子の番号だけを 1 行ずつ書き、親は書かない。この行が無いと、merge しても `ready` が付かない。**設計 PR は issue の Development に紐づけない**。本文に `Closes` などのキーワードを書かず、issue の画面からも紐づけない。Development に紐づいた PR は、デフォルトブランチへの merge で issue を close するので、`ready` が付いても /dev-impl が拾えなくなるため。issue の Development に載せるのは /dev-impl の実装 PR だけである。画面の画像があるときは、`gh pr create` に撮った png を全件 `--attach` で渡し、作った後に本文にローカルのパスが残っていないことを確かめる (`references/sketch-capture.md`「添付して PR を作る」)
 4. 書き直した本文を issue に反映し、ラベルを付け替える
    - 分けなかったとき: `needs-design` を外して `design-review` を付ける

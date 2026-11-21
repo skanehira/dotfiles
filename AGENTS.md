@@ -11,7 +11,7 @@
 
 ## ハーネス (agents/) を編集するとき
 
-- 配布は symlink が基本。グローバル指示 (`~/.claude/CLAUDE.md`) / ルール (`~/.claude/rules`) / スキル (`~/.claude/skills`) / subagent (`~/.claude/agents`) は正本 `agents/` への symlink なので、**本文の編集は即反映**される。
+- 配布は symlink が基本。グローバル指示 (`~/.claude/CLAUDE.md`) / ルール (`~/.claude/guidelines`) / スキル (`~/.claude/skills`) / subagent (`~/.claude/agents`) は正本 `agents/` への symlink なので、**本文の編集は即反映**される。
 - 例外は 2 つ。どちらも `drs` / `hms` が要る。
   - **スキルの追加・削除**: Codex 向けに `~/.agents/skills/<name>` へ個別 symlink を張り直すため (`nix/modules/home/codex.nix` の activation `linkAgentSkills`)
   - **subagent の変更・追加**: Codex は TOML しか読めないので `agents/scripts/sync-subagents.ts` が `~/.codex/agents/*.toml` へ書式変換する (activation `syncCodexSubagents`)

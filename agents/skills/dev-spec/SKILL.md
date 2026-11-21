@@ -179,7 +179,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 
 > docs/design/USECASES.md (あれば)・docs/design/DESIGN.md・docs/design/features/*.md を**全文 Read** し、照合用に docs/design/FEASIBILITY.md と docs/design/UI_SKETCH.html (それぞれあれば) も Read して、次を検査して指摘だけを返せ (修正はしない):
 >
-> 1. **落とし漏れ**: USECASES.md の各 UC・各規則 (BR) が、いずれかの機能設計書でカバーされているか。各 UC の受け入れ基準の各行が、いずれかの機能設計書「テスト方針」の表に写されて検証レベルを割り当てられているか (レベル `なし (<理由>)` も割り当てに数える。その理由が `~/.claude/rules/core/testing.md`「テストを書くかを先に決める」の 2 つの軸に沿っているか、逆に 2 つとも低い行にテストのレベルを割り当てていないかも見る。複数の機能設計書にまたがる二重の割り当ても指摘する。同じ機能設計書の `E2E 対象動線:` 行は表の該当行の再掲であり、二重には当たらない)。逆向きに、テスト方針の表の各行が USECASES.md の受け入れ基準に文面どおり実在するか (受け入れ基準を改訂したあとに古い写しが残っていないか)。「対象 UC」が複数の機能設計書では、行の先頭の `UC-<n>: ` を除いた文面を、その UC の受け入れ基準と比べる。1 列目の見出しが `確かめること` で始まる表 (「対象 UC」がなしの機能設計書と、DESIGN.md「横断規約」のアプリシェルの項) は受け入れ基準の写しではないので、この照合の対象外
+> 1. **落とし漏れ**: USECASES.md の各 UC・各規則 (BR) が、いずれかの機能設計書でカバーされているか。各 UC の受け入れ基準の各行が、いずれかの機能設計書「テスト方針」の表に写されて検証レベルを割り当てられているか (レベル `なし (<理由>)` も割り当てに数える。その理由が `~/.claude/guidelines/core/testing.md`「テストを書くかを先に決める」の 2 つの軸に沿っているか、逆に 2 つとも低い行にテストのレベルを割り当てていないかも見る。複数の機能設計書にまたがる二重の割り当ても指摘する。同じ機能設計書の `E2E 対象動線:` 行は表の該当行の再掲であり、二重には当たらない)。逆向きに、テスト方針の表の各行が USECASES.md の受け入れ基準に文面どおり実在するか (受け入れ基準を改訂したあとに古い写しが残っていないか)。「対象 UC」が複数の機能設計書では、行の先頭の `UC-<n>: ` を除いた文面を、その UC の受け入れ基準と比べる。1 列目の見出しが `確かめること` で始まる表 (「対象 UC」がなしの機能設計書と、DESIGN.md「横断規約」のアプリシェルの項) は受け入れ基準の写しではないので、この照合の対象外
 > 2. **矛盾**: 機能設計書どうし、および DESIGN.md との食い違い (スキーマと入出力、API 一覧と各機能の API 節)
 > 3. **未定義・参照切れ**: 使われている用語・テーブル・エンドポイント・節参照に定義があるか。「後述」「別途定義」のまま宙に浮いた参照が無いか
 > 4. **エッジケースの妥当性**: 明らかに起こるのに決定が書かれていないエッジケース
@@ -210,7 +210,7 @@ sh ~/.claude/skills/dev-spec/scripts/dep-depth.sh [--serial] <scratchpad>
 
 `references/issue-template.md` の「issue 作成手順」に従う。要点:
 
-1. **docs をコミットする**: docs/design/ 配下の成果物 (DESIGN.md / features/ ほか。ただし `docs/pending-review/` は対象外 — dev-impl が管理する) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/rules/core/orchestration.md` に従う)。**/dev-impl は origin のデフォルトブランチから切ったブランチで docs を読むため、実装開始前にこのコミットが origin のデフォルトブランチに入っている必要がある。** デフォルトブランチ上でコミットした場合は push を、デフォルトブランチが保護されていて直接 push できない場合は docs のブランチから PR を作って merge することを、下の 4. の案内に含める
+1. **docs をコミットする**: docs/design/ 配下の成果物 (DESIGN.md / features/ ほか。ただし `docs/pending-review/` は対象外 — dev-impl が管理する) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/guidelines/core/orchestration.md` に従う)。**/dev-impl は origin のデフォルトブランチから切ったブランチで docs を読むため、実装開始前にこのコミットが origin のデフォルトブランチに入っている必要がある。** デフォルトブランチ上でコミットした場合は push を、デフォルトブランチが保護されていて直接 push できない場合は docs のブランチから PR を作って merge することを、下の 4. の案内に含める
 
 2. **作成前に人間の同意を取る** (GitHub への書き込みなので):
 
@@ -261,9 +261,9 @@ B: このセッションで続行 — このセッションのまま、あなた
 
 設計・タスク分解で以下を参照する:
 
-- TDD ルール: `~/.claude/rules/core/tdd.md`
-- 設計原則: `~/.claude/rules/core/design.md`
-- テスト方針: `~/.claude/rules/core/testing.md`
+- TDD ルール: `~/.claude/guidelines/core/tdd.md`
+- 設計原則: `~/.claude/guidelines/core/design.md`
+- テスト方針: `~/.claude/guidelines/core/testing.md`
 
 ## 関連スキル・エージェント
 
