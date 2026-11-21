@@ -87,20 +87,17 @@ scroll / input / 頻繁な計算結果の反映など、緊急でない state �
 
 ```tsx
 // Bad: 毎スクロールで synchronous に re-render
-useEffect(() => {
-  const handler = () => setScrollY(window.scrollY)
-  window.addEventListener('scroll', handler, { passive: true })
-  return () => window.removeEventListener('scroll', handler)
-}, [])
+<div onScroll={(e) => setScrollY(e.currentTarget.scrollTop)}>{children}</div>
 
 // Good
-useEffect(() => {
-  const handler = () => {
-    startTransition(() => setScrollY(window.scrollY))
-  }
-  window.addEventListener('scroll', handler, { passive: true })
-  return () => window.removeEventListener('scroll', handler)
-}, [])
+<div
+  onScroll={(e) => {
+    const next = e.currentTarget.scrollTop
+    startTransition(() => setScrollY(next))
+  }}
+>
+  {children}
+</div>
 ```
 
 ## useDeferredValue で重い派生レンダーをずらす

@@ -47,12 +47,18 @@ model: opus
 
 ### 3. コード品質
 
-`~/.claude/rules/core/design.md` / `implementation.md` への**明白な**違反のみ指摘する (スタイルの好みは指摘しない):
+`~/.claude/rules/core/design.md` / `implementation.md` と、下の表で当たる技術別の rules への**明白な**違反のみ指摘する (スタイルの好みは指摘しない)。技術別の rules は subagent には自動では読み込まれないので、当たるものを自分で全ファイル Read する:
+
+| 当たる条件 (どちらか) | Read する rules |
+| --- | --- |
+| `docs/design/DESIGN.md`「アーキテクチャと技術選定」が React を選んでいる / `package.json` の依存に `react` がある | `~/.claude/rules/frontend/react/` の全ファイル |
 
 - 外界 (IO) の直接呼び出し (DI されていない fetch / Date.now() / Math.random() 等)
 - 頼まれていない機能・抽象化・不可能シナリオの error handling (最小実装違反)
 - 依頼にトレースできない隣接コードの改変
 - 曖昧な命名 (`check` / `process` / `handle` 等) の新規導入
+- 技術別の rules が禁じる書き方 (例: React の rules が禁じる `useEffect`)
+- 差分に足した、lint の規則を外すコメント (`oxlint-disable` / `eslint-disable` / `biome-ignore` など)。理由が書かれていない、または理由が技術別の rules とプロジェクトの規約 (`CLAUDE.md` / `AGENTS.md`) の許す場面に当たらないものは `medium` / `category: code-quality`。プロジェクトの規約が外すことを禁じている規則 (例: レイヤ境界の import 制限) を外しているものは `high` (lint で強制した境界が、レビューを通って壊れたまま残るため)。同じ形の箇所の一括走査に従い、差分の追加行から外すコメントをすべて抜き出して 1 件にまとめる
 
 E2E の中の証跡ヘルパー (`E2E_EVIDENCE_DIR` を読んでスクリーンショットを書き出す `capture`) と、golden path の spec からの `capture` 呼び出しは、頼まれていない機能として指摘しない。dev-impl が PR に動作確認の証跡を載せるための規約で、`~/.claude/skills/workflow-create-pr/references/evidence.md` が定めている。
 - `implementation.md`「コードコメント」の「書かない」に当たる新規コメント (What の再述・変更履歴・タスク ID の参照・自信の無さを言葉で埋めたもの)。severity は `medium` にする。契約は壊れておらず、規約違反が残る段階だからである (dev-impl では保留リストに回る)。同じ形の箇所の一括走査に従い、差分の追加コメント行をすべて判定して 1 件にまとめる

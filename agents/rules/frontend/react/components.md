@@ -23,7 +23,7 @@ function Cart({ items }: { items: Item[] }) {
   return <List items={items} />
 }
 
-// Good: 副作用はイベントハンドラ or useEffect、props は不変
+// Good: 副作用はイベントハンドラ (useEffect は @hooks.md の例外だけ)、props は不変
 function Cart({ items }: { items: Item[] }) {
   const displayItems = [...items, { id: 'free-gift' }]
   return <List items={displayItems} />

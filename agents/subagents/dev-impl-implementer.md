@@ -34,7 +34,11 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 1. **issue 本文**: `gh issue view <issue_number> --json title,body` で取得する。`## ゴール` / `## 設計` / `## DoD` / `## 非スコープ` / `## 依存` の節構成
 2. **issue の `## 設計` が参照する docs**: 通常は `docs/design/features/<機能名>.md` と、言及があれば `docs/design/DESIGN.md` の該当節。webapp のアプリシェルの子は機能設計書を持たず、`docs/design/DESIGN.md`「横断規約」のアプリシェルの項を指す。**契約 (入出力・API・エッジケースの決定) はここが正本**。以下で「設計文書」と書くときは、この 2. で読んだ文書を指す
 3. **`docs/design/DESIGN.md`「開発・検証コマンド」**: セットアップ・テスト実行・lint の方法はここに従う (DESIGN.md が無い構成では issue の DoD に書かれたコマンドから読み取る)
-4. **rules**: `$HOME/.claude/rules/core/` の tdd.md / design.md / testing.md / implementation.md / verification.md と、あれば言語別 rules。**親の hooks も CLAUDE.md も継承されないため、これを読まずに実装しない**
+4. **rules**: `$HOME/.claude/rules/core/` の tdd.md / design.md / testing.md / implementation.md / verification.md と、下の表で当たる技術別の rules の全ファイル。**親の hooks も CLAUDE.md も継承されず、rules の `paths` による自動読み込みも届かないため、これを読まずに実装しない**
+
+   | 当たる条件 (どちらか) | Read する rules |
+   | --- | --- |
+   | `docs/design/DESIGN.md`「アーキテクチャと技術選定」が React を選んでいる / `package.json` の依存に `react` がある | `$HOME/.claude/rules/frontend/react/` の全ファイル |
 5. **証跡の集め方**: `$HOME/.claude/skills/workflow-create-pr/references/evidence.md`。画面または HTTP API に触れる issue のときだけ読む。どちらにも触れない issue でも `manifest.json` は書く (下記「動作確認の証跡」)
 
 ## 作業ディレクトリの制約 (最重要)
@@ -81,6 +85,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 | 画面・E2E・機能名を消した/変えた | `git grep` で `docs/design/` と `docs/user-guide/` を探し、古い記述を直す |
 | 画面の見た目を変えた | 視覚テストの画像を開き、同じ行の下端・幅・ラベルの位置・複数の幅で確かめる |
 | E2E を足した/変えた | 「E2E で確かめないもの」(文言・書式・計算・DB の値) を比べていないか |
+| lint の規則を外すコメントを足した | 理由をコメントに書いたか。その理由が技術別の rules とプロジェクトの規約 (`CLAUDE.md` / `AGENTS.md`) の許す場面に当たるか。規約が外すことを禁じている規則 (例: レイヤ境界) なら外さずに設計を直す |
 
 ### 3. 表にない変更 (その他)
 

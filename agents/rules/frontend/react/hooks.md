@@ -6,7 +6,14 @@ paths:
 
 # React Hooks ルール
 
-**重要**: useEffect は外部システムとの同期にだけ使う。それ以外のほぼ全ての場面で useEffect は不要であり、乱用は再レンダリング・stale state・race condition・テスト困難の温床となる。
+**重要**: `useEffect` は禁止する。ほぼ全ての場面で `useEffect` は不要であり、乱用は再レンダリング・stale state・race condition・テスト困難の温床となる。下の「例外として使ってよい場面」に当たり、どうしても要るときだけ、lint の規則を外すコメントにその理由を書いて使う。
+
+プロジェクトの lint が `useEffect` の import を禁じているとき (例: `no-restricted-imports` で `react` の `useEffect` を指定) は、外すコメントを import の行に付ける。lint で禁じていないプロジェクトでも、同じ形の理由のコメントを `useEffect` の呼び出しの直前に書く。理由には、例外のどれに当たり、何と同期するかを書く。
+
+```tsx
+// oxlint-disable-next-line no-restricted-imports -- 外部システムとの同期: 地図ライブラリのインスタンスを生成し、アンマウントで破棄する
+import { useEffect } from 'react'
+```
 
 ## API を選ぶ前に公式ドキュメントの意図と照合する
 
@@ -35,7 +42,7 @@ useLayoutEffect(() => {
 
 ## 実装前 / レビュー時の useEffect 棚卸し
 
-新規 `useEffect` を書く前 / 既存コードをレビューするときは、下記 12 パターンに当てはまらないか必ずチェック。当てはまれば書き換える。
+`useEffect` が要りそうに見えたとき / 既存コードをレビューするときは、下記 12 パターンに当てはまらないか必ずチェック。当てはまれば書き換える。どれにも当たらず「例外として使ってよい場面」に当たるときだけ、理由のコメント付きで使う。
 
 ## Rules of Hooks
 
@@ -218,18 +225,9 @@ useEffect(() => {
 if (typeof window !== 'undefined') {
   checkAuthToken()
 }
-
-// Good: どうしてもコンポーネント内なら didInit フラグ
-let didInit = false
-function App() {
-  useEffect(() => {
-    if (!didInit) {
-      didInit = true
-      loadDataFromLocalStorage()
-    }
-  }, [])
-}
 ```
+
+初期化の完了を待って描画を切り替えたいとき (読み込みの Promise を待つなど) も `useEffect` で待たない。`use` と Suspense、または SWR などのデータ取得ライブラリで待つ (@data-fetching.md)。
 
 ### 9. 親への state 変更通知
 
@@ -321,17 +319,17 @@ const { data: results } = useSWR(['/api/search', query], ([_, q]) =>
 )
 ```
 
-## useEffect を使ってよい場面
+## 例外として使ってよい場面
 
-**外部システムとの同期だけ**：
+**外部システムとの同期だけ**。lint の規則を外すコメントの理由として認めるのは次の 3 つで、コメントにはどれに当たるかを書く：
 
-- DOM API（`document.title`、IntersectionObserver、サードパーティ widget の生成/破棄）
+- DOM API（`document.title`、IntersectionObserver、サードパーティ widget の生成/破棄、ページ全体のキー入力の購読）
 - ネットワーク購読（WebSocket、SSE 接続のセットアップ/teardown）
 - 外部ライブラリのライフサイクル連携（map ライブラリ、エディタ）
 
-それ以外は本ドキュメントの12パターンに当てはまっていないか必ず確認する。
+値を読むための購読 (オンライン状態・URL・メディアクエリなど) は例外に数えず、`useSyncExternalStore` を使う (パターン 11)。ルーターを使うプロジェクトでは、URL の変化はルーターの hook で受け取る。それ以外は本ドキュメントの12パターンに当てはまっていないか必ず確認する。
 
-## useEffect の正しい書き方
+## 例外として使うときの書き方
 
 ### 依存配列はプリミティブで絞る
 
