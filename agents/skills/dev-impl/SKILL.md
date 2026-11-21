@@ -76,7 +76,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 - **docs が push 済みか確認する**: ローカルに `docs/design/DESIGN.md` があるのに `git log origin/$DEFAULT -1 -- docs/design/DESIGN.md docs/design/features/` が空なら、ブランチ基点 (origin) に設計 docs が無い。docs を含むコミットの push を人間に依頼して停止する (2.1 のブランチは origin から切るため、push されていないと implementer が docs を読めない)。push が済んだら、人間が本スキルを再実行する
 - `docs/design/DESIGN.md` が無い構成でも、issue が自己完結していれば続行してよい (issue の DoD に実行コマンドが揃っていることが条件)
 
-作業ログ用のディレクトリを作る: `SCRATCH=<scratchpad>/dev-impl-$(date +%Y%m%d-%H%M%S)` (`<scratchpad>` はこのセッションの scratchpad のディレクトリ。report JSON の置き場で、git 管理外)。保留レビュー項目のチェックリストは **`docs/pending-review/issue-<N>.html`** に置く (リポジトリ内。issue 1 件につき 1 ファイル。issue のコミットに含めて merge されるため、別マシン・別セッション・後続 run にも引き継がれる。作成は 2.3、確認案内は Step 3)。
+作業ログ用のディレクトリを作る: `SCRATCH=<scratchpad>/dev-impl-$(date +%Y%m%d-%H%M%S)` (`<scratchpad>` はこのセッションの scratchpad のディレクトリ。report JSON の置き場で、git 管理外)。保留レビュー項目のチェックリストは **`docs/pending-review/issue-<N>.md`** に置く (リポジトリ内。issue 1 件につき 1 ファイル。issue のコミットに含めて merge されるため、別マシン・別セッション・後続 run にも引き継がれる。作成は 2.3、確認案内は Step 3)。
 
 ## Step 1: issue の収集と着手順
 
@@ -361,7 +361,20 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 #### 保留レビュー項目の記録
 
-修正対象にしなかった medium と、r2 で残った `test-quality` / `code-quality` / `ui-layout` の high は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。**保留対象が 1 件以上あるときだけ** `docs/pending-review/issue-<N>.html` を新規に書き出す (0 件なら作らない — 空ファイルが積まれると Step 3 の件数がノイズを数える)。各 finding はチェックボックス付きの 1 項目で、severity / category / `file:line` / summary / evidence / fix_hint をまとめる。**high は medium より前に置く。** 各項目の要素に `data-severity="high|medium"` と `data-category="<category>"` を持たせ、設計差し戻しが必要な指摘 (下記) には `data-design-return="true"` も持たせる — Step 3 が属性で件数を数え、設計差し戻しを拾い、過去 run のファイルも同じ形で数えられるようにするため。 外部依存の無い自己完結の静的 HTML とする。**issue 1 件につき 1 ファイルにする** — 全 issue が 1 枚のファイルへ追記する形だと、並列で走る issue が同じ位置に節を足して rebase のたびに必ず衝突する。ファイルを分ければ衝突は起きないので、union の衝突解決も要らない。**このファイルは 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
+修正対象にしなかった medium と、r2 で残った `test-quality` / `code-quality` / `ui-layout` の high は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。**保留対象が 1 件以上あるときだけ** `docs/pending-review/issue-<N>.md` を新規に書き出す (0 件なら作らない — 空ファイルが積まれると Step 3 の件数がノイズを数える)。各 finding はチェックボックス付きの 1 項目で、次の形で severity / category / `file:line` / summary / evidence / fix_hint をまとめる。**high は medium より前に置く。** 項目の行頭の `- [ ] [<severity>] [<category>]` と、設計差し戻しが必要な指摘 (下記) に付ける `[設計差し戻し]` は書式を変えない — Step 3 がこの文字列で件数を数え、設計差し戻しを拾い、過去 run のファイルも同じ形で数えるため。
+
+```markdown
+# issue #<N> の保留レビュー項目
+
+- [ ] [high] [test-quality] `src/features/tag/save.test.ts:42` <summary>
+  - evidence: <根拠>
+  - fix_hint: <修正方針>
+- [ ] [medium] [e2e] [設計差し戻し] `e2e/tag.spec.ts:10` <summary>
+  - evidence: <根拠>
+  - fix_hint: <修正方針>
+```
+
+**issue 1 件につき 1 ファイルにする** — 全 issue が 1 枚のファイルへ追記する形だと、並列で走る issue が同じ位置に節を足して rebase のたびに必ず衝突する。ファイルを分ければ衝突は起きないので、union の衝突解決も要らない。**このファイルは 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
 
 **r2 まで回した issue では、r1 と r2 の medium を `file:line` + summary で重複排除した和を書き出す。** r2 が r1 と同じ medium を出し直すとは限らないので (検査項目 6 は high しか追わず、同じ形の箇所の走査も high 候補を先に処理して打ち切りうる)、r2 のぶんだけを書くと r1 の medium が黙って落ちる。逆に単純な和では同じ指摘が二重に載るので、重複排除する。r1 で通過した issue は r1 の medium だけになる。
 
@@ -369,7 +382,7 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 ### 2.4 コミット・検証・PR・merge
 
-1. **コミット**: 変更を論理単位で Conventional Commit (`~/.claude/rules/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針「Haiku への委譲」)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.html` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
+1. **コミット**: 変更を論理単位で Conventional Commit (`~/.claude/rules/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針「Haiku への委譲」)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.md` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
 
    コミットが手順 2 の検証より前に来るのは、検証対象を「積み終えた差分」に固定するためである。`~/.claude/rules/core/commit.md` のコミット条件 (全テスト green) は、implementer の `test_result` / `dod_result` が exit 0 であること (2.2 の検収で確認済み) を根拠に満たす。**手順 2 が red だった場合、このコミットは merge されない駐車ブランチ上の記録として扱う** (2.6 の WIP 退避と同じ例外)。
 
@@ -493,7 +506,7 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 - CI: <pass (check 名の列挙) / なし (checks 未登録)>
 - レビュー: <ラウンド数> 周 (low: <r1 と r2 の和を列挙、なければ「なし」>)<前 run の review JSON が無く前ラウンドの指摘を再検査していなければ「(前ラウンドの指摘の再検査なし)」>
 - 保留 high (test-quality / code-quality / ui-layout): <各 1 行で `file:line` + summary。なければ「なし」>
-- 保留 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/pending-review/issue-<N>.html` に記録)
+- 保留 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/pending-review/issue-<N>.md` に記録)
 - 設計差し戻しが必要な指摘: <`medium` の「対象動線未指定」と「テスト不要の判断が実装と合わない」。各 1 行。なければ「なし」>
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
@@ -521,7 +534,7 @@ gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が
 
 ブランチと open PR は merge せず残す (人間が差分を確認でき、再開時に再利用できる)。**その issue に依存しない次の issue へ進む。** 次の issue は `sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" "$N" parked` が出す着手順で決める (Step 1)。
 
-**run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する — このときも Step 3 の手順 2 (docs/pending-review/ の open と確認促し) を実行する (merge 済み issue の保留項目を停止で失わない)。
+**run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する — このときも Step 3 の手順 2 (docs/pending-review/ の件数の集計と確認促し) を実行する (merge 済み issue の保留項目を停止で失わない)。
 
 ## Step 3: 終了処理
 
@@ -549,9 +562,9 @@ done
 
 2. 保留レビュー項目を確かめてもらう:
    - デフォルトブランチへ戻って `git pull` する (`git fetch origin` のあと `git switch "$DEFAULT" && git pull`。$REPO_DIR が worktree で既定ブランチを別の checkout が使っていて switch できなければ `git switch --detach "origin/$DEFAULT"`)
-   - `docs/pending-review/` にファイルがあれば一覧と件数を出す。件数は全ファイルの合計で、`rg --count-matches 'data-severity="high"' docs/pending-review/ | awk -F: '{ s += $2 } END { print s + 0 }'` と、同じく `medium` で数える (`--count-matches` は 1 行に複数の項目があっても数える) (2.3 が全項目にこの属性を付けている)
-   - `data-design-return="true"` の項目を拾い、設計差し戻しが必要な指摘として最終報告に列挙する
-   - `open docs/pending-review/` でディレクトリを開き (macOS。非 macOS ではパスを提示するだけでよい)、最終報告の先頭で「実装は完了したが、保留 high <h> 件・保留 medium <m> 件のチェックが必要」とユーザーに確認を促す (過去 run の未消化分も累積している)
+   - `docs/pending-review/` にファイルがあれば一覧と件数を出す。件数はチェックの付いていない項目の全ファイルの合計で、`rg --count '^- \[ \] \[high\]' docs/pending-review/ | awk -F: '{ s += $2 } END { print s + 0 }'` と、同じく `medium` で数える (2.3 が全項目の行頭をこの形で書いている)
+   - `[設計差し戻し]` を含むチェックの付いていない項目を拾い、設計差し戻しが必要な指摘として最終報告に列挙する
+   - 最終報告の先頭で「実装は完了したが、保留 high <h> 件・保留 medium <m> 件のチェックが必要」と、チェックリストのパスを添えてユーザーに確認を促す (過去 run の未消化分も累積している)
    - 対応要と判断した項目は、新しい issue にするか直接の修正依頼で対応してもらう。確認が済んだ issue はファイルごと削除する (手動または修正依頼。通常のコミットで反映)
    - 保留にした medium を「早見表にあった種類か」で分ける。早見表 (`dev-impl-implementer.md`「実装後のセルフチェック」) に無かった種類は、次回の早見表に足す候補として最終報告に列挙する (表に足すかは人間が決める)
 3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
