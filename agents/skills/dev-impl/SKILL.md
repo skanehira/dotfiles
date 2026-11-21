@@ -365,7 +365,7 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 **r2 まで回した issue では、r1 と r2 の medium を `file:line` + summary で重複排除した和を書き出す。** r2 が r1 と同じ medium を出し直すとは限らないので (検査項目 6 は high しか追わず、同じ形の箇所の走査も high 候補を先に処理して打ち切りうる)、r2 のぶんだけを書くと r1 の medium が黙って落ちる。逆に単純な和では同じ指摘が二重に載るので、重複排除する。r1 で通過した issue は r1 の medium だけになる。
 
-**`medium` / `category: e2e` で、summary が `対象動線未指定 (設計差し戻し):` で始まる finding だけは別立てで扱う** (この書式は review-impl 側で固定してある)。 これは実装ではなく設計側の欠落なので、保留リストに載せたうえで、2.5 の完了コメントに「設計差し戻しが必要な指摘」として独立の行で書き、Step 3 の最終報告にも載せる (保留リストに埋もれると設計へ差し戻る経路が消える)。
+**`medium` の finding のうち、summary が次のどちらかで始まるものだけは別立てで扱う** (この書式は review-impl 側で固定してある): `category: e2e` の `対象動線未指定 (設計差し戻し):` と、`category: spec-compliance` の `テスト不要の判断が実装と合わない (設計差し戻し):`。 これは実装ではなく設計側の欠落なので、保留リストに載せたうえで、2.5 の完了コメントに「設計差し戻しが必要な指摘」として独立の行で書き、Step 3 の最終報告にも載せる (保留リストに埋もれると設計へ差し戻る経路が消える)。
 
 ### 2.4 コミット・検証・PR・merge
 
@@ -494,7 +494,7 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 - レビュー: <ラウンド数> 周 (low: <r1 と r2 の和を列挙、なければ「なし」>)<前 run の review JSON が無く前ラウンドの指摘を再検査していなければ「(前ラウンドの指摘の再検査なし)」>
 - 保留 high (test-quality / code-quality / ui-layout): <各 1 行で `file:line` + summary。なければ「なし」>
 - 保留 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/pending-review/issue-<N>.html` に記録)
-- 設計差し戻しが必要な指摘: <`medium` / `category: e2e` の「対象動線未指定」。各 1 行。なければ「なし」>
+- 設計差し戻しが必要な指摘: <`medium` の「対象動線未指定」と「テスト不要の判断が実装と合わない」。各 1 行。なければ「なし」>
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
 
