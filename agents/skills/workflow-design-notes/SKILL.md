@@ -31,7 +31,7 @@ description: dev-spec を使わず議論しながら設計を固めるときの�
 
 トリガー: ユーザーの「まとめて」「落とし込んで」指示。議論が節目（アーキテクチャ確定・レビュー依頼前）に達したと判断したら自分から提案してよい。
 
-1. `~/.claude/guidelines/core/documentation.md` の手順どおり依拠事実を rg で再検証する
+1. 設計書は `~/.claude/skills/workflow-doc-write/SKILL.md` の手順 3〜7 (下書き・推敲・書き出し・検査・整合性の確認) で書く。とくに依拠事実は rg で再検証する
 2. `~/.claude/guidelines/core/references/doc-formats/design-doc.md`（構造規範）と `../dev-spec/references/design-doc.md`（DESIGN.md テンプレートの正本）・`../dev-spec/references/feature-doc.md`（機能設計書テンプレート）を Read する
 3. 台帳**全体**から `docs/design/DESIGN.md` + `docs/design/features/` を**毎回ゼロから生成**する（前回生成物への差分編集をしない）。生成物の冒頭に `<!-- generated-from: docs/DESIGN_NOTES.md -->` を入れる（直接編集への注意標識）
 4. design-doc.md の「機械ゲート」判定コマンド（POC_NEEDED blocker=true 残存）を自分で実行し、通らなければ生成をやり直す
@@ -50,6 +50,7 @@ description: dev-spec を使わず議論しながら設計を固めるときの�
 
 ## 関連
 
-- `~/.claude/guidelines/core/documentation.md` — ドキュメント作業ルールの正本
+- `~/.claude/guidelines/core/documentation.md` — ドキュメント作業の規範の正本
+- `~/.claude/skills/workflow-doc-write/SKILL.md` — 文書を書く手順 (推敲・検査・整合性の確認)
 - `~/.claude/guidelines/core/references/doc-formats/design-doc.md` — 設計書の構造規範（機械ゲート含む）
 - `../utility-doc-audit/SKILL.md` — 落とし込み後の監査

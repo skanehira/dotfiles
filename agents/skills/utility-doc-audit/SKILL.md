@@ -14,7 +14,7 @@ description: ユーザー起動専用のドキュメント監査。設計書・�
 - ユーザーが `/utility-doc-audit <path>` を実行したとき
 - `/workflow-design-notes` の落とし込みフェーズ (step 5) から起動されたとき
 
-この 2 つ以外では起動しない。とくにドキュメントを編集した直後や「監査して」と依頼された場合は、自分で起動せず `~/.claude/guidelines/core/documentation.md`「編集後の整合性パス」3. の依頼 1 行を出してユーザーに委ねる。
+この 2 つ以外では起動しない。とくにドキュメントを編集した直後や「監査して」と依頼された場合は、自分で起動せず `~/.claude/skills/workflow-doc-write/SKILL.md`「8. 監査の要否を判定する」の依頼 1 行を出してユーザーに委ねる。
 
 ## 入力
 
@@ -102,5 +102,6 @@ severity: `major` = 実装者が止まる / `minor` = 説明不足・表記揺�
 
 ## 関連
 
-- `~/.claude/guidelines/core/documentation.md` — ドキュメント作業ルールの正本（本スキルは「編集後の整合性パス」の実行体）
+- `~/.claude/guidelines/core/documentation.md` — ドキュメント作業の規範の正本
+- `~/.claude/skills/workflow-doc-write/SKILL.md` — 文書を書く手順。監査の要否の判定 (手順 8) が本スキルの起動を依頼する
 - `~/.claude/guidelines/core/references/doc-formats/` — 型別構造規範（フォーマット適合観点の正本）

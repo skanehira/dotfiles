@@ -264,6 +264,7 @@ B: このセッションで続行 — このセッションのまま、あなた
 - TDD ルール: `~/.claude/guidelines/core/tdd.md`
 - 設計原則: `~/.claude/guidelines/core/design.md`
 - テスト方針: `~/.claude/guidelines/core/testing.md`
+- 文書を書く手順: `~/.claude/skills/workflow-doc-write/SKILL.md`。フェーズ 6・7 の設計書は、その手順 1〜7 で書く (監査はフェーズ 8 の設計チェックが行う)
 
 ## 関連スキル・エージェント
 
