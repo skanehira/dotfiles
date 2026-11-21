@@ -176,6 +176,7 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 | [workflow-create-pr](./workflow-create-pr/)       | ローカルのコミット履歴と差分から PR を作成 (`.github/` のテンプレート自動検出)。`--draft` で Draft PR、`--evidence` で画面のスクリーンショットと API の実行結果を本文に載せて添付する。dev-impl の 2.4 が非対話モード (`--yes`) で証跡付きの PR を作るのに使う。旧名は workflow-create-draft-pr |
 | [workflow-debate](./workflow-debate/)             | 複数サブエージェントで議論を反復し、相違が収束するまで議題を検証                                                                                                                                                                                                                                |
 | [workflow-design-notes](./workflow-design-notes/) | 議論しながら設計を固める進行様式。決定台帳 → 節目に DESIGN.md + docs/design/features/ へゼロから落とし込み                                                                                                                                                                                      |
+| [workflow-doc-write](./workflow-doc-write/) | 文書ファイルを書く・直す手順。結論と理由の形で下書きし、改訂は節を書き直し、yomiyasu で推敲し、`doc_check.py` で、決まるまでの流れや確かめた範囲の書き込み・長い文・重複を検査する |
 
 ### プロダクト生成
 
