@@ -255,7 +255,7 @@ evidence_dir: <SCRATCH>/evidence-<N>
 - `self_review.change_types` に「その他」がある場合、`self_review.other` の各項目に `summary` / `axes` (`spec` / `layer` / `artifact`) / `answers` (4 問い) が埋まっている
 - 差分にコメントを足している場合、`self_review.comments` の `added` / `removed` が記録されている (`implementation.md`「コードコメント」の自己点検の結果)
 - `evidence.manifest_path` の `manifest.json` があり、その `captured_mode` が今回起動した `mode` と一致し、`screens[].file` と `api[].file` の全パスが実在する (`ls` で確かめる)。実在しないパスを 2.4 手順 3 に渡すと添付が失敗し、本文にローカルのパスが残る。画面と API が両方とも空なら `note` に理由が書かれていること
-- UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でないこと。**その画像を親が `Read` で実際に開いて**、同じ行の下端・幅の決まり方・ラベル位置が揃っていることを確かめる。exit code は見た目を守らないので、ここを飛ばすと崩れは利用者が指摘するまで残る
+- UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でないこと (implementer が自分で画像を見た記録)。親は画像を開かない。差分で追加・更新された基準画像は、2.3 の review-impl が検査項目 5 で開いて見る
 
 検収に落ちた報告の扱い:
 
