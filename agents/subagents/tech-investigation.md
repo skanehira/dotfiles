@@ -95,6 +95,18 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [${MARKER_ID}] <message>" >> "$LOG"
 
 PoC コードは「**マーカー scope だけを検証する最小コード**」に限定。本実装の prototype を書こうとしない (= ファイル 1 つ・関数 1 つで完結する規模)。
 
+**ブラウザを使う PoC は、必ずヘッドレスで動かす。** この subagent はユーザーの作業中に裏で動くので、ウィンドウを画面に出すとユーザーの操作を奪う。
+
+| 手段 | 書き方 |
+| --- | --- |
+| Playwright のスクリプト | `chromium.launch({ headless: true })` と明示する。`headless: false` と `slowMo` は書かない |
+| Playwright Test | `npx playwright test` を、`--headed` / `--ui` / `--debug` を付けずに実行する。設定ファイルに `headless: false` を書かない |
+| Puppeteer | `puppeteer.launch({ headless: true })` と明示する |
+| Chrome / Chromium を直接起動する | `--headless=new` を付ける |
+
+- `open <URL>` や `osascript` で、ブラウザやアプリを開かない
+- 画面の見た目を確かめたいときは、スクリーンショットを `workspace_dir` に書き出し、Read で画像として見る
+
 実行環境が無い (該当 runtime 未インストール) 場合は `result: partial` で「環境準備の上で再検証必要」と返す。
 
 ### Step 4: 結果分類
