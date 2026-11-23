@@ -1,7 +1,7 @@
 ---
 name: dev-spec
 description: >-
-  設計ループ。ユーザーストーリー → UI スケッチ → ユースケース → 実現可能性検証 → PoC 検証 →
+  設計ループ。ユーザーストーリー → ユースケース → UI スケッチ → 実現可能性検証 → PoC 検証 →
   横断設計 (docs/design/DESIGN.md) → 機能設計 (docs/design/features/) → 設計チェック → issue ドラフトチェック →
   GitHub issue 生成 (親子構造) までを対話的に実行し、人間が issue を確認して実装ループへ引き渡す。
   「設計フェーズを開始」「要件を整理したい」「計画を立てたい」「ユーザーストーリーを書きたい」
@@ -33,7 +33,7 @@ argument-hint: "[cli|webapp] [タスク説明]"
 
 ## プロダクトモード
 
-設計対象がブラウザ操作型か CLI/ターミナル型かを表す横断設定。フェーズ 2 (UI スケッチ) の要否と E2E 検証の中身を左右する。
+設計対象がブラウザ操作型か CLI/ターミナル型かを表す横断設定。フェーズ 3 (UI スケッチ) の要否と E2E 検証の中身を左右する。
 
 | モード   | 対象                                             | 判定ヒント                                               |
 | -------- | ------------------------------------------------ | -------------------------------------------------------- |
@@ -57,8 +57,8 @@ dev-impl が起動する implementer (`dev-impl-implementer`) とレビュワー
 | #  | フェーズ                          | 手順書                              | 出力                               | クイックモード | cli モード |
 | -- | --------------------------------- | ----------------------------------- | ---------------------------------- | -------------- | ---------- |
 | 1  | ユーザーストーリー                | `references/user-story.md`          | docs/design/USER_STORIES.md               | スキップ       | 実行       |
-| 2  | UI スケッチ                       | `references/ui-sketch.md`           | docs/design/UI_SKETCH.html                | スキップ       | スキップ   |
-| 3  | ユースケース記述                  | `references/usecase-description.md` | docs/design/USECASES.md + USER_STORIES.md の「実現するユースケース」行 | スキップ       | 実行       |
+| 2  | ユースケース記述                  | `references/usecase-description.md` | docs/design/USECASES.md + USER_STORIES.md の「実現するユースケース」行 | スキップ       | 実行       |
+| 3  | UI スケッチ                       | `references/ui-sketch.md`           | docs/design/UI_SKETCH.html。動作確認で流れが変わったときは USECASES.md の書き換え | スキップ       | スキップ   |
 | 4  | 実現可能性検証                    | `references/feasibility-check.md`   | docs/design/FEASIBILITY.md (PoC 計画)     | 条件付き実行   | 実行       |
 | 5  | PoC 検証                          | `references/poc-verification.md`    | FEASIBILITY.md 更新 (設計書のマーカーから足した PoC 計画と PoC 結果)。スコープ縮小を選んだときは USER_STORIES.md・USECASES.md (features/ があればそれも) の書き換え | 条件付き実行   | 実行       |
 | 6  | 横断設計                          | `references/design-doc.md`          | docs/design/DESIGN.md                     | 実行           | 実行       |
@@ -107,19 +107,19 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 「続きから」の再開フェーズは次の順で決める。
 
 1. FEASIBILITY.md があれば、先に「ゲート条件」の 2 つのコマンドを実行する。未解決の `blocker=true` が 1 件以上あるか、見出しと POC_STATUS 行の件数が食い違えば、下流の成果物 (DESIGN.md など) の有無によらずフェーズ 5 から再開する (フェーズ 6・7 から差し戻したあと、フェーズ 5 の途中で中断した場合がこれに当たる)
-2. 1 に当たらなければ、次の表で決める (存在する成果物のうち最も下流のものを見る)。UI_SKETCH.html の行は `rg -q '<!-- ui-sketch: finalized -->' docs/design/UI_SKETCH.html` の終了コード (0 = 印あり / 1 = 印なし) で分ける
+2. 1 に当たらなければ、次の表で決める (存在する成果物のうち最も下流のものを見る)。UI_SKETCH.html の行は `rg -q '<!-- ui-sketch: finalized -->' docs/design/UI_SKETCH.html` の終了コード (0 = 印あり / 1 = 印なし) で分ける。下流の順は USER_STORIES.md → USECASES.md → UI_SKETCH.html → FEASIBILITY.md → DESIGN.md である。UI_SKETCH.html があるのに USECASES.md が無いか、被覆チェックが NG を出すときは、UI_SKETCH.html の行ではなく 2 (ユースケース) から再開する。ユースケースを書き終えたら、完了の印があるスケッチは作り直さず、ユースケースのフローと食い違う画面だけを ui-sketch.md 手順 5.4 の修正として直す
 
 | 最も下流の既存成果物                        | 再開フェーズ                                                   |
 | ------------------------------------------- | -------------------------------------------------------------- |
-| USER_STORIES.md                             | 2 (UI スケッチ)。cli モードでは 3                              |
-| UI_SKETCH.html (完了の印 `<!-- ui-sketch: finalized -->` なし) | 2 (UI スケッチの途中で中断した)。ui-sketch.md の手順 1 から始め、既存の UI_SKETCH.html から読み取れる決定は確認だけで済ませる。ただし frontend-design の痕跡の行 (`<!-- frontend-design: `) が無ければ、手順 5.3 の作り込みは確認で済ませずに実行する (ui-sketch.md「frontend-design の起動のしかた」) |
-| UI_SKETCH.html (完了の印あり)               | 3 (ユースケース)                                               |
-| USECASES.md                                 | 4 (実現可能性)。ただし USER_STORIES.md もあり、`~/.claude/scripts/check-ac-coverage.ts docs/design/USER_STORIES.md docs/design/USECASES.md` が NG を出すなら 3 (ユースケースの途中で中断したか、書き戻しと被覆チェックが済んでいない。受け入れ基準を持たない旧形式の docs もここに入る) |
+| USER_STORIES.md                             | 2 (ユースケース)                                               |
+| USECASES.md                                 | webapp では 3 (UI スケッチ)、cli モードでは 4 (実現可能性)。ただし USER_STORIES.md もあり、`~/.claude/scripts/check-ac-coverage.ts docs/design/USER_STORIES.md docs/design/USECASES.md` が NG を出すなら 2 (ユースケースの途中で中断したか、書き戻しと被覆チェックが済んでいない。受け入れ基準を持たない旧形式の docs もここに入る) |
+| UI_SKETCH.html (完了の印 `<!-- ui-sketch: finalized -->` なし) | 3 (UI スケッチの途中で中断した)。ui-sketch.md の手順 1 から始め、既存の UI_SKETCH.html から読み取れる決定は確認だけで済ませる。ただし frontend-design の痕跡の行 (`<!-- frontend-design: `) が無ければ、手順 5.3 の作り込みは確認で済ませずに実行する (ui-sketch.md「frontend-design の起動のしかた」) |
+| UI_SKETCH.html (完了の印あり)               | 4 (実現可能性)                                                 |
 | FEASIBILITY.md                              | 6 (横断設計)。1 を通過しているので未解決の `blocker=true` は無い。`blocker=false` の計画だけが unresolved で残っていても 6 へ進み、design-doc.md「入力と転記」の規則 3 がマーカーにする |
 | DESIGN.md                                   | 7 (機能設計)。features/ 各ファイルの「対象 UC」と USECASES.md の UC 一覧を突合し、全 UC がカバー済みなら 8 (USECASES.md が無い構成では人間に確認する) |
 | GitHub に `tracking` issue が 1 件以上ある   | 9 (ドラフトを docs から再生成) → 10。ドラフトはセッション固有の scratchpad にしか無く、10 単独では突き合わせの比較元が無い。親が一部しか作られていない中断状態でも、10 の突き合わせが未作成分を補完する |
 
-更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する (DESIGN.md ではスタンプ行を押し出さず 1 行目に保つ)。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。** フェーズ 3 (ユースケース記述) は USECASES.md に加えて USER_STORIES.md の「実現するユースケース」行も書き換えるので、フェーズ 3 だけを部分実行する場合も両方が更新対象になる。フェーズ 1 だけを部分実行した場合は、USECASES.md があるときだけ、続けて usecase-description.md の手順 9 (書き戻しと被覆チェック) を実行する (ストーリーの追加・Won't への移動がユースケース側の受け入れ基準と食い違うため。USECASES.md が無ければ照合する相手が無く、被覆チェックのコマンドもファイルが無いことで異常終了する)。
+更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する (DESIGN.md ではスタンプ行を押し出さず 1 行目に保つ)。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。** フェーズ 2 (ユースケース記述) は、USECASES.md に加えて USER_STORIES.md の「実現するユースケース」行も書き換える。フェーズ 2 だけを部分実行する場合も、両方が更新対象になる。webapp でユースケースのフローを変えたときは、UI_SKETCH.html の該当する画面とフローも直す (スケッチはユースケースのフローを画面に写したものなので、直さないと食い違う)。フェーズ 1 だけを部分実行した場合は、USECASES.md があるときだけ、続けて usecase-description.md の手順 9 (書き戻しと被覆チェック) を実行する (ストーリーの追加・Won't への移動がユースケース側の受け入れ基準と食い違うため。USECASES.md が無ければ照合する相手が無く、被覆チェックのコマンドもファイルが無いことで異常終了する)。
 
 ### 0.3 モード選択
 
@@ -144,7 +144,7 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 
 ### 部分実行
 
-依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「機能設計だけ書き直したい」「issue を作り直したい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。**ただし対象にフェーズ 6 が含まれる場合は、実行前に必ず「ゲート条件」の判定コマンドを実行する。** docs を修正する部分実行の後は、フェーズ 8 (設計チェック) → 9 (ドラフト再生成 + ドラフトチェック) → 10 の順で issue に反映する (フェーズ 10 の突き合わせが本文差分を検出して貼り直す)。対象がフェーズ 2 (UI スケッチ) で cli モードなら「cli モードでは UI スケッチは対象外です」と案内して終了する。
+依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「機能設計だけ書き直したい」「issue を作り直したい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。**ただし対象にフェーズ 6 が含まれる場合は、実行前に必ず「ゲート条件」の判定コマンドを実行する。** docs を修正する部分実行の後は、フェーズ 8 (設計チェック) → 9 (ドラフト再生成 + ドラフトチェック) → 10 の順で issue に反映する (フェーズ 10 の突き合わせが本文差分を検出して貼り直す)。対象がフェーズ 3 (UI スケッチ) で cli モードなら「cli モードでは UI スケッチは対象外です」と案内して終了する。
 
 ## 各フェーズの進め方
 
@@ -153,8 +153,9 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 ```
 📍 設計ループ [n/10]
    ├─ ✓ user-story（完了）
+   ├─ ✓ usecase-description（完了）
    ├─ ⊘ ui-sketch（cli モードのためスキップ）
-   ├─ ▶ usecase-description（実行中）
+   ├─ ▶ feasibility-check（実行中）
    └─ ○ ...
 ```
 

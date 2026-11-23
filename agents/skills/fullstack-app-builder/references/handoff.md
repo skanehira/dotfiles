@@ -19,7 +19,7 @@ dev-spec は以下の 4 フェーズで `docs/PRODUCT_SPEC.md` を Read し、�
 | dev-spec のフェーズ | 手順書 | PRODUCT_SPEC.md の使われ方 |
 | --- | --- | --- |
 | フェーズ 1 ユーザーストーリー | `references/user-story.md` | プロダクトのスコープ・コア価値の把握 |
-| フェーズ 2 UI スケッチ | `references/ui-sketch.md` | プロダクトのスコープ把握 |
+| フェーズ 3 UI スケッチ | `references/ui-sketch.md` | プロダクトのスコープ把握 |
 | フェーズ 4 実現可能性検証 | `references/feasibility-check.md` | 技術的制約の把握 (PoC 対象の絞り込み) |
 | フェーズ 6 横断設計 | `references/design-doc.md` | プロダクトの目的・技術的制約を DESIGN.md の「目的とスコープ」「アーキテクチャと技術選定」に反映 |
 
@@ -104,7 +104,7 @@ PRODUCT_SPEC.md を書いたら、以下を表示してスキルを終える:
     /dev-spec webapp <プロダクト概要 1 行>。技術スタックは docs/PRODUCT_SPEC.md の確定済みスタックに従う
 
 - docs/PRODUCT_SPEC.md に確定スタックと scaffold 済みの状態を記録済みです。
-  dev-spec のフェーズ 1 (ユーザーストーリー) / 2 (UI スケッチ) / 4 (実現可能性検証) / 6 (横断設計) が自動で読み込みます。
+  dev-spec のフェーズ 1 (ユーザーストーリー) / 3 (UI スケッチ) / 4 (実現可能性検証) / 6 (横断設計) が自動で読み込みます。
 - 新規プロダクトなのでモードは「フルコース」を推奨します。
 - 設計が承認されたら /dev-impl で実装ループに入ります。
 ```

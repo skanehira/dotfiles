@@ -16,10 +16,10 @@
 
 | 入力 | 生成者 | 使い方 |
 | --- | --- | --- |
-| `docs/design/USECASES.md` | dev-spec のフェーズ 3 | 機能の切り方と「対象 UC」を決め、受け入れ基準を「テスト方針」の表へ写す |
+| `docs/design/USECASES.md` | dev-spec のフェーズ 2 | 機能の切り方と「対象 UC」を決め、受け入れ基準を「テスト方針」の表へ写す |
 | `docs/design/DESIGN.md` | dev-spec のフェーズ 6 | 横断事項 (スキーマ・API 規約・認証・横断規約) を参照する。ここに書かれたものは重複させない |
 | `docs/design/FEASIBILITY.md` | dev-spec のフェーズ 4・5 | 下の転記規則で `POC_NEEDED` マーカーを置く |
-| `docs/design/UI_SKETCH.html` | dev-spec のフェーズ 2 (webapp のみ) | UI 系の機能の「入出力と振る舞い」で該当画面を参照する |
+| `docs/design/UI_SKETCH.html` | dev-spec のフェーズ 3 (webapp のみ) | UI 系の機能の「入出力と振る舞い」で該当画面を参照する |
 
 転記規則: FEASIBILITY.md の PoC 計画のうち、POC_STATUS が `status=unresolved` かつ `blocker=false` で、機能単体の契約に属するものを、その機能の機能設計書に `POC_NEEDED` マーカーとして置く (design-doc.md「入力と転記」の規則 3 のうち本フェーズが受け持つ分)。置く前に `rg -n 'POC_NEEDED: id=<id>,' docs/design/` で同じ id が DESIGN.md や他の機能設計書に置かれていないことを確かめ、既にあれば置かない (二重に置くと、2 つの子 issue の DoD に同じ検証が載る)。
 

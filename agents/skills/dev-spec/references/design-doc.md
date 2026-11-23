@@ -13,8 +13,8 @@
 | 入力 | 生成者 | 使い方 |
 | --- | --- | --- |
 | `docs/design/FEASIBILITY.md` | dev-spec のフェーズ 4・5 (「不確実性なし」の記録だけのときは dev-spec のフェーズ 0.4) | 下の転記規則 1〜3 で DESIGN.md へ写す。「技術スタック（案）」の表があれば「アーキテクチャと技術選定」の出発点にする |
-| `docs/design/USECASES.md` | dev-spec のフェーズ 3 | 「目的とスコープ」と、機能をまたぐ規則 (BR) の置き場を決める |
-| `docs/design/UI_SKETCH.html` | dev-spec のフェーズ 2 (webapp のみ) | アプリシェルの決定を「横断規約」へ写す (転記規則 4) |
+| `docs/design/USECASES.md` | dev-spec のフェーズ 2 | 「目的とスコープ」と、機能をまたぐ規則 (BR) の置き場を決める |
+| `docs/design/UI_SKETCH.html` | dev-spec のフェーズ 3 (webapp のみ) | アプリシェルの決定を「横断規約」へ写す (転記規則 4) |
 | `docs/PRODUCT_SPEC.md` | 利用者が置くか fullstack-app-builder が生成する | プロダクトの目的・技術的制約を「目的とスコープ」「アーキテクチャと技術選定」に反映する |
 
 転記規則:

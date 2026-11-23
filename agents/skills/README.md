@@ -25,7 +25,7 @@ Neovim プラグインの UI 確認は `/utility-nvim-ui-capture` を使う。�
 ┌────────────────────────────────────────────────────────────────┐
 │  /dev-spec — 設計ループ (賢いモデルのセッションで起動)         │
 │                                                                │
-│  1 user-story → 2 ui-sketch (webapp のみ) → 3 usecase          │
+│  1 user-story → 2 usecase → 3 ui-sketch (webapp のみ)          │
 │      → 4 feasibility → 5 ★PoC 検証 (tech-investigation 並列)   │
 │      → 6 DESIGN.md (横断 1 枚) → 7 docs/design/features/ (機能設計)   │
 │      → 8 ★設計チェック (fresh context の突合)                  │
