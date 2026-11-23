@@ -17,6 +17,7 @@ let
   # 言語ランタイム / コンパイラ (バージョンは明示ピン)
   languageRuntimes = with pkgs; [
     bun
+    elan # Lean 4 のツールチェーン管理。版は各リポジトリの lean-toolchain が決める
     go_1_27
     nodejs
     uv
