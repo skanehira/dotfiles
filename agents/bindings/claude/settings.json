@@ -29,7 +29,7 @@
       "WebFetch(domain:*)",
       "mcp__chrome-devtools"
     ],
-    "defaultMode": "plan"
+    "defaultMode": "bypassPermissions"
   },
   "model": "opus",
   "fallbackModel": [
@@ -170,7 +170,7 @@
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
-  "verbose": true,
+  "verbose": false,
   "preferredNotifChannel": "terminal_bell",
   "idleCompaction": false,
   "remoteControlAtStartup": true,
