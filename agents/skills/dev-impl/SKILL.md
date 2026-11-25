@@ -1,6 +1,6 @@
 ---
 name: dev-impl
-description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー → 修正 ≤1 ラウンド (high のみ) → 検証 → 動作確認の証跡付き PR → CI pass (CI があれば) → merge → close」で自律実装するオーケストレーター。依存を守ってスコアの高い順 (緊急枠が先頭。スコアの無い issue は後ろ。同じなら番号の小さい順) に着手し、前提を満たすプロジェクトでは着手できる issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
+description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー → 修正 ≤1 ラウンド (high と medium) → 検証 → 動作確認の証跡付き PR → CI pass (CI があれば) → merge → close」で自律実装するオーケストレーター。依存を守ってスコアの高い順 (緊急枠が先頭。スコアの無い issue は後ろ。同じなら番号の小さい順) に着手し、前提を満たすプロジェクトでは着手できる issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
 argument-hint: "[issue 番号の絞り込み、省略時は ready 全件]"
 model: opus
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, Skill
@@ -76,7 +76,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 - **docs が push 済みか確認する**: ローカルに `docs/design/DESIGN.md` があるのに `git log origin/$DEFAULT -1 -- docs/design/DESIGN.md docs/design/features/` が空なら、ブランチ基点 (origin) に設計 docs が無い。docs を含むコミットの push を人間に依頼して停止する (2.1 のブランチは origin から切るため、push されていないと implementer が docs を読めない)。push が済んだら、人間が本スキルを再実行する
 - `docs/design/DESIGN.md` が無い構成でも、issue が自己完結していれば続行してよい (issue の DoD に実行コマンドが揃っていることが条件)
 
-作業ログ用のディレクトリを作る: `SCRATCH=<scratchpad>/dev-impl-$(date +%Y%m%d-%H%M%S)` (`<scratchpad>` はこのセッションの scratchpad のディレクトリ。report JSON の置き場で、git 管理外)。保留レビュー項目のチェックリストは **`docs/pending-review/issue-<N>.md`** に置く (リポジトリ内。issue 1 件につき 1 ファイル。issue のコミットに含めて merge されるため、別マシン・別セッション・後続 run にも引き継がれる。作成は 2.3、確認案内は Step 3)。
+作業ログ用のディレクトリを作る: `SCRATCH=<scratchpad>/dev-impl-$(date +%Y%m%d-%H%M%S)` (`<scratchpad>` はこのセッションの scratchpad のディレクトリ。report JSON の置き場で、git 管理外)。
 
 ## Step 1: issue の収集と着手順
 
@@ -239,6 +239,7 @@ gh issue comment "$N" --repo "$REPO_SLUG" --body "実装を開始します (dev-
 ```
 mode: implement
 repo_dir: <WORK_DIR>
+base_sha: <BASE_SHA>
 issue_number: <N>
 port: <スロットのポート>
 report_path: <SCRATCH>/impl-<N>.json
@@ -253,14 +254,14 @@ evidence_dir: <SCRATCH>/evidence-<N>
 - `test_result.exit_code = 0`・`dod_result.exit_code = 0`・`self_review.checklist_applied = true`
 - `self_review.basic_checks` の 4 つ (`new_behavior` / `removed_behavior` / `touched_specs` / `new_branches`) がすべて空でない。`self_review.change_types` が空でない
 - `self_review.change_types` に「その他」がある場合、`self_review.other` の各項目に `summary` / `axes` (`spec` / `layer` / `artifact`) / `answers` (4 問い) が埋まっている
-- 差分にコメントを足している場合、`self_review.comments` の `added` / `removed` が記録されている (`implementation.md`「コードコメント」の自己点検の結果)
+- `sh ~/.claude/skills/dev-impl/scripts/added-comments.sh "$WORK_DIR" "$BASE_SHA"` を親が実行し、出力の `<パス>:<行番号>` が `self_review.comments.kept` の `at` と過不足なく一致する。終了コードが 0 でなければ照合できないので、原因を直して実行し直す
 - `evidence.manifest_path` の `manifest.json` があり、その `captured_mode` が今回起動した `mode` と一致し、`screens[].file` と `api[].file` の全パスが実在する (`ls` で確かめる)。実在しないパスを 2.4 手順 3 に渡すと添付が失敗し、本文にローカルのパスが残る。画面と API が両方とも空なら `note` に理由が書かれていること
 - UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でないこと (implementer が自分で画像を見た記録)。親は画像を開かない。差分で追加・更新された基準画像は、2.3 の review-impl が検査項目 5 で開いて見る
 
 検収に落ちた報告の扱い:
 
-- **同じ `mode: implement` で 1 回だけ再起動する**。渡す内容に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」の行を足す。セルフチェックの記録が不足している場合は、`basic_checks` / `change_types` / `other` / `comments` のどこが足りないかを具体的に伝える
-- `mode: fix` は使わない。`mode: fix` は `findings_path` の JSON から high を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる
+- **同じ `mode: implement` で 1 回だけ再起動する**。渡す内容に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」の行を足す。セルフチェックの記録が不足している場合は、`basic_checks` / `change_types` / `other` / `comments.kept` のどこが足りないか (コメントは一致しない行)を具体的に伝える
+- `mode: fix` は使わない。`mode: fix` は `findings_path` の JSON の指摘を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる
 - **この再起動は 2.3 の fix ラウンドに数えない**。実装の検収であって、レビュー指摘の修正ではないため
 - **2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)
 
@@ -304,14 +305,24 @@ report_path: <SCRATCH>/review-<N>-r<ラウンド>.json
 
 review JSON が無い・パース不能の場合も同様に 1 回再起動 → 再失敗で 2.6。**検収の失敗による再実行は同じ `report_path` を上書きする** (r 番号を進めない。r 番号は fix 済みか否かの判定と `previous_findings_path` の選択に使われるので、実際には行われていない fix を数えてしまう)。
 
-#### 修正対象は high だけ
+#### 指摘の扱い
 
-**medium はどのラウンドでも修正対象にしない。** merge を止めるのは high だけと決め、medium は保留リストに記録して先へ進む。実測では findings 128 件のうち medium が 76 件で high は 13 件しかなく、medium を修正ループに入れている限りラウンドは減らない。同じ run で r2 / r3 が新たに見つけた high 4 件は、すべて r1 の時点で既に high があった issue のものだった — 「r1 で high が 0 件なら直接 merge へ」で取り逃す high はこの run では 0 件である。
+severity ごとに、次のとおり扱う (基準の正本は review-impl の「severity と報告の基準」)。
+
+| severity | 動作 |
+| --- | --- |
+| `high` | 修正 1 回 → r2 |
+| `medium` | 修正 1 回。`high` が無ければ r2 を回さず、2.4 手順 2 の全テストで確かめる |
+| `followup` | 直さない。merge を止めず、issue にする (下記「issue にする指摘」) |
 
 r1 の findings による分岐:
 
-- **high が 0 件** → 2.4 へ。medium は保留リストに記録し (下記「保留レビュー項目の記録」)、low は完了コメントに「報告のみ」として記載する (r2 まで回したときは、r1 と r2 の low を `file:line` + summary で重複排除した和を載せる)
-- **high がある** → **先に `category: test-weakening` の finding を下記の裁定で処理し** (implementer に渡すと `test_weakening_suspected` で escalate が返り、2.2 の分岐で 2.6 へ落ちて裁定経路が迂回される)、残った high について implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動して **high だけ**を直させ、r2 を回す。**fix はこの 1 回だけ (固定)**。裁定の結果 high が 0 件になったら fix を起動せず 2.4 へ進む
+1. **`category: test-weakening` の finding を先に裁定する** (下記)。implementer に渡すと `test_weakening_suspected` で escalate が返り、2.2 の分岐で 2.6 へ落ちて裁定を飛ばしてしまう
+2. 残った `high` と `medium` で分ける:
+   - **どちらも 0 件** → 2.4 へ
+   - **1 件以上** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動し、`high` と `medium` をまとめて直させる。**fix はこの 1 回だけ (固定)**
+
+`high` の有無は裁定の後に数える。`medium` だけの修正を再レビューしないのは、修正が小さく、周回を増やさないためである。
 
 fix は、サブエージェント `dev-impl-implementer` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (待ち方は 2.0)。
 
@@ -321,6 +332,7 @@ fix は、サブエージェント `dev-impl-implementer` を起動する (モ�
 ```
 mode: fix
 repo_dir: <WORK_DIR>
+base_sha: <BASE_SHA>
 issue_number: <N>
 port: <スロットのポート>
 findings_path: <SCRATCH>/review-<N>-r1.json
@@ -332,26 +344,26 @@ evidence_dir: <SCRATCH>/evidence-<N>
 - `findings_path` は、`test-weakening` の裁定の印 (`adjudication`) を書き足した後の r1 の review JSON を指す
 - `report_path` は 2.2 の `impl-<N>.json` と別名にする (実装時の報告を上書きしない)
 
-返った report には 2.2 と同じ検収 (`test_result` / `dod_result` の exit code と `self_review`、証跡の `manifest.json`、UI に触れる issue では `ui_evidence`) を当てる。fix は `implement` と同じ `evidence_dir` に証跡を取り直すので、検収後の `manifest.json` の `captured_mode` は `fix` になる。
+返った report には 2.2 と同じ検収 (`test_result` / `dod_result` の exit code と `self_review`、証跡の `manifest.json`、UI に触れる issue では `ui_evidence`) を当てる。加えて、`findings_result` に、対象の finding (裁定済みを除く `high` と `medium`) が 1 件ずつ過不足なく載っていることを確かめる。fix は `implement` と同じ `evidence_dir` に証跡を取り直すので、検収後の `manifest.json` の `captured_mode` は `fix` になる。
 
-- 検収を通った `done` → r2 を回す
+- 検収を通った `done` → r1 に `high` があれば r2 を回す。無ければ 2.4 へ
 - `escalate` / `failed` → 2.6 へ
 - 検収落ち・subagent のエラー・report JSON が無い・パース不能 → 同じ `mode: fix` で 1 回だけ再起動する。渡す内容と `findings_path` は変えず、検収落ちのときは 2.2 と同じく満たさなかった項目の行を足す。**この再起動は fix ラウンドに数えない** (「fix はこの 1 回だけ」の 1 回は、r1 の findings に対する修正の機会を数える)。再起動後も検収を通った `done` にならなければ 2.6 へ
 
-**r2 に high が無ければ 2.4 へ進む** (medium は保留リストに記録する)。r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わない) は、その high の `category` で分岐する。**契約・証跡・検証器が壊れているものだけを駐車し、成果物の内部品質は記録して先へ進む**:
+**r2 に high が無ければ 2.4 へ進む。** r2 で新たに出た `medium` は直さない (「issue にする指摘」)。r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わない) は、その high の `category` で分岐する。**契約・証跡・検証器が壊れているものだけを駐車し、成果物の内部品質は issue にして先へ進む**:
 
 | `category` | 動作 |
 | --- | --- |
 | `spec-compliance` | 2.6 で駐車。契約が壊れたまま merge すると、後続 issue がその契約に依存して誤った土台の上に積み上がる |
 | `e2e` | 2.6 で駐車。E2E の不在・失敗は「画面が動く証跡が無い」ことを意味する |
 | `test-weakening` | 下記の裁定を先に行い、**裁定できないときだけ** 2.6 で駐車する (裁定して直せたら 2.4 へ。再レビューはしない) |
-| `test-quality` | 保留リストに記録して 2.4 へ。実装は契約を満たしており、テストが検証していないだけなので後から独立に直せる |
-| `code-quality` | 保留リストに記録して 2.4 へ。動作は正しく、DI 違反や命名は後から直せる |
-| `ui-layout` | 保留リストに記録して 2.4 へ。契約は満たしており、見た目の崩れは後から独立に直せる。ただし利用者に見えるので、保留リストと完了コメントでは high を先に出す |
+| `test-quality` | issue にして 2.4 へ。実装は契約を満たしており、テストが弱いだけなので後から独立に直せる |
+| `code-quality` | issue にして 2.4 へ。動作は正しく、DI 違反などは後から直せる |
+| `ui-layout` | issue にして 2.4 へ。契約は満たしており、見た目の崩れは後から独立に直せる |
 
-**駐車 category と保留 category が混在したら、issue 全体を 2.6 へ駐車する** (保留 category のぶんは駐車コメントに列挙する。壊れた契約を抱えた issue を merge しないことが優先する)。
+**駐車する category と issue にする category が混在したら、issue 全体を 2.6 へ駐車する** (issue にするはずだったぶんは駐車コメントに列挙する。壊れた契約を抱えた issue を merge しないことが優先する)。
 
-`test-quality` の high を保留して merge するのは、no-op に置き換えても通るテスト (`~/.claude/guidelines/core/testing.md` のリトマス試験 B に落ちるもの) を抱えたまま先へ進むことを意味する。**これは意図した受容**なので、保留リストと完了コメントでは high を medium と分けて先に出し、ユーザーが気付ける状態にする。
+`test-quality` の high を issue にして merge するのは、no-op に置き換えても通るテスト (`~/.claude/guidelines/core/testing.md` のリトマス試験 B に落ちるもの) を抱えたまま先へ進むことを意味する。**これは意図した受容**なので、完了コメントと最終報告では、high から作った issue を先に出し、ユーザーが気付ける状態にする。
 
 **3 周目に入りたくなったら、それは「収束していない」という信号**なので、上の表に従う。**この上限を強制する機械ゲートは無い。自律遵守する。** 上限は機械ゲートが無い状態で実際に破られる (実測: 22 issue 中 6 件が 3 周目以降に入り、規定超過分だけで 5.7h を消費した)。破らないための手立ては、review JSON のファイル名にあるラウンド番号を毎回自分で読むことだけである。3 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)。
 
@@ -359,30 +371,35 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 **裁定した finding には、その review JSON の該当 finding へ `"adjudication": {"verdict": "false_positive|fixed_by_parent", "rationale": "<根拠の一文>"}` を足す。** r1 の JSON は r2 で `previous_findings_path` としてレビュワーに渡るため、印を付けないと裁定済みの指摘が「未解消」として再計上され、同じ指摘で駐車に落ちる (レビュワー側は `adjudication` の付いた finding を残存判定の対象外にする規約)。
 
-#### 保留レビュー項目の記録
+#### issue にする指摘
 
-修正対象にしなかった medium と、r2 で残った `test-quality` / `code-quality` / `ui-layout` の high は、これ以上修正もエスカレーションもせず**ユーザーの事後確認に回す**。**保留対象が 1 件以上あるときだけ** `docs/pending-review/issue-<N>.md` を新規に書き出す (0 件なら作らない — 空ファイルが積まれると Step 3 の件数がノイズを数える)。各 finding はチェックボックス付きの 1 項目で、次の形で severity / category / `file:line` / summary / evidence / fix_hint をまとめる。**high は medium より前に置く。** 項目の行頭の `- [ ] [<severity>] [<category>]` と、設計差し戻しが必要な指摘 (下記) に付ける `[設計差し戻し]` は書式を変えない — Step 3 がこの文字列で件数を数え、設計差し戻しを拾い、過去 run のファイルも同じ形で数えるため。
+次の指摘は、この PR では直さず、merge の後に issue にする。
+
+- r1 と r2 の `followup`
+- r2 を回したとき: r2 の `medium` (新しく出たものも、r1 から残ったものも) と、r2 に残った `test-quality` / `code-quality` / `ui-layout` の `high`
+- r2 を回さなかったとき: fix の `findings_result` が `not_fixed` の `medium`
+
+r1 と r2 の両方にある指摘は、category と summary の中身で突き合わせて 1 件にする (fix で行がずれるので `file:line` では判定しない)。
+
+1 件以上あれば、**PR を作った直後 (2.4 手順 3) に、全文を PR のコメントに 1 件で残す。** 指摘は SCRATCH にしか無く、SCRATCH は次の run に引き継がれないので、途中で止まっても落とさないためである。コメントは `<SCRATCH>/findings-<N>.md` に Write し、`gh pr comment <PR 番号> --repo "$REPO_SLUG" --body-file` で投稿する。同じ PR に以前の `dev-impl-findings` のコメントがあれば、`gh api -X PATCH "repos/$REPO_SLUG/issues/comments/<ID>" -F body=@<SCRATCH>/findings-<N>.md` で置き換える (レビューをやり直さずに再開した run では触らない)。
 
 ```markdown
-# issue #<N> の保留レビュー項目
+<!-- dev-impl-findings: pending -->
+この PR では直さず、merge の後に issue にする指摘。
 
-- [ ] [high] [test-quality] `src/features/tag/save.test.ts:42` <summary>
-  - evidence: <根拠>
-  - fix_hint: <修正方針>
-- [ ] [medium] [e2e] [設計差し戻し] `e2e/tag.spec.ts:10` <summary>
-  - evidence: <根拠>
-  - fix_hint: <修正方針>
+### 1. [<severity>/<category>] <summary>
+- 場所: `<file>:<line>`
+- 起きること: <impact>
+- 根拠: <evidence>
+- 直し方の案: <fix_hint。`not_fixed` なら、直せなかった理由も書く>
+- 決めること: <直し方が決まらない `followup` のときだけ。選択肢と、それぞれを選ぶと起きること>
 ```
 
-**issue 1 件につき 1 ファイルにする** — 全 issue が 1 枚のファイルへ追記する形だと、並列で走る issue が同じ位置に節を足して rebase のたびに必ず衝突する。ファイルを分ければ衝突は起きないので、union の衝突解決も要らない。**このファイルは 2.4 手順 1 で本 issue のコミットに含める** (`docs_updates` と同じ経路で merge され、リポジトリで持ち回られる)。
-
-**r2 まで回した issue では、r1 と r2 の medium を `file:line` + summary で重複排除した和を書き出す。** r2 が r1 と同じ medium を出し直すとは限らないので (検査項目 6 は high しか追わず、同じ形の箇所の走査も high 候補を先に処理して打ち切りうる)、r2 のぶんだけを書くと r1 の medium が黙って落ちる。逆に単純な和では同じ指摘が二重に載るので、重複排除する。r1 で通過した issue は r1 の medium だけになる。
-
-**`medium` の finding のうち、summary が次のどちらかで始まるものだけは別立てで扱う** (この書式は review-impl 側で固定してある): `category: e2e` の `対象動線未指定 (設計差し戻し):` と、`category: spec-compliance` の `テスト不要の判断が実装と合わない (設計差し戻し):`。 これは実装ではなく設計側の欠落なので、保留リストに載せたうえで、2.5 の完了コメントに「設計差し戻しが必要な指摘」として独立の行で書き、Step 3 の最終報告にも載せる (保留リストに埋もれると設計へ差し戻る経路が消える)。
+issue は、このコメントから作る (2.5 と Step 3)。駐車した issue では作らない。PR のコメントが無い駐車 (PR を作る前に止まったとき) では、駐車のコメントに列挙する (2.6)。
 
 ### 2.4 コミット・検証・PR・merge
 
-1. **コミット**: 変更を論理単位で Conventional Commit (`~/.claude/guidelines/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針「Haiku への委譲」)。implementer の `docs_updates` (乖離補正) と、2.3 で書き出した `docs/pending-review/issue-<N>.md` も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
+1. **コミット**: 変更を論理単位で Conventional Commit (`~/.claude/guidelines/core/commit.md`。STRUCTURAL / BEHAVIORAL 分離) にする。メッセージ起草とステージ対象の決定は親、実行は Haiku subagent に委譲してよい (モデル方針「Haiku への委譲」)。implementer の `docs_updates` (乖離補正) も同じ issue の**コミット列**に含める (関心事分離に従い docs は独立コミットでよい)。
 
    コミットが手順 2 の検証より前に来るのは、検証対象を「積み終えた差分」に固定するためである。`~/.claude/guidelines/core/commit.md` のコミット条件 (全テスト green) は、implementer の `test_result` / `dod_result` が exit 0 であること (2.2 の検収で確認済み) を根拠に満たす。**手順 2 が red だった場合、このコミットは merge されない駐車ブランチ上の記録として扱う** (2.6 の WIP 退避と同じ例外)。
 
@@ -425,7 +442,7 @@ Closes #<N>
 
 ## 検証
 - テスト + lint + フォーマット検査 + DoD: 手順 2 でローカル実行し全て green (<passed/failed 件数>。フォーマット検査が定義なしならその旨)
-- レビュー: review-impl <ラウンド数> 周 (low <k> 件・保留 high <h> 件・保留 medium <m> 件は merge 後の issue コメントに記載。0 件ならその旨)
+- レビュー: review-impl <ラウンド数> 周 (直した指摘 <f> 件・issue にする指摘 <k> 件。0 件ならその旨)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
@@ -440,7 +457,7 @@ Closes #<N>
 
    | 最終行 | 動作 |
    | --- | --- |
-   | `PR_CREATED <url>` / `PR_UPDATED <url>` | 手順 4 へ |
+   | `PR_CREATED <url>` / `PR_UPDATED <url>` | 「issue にする指摘」(2.3) があれば PR のコメントに残してから、手順 4 へ |
    | `PR_FAILED secret_detected <ファイル>:<行>` | 証跡のマスク漏れ。報告される行は最終本文 (`<SCRATCH>/pr-<N>.md.final.md`) のものなので、その行の内容で `<SCRATCH>/evidence-<N>/api/` を `rg` して元の証跡ファイルを特定する。親がその箇所を `<masked>` にして、同じ引数で 1 回だけ再起動する。再発したら 2.6 へ |
    | `PR_FAILED attach_partial <url>` | PR はできたが本文に画像のローカルパスが残っている。同じ引数で 1 回だけ再起動する (同じ head の PR を更新する)。再発したら 2.6 へ |
    | `PR_FAILED issue_link <url>` | PR はできたが issue の Development に紐づいていない。下書きの先頭行が `Closes #<N>` であることを確かめ、違っていれば直して同じ引数で 1 回だけ再起動する。下書きが正しいか、再発したら merge せずに 2.6 へ (人が issue の画面の Development から紐づける) |
@@ -497,6 +514,33 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 
 `BRANCH:` の行が「消した」「手元に無い」以外 (消せない・残った・確かめられない) なら、その行を Step 3 の最終報告の「消せなかったブランチ・worktree」に載せる。
 
+**PR に `<!-- dev-impl-findings: pending -->` のコメントがあれば、完了コメントの前に、指摘 1 件につき issue を 1 件作る** (SCRATCH の有無や再開かどうかに関わらず、PR のコメントを読んで作る)。dev-triage が指摘ごとに採点するので、束ねない。状態のラベルは付けない (未整理として dev-triage が拾う。agent-loop に登録していないリポジトリでは、人が `/dev-triage` を起動する)。
+
+1. 作成済みの印を調べる: `gh issue list --repo "$REPO_SLUG" --state all --limit 100 --json number,body --jq '.[] | select(.body | contains("dev-impl-finding: PR #<PR 番号>-")) | [.number, (.body | capture("dev-impl-finding: PR #<PR 番号>-(?<n>[0-9]+)").n)] | @tsv'`。印のある通し番号は飛ばす
+2. 残りを `gh issue create --repo "$REPO_SLUG" --title "<summary を 1 行にしたもの>" --body-file <ファイル>` で作る。本文は次の形にする
+
+```markdown
+<summary。設計書を読んでいない人が分かる文章で書く>
+
+## 起きること
+<起きること>
+
+## 決めること
+<決めること。無ければ節ごと書かない>
+
+## 根拠
+<場所と根拠>
+
+## 直し方の案
+<直し方の案>
+
+#<N> の実装 (PR #<PR 番号>) のレビューで見つかり、直さずに merge した指摘。severity は <high|medium|followup>。
+
+<!-- dev-impl-finding: PR #<PR 番号>-<通し番号> -->
+```
+
+3. 全件を作れたら、PR のコメントの `pending` を `done` に書き換える。作れなかった指摘があれば `pending` のまま残し、最終報告の「issue にできなかった指摘」に書く (次の run の Step 3 が作り直す)
+
 完了コメントは、中身を知っているエージェントが 1 件残す (`CI:` の行は `merge-pr.sh` の出力をそのまま書く):
 
 ```
@@ -504,10 +548,8 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 - 変更: <summary と主要ファイル>
 - テスト + lint + フォーマット検査 + DoD: <2.4 手順 2 で最後に実行した巡の結果 (件数)>、green (フォーマット検査が定義なしならその旨)
 - CI: <pass (check 名の列挙) / なし (checks 未登録)>
-- レビュー: <ラウンド数> 周 (low: <r1 と r2 の和を列挙、なければ「なし」>)<前 run の review JSON が無く前ラウンドの指摘を再検査していなければ「(前ラウンドの指摘の再検査なし)」>
-- 保留 high (test-quality / code-quality / ui-layout): <各 1 行で `file:line` + summary。なければ「なし」>
-- 保留 medium: <各 1 行で `file:line` + summary。なければ「なし」> (evidence・fix_hint は `docs/pending-review/issue-<N>.md` に記録)
-- 設計差し戻しが必要な指摘: <`medium` の「対象動線未指定」と「テスト不要の判断が実装と合わない」。各 1 行。なければ「なし」>
+- レビュー: <ラウンド数> 周 (直した指摘: high <h> 件・medium <m> 件)<前 run の review JSON が無く前ラウンドの指摘を再検査していなければ「(前ラウンドの指摘の再検査なし)」>
+- issue にした指摘: <high から先に、各 1 行で `#<作った番号>` + severity + summary。なければ「なし」>
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
 
@@ -517,7 +559,7 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 
 次の解消できない issue を駐車する:
 
-- r2 の後に残った `spec-compliance` / `e2e` の high と、裁定できない `test-weakening`
+- r2 の後に残った `spec-compliance` / `e2e` の high (fix で `not_fixed` になったものを含む) と、裁定できない `test-weakening`
 - implementer の `escalate`、DoD の失敗、テストの red、subagent の再失敗
 - 直せないコミットの失敗、push の失敗
 - 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR の作成、issue の Development に紐づかない PR
@@ -527,14 +569,16 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human
-gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。未 merge の保留 high / medium と、設計差し戻しが必要な指摘があればその summary も列挙 (pending-review のファイルが merge されていないため)。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置><!-- dev-impl -->"
+gh issue comment "$N" --repo "$REPO_SLUG" --body "<状況: 何を試し、何が起き、何が残っているか (implementer の summary の試行記録を含める)。PR がまだ無く「issue にする指摘」(2.3) があれば、その summary と fix_hint も列挙。人間に決めてほしいこと。ブランチ issue-$N (と PR があれば PR) は未 merge のまま残置><!-- dev-impl -->"
 ```
 
 駐車のコメントには、`~/.claude/skills/dev-triage/references/issue-states.md`「needs-human のコメントに載せる会話の入口」に従って会話の入口を足す (`<!-- dev-impl -->` の前)。
 
 ブランチと open PR は merge せず残す (人間が差分を確認でき、再開時に再利用できる)。**その issue に依存しない次の issue へ進む。** 次の issue は `sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" "$N" parked` が出す着手順で決める (Step 1)。
 
-**run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。停止時は未解消 issue の一覧と理由をまとめて報告する — このときも Step 3 の手順 2 (docs/pending-review/ の件数の集計と確認促し) を実行する (merge 済み issue の保留項目を停止で失わない)。
+**run 全体を停止するのは次の 2 つだけ**: (1) 残りの全 issue が未解消 issue に依存してブロックされた (2) `contract_break` の内容が後続 issue の前提を崩し、進めるとやり直しになる。
+
+停止時も、未解消 issue の一覧と理由に加えて、Step 3 の手順 2 (作り残しを拾い、作った issue を並べる) を行う。
 
 ## Step 3: 終了処理
 
@@ -560,13 +604,12 @@ done
 
 **この走査は `tracking` ラベルの open issue を repo 全件対象にするが、close するのは dev-spec が作った形のタイトルの親だけにする**: `UC-<番号>: ` で始まる、`基盤: UC に属さない共通実装`、` トラッキング` で終わる、のどれか。それ以外の `tracking` (dev-triage や人が付けたもの) は close せず、最終報告に一覧で出して人間の判断を仰ぐ。
 
-2. 保留レビュー項目を確かめてもらう:
+2. レビューの指摘から作った issue をまとめる:
    - デフォルトブランチへ戻って `git pull` する (`git fetch origin` のあと `git switch "$DEFAULT" && git pull`。$REPO_DIR が worktree で既定ブランチを別の checkout が使っていて switch できなければ `git switch --detach "origin/$DEFAULT"`)
-   - `docs/pending-review/` にファイルがあれば一覧と件数を出す。件数はチェックの付いていない項目の全ファイルの合計で、`rg --count '^- \[ \] \[high\]' docs/pending-review/ | awk -F: '{ s += $2 } END { print s + 0 }'` と、同じく `medium` で数える (2.3 が全項目の行頭をこの形で書いている)
-   - `[設計差し戻し]` を含むチェックの付いていない項目を拾い、設計差し戻しが必要な指摘として最終報告に列挙する
-   - 最終報告の先頭で「実装は完了したが、保留 high <h> 件・保留 medium <m> 件のチェックが必要」と、チェックリストのパスを添えてユーザーに確認を促す (過去 run の未消化分も累積している)
-   - 対応要と判断した項目は、新しい issue にするか直接の修正依頼で対応してもらう。確認が済んだ issue はファイルごと削除する (手動または修正依頼。通常のコミットで反映)
-   - 保留にした medium を「早見表にあった種類か」で分ける。早見表 (`dev-impl-implementer.md`「実装後のセルフチェック」) に無かった種類は、次回の早見表に足す候補として最終報告に列挙する (表に足すかは人間が決める)
+   - **作り残しを拾う**: `gh pr list --repo "$REPO_SLUG" --state merged --limit 50 --json number,headRefName,comments --jq '.[] | select(.headRefName | startswith("issue-")) | select(any(.comments[]; .body | contains("<!-- dev-impl-findings: pending -->"))) | .number'` に出た PR について、2.5 の手順で issue を作る (merge の後に止まった run・終了コード 15 と `MERGE_UNKNOWN` で 2.5 を通らなかった PR を拾うため)
+   - この run で作った issue を、severity (high → followup → medium) ごとに番号とタイトルで最終報告の先頭に出す。0 件なら出さない
+   - 直した指摘と issue にした指摘を「早見表にあった種類か」で分ける。早見表 (`dev-impl-implementer.md`「実装後のセルフチェック」) に無かった種類は、次回の早見表に足す候補として最終報告に列挙する (表に足すかは人間が決める)
+   - `docs/pending-review/` が残っているリポジトリでは、ファイル数とパスだけを最終報告に 1 行で出す。中身は読まず、ファイルも足さない
 3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
    - 実装した issue と PR の一覧
    - 着手できなかった issue を理由ごとに: 塞いでいる open の依存先 (番号とラベル。ラベルは `gh issue view <番号> --json labels` で引く)、依存の循環 (`cycle`)、どこにも無い依存先 (`unknown`)、読めない依存の行 (`badline`)、対象にならない番号 (`#<番号> は対象にならない`)、別のセッションが担当中 (`claimed`。セッション ID も書く)
@@ -574,14 +617,13 @@ done
    - 2.5 で親 close を判定できなかった子 issue の番号 (親に紐付いていない 404 の子と、API 失敗の子を分けて)
    - 消せなかったブランチ・worktree (`merge-pr.sh` の `BRANCH:` の行) と、merge の後の処理に失敗した issue (終了コード 15 の 2 回目の `ISSUE:`・`LABEL:` の行)
    - close しなかった、dev-spec の形でないタイトルの `tracking` の親 (手順 1)
-   - 保留レビュー項目 (保留 high・medium) の件数とチェックリストのパス、および設計差し戻しが必要な指摘
-   - 早見表に無かった指摘の種類 (次回の表に足す候補)
+   - issue にできなかった指摘 (2.5)
    - `needs-human` で駐車した issue と、人間がすべき決定。報告を読む時点のユーザーは issue の中身を覚えていない前提で、issue ごとに `~/.claude/guidelines/core/collaboration.md`「質問・提案の形式」に従って書く。どの件の話かは issue の番号とタイトルで示す
    - 実装中の設計判断・docs 更新の要約
 
 ## エスカレーション回答後の再開
 
-人間が `needs-human` の issue に回答したら、**回答の内容を issue 本文 (該当節の書き換え) または参照 docs に反映してから**、`needs-human` を外して `ready` を付け (`gh issue edit <番号> --remove-label needs-human --add-label ready`。`needs-human` が残ると Step 1 の対象にならない)、本スキルを再実行する — implementer は issue 本文と docs しか読まないため、コメントに書かれただけの回答は実装に届かない。docs 側を変えた場合は push も行う (Step 0 の確認に掛かる)。Step 1 の収集が駐車 issue を拾い直し、残置ブランチ・PR があれば続きから実装する。チェックリスト (`docs/pending-review/`) はリポジトリで持ち回るため、再開 run・別マシンでも累積した保留項目がそのまま引き継がれる。
+人間が `needs-human` の issue に回答したら、**回答の内容を issue 本文 (該当節の書き換え) または参照 docs に反映してから**、`needs-human` を外して `ready` を付け (`gh issue edit <番号> --remove-label needs-human --add-label ready`。`needs-human` が残ると Step 1 の対象にならない)、本スキルを再実行する — implementer は issue 本文と docs しか読まないため、コメントに書かれただけの回答は実装に届かない。docs 側を変えた場合は push も行う (Step 0 の確認に掛かる)。Step 1 の収集が駐車 issue を拾い直し、残置ブランチ・PR があれば続きから実装する。
 
 ## 参照ルール
 

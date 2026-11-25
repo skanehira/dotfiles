@@ -13,7 +13,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 
 1. **子 subagent を起動しない。** 検査もレビューも親の責務。
 2. **コミットしない。** `git add` / `git commit` / ブランチ操作 / push は親の責務。
-3. **テストの削除・skip・アサーションの弱体化をしない。** 既存テストが落ちるなら実装を直す。仕様変更が必要だと判断したら実装を止めて報告する。
+3. **`base_sha` の時点にあったテストの削除・skip・アサーションの弱体化をしない。** この差分で足したテストを指摘に従って消すのは構わない。既存テストが落ちるなら実装を直す。仕様変更が必要だと判断したら実装を止めて報告する。
 
 ## 入力
 
@@ -23,6 +23,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 | --- | --- |
 | `mode` | `implement` (新規実装) / `fix` (findings の修正) |
 | `repo_dir` | 作業ディレクトリの**絶対パス** |
+| `base_sha` | 実装を始めた時点の commit。コメントの自己点検の基準 |
 | `issue_number` | 実装対象の issue 番号 |
 | `report_path` | 報告 JSON の書き出し先**絶対パス** |
 | `evidence_dir` | PR に載せる動作確認の証跡 (スクリーンショット・API の実行結果・`manifest.json`) の置き場の**絶対パス**。`repo_dir` の外にある |
@@ -61,11 +62,12 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 4. `## DoD` のコマンドと、変更範囲のテスト・lint・フォーマット検査を実行し、exit code 0 を確認する (自己申告ではなく実行結果で判定)
 5. **実装後のセルフチェック**を行い、結果を報告に残す (下記「実装後のセルフチェック」)
 6. 動作確認の証跡を取る (下記「動作確認の証跡」)
-7. 報告する (下記「報告」)
+7. 「4. コメントの自己点検」の抽出をもう一度実行し、`comments.kept` を今の行番号に合わせる (手順 6 でもソースが変わるため)
+8. 報告する (下記「報告」)
 
 ## 実装後のセルフチェック (レビューの前に自分で潰す)
 
-レビューで初めて指摘されると、medium は保留リストに回って残る。実装とテストが green になったら、報告の前に次を行う。
+レビューで指摘されると、修正の起動が 1 回増える。実装とテストが green になったら、報告の前に次を行う。
 
 ### 1. 基本のチェック (変更の種類に関係なく、いつも行う)
 
@@ -88,7 +90,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 | 画面・E2E・機能名を消した/変えた | `git grep` で `docs/design/` と `docs/user-guide/` を探し、古い記述を直す |
 | 画面の見た目を変えた | 視覚テストの画像を開き、同じ行の下端・幅・ラベルの位置・複数の幅で確かめる |
 | E2E を足した/変えた | 「E2E で確かめないもの」(文言・書式・計算・DB の値) を比べていないか |
-| lint の規則を外すコメントを足した | 理由をコメントに書いたか。その理由が技術別の guidelines とプロジェクトの規約 (`CLAUDE.md` / `AGENTS.md`) の許す場面に当たるか。規約が外すことを禁じている規則 (例: レイヤ境界) なら外さずに設計を直す |
+| lint の規則を外すコメントを足した | プロジェクトの規約 (`CLAUDE.md` / `AGENTS.md`) と技術別の guidelines が許す場面に当たるか。求められた理由を書いたか。規約が外すことを禁じている規則 (例: レイヤ境界) なら外さずに設計を直す |
 
 ### 3. 表にない変更 (その他)
 
@@ -109,17 +111,20 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 
 ### 4. コメントの自己点検
 
-`~/.claude/guidelines/core/implementation.md`「コードコメント」の自己点検を行う。差分から追加したコメント行を抽出し、1 行ずつ「書く / 書かない / 対象外」に分け、「書かない」に当たる行を消す。結果 (追加した行数・消した行数・残した理由) を報告の `self_review.comments` に残す。
+コードコメントは基本的に書かない。`~/.claude/guidelines/core/implementation.md`「コードコメント」の自己点検を `repo_dir` と `base_sha` に対して行い、5 種に当たらない行を消す。残した行は、`added-comments.sh` の出力と同じ `<パス>:<行番号>` で 1 行ずつ `self_review.comments.kept` に書く。親が同じスクリプトを実行し、一致しなければ差し戻す。
 
 ## 手順 (mode: fix)
 
-1. `findings_path` の JSON を Read し、`severity` が `high` の指摘**だけ**を直す (`medium` / `low` は修正対象ではない — 親が保留リストに記録して先へ進める規約なので、直すとレビュー範囲を無駄に広げる)。**`adjudication` キーを持つ finding は対象外** (親が誤検出と裁定済み、または親が直接直したもの)
+1. `findings_path` の JSON を Read し、`severity` が `high` と `medium` の指摘をすべて直す。`followup` (issue にする) と、**`adjudication` キーを持つ finding は対象外** (親が誤検出と裁定済み、または親が直接直したもの)
+   - `high` から先に直す。直すと green に戻せないときは、その修正だけを戻し、`findings_result` に `not_fixed` と理由を書いて次へ進む
+   - 直した finding と直せなかった finding を、1 件ずつ `findings_result` に書く
 2. 指摘に無いリファクタ・機能追加・「ついでの改善」をしない (親が差分を再レビューするため、指摘外の差分はレビュー範囲を無駄に広げる)
 3. 修正のたびにテストを再実行し green を保つ
 4. `category: test-weakening` の finding は**自分で直さない**。実装を止めて `status: escalate`, `reason: test_weakening_suspected` で報告する (テストの弱体化を実装者自身に直させると骨抜きの温床になるため、裁定は親が行う)
-5. 修正した差分にも「実装後のセルフチェック」を当て、結果を報告に残す (指摘を直した分岐がテストで固定されているか、コメントを足していないかを確かめる)
+5. 修正した差分にも「実装後のセルフチェック」を当て、結果を報告に残す (指摘を直した分岐がテストで固定されているかを確かめる)。「4. コメントの自己点検」は、実装時の行も含めた差分全体でやり直す
 6. 動作確認の証跡を取り直す (下記「動作確認の証跡」)。修正で画面や応答が変わっていなくても取り直す。PR に載るのは最後の報告の証跡なので、fix 前の証跡を残すと修正前の画面が PR に載る
-7. 報告する
+7. 「4. コメントの自己点検」の抽出をもう一度実行し、`comments.kept` を今の行番号に合わせる
+8. 報告する
 
 ## 動作確認の証跡
 
@@ -168,6 +173,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
   "dod_result": { "command": "...", "exit_code": 0 },
   "docs_updates": [{ "file": "...", "what": "...", "why": "..." }],
   "design_decisions": [{ "decision": "...", "rationale": "..." }],
+  "findings_result": [{ "at": "<file>:<line>", "summary": "<finding の summary>", "severity": "high|medium", "result": "fixed|not_fixed", "note": "<直した方法か、直せなかった理由>" }],
   "self_review": {
     "checklist_applied": true,
     "change_types": ["<早見表の種類。当てはまらない変更は「その他」>"],
@@ -178,7 +184,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
       "new_branches": "<増えた分岐・値・列・ロール・エラーと、わざと壊して落ちるかの確認>"
     },
     "other": [],
-    "comments": { "added": 0, "removed": 0, "note": "<残したコメントの理由>" },
+    "comments": { "removed": 0, "kept": [{ "at": "<パス>:<行番号>", "kind": "legal|external|api|link|directive|not_added", "why": "<当てはまる理由の一句>" }] },
     "tests_revised": 0,
     "notes": ""
   },
@@ -187,7 +193,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 }
 ```
 
-該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。`ui_evidence` と `evidence` は役割が違うので両方埋める。`ui_evidence` は、手順 3 で自分が開いて見た視覚テストの png の記録である。`evidence` は PR 本文に載せる動作確認の証跡で、`status` が `done` のときは必ず `manifest.json` を指す。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` に加え、`basic_checks` の 4 つが空でないこと、`change_types` が空でないことを検収してから done と扱う。`change_types` に「その他」がある場合は `other` の各項目に `summary` / `axes` (`spec` / `layer` / `artifact`) / `answers` (4 問い) が埋まっていること、差分にコメントを足した場合は `comments` が記録されていることも確かめる。**UI に触れる issue では `ui_evidence.screenshots` が空でないことも検収対象**になる。親は画像を開かない。差分で追加・更新された基準画像は、別のコンテキストの review-impl が開いて見る (検査項目 5)。`self_review` は、報告の直前に「実装後のセルフチェック」と `~/.claude/guidelines/core/testing.md`「セルフレビューチェックリスト」を自分の差分とテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して確認レビューで残存と判定されるだけ)。`basic_checks` は該当が無くても「なし」と書いて 4 つすべてを埋める。
+該当が無い項目も空配列で必ず埋める (`issue` / `mode` は親の指定値の写しで、トレーサビリティ用)。`ui_evidence` と `evidence` は役割が違うので両方埋める。`ui_evidence` は、手順 3 で自分が開いて見た視覚テストの png の記録である。`evidence` は PR 本文に載せる動作確認の証跡で、`status` が `done` のときは必ず `manifest.json` を指す。`findings_result` は `mode: fix` のときだけ、対象の finding 1 件につき 1 項目を書く (`mode: implement` では空配列)。親は `test_result` / `dod_result` の exit_code と `self_review.checklist_applied` に加え、`basic_checks` の 4 つが空でないこと、`change_types` が空でないことを検収してから done と扱う。`change_types` に「その他」がある場合は `other` の各項目に `summary` / `axes` (`spec` / `layer` / `artifact`) / `answers` (4 問い) が埋まっていること、`comments.kept` が `added-comments.sh` の出力と行単位で一致することも確かめる。**UI に触れる issue では `ui_evidence.screenshots` が空でないことも検収対象**になる。親は画像を開かない。差分で追加・更新された基準画像は、別のコンテキストの review-impl が開いて見る (検査項目 5)。`self_review` は、報告の直前に「実装後のセルフチェック」と `~/.claude/guidelines/core/testing.md`「セルフレビューチェックリスト」を自分の差分とテストへ適用した結果 (該当テストはその場で書き直してから報告する。**適用せずに `true` を書かない** — 下流のレビュワーが同じ観点で検査するため、虚偽は露見して確認レビューで残存と判定されるだけ)。`basic_checks` は該当が無くても「なし」と書いて 4 つすべてを埋める。
 
 ## 範囲外 (やらないこと)
 

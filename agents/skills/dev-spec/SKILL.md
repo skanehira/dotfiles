@@ -211,7 +211,7 @@ sh ~/.claude/skills/dev-spec/scripts/dep-depth.sh [--serial] <scratchpad>
 
 `references/issue-template.md` の「issue 作成手順」に従う。要点:
 
-1. **docs をコミットする**: docs/design/ 配下の成果物 (DESIGN.md / features/ ほか。ただし `docs/pending-review/` は対象外 — dev-impl が管理する) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/guidelines/core/orchestration.md` に従う)。**/dev-impl は origin のデフォルトブランチから切ったブランチで docs を読むため、実装開始前にこのコミットが origin のデフォルトブランチに入っている必要がある。** デフォルトブランチ上でコミットした場合は push を、デフォルトブランチが保護されていて直接 push できない場合は docs のブランチから PR を作って merge することを、下の 4. の案内に含める
+1. **docs をコミットする**: docs/design/ 配下の成果物 (DESIGN.md / features/ ほか) の変更を Conventional Commit でコミットする (コミット実行の委譲は `~/.claude/guidelines/core/orchestration.md` に従う)。**/dev-impl は origin のデフォルトブランチから切ったブランチで docs を読むため、実装開始前にこのコミットが origin のデフォルトブランチに入っている必要がある。** デフォルトブランチ上でコミットした場合は push を、デフォルトブランチが保護されていて直接 push できない場合は docs のブランチから PR を作って merge することを、下の 4. の案内に含める
 
 2. **作成前に人間の同意を取る** (GitHub への書き込みなので):
 

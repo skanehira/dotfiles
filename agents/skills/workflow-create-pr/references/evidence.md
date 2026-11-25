@@ -85,7 +85,6 @@ const evidenceDir = process.env.E2E_EVIDENCE_DIR;
 let step = 0;
 
 export async function capture(page: Page, state: string): Promise<void> {
-  // 環境変数が無い実行 (検証・レビュー・CI) で書き出すと、他の spec の画像が混ざり、リポジトリにも残るため何もしない
   if (!evidenceDir) return;
   step += 1;
   mkdirSync(evidenceDir, { recursive: true });
@@ -99,7 +98,7 @@ export async function capture(page: Page, state: string): Promise<void> {
 }
 ```
 
-番号はモジュールの中の 1 つのカウンタで振る。golden path を 1 本の `test()` で書くのはこのためで、`test()` を分けると並列実行で番号が混ざる。ファイル名の slug は英数字だけを使う (日本語の状態名は `screen` になる)。日本語や括弧をファイル名に入れると、PR 本文の画像参照が壊れることがある。
+環境変数が無い実行 (検証・レビュー・CI) では何もしない。書き出すと、他の spec の画像が混ざり、リポジトリにも残るためである。番号はモジュールの中の 1 つのカウンタで振る。golden path を 1 本の `test()` で書くのはこのためで、`test()` を分けると並列実行で番号が混ざる。ファイル名の slug は英数字だけを使う (日本語の状態名は `screen` になる)。日本語や括弧をファイル名に入れると、PR 本文の画像参照が壊れることがある。
 
 ```ts
 test("会員登録の golden path", async ({ page }) => {
