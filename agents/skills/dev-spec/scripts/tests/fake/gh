@@ -4,7 +4,7 @@
 #   issues/<番号>/title・state (OPEN|CLOSED)・labels (カンマ区切り)・body・parent (親の番号。無ければファイルが無い)
 #   next (次に作る番号)、calls.log (状態を変えた呼び出しの記録)
 # GitHub は本文を受け取ったとおりに (末尾の改行も含めて) 保存し、gh -q は末尾に改行を 1 つ足して出す。
-# 偽物もそう振る舞う (2026-11-14 に ro-ai-dojo/rehearsal-flashcards の issue で確かめた)。
+# 偽物もそう振る舞う (2026-11-14 に実物の issue で確かめた)。
 # GH_FAKE_FAIL_LINK=1 なら、親への紐付けを HTTP 422 で失敗させる。
 set -u
 D=${GH_FAKE_DIR:?}
