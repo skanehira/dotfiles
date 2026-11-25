@@ -313,12 +313,14 @@ severity ごとに、次のとおり扱う (基準の正本は review-impl の�
 | --- | --- |
 | `high` | 修正 1 回 → r2 |
 | `medium` | 修正 1 回。`high` が無ければ r2 を回さず、2.4 手順 2 の全テストで確かめる |
+| `decision` | 直さない。人が決めるまで merge せず、2.6 で駐車する |
 | `followup` | 直さない。merge を止めず、issue にする (下記「issue にする指摘」) |
 
 r1 の findings による分岐:
 
 1. **`category: test-weakening` の finding を先に裁定する** (下記)。implementer に渡すと `test_weakening_suspected` で escalate が返り、2.2 の分岐で 2.6 へ落ちて裁定を飛ばしてしまう
-2. 残った `high` と `medium` で分ける:
+2. **`decision` が 1 件以上あれば、fix を起動せずに 2.6 で駐車する** (決まった内容で直し方が変わり、先に直しても無駄になりうるため)
+3. 残った `high` と `medium` で分ける:
    - **どちらも 0 件** → 2.4 へ
    - **1 件以上** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動し、`high` と `medium` をまとめて直させる。**fix はこの 1 回だけ (固定)**
 
@@ -350,7 +352,7 @@ evidence_dir: <SCRATCH>/evidence-<N>
 - `escalate` / `failed` → 2.6 へ
 - 検収落ち・subagent のエラー・report JSON が無い・パース不能 → 同じ `mode: fix` で 1 回だけ再起動する。渡す内容と `findings_path` は変えず、検収落ちのときは 2.2 と同じく満たさなかった項目の行を足す。**この再起動は fix ラウンドに数えない** (「fix はこの 1 回だけ」の 1 回は、r1 の findings に対する修正の機会を数える)。再起動後も検収を通った `done` にならなければ 2.6 へ
 
-**r2 に high が無ければ 2.4 へ進む。** r2 で新たに出た `medium` は直さない (「issue にする指摘」)。r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わない) は、その high の `category` で分岐する。**契約・証跡・検証器が壊れているものだけを駐車し、成果物の内部品質は issue にして先へ進む**:
+**r2 に `decision` があれば 2.6 で駐車する。`decision` も high も無ければ 2.4 へ進む。** r2 で新たに出た `medium` は直さない (「issue にする指摘」)。r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わない) は、その high の `category` で分岐する。**契約・証跡・検証器が壊れているものだけを駐車し、成果物の内部品質は issue にして先へ進む**:
 
 | `category` | 動作 |
 | --- | --- |
@@ -560,6 +562,7 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 次の解消できない issue を駐車する:
 
 - r2 の後に残った `spec-compliance` / `e2e` の high (fix で `not_fixed` になったものを含む) と、裁定できない `test-weakening`
+- r1 か r2 の `decision` (指摘ごとに、起きること・選択肢・それぞれを選ぶと起きることを駐車コメントに書く)
 - implementer の `escalate`、DoD の失敗、テストの red、subagent の再失敗
 - 直せないコミットの失敗、push の失敗
 - 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR の作成、issue の Development に紐づかない PR

@@ -115,7 +115,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 
 ## 手順 (mode: fix)
 
-1. `findings_path` の JSON を Read し、`severity` が `high` と `medium` の指摘をすべて直す。`followup` (issue にする) と、**`adjudication` キーを持つ finding は対象外** (親が誤検出と裁定済み、または親が直接直したもの)
+1. `findings_path` の JSON を Read し、`severity` が `high` と `medium` の指摘をすべて直す。`decision` (人が決める) と `followup` (issue にする)、**`adjudication` キーを持つ finding は対象外** (親が誤検出と裁定済み、または親が直接直したもの)
    - `high` から先に直す。直すと green に戻せないときは、その修正だけを戻し、`findings_result` に `not_fixed` と理由を書いて次へ進む
    - 直した finding と直せなかった finding を、1 件ずつ `findings_result` に書く
 2. 指摘に無いリファクタ・機能追加・「ついでの改善」をしない (親が差分を再レビューするため、指摘外の差分はレビュー範囲を無駄に広げる)
