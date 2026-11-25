@@ -193,6 +193,13 @@ test_section_line_limit_counts_bytes() {
   assert_eq 1 "$CODE"
 }
 
+test_limits_ignore_link_targets() {
+  setup
+  feature export "[一覧](https://example.com/$(repeat 4100 a))"
+  run "$T/d"
+  assert_eq "" "$OUT"
+}
+
 test_section_row_limit_ignores_blank_lines() {
   setup
   feature export "$(i=0; while [ $i -lt 40 ]; do printf 'x\n\n'; i=$((i + 1)); done)"

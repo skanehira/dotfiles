@@ -457,7 +457,7 @@ subagent は 3 者で唯一**書式変換が避けられない**要素である�
 deno test --allow-env --allow-run --allow-read --allow-write agents/
 ```
 
-dev-spec と dev-impl の skill に置いたスクリプトは、deno ではなく POSIX の sh と awk で書く。対象は `agents/skills/dev-spec/scripts/` (issue 作成・依存の段数・人が読む概要の検査) と `agents/skills/dev-impl/scripts/` (着手順・CI 待ちと merge・追加したコメント行の抽出) である。研修のプラグインで、deno の無い受講者の PC (macOS と Ubuntu) にも配るためである。触ったら、macOS の awk・GNU awk・dash と、docker の Ubuntu (dash と mawk) でテストを回す。`SH=dash` を付けると、テストが呼ぶスクリプトも dash で動く (付けないと macOS では `sh` = bash で動く)。テストは偽の gh (`tests/fake/gh` と、merge のテスト用の `tests/fake/gh-merge`) を使い、`gh` が偽物を指していなければ何もせずに止まる。
+dev-spec と dev-impl の skill に置いたスクリプトは、deno ではなく POSIX の sh と awk で書く。対象は `agents/skills/dev-spec/scripts/` (issue 作成・依存の段数・人が読む概要と issue 本文の検査) と `agents/skills/dev-impl/scripts/` (着手順・CI 待ちと merge・追加したコメント行の抽出) である。研修のプラグインで、deno の無い受講者の PC (macOS と Ubuntu) にも配るためである。触ったら、macOS の awk・GNU awk・dash と、docker の Ubuntu (dash と mawk) でテストを回す。`SH=dash` を付けると、テストが呼ぶスクリプトも dash で動く (付けないと macOS では `sh` = bash で動く)。テストは偽の gh (`tests/fake/gh` と、merge のテスト用の `tests/fake/gh-merge`) を使い、`gh` が偽物を指していなければ何もせずに止まる。
 
 ```bash
 for t in agents/skills/dev-spec/scripts/tests/*_test.sh agents/skills/dev-impl/scripts/tests/*_test.sh; do

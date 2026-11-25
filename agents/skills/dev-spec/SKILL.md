@@ -21,7 +21,7 @@ argument-hint: "[cli|webapp] [タスク説明]"
 - **docs/design/DESIGN.md** (横断設計 1 枚): 目的・アーキテクチャ・開発検証コマンド・スキーマ・API 一覧・CLI インターフェース (cli モード)・横断規約 (webapp ではアプリシェルの項を含む)・既知の制約
 - **docs/design/OVERVIEW.md** (仕様の概要 1 枚): 人が仕様の概要をつかむための文書。利用者・流れ・状態・中心の決まり・機能の一覧
 - **docs/design/features/<機能名>.md** (機能設計): 先頭の「何を作るか」が人の読む概要、ほかの節が契約。機能単位の入出力・API・実装配置・エッジケース・テスト方針。**正本は常に docs 側で、issue は参照するだけ** (ローカルで「この機能の設計はどうなっているか」を AI にも人間にも引ける)
-- **GitHub issue**: ユースケース単位の親 (`tracking`) + その sub-issue の子 (作業単位) の 2 階層。**人間が issue 本文 + 参照 docs だけで着手できる**ことが情報設計の基準
+- **GitHub issue**: ユースケース単位の親 (`tracking`) + その sub-issue の子 (作業単位) の 2 階層。子は、先頭の「ゴール」だけで人が内容を理解でき、折りたたんだ節と参照 docs で実装に着手できる形にする
 
 フェーズごとに Feedback (検証手段) が異なる:
 
@@ -199,7 +199,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 
 `references/issue-template.md` を Read し、テンプレートに従って**親 <m> 件 + 子 <n> 件のドラフトを scratchpad にファイルとして書き出す** (まだ GitHub に作らない)。**ファイル名は子が `issue-<連番>.md`、親が `parent-<識別子>.md`** (フェーズ 10 の作成手順と同じ規約。子の連番はドラフト段階の依存 `Depends on issue-<連番>` と `dep-depth.sh` の段数の計算が参照する)。タイトルはドラフトのファイルに入らないので、全ドラフトのファイル名とタイトルを `<scratchpad>/titles.tsv` に書き出す (形式は issue-template.md「タイトル一覧ファイル」)。子のタイトルは、GitHub に既存の子 issue があれば issue-template.md「子 issue テンプレート」の引き継ぎ規則で既存のタイトルを使う (docs から作り直したドラフトの言い回しがずれると、フェーズ 10 のタイトル突き合わせが外れて子が二重に作られるため)。親は USECASES.md の UC 1 件につき 1 件。例外 (基盤親・UC 統合親・クイックモードのフォールバック) は issue-template.md「親 issue テンプレート」の表に従う。再実行時 (issue への反映・別セッションからの再開) もドラフトは docs から再生成する — 前セッションの scratchpad は残っていない。作業単位の切り方: 1 issue = 独立して検証可能な 1 単位 (機能 1 つ、または機能を構成する縦切りの 1 段)。**依存は「依存先が merge した成果物が無いと DoD が失敗する」ものだけに絞り、並行して着手できる形を優先する** (基準と段数の算出は issue-template.md「依存の段数」。依存の段数がそのまま実装ループの所要時間の下限になる)。
 
-全ドラフトが揃ったら、先に依存の段数を計算する。dev-impl の SKILL.md (`~/.claude/skills/dev-impl/SKILL.md`)「2.0 並列実行の可否と枠組み」を Read して、対象のリポジトリが並列実行の条件を満たすかを判定し、満たさなければ `--serial` を付ける:
+全ドラフトが揃ったら、`sh ~/.claude/skills/dev-spec/scripts/issue-check.sh <scratchpad>/issue-*.md` を実行し、何も出力しなくなるまで直す。続けて、依存の段数を計算する。dev-impl の SKILL.md (`~/.claude/skills/dev-impl/SKILL.md`)「2.0 並列実行の可否と枠組み」を Read して、対象のリポジトリが並列実行の条件を満たすかを判定し、満たさなければ `--serial` を付ける:
 
 ```bash
 sh ~/.claude/skills/dev-spec/scripts/dep-depth.sh [--serial] <scratchpad>
@@ -207,7 +207,7 @@ sh ~/.claude/skills/dev-spec/scripts/dep-depth.sh [--serial] <scratchpad>
 
 出力の 1 行目が `依存段数:` の行で、2 行目以降が段ごとの子である (形式と閾値は issue-template.md「依存の段数」)。0 以外で終わったら、issue-template.md「依存の段数」の終了コードの表に従う (2〜4 はドラフトの誤りなので、標準エラーに挙がった行に従ってドラフトを直し、実行し直す)。
 
-続けて、`general-purpose` subagent (**モデル: opus を明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合・相互の重複漏れ・UC 帰属はセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 6 項目を指示文に転記し (観点 3 が参照する「依存の段数」の書く基準・閾値と、`dep-depth.sh` の出力の全行も一緒に転記する)、`<scratchpad>/titles.tsv`・USECASES.md (あれば)・機能設計書と DESIGN.md のパスを渡して照合させる。完了を待ってから結果の分岐へ進む。出力形式はフェーズ 8 と同じ。`依存段数:` の行は、`dep-depth.sh` の出力をそのまま使う (段数は severity を持たない情報なので findings の形式に載らない)。
+続けて、`general-purpose` subagent (**モデル: opus を明示**、fresh context) を **1 本だけ**起動し、親 + 子の全ドラフトを一括で検査させる (issue ごとに個別起動しない — 依存の整合・相互の重複漏れ・UC 帰属はセット全体を見ないと検査できない)。検査観点は issue-template.md「ドラフトチェックのチェックリスト」の 7 項目を指示文に転記し (観点 3 が参照する「依存の段数」の書く基準・閾値と、`dep-depth.sh` の出力の全行も一緒に転記する)、`<scratchpad>/titles.tsv`・USECASES.md (あれば)・機能設計書と DESIGN.md のパスを渡して照合させる。完了を待ってから結果の分岐へ進む。出力形式はフェーズ 8 と同じ。`依存段数:` の行は、`dep-depth.sh` の出力をそのまま使う (段数は severity を持たない情報なので findings の形式に載らない)。
 
 分岐も同じ (**最大 2 周**): high は修正して再実行、2 周で残れば人間に提示、無ければフェーズ 10 へ。**`依存段数:` の行と、段数超過の medium は、フェーズ 10 の作成同意を取る前にユーザーへ提示する** (依存をどう削るかは設計判断なので、他の medium と違って自動では反映しない)。
 

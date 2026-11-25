@@ -31,12 +31,13 @@ child() {
   uc=$3
   shift 3
   {
-    printf '## ゴール\n対応 UC: %s\n%s を作る\n\n## 依存\n' "$uc" "$title"
+    printf '## ゴール\n%s を作る\n\n<details>\n<summary>実装用</summary>\n\n## 設計\n対応 UC: %s\n\n## 依存\n' "$title" "$uc"
     if [ $# -eq 0 ]; then
       printf '依存なし\n'
     else
       for d in "$@"; do printf 'Depends on issue-%s\n' "$d"; done
     fi
+    printf '\n</details>\n'
   } >"$T/d/issue-$n.md"
   printf 'issue-%s.md\t%s\n' "$n" "$title" >>"$T/d/titles.tsv"
 }

@@ -61,3 +61,42 @@ explain_graph_error() {
     END { if (c != "") printf "依存が循環している: %s\n", c }
   ' "$1" >&2
 }
+
+# 人が読む文章の長さと語を検査し、問題を 1 件につき 1 行で出す。リンクの先は長さに数えない。
+# 使い方: check_text <ファイル> <節の見出し。空ならファイル全体> <行数の上限> <バイト数の上限> <1 行のバイト数の上限>
+check_text() {
+  awk -v file="$1" -v section="$2" -v max_rows="$3" -v max_bytes="$4" -v max_line="$5" '
+    { sub(/[ \t\r]+$/, "") }
+    /<!--[ \t]*変更履歴/ { printf "%s:%d: 変更履歴のコメントがある\n", file, NR; next }
+    /^[ \t]*(```|~~~)/ {
+      if (!fence && $0 !~ /^[ \t]*```mermaid$/ && (section == "" || in_section))
+        printf "%s:%d: mermaid 以外のコードブロックがある\n", file, NR
+      fence = !fence
+      fence_row = 1
+    }
+    !fence && !fence_row && /^## / {
+      in_section = ($0 == "## " section)
+      if (section != "") next
+    }
+    (section == "" || in_section) && $0 != "" {
+      shown = $0
+      gsub(/\]\([^)]*\)/, "]", shown)
+      rows++
+      bytes += length(shown)
+      if (length(shown) > max_line)
+        printf "%s:%d: 1 行が長い (%d B / 上限 %d B)\n", file, NR, length(shown), max_line
+      if (!fence && !fence_row && index($0, "`"))
+        printf "%s:%d: 実装の語 (バッククォート) がある\n", file, NR
+    }
+    { fence_row = 0 }
+    END {
+      label = (section == "") ? "" : "「" section "」が"
+      if (section != "" && rows == 0)
+        printf "%s: 「%s」節が無いか、空である\n", file, section
+      if (rows > max_rows)
+        printf "%s: %s長い (%d 行 / 上限 %d 行)\n", file, label, rows, max_rows
+      if (bytes > max_bytes)
+        printf "%s: %s長い (%d B / 上限 %d B)\n", file, label, bytes, max_bytes
+    }
+  ' "$1" || printf '%s: 読めない\n' "$1"
+}

@@ -95,6 +95,16 @@ test_orders_by_priority_section() {
   assert_file_eq "$T/exp.txt" "$T/out.txt"
 }
 
+# 実装用の節が折りたたまれた本文でも、依存とスコアを読む
+test_reads_folded_body() {
+  setup
+  issue 1 OPEN ready '## ゴール' '書き出せる' '' '<details>' '<summary>実装用</summary>' '' '## 設計' '対応 UC: 基盤' '' '## 依存' 'Depends on #2' '' '</details>' '' '## 優先度' 'スコア 4.0 (2026-11-05 採点)'
+  issue 2 OPEN ready '## 優先度' 'スコア 1.0 (2026-11-05 採点)'
+  collect
+  printf 'start\t2\t4\nwait\t1\t2\n' >"$T/exp.txt"
+  assert_file_eq "$T/exp.txt" "$T/out.txt"
+}
+
 # 「## 優先度」の節の外にあるスコアや、行の先頭でない「緊急枠」は数えない
 test_ignores_score_outside_priority_section() {
   setup
