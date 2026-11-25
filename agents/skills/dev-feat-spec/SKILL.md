@@ -89,7 +89,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,body,files
 
 `git switch -c design/issue-<N> origin/$DEFAULT` で切ったブランチで書く。
 
-- **機能設計書**: 既存の `docs/design/features/<機能名>.md` を変えるか、新しく作る。型と記入基準は `~/.claude/skills/dev-spec/references/feature-doc.md` に従う (/dev-impl の implementer と review-impl がこの型で読むため)。「決めが要る点はその場で聞く」の基準だけは、このスキルでは「質問せずに決めて確認点に書く」に読み替える
+- **機能設計書**: 既存の `docs/design/features/<機能名>.md` を変えるか、新しく作る。型と記入基準は `~/.claude/skills/dev-spec/references/feature-doc.md` に従う (/dev-impl の implementer と review-impl がこの型で読むため)。「細部は方針から導き、聞くものを絞る」の基準のうち、その場でユーザーに確認する部分だけは、このスキルでは「質問せずに決めて確認点に書く」に読み替える
 - **人が読む概要**: 機能設計書の「何を作るか」と `docs/design/OVERVIEW.md` は、人が仕様の概要を知るための要約である (書き方は `~/.claude/skills/dev-spec/references/overview-doc.md` と `feature-doc.md`)。次の表で扱いを決める
 
   | 対象 | この設計で概要が変わる | 変わらない |

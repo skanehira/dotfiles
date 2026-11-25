@@ -628,6 +628,7 @@ hook を追加したくなったときの置き場は次のとおり。
 | utility-doc-audit の起動経路 (ユーザー起動と `/workflow-design-notes` の落とし込みのみ) | `agents/skills/utility-doc-audit/SKILL.md` | 普段の作業で監査が自発起動し、観点サブエージェントの fan-out 分のトークンを消費する | **無い**。`disable-model-invocation` を使わない判断のため、SKILL.md の description と本文の記述が唯一の抑止 |
 | dev-spec で UI スケッチを最初に作るとき、frontend-design を Skill ツールで起動すること (既存のスケッチに画面を足す・直すときは起動しない) | `agents/skills/dev-spec/references/ui-sketch.md` の手順 5.3「frontend-design の起動のしかた」 | 記憶にあるデザインの知識で作り込み、ジェネリックな見た目のスケッチが実装の手本になる | `UI_SKETCH.html` の痕跡の行 `<!-- frontend-design: ... -->` と、ui-sketch.md 手順 8 のレビュー観点 8 (方針の見た目が全画面に出ているか)。痕跡の行は起動しなくても書けるので、起動したことの証明にはならない |
 | dev-spec の UI スケッチを、ユーザーに渡す前に自分で撮影・操作して確かめ、別のコンテキストの批評を通すこと | `agents/skills/dev-spec/references/ui-sketch.md` の手順 5.4・5.5 と `sketch-critique.md` | 描画結果を誰も見ないままユーザーに渡り、押しても動かないキー・見出しの無い列・崩れた画面が、ユーザーの指摘として 1 件ずつ返ってくる | 撮影だけは `agents/skills/dev-spec/scripts/sketch-shots.sh` の終了コードで分かる (ui-sketch.md 手順 8 が完了の印の前に実行する)。操作のスクリプトと批評を実行したかは、**無い**。セッションのログを人が読むしかない |
+| dev-spec で細部の挙動を 1 件ずつユーザーに聞かず、方針から導いて確認点として示すこと | `agents/skills/dev-spec/references/behavior-policy.md` と、それを参照するフェーズ 2・3・6・7 の手順書 | 細部の質問が数十件になるか、聞かれないまま残ってスケッチとユースケースが食い違い、実装者が場当たりで決める | 残った未決定は、フェーズ 8 の設計チェックの観点 8 が別のコンテキストで探す。方針を立てたか・確認点を示したかは、**無い**。USECASES.md の「挙動の方針」の節と完了報告を人が読むしかない |
 | OpenCode が共通の正本を Read すること | `agents/bindings/opencode/AGENTS.md` | OpenCode は `~/.claude/CLAUDE.md` を自動では読まない (→「配布先」節) ため、指示を守らないと**エラーも警告も出さずに共通ハーネス無しで走る** | **無い**。セッションのログを人が読むしかない |
 
 ### subagents (agents/subagents/)
