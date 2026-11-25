@@ -16,10 +16,11 @@ argument-hint: "[cli|webapp] [タスク説明]"
 
 ## 概要
 
-設計ループを回して docs/design/ 配下に設計成果物を生成し、GitHub issue に落として実装ループ (`/dev-impl`) に引き渡す。成果物は 3 種:
+設計ループを回して docs/design/ 配下に設計成果物を生成し、GitHub issue に落として実装ループ (`/dev-impl`) に引き渡す。成果物は 4 種:
 
 - **docs/design/DESIGN.md** (横断設計 1 枚): 目的・アーキテクチャ・開発検証コマンド・スキーマ・API 一覧・CLI インターフェース (cli モード)・横断規約 (webapp ではアプリシェルの項を含む)・既知の制約
-- **docs/design/features/<機能名>.md** (機能設計): 機能単位の入出力・API・実装配置・エッジケース・テスト方針。**正本は常に docs 側で、issue は参照するだけ** (ローカルで「この機能の設計はどうなっているか」を AI にも人間にも引ける)
+- **docs/design/OVERVIEW.md** (仕様の概要 1 枚): 人が仕様の概要をつかむための文書。利用者・流れ・状態・中心の決まり・機能の一覧
+- **docs/design/features/<機能名>.md** (機能設計): 先頭の「何を作るか」が人の読む概要、ほかの節が契約。機能単位の入出力・API・実装配置・エッジケース・テスト方針。**正本は常に docs 側で、issue は参照するだけ** (ローカルで「この機能の設計はどうなっているか」を AI にも人間にも引ける)
 - **GitHub issue**: ユースケース単位の親 (`tracking`) + その sub-issue の子 (作業単位) の 2 階層。**人間が issue 本文 + 参照 docs だけで着手できる**ことが情報設計の基準
 
 フェーズごとに Feedback (検証手段) が異なる:
@@ -62,7 +63,7 @@ dev-impl が起動する implementer (`dev-impl-implementer`) とレビュワー
 | 4  | 実現可能性検証                    | `references/feasibility-check.md`   | docs/design/FEASIBILITY.md (PoC 計画)     | 条件付き実行   | 実行       |
 | 5  | PoC 検証                          | `references/poc-verification.md`    | FEASIBILITY.md 更新 (設計書のマーカーから足した PoC 計画と PoC 結果)。スコープ縮小を選んだときは USER_STORIES.md・USECASES.md (features/ があればそれも) の書き換え | 条件付き実行   | 実行       |
 | 6  | 横断設計                          | `references/design-doc.md`          | docs/design/DESIGN.md                     | 実行           | 実行       |
-| 7  | 機能設計                          | `references/feature-doc.md`         | docs/design/features/<機能名>.md          | 実行           | 実行       |
+| 7  | 機能設計と仕様の概要              | `references/feature-doc.md`。全機能設計書のあとに `references/overview-doc.md` | docs/design/features/<機能名>.md + docs/design/OVERVIEW.md | 実行           | 実行       |
 | 8  | 設計チェック                      | (本ファイル下記)                    | 指摘の反映 (docs 修正)             | 実行           | 実行       |
 | 9  | issue ドラフト + ドラフトチェック | `references/issue-template.md`      | ドラフト (scratchpad) + 指摘の反映 | 実行           | 実行       |
 | 10 | GitHub issue 生成                 | `references/issue-template.md`      | 親 issue <m> 件 + 子 issue <n> 件  | 実行           | 実行       |
@@ -98,7 +99,7 @@ rg -c 'POC_STATUS:' docs/design/FEASIBILITY.md
 
 ### 0.2 既存ドキュメントの確認と開始点の決定
 
-docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / DESIGN.md / features/) と、GitHub 上の親 issue (`tracking` ラベル。ユースケース単位) を確認する (先に `gh auth status` を確認し、未認証なら issue 関連の判定はスキップして「フェーズ 10 までに認証が必要」と伝える)。
+docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECASES.md / FEASIBILITY.md / DESIGN.md / OVERVIEW.md / features/) と、GitHub 上の親 issue (`tracking` ラベル。ユースケース単位) を確認する (先に `gh auth status` を確認し、未認証なら issue 関連の判定はスキップして「フェーズ 10 までに認証が必要」と伝える)。
 
 旧構成の成果物 (DESIGN_DETAIL_APP.md / DESIGN_DETAIL_INFRA.md / DOMAIN_MODEL.md / TODO.md) を見つけたら、本スキルの対象外であることを伝え、「新構成 (DESIGN.md 1 枚 + features/) で設計し直す / 中止」を確認する。旧成果物は読み取りの参考にはするが更新しない。
 
@@ -116,10 +117,10 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 | UI_SKETCH.html (完了の印 `<!-- ui-sketch: finalized -->` なし) | 3 (UI スケッチの途中で中断した)。ui-sketch.md の手順 1 から始め、既存の UI_SKETCH.html から読み取れる決定は確認だけで済ませる。ただし frontend-design の痕跡の行 (`<!-- frontend-design: `) が無ければ、手順 5.3 の作り込みは確認で済ませずに実行する (ui-sketch.md「frontend-design の起動のしかた」) |
 | UI_SKETCH.html (完了の印あり)               | 4 (実現可能性)                                                 |
 | FEASIBILITY.md                              | 6 (横断設計)。1 を通過しているので未解決の `blocker=true` は無い。`blocker=false` の計画だけが unresolved で残っていても 6 へ進み、design-doc.md「入力と転記」の規則 3 がマーカーにする |
-| DESIGN.md                                   | 7 (機能設計)。features/ 各ファイルの「対象 UC」と USECASES.md の UC 一覧を突合し、全 UC がカバー済みなら 8 (USECASES.md が無い構成では人間に確認する) |
+| DESIGN.md                                   | 7 (機能設計)。features/ 各ファイルの「対象 UC」と USECASES.md の UC 一覧を突合し、全 UC がカバー済みで OVERVIEW.md があれば 8 (USECASES.md が無い構成では人間に確認する) |
 | GitHub に `tracking` issue が 1 件以上ある   | 9 (ドラフトを docs から再生成) → 10。ドラフトはセッション固有の scratchpad にしか無く、10 単独では突き合わせの比較元が無い。親が一部しか作られていない中断状態でも、10 の突き合わせが未作成分を補完する |
 
-更新モードでは既存ドキュメントを読み取って差分のみ更新し、ファイル先頭に変更履歴コメント (`<!-- 変更履歴 [YYYY-MM-DD]: 要約 -->`) を追記する (DESIGN.md ではスタンプ行を押し出さず 1 行目に保つ)。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。** フェーズ 2 (ユースケース記述) は、USECASES.md に加えて USER_STORIES.md の「実現するユースケース」行も書き換える。フェーズ 2 だけを部分実行する場合も、両方が更新対象になる。webapp でユースケースのフローを変えたときは、UI_SKETCH.html の該当する画面とフローも直す (スケッチはユースケースのフローを画面に写したものなので、直さないと食い違う)。フェーズ 1 だけを部分実行した場合は、USECASES.md があるときだけ、続けて usecase-description.md の手順 9 (書き戻しと被覆チェック) を実行する (ストーリーの追加・Won't への移動がユースケース側の受け入れ基準と食い違うため。USECASES.md が無ければ照合する相手が無く、被覆チェックのコマンドもファイルが無いことで異常終了する)。
+更新モードでは既存ドキュメントを読み取って差分のみ更新する。変更履歴のコメントは書かない (DESIGN.md のスタンプは 1 行目に保つ)。機能設計書を変えたら、「何を作るか」と OVERVIEW.md がいまの仕様を表しているかを確かめ、ずれていれば書き直す。**概念の追加・削除を含む更新では該当節だけの局所 Edit にせず全文を読み直して書き直し、更新後はフェーズ 8 (設計チェック) を再実行する。** フェーズ 2 (ユースケース記述) は、USECASES.md に加えて USER_STORIES.md の「実現するユースケース」行も書き換える。フェーズ 2 だけを部分実行する場合も、両方が更新対象になる。webapp でユースケースのフローを変えたときは、UI_SKETCH.html の該当する画面とフローも直す (スケッチはユースケースのフローを画面に写したものなので、直さないと食い違う)。フェーズ 1 だけを部分実行した場合は、USECASES.md があるときだけ、続けて usecase-description.md の手順 9 (書き戻しと被覆チェック) を実行する (ストーリーの追加・Won't への移動がユースケース側の受け入れ基準と食い違うため。USECASES.md が無ければ照合する相手が無く、被覆チェックのコマンドもファイルが無いことで異常終了する)。
 
 ### 0.3 モード選択
 
@@ -144,7 +145,7 @@ docs/design/ 配下の既存成果物 (USER_STORIES.md / UI_SKETCH.html / USECAS
 
 ### 部分実行
 
-依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「機能設計だけ書き直したい」「issue を作り直したい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。**ただし対象にフェーズ 6 が含まれる場合は、実行前に必ず「ゲート条件」の判定コマンドを実行する。** docs を修正する部分実行の後は、フェーズ 8 (設計チェック) → 9 (ドラフト再生成 + ドラフトチェック) → 10 の順で issue に反映する (フェーズ 10 の突き合わせが本文差分を検出して貼り直す)。対象がフェーズ 3 (UI スケッチ) で cli モードなら「cli モードでは UI スケッチは対象外です」と案内して終了する。
+依頼が特定フェーズだけを指す場合 (例: 「ユースケースを詳細化したい」「機能設計だけ書き直したい」「issue を作り直したい」) は、全フェーズを回さず該当フェーズの手順書だけを Read して実行する。**ただし対象にフェーズ 6 が含まれる場合は、実行前に必ず「ゲート条件」の判定コマンドを実行する。** docs を修正する部分実行の後は、フェーズ 8 (設計チェック) → 9 (ドラフト再生成 + ドラフトチェック) → 10 の順で issue に反映する (フェーズ 10 の突き合わせが本文差分を検出して貼り直す)。概要だけの移行 (`references/overview-doc.md`「概要の無い既存のプロジェクト」) は契約を変えないので、フェーズ 8 で終わり、9 と 10 を行わない。対象がフェーズ 3 (UI スケッチ) で cli モードなら「cli モードでは UI スケッチは対象外です」と案内して終了する。
 
 ## 各フェーズの進め方
 
@@ -176,9 +177,11 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 
 判定は終了コードではなく出力の行数で行う (渡したパスが無いと rg は終了コード 2 を返すが、`2>/dev/null` で警告を捨てているので、無いファイルは 0 件として読める)。1 件以上ヒットしたら、その id が FEASIBILITY.md の POC_STATUS で解決済み (`verified` / `fallback_adopted` / `scope_reduced`) なら結果を設計へ反映してマーカーを除去し、未解決ならフェーズ 5 (PoC 検証) へ戻る。0 件になってから検査 subagent を起動する (残したまま issue にすると、dev-impl が開始ガードで止まって設計ループへ差し戻される)。
 
-`general-purpose` subagent を**モデル: opus を明示**して 1 本起動し、完了を待ってから結果の分岐へ進む。機能設計書が 8 本を超える場合は分担して並列に起動する (同じ段の複数起動は並列でよい)。観点 3・4 は機能設計書ごとに判定できるので、機能設計書を分けて複数本に持たせる。観点 1・2・5・6 はセット全体を見ないと判定できないので、全文を読む 1 本に残す。指示文に含める内容:
+あわせて `sh ~/.claude/skills/dev-spec/scripts/overview-check.sh docs/design` を実行し、何も出力しなくなるまで直す。部分実行と更新モードでは、変えた機能設計書のうち「何を作るか」が新しい形のものを引数に渡し、この実行で変えたファイルの指摘だけを直す (旧い形の節は、概要の移行を頼まれたときだけ書き直す)。
 
-> docs/design/USECASES.md (あれば)・docs/design/DESIGN.md・docs/design/features/*.md を**全文 Read** し、照合用に docs/design/FEASIBILITY.md と docs/design/UI_SKETCH.html (それぞれあれば) も Read して、次を検査して指摘だけを返せ (修正はしない):
+`general-purpose` subagent を**モデル: opus を明示**して 1 本起動し、完了を待ってから結果の分岐へ進む。機能設計書が 8 本を超える場合は分担して並列に起動する (同じ段の複数起動は並列でよい)。観点 3・4 は機能設計書ごとに判定できるので、機能設計書を分けて複数本に持たせる。観点 1・2・5・6・7 はセット全体を見ないと判定できないので、全文を読む 1 本に残す。指示文に含める内容:
+
+> docs/design/USECASES.md (あれば)・docs/design/DESIGN.md・docs/design/OVERVIEW.md・docs/design/features/*.md を**全文 Read** し、照合用に docs/design/FEASIBILITY.md と docs/design/UI_SKETCH.html (それぞれあれば) も Read して、次を検査して指摘だけを返せ (修正はしない):
 >
 > 1. **落とし漏れ**: USECASES.md の各 UC・各規則 (BR) が、いずれかの機能設計書でカバーされているか。各 UC の受け入れ基準の各行が、いずれかの機能設計書「テスト方針」の表に写されて検証レベルを割り当てられているか (レベル `なし (<理由>)` も割り当てに数える。その理由が `~/.claude/guidelines/core/testing.md`「テストを書くかを先に決める」の 2 つの軸に沿っているか、逆に 2 つとも低い行にテストのレベルを割り当てていないかも見る。複数の機能設計書にまたがる二重の割り当ても指摘する。同じ機能設計書の `E2E 対象動線:` 行は表の該当行の再掲であり、二重には当たらない)。逆向きに、テスト方針の表の各行が USECASES.md の受け入れ基準に文面どおり実在するか (受け入れ基準を改訂したあとに古い写しが残っていないか)。「対象 UC」が複数の機能設計書では、行の先頭の `UC-<n>: ` を除いた文面を、その UC の受け入れ基準と比べる。1 列目の見出しが `確かめること` で始まる表 (「対象 UC」がなしの機能設計書と、DESIGN.md「横断規約」のアプリシェルの項) は受け入れ基準の写しではないので、この照合の対象外
 > 2. **矛盾**: 機能設計書どうし、および DESIGN.md との食い違い (スキーマと入出力、API 一覧と各機能の API 節)
@@ -186,6 +189,7 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 > 4. **エッジケースの妥当性**: 明らかに起こるのに決定が書かれていないエッジケース
 > 5. **開発・検証コマンドの実在**: DESIGN.md「開発・検証コマンド」が現リポジトリで実行可能か (可能なら実行して確かめる)
 > 6. **転記の漏れ**: FEASIBILITY.md「PoC 結果」の各結果と、未検証で残った `blocker=false` の計画が、DESIGN.md または機能設計書に写っているか (規則は `~/.claude/skills/dev-spec/references/design-doc.md`「入力と転記」)。webapp で UI_SKETCH.html があるとき、そのアプリシェルの決定が DESIGN.md「横断規約」のアプリシェルの項に写り、その項に「テスト方針」の表と `E2E 対象動線:` 行があるか
+> 7. **概要の誤り**: OVERVIEW.md の全文と、各機能設計書の「何を作るか」の記述 (表の各行・図の各矢印・箇条書きの各項目) を 1 つずつ裏づける。裏づけの元は、USECASES.md (あれば) のビジネスルール、DESIGN.md「目的とスコープ」、契約の節である。OVERVIEW.md が無い、または「何を作るか」が旧い形のもの (契約の文を含む) は対象にしない。詳細の省略は指摘しない。指摘するのは次の 6 つである (食い違いは high、ほかは medium): 正本と食い違う / 正本に無い / 省略で読み手が誤解する (例外を落とした言い切り、欠けた矢印) / 用語が用語集と違う / 欠かせない利用者・流れ・状態・機能が抜けている / 概要に要らない記述 (文言・エラー・データの持ち方・例外の例外) がある。例外を落とした言い切りの修正案は、まず言い切りを弱めることにし、例外を足すのは 1 項目に 1 つまでにする。要らない記述の修正案は削除か入れ替えにする
 >
 > 出力: `[severity] 該当箇所 / 問題の一文 / 修正案の一文` (severity: high = 実装が詰まる / medium = 曖昧さが残る / low = 可読性)
 
@@ -254,7 +258,7 @@ B: このセッションで続行 — このセッションのまま、あなた
 - [ ] 対象フェーズがすべて実行された (またはユーザー判断でスキップ)
 - [ ] blocker=true の PoC 計画がすべて解決済み (`verified` / `fallback_adopted` / `scope_reduced` のいずれか)
 - [ ] docs/design/DESIGN.md と docs/design/features/ に `POC_NEEDED: ... blocker=true` が残っていない (`rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>/dev/null` の出力が 0 行)
-- [ ] docs/design/DESIGN.md と docs/design/features/ が生成され、フェーズ 8 の設計チェックを通過した (high 0 件、または未解消のまま人間判断に提示済み)
+- [ ] docs/design/DESIGN.md・docs/design/OVERVIEW.md・docs/design/features/ が生成され、フェーズ 8 の設計チェックを通過した (high 0 件、または未解消のまま人間判断に提示済み)
 - [ ] 全ドラフトがフェーズ 9 のドラフトチェックを通過した (high 0 件、または 2 周で残った high を人間判断に提示済み)
 - [ ] 親 issue 全件 + 子 issue 全件が作成され、全子が対応する親に sub-issue として紐付いた。対応 UC 不明で紐付けられなかった子と、どのドラフトとも一致しない open の既存の子は、issue-template.md の最終報告の形式で列挙した
 

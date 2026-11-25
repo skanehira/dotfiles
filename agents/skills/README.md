@@ -27,7 +27,7 @@ Neovim プラグインの UI 確認は `/utility-nvim-ui-capture` を使う。�
 │                                                                │
 │  1 user-story → 2 usecase → 3 ui-sketch (webapp のみ)          │
 │      → 4 feasibility → 5 ★PoC 検証 (tech-investigation 並列)   │
-│      → 6 DESIGN.md (横断 1 枚) → 7 docs/design/features/ (機能設計)   │
+│      → 6 DESIGN.md (横断 1 枚) → 7 features/ + OVERVIEW.md     │
 │      → 8 ★設計チェック (fresh context の突合)                  │
 │      → 9 issue ドラフト + ★ドラフト一括チェック                │
 │      → 10 GitHub issue 生成 (親 1 + 子 N、sub-issue 紐付け)    │
@@ -212,4 +212,4 @@ dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/refere
 - `security-best-practices` と `security-threat-model` は [openai/skills の commit 49f948faa9258a0c61caceaf225e179651397431](https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated) の同名ディレクトリを全ファイルそのまま取り込んでいる。ライセンスは各ディレクトリの `LICENSE.txt` に保持する。更新時は同じ配布元の対象ディレクトリを置き換え、参照する commit と内容を照合する。配置の反映は `drs` / `hms` の `linkAgentSkills` が行う
 - **必ずしも全フェーズを使う必要はない** — dev-spec はクイックモード・部分実行・途中再開に対応
 - **PoC 検証は不確実性がある場合のみ発火** — 技術的不確実性が無ければ自動スキップ
-- **設計の正本は docs 側** — issue は docs を参照するだけで、転記・同期の機構は無い。機能の設計を知りたければ `docs/design/features/<機能名>.md` を読む (ローカルで AI に聞くときもここを指す)
+- **設計の正本は docs 側** — issue は docs を参照するだけで、転記・同期の機構は無い。機能の設計を知りたければ `docs/design/features/<機能名>.md` を読む (ローカルで AI に聞くときもここを指す)。人が仕様の概要を知りたいときは `docs/design/OVERVIEW.md` と、各機能設計書の「何を作るか」を読む

@@ -33,7 +33,7 @@ dev-impl の 1 issue を実装する葉の agent。**実装とテストだけ**�
 ## 事前に必ず Read するもの
 
 1. **issue 本文**: `gh issue view <issue_number> --json title,body` で取得する。`## ゴール` / `## 設計` / `## DoD` / `## 非スコープ` / `## 依存` の節構成
-2. **issue の `## 設計` が参照する docs**: 通常は `docs/design/features/<機能名>.md` と、言及があれば `docs/design/DESIGN.md` の該当節。webapp のアプリシェルの子は機能設計書を持たず、`docs/design/DESIGN.md`「横断規約」のアプリシェルの項を指す。**契約 (入出力・API・エッジケースの決定) はここが正本**。以下で「設計文書」と書くときは、この 2. で読んだ文書を指す
+2. **issue の `## 設計` が参照する docs**: 通常は `docs/design/features/<機能名>.md` と、言及があれば `docs/design/DESIGN.md` の該当節。webapp のアプリシェルの子は機能設計書を持たず、`docs/design/DESIGN.md`「横断規約」のアプリシェルの項を指す。**契約 (入出力・API・エッジケースの決定) はここが正本**。機能設計書の「何を作るか」は人が読む要約で、契約の節と食い違えば契約の節が正しい (乖離補正で契約をここに書かない)。以下で「設計文書」と書くときは、この 2. で読んだ文書を指す
 3. **`docs/design/DESIGN.md`「開発・検証コマンド」**: セットアップ・テスト実行・lint の方法はここに従う (DESIGN.md が無い構成では issue の DoD に書かれたコマンドから読み取る)
 4. **guidelines**: `$HOME/.claude/guidelines/core/` の tdd.md / design.md / testing.md / implementation.md / verification.md と、下の表で当たる技術別の guidelines の全ファイル。**親の hooks も CLAUDE.md も継承されず、guidelines は自動では読み込まれないため、これを読まずに実装しない**
 

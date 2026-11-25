@@ -8,7 +8,7 @@
 
 ## 成果物とパス（違反は major）
 
-1. 横断設計 = `docs/design/DESIGN.md` の 1 枚 + 機能単位の設計 = `docs/design/features/<機能名>.md`（1 機能 = 1 ファイル、機能名で命名）
+1. 横断設計 = `docs/design/DESIGN.md` の 1 枚 + 機能単位の設計 = `docs/design/features/<機能名>.md`（1 機能 = 1 ファイル、機能名で命名）。人が読む概要 = `docs/design/OVERVIEW.md` の 1 枚
 2. `docs/design/DESIGN.md` の 1 行目にプロダクトモードスタンプ (`<!-- product-mode: cli|webapp -->`) がある
 3. 節構成は各テンプレートに従う。該当しない節（データスキーマ・API・インフラ等）は省略できる。機能設計書の「エッジケースの決定」だけは、検討して該当なしと判断した観点に「該当なし (<理由>)」を残す（feature-doc.md の記入基準と同一）
 
@@ -17,6 +17,7 @@
 | 要件 | 判定 |
 | --- | --- |
 | PoC 未解決なし | `rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/` が 0 件 |
+| 人が読む概要 | `sh ~/.claude/skills/dev-spec/scripts/overview-check.sh docs/design` が何も出力しない |
 | 開発・検証コマンド | `docs/design/DESIGN.md` に「開発・検証コマンド」節がある（issue の DoD がこの節の前提の上で実行されるため。scaffold 前は「セットアップ issue の完了後に確定」の明記で可） |
 
 ## 整合性の仕掛け（違反は major/minor）
@@ -31,8 +32,8 @@
 2. 表の完全性: 数値列に単位、選択肢列に取りうる値の例があるか（「詳細は別途確認」単独の記述がないか）
 3. 未解決の論点: DESIGN.md に「未解決の論点」節があり、ビジネス判断待ちが列挙されている（なければ「なし」）
 
-## 可読性（違反は suggestion）
+## 可読性（違反は suggestion。変更履歴のコメントは機械ゲートで major）
 
 - 1 節 1 主題（節の要約が「〜と〜と〜」にならない）
 - 各節は結論の一文で始まり、根拠・詳細が続く
-- 過程の記録（「以前は〜だったが」）を含まない（最終状態のみ。1 行目の product-mode スタンプと `<!-- 変更履歴 ... -->` の HTML コメントは過程の記録に数えない）
+- 過程の記録（「以前は〜だったが」）を含まない（最終状態のみ。`<!-- 変更履歴 ... -->` のコメントも過程の記録に数える）

@@ -32,10 +32,10 @@ description: dev-spec を使わず議論しながら設計を固めるときの�
 トリガー: ユーザーの「まとめて」「落とし込んで」指示。議論が節目（アーキテクチャ確定・レビュー依頼前）に達したと判断したら自分から提案してよい。
 
 1. 設計書は `~/.claude/skills/workflow-doc-write/SKILL.md` の手順 3〜7 (下書き・推敲・書き出し・検査・整合性の確認) で書く。とくに依拠事実は rg で再検証する
-2. `~/.claude/guidelines/core/references/doc-formats/design-doc.md`（構造規範）と `../dev-spec/references/design-doc.md`（DESIGN.md テンプレートの正本）・`../dev-spec/references/feature-doc.md`（機能設計書テンプレート）を Read する
-3. 台帳**全体**から `docs/design/DESIGN.md` + `docs/design/features/` を**毎回ゼロから生成**する（前回生成物への差分編集をしない）。生成物の冒頭に `<!-- generated-from: docs/DESIGN_NOTES.md -->` を入れる（直接編集への注意標識）
-4. design-doc.md の「機械ゲート」判定コマンド（POC_NEEDED blocker=true 残存）を自分で実行し、通らなければ生成をやり直す
-5. `/utility-doc-audit` を設計書 2 ファイル + 決定台帳付きで**フル監査**として起動する（ゼロから全文再生成した直後のため、スコープ監査ではなく観点 1〜6 全体を検査させる。決定カバレッジ観点が台帳→文書の取りこぼし・棄却案の生き残りを検査する）。同スキルは通常ユーザー起動専用だが、この落とし込みフェーズだけは本スキルが直接起動する（`~/.claude/guidelines/core/documentation.md`「編集後の整合性パス」3. の例外）
+2. `~/.claude/guidelines/core/references/doc-formats/design-doc.md`（構造規範）と `../dev-spec/references/design-doc.md`（DESIGN.md テンプレートの正本）・`../dev-spec/references/feature-doc.md`（機能設計書テンプレート）・`../dev-spec/references/overview-doc.md`（仕様の概要テンプレート）を Read する
+3. 台帳**全体**から `docs/design/DESIGN.md` + `docs/design/features/` + `docs/design/OVERVIEW.md` を**毎回ゼロから生成**する（前回生成物への差分編集をしない）。生成物の冒頭に `<!-- generated-from: docs/DESIGN_NOTES.md -->` を入れる（直接編集への注意標識）
+4. design-doc.md の「機械ゲート」判定コマンド（表の全行）を自分で実行し、通らなければ生成をやり直す
+5. `/utility-doc-audit` を設計書 (DESIGN.md・OVERVIEW.md・features/) + 決定台帳付きで**フル監査**として起動する（ゼロから全文再生成した直後のため、スコープ監査ではなく観点 1〜6 全体を検査させる。決定カバレッジ観点が台帳→文書の取りこぼし・棄却案の生き残りを検査する）。同スキルは通常ユーザー起動専用だが、この落とし込みフェーズだけは本スキルが直接起動する（`~/.claude/guidelines/core/documentation.md`「編集後の整合性パス」3. の例外）
 6. 監査指摘のうち決定に関わるものは**台帳に反映してから再生成**する（文書だけを直すと台帳と文書が乖離する）。字句レベルの指摘は文書の直接修正でよい
 
 ## 下流への接続

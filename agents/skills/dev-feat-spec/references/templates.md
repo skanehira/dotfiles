@@ -32,6 +32,7 @@ Design-for: #<issue 番号。issue を分けたときはこの行を書かず、
 - `docs/design/features/<機能名>.md`: <何を足したか・変えたか>
 - `docs/design/USECASES.md`: <足した・変えた受け入れ基準の ID>
 - `docs/design/DESIGN.md「<節名>」`: <あれば>
+- 人が読む概要 (`OVERVIEW.md「<節名>」`・機能設計書の「何を作るか」): <どう変わったか。変わらなければ行ごと省く>
 
 ## 確認点
 人の判断で変わりうる点。上ほど、変えたときの影響が大きい。
