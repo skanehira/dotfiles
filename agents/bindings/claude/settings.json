@@ -78,7 +78,8 @@
     "claude-security@claude-plugins-official": true,
     "stripe@claude-plugins-official": true,
     "html-plan@claude-community": true,
-    "timeline@claude-timeline": true
+    "timeline@claude-timeline": true,
+    "pstack@cursor-plugins": true
   },
   "extraKnownMarketplaces": {
     "agent-plugins-for-aws": {
@@ -154,6 +155,12 @@
         "source": "github",
         "repo": "anthropics/claude-plugins-community"
       }
+    },
+    "cursor-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "cursor/plugins"
+      }
     }
   },
   "outputStyle": "concise",
@@ -166,7 +173,7 @@
       "effortLevel": "high"
     }
   },
-  "advisorModel": "fable",
+  "advisorModel": "claude-fable-5-2",
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
