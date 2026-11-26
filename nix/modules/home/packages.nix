@@ -27,7 +27,7 @@ let
   # パッケージマネージャ
   packageManagers = with pkgs; [
     cargo-binstall
-    pnpm
+    (callPackage ../../pkgs/pnpm.nix { }) # nixpkgs 版は上流の最新に追いつかないため自前
     yarn # classic 1.22.x（後継は yarn-berry）
   ];
 

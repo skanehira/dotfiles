@@ -138,7 +138,7 @@ aarch64 検証は `--platform linux/arm64` + flake target を `.#skanehira-aarch
   - `modules/overlays.nix` — nix-darwin 用 overlays モジュール (overlays-list.nix を消費)
   - `modules/overlays-list.nix` — overlay の素のリスト (mac/Linux 両側で共有)
   - `install.sh` — mac bootstrap 用 (一度限り)
-  - `pkgs/` — nixpkgs 未収録、または nixpkgs 版が使えないツールの自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode / claude-recall / nodejs-bin)
+  - `pkgs/` — nixpkgs 未収録、または nixpkgs 版が使えないツールの自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode / pnpm / claude-recall / nodejs-bin)
 
 ### Nix 補助
 
@@ -230,7 +230,7 @@ nix/
 ├── home-android.nix       ← home-core.nix + 軽量 module + homeDirectory=/home/...
 ├── darwin.nix             ← imports modules/darwin/
 ├── install.sh             ← mac bootstrap
-├── pkgs/                  ← 自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode / claude-recall / nodejs-bin)
+├── pkgs/                  ← 自前 derivation (tsp-server / gh-actions-language-server / kanary / opencode / pnpm / claude-recall / nodejs-bin)
 └── modules/
     ├── overlays.nix       ← nix-darwin 用 module (overlays-list.nix を nixpkgs.overlays に流す)
     ├── overlays-list.nix  ← overlay の素のリスト (HM standalone の pkgs= からも参照)
@@ -250,7 +250,7 @@ nix/
     │   ├── neovim.nix    ← vim/{init.lua,lua,after} を mkOutOfStoreSymlink で live edit
     │   ├── opencode.nix  ← OpenCode 向けの symlink (opencode.json / cli.json / plugins/spark-served.ts / ~/.config/opencode/AGENTS.md) + subagent の Markdown 変換 (syncOpencodeSubagents) + service.json の hostname 上書き (opencodeServiceConfig)
     │   ├── packages.nix  ← home.packages 群 (言語ランタイム / LSP / CLI を 13 カテゴリで宣言、約 100 件。vite-plus / nvtop / libreoffice-bin / scrcpy / android-tools / terminal-notifier / screen-capture-mcp-server / kanary の 8 件は darwin only)
-    │   ├── packages-android.nix ← Android 用の明示リスト (19 エントリ。binary cache から取れる軽量なものと、ビルド済みバイナリを展開するだけの opencode)
+    │   ├── packages-android.nix ← Android 用の明示リスト (19 エントリ。binary cache から取れる軽量なものと、ビルド済みバイナリを展開するだけの opencode と pnpm)
     │   ├── rustup.nix    ← bootstrap-install (~/.cargo/bin/rustup 不在時のみ公式 installer 実行)
     │   ├── tmux.nix      ← tmux/tmux.conf を mkOutOfStoreSymlink で live edit。plugins.conf のみ Nix 生成 (resurrect + themepack)
     │   ├── vite-plus-bootstrap.nix ← bootstrap-install (~/.vite-plus/bin/vp 不在時のみ公式 installer 実行。Android のみ import)
@@ -288,7 +288,7 @@ nix/
   | Homebrew の `ca-certificates` | brew の `python@3.14` / `openssl@3` | `homebrew.nix` が `upgrade = false` なので `drs` では上がらない。`brew upgrade ca-certificates` を手で流す |
   | macOS の Keychain (SecTrust) | Safari、mac 上の Go 製バイナリなど OS の検証を使うアプリ | Apple が OS アップデートを介さずに失効を配る |
   | `/etc/ssl/cert.pem` (Apple 同梱) | Apple の `/usr/bin/curl` / `git` / `python3` / `openssl` など | macOS のアップデートでだけ更新される。失効は確認しないので、Keychain 側で遮断されてもこちらは通る |
-  | ランタイムの内蔵ルート | Node (`NODE_OPTIONS` が無いとき)、deno、rustup、Claude Code、uv、pnpm | 各ランタイムの更新。Nix 管理のものは `nix flake update nixpkgs` (mac の Node だけは `nix/pkgs/nodejs-bin.nix` の version を書き換える)、自己更新のものは `deno upgrade` などを手で流す |
+  | ランタイムの内蔵ルート | Node (`NODE_OPTIONS` が無いとき)、deno、rustup、Claude Code、uv、pnpm | 各ランタイムの更新。Nix 管理のものは `nix flake update nixpkgs` (mac の Node は `nix/pkgs/nodejs-bin.nix`、pnpm は `nix/pkgs/pnpm.nix` の version を書き換える)、自己更新のものは `deno upgrade` などを手で流す |
 
   Go の 1.26.10 / 1.27.3 以降は、問題の中間証明書を含むチェーンを OS を問わず拒否する。ただし効くのはその版でビルドしたバイナリだけである。
 
