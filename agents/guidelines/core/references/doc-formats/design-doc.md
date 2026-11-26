@@ -18,12 +18,13 @@
 | --- | --- |
 | PoC 未解決なし | `rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/` が 0 件 |
 | 人が読む概要 | `sh ~/.claude/skills/dev-spec/scripts/overview-check.sh docs/design` が何も出力しない |
+| 実装先ファイルの作り手 | リポジトリの最上位で実行した `sh ~/.claude/skills/dev-spec/scripts/placement-check.sh docs/design` が何も出力しない |
 | 開発・検証コマンド | `docs/design/DESIGN.md` に「開発・検証コマンド」節がある（issue の DoD がこの節の前提の上で実行されるため。scaffold 前は「セットアップ issue の完了後に確定」の明記で可） |
 
 ## 整合性の仕掛け（違反は major/minor）
 
-1. **横断と機能の分担**: テーブル定義・API 共通規約・エラー形式・認証は DESIGN.md のみにあり、features 側に重複していない。逆に機能単体の入出力契約・エッジケースの決定は features 側のみにある
-2. **参照の実在**: features → DESIGN.md の節参照（「DESIGN.md「<節名>」参照」）が実在の節名を指す
+1. **横断と機能の分担**: テーブル定義・API 共通規約・エラー形式・認証は DESIGN.md のみにあり、features 側に重複していない。ほかの機能設計書が前提にする共有の契約は、DESIGN.md か 1 本の機能設計書のみにあり、ほかの機能設計書に写されていない (置き場は feature-doc.md「共有の契約と書く順」)。逆に機能単体の入出力契約・エッジケースの決定は features 側のみにある
+2. **参照の実在**: features → DESIGN.md の節参照（「DESIGN.md「<節名>」参照」）と、features → features の節参照（「features/<名前>.md「<節名>」参照」）が実在の節名を指す
 3. **UC との対応**: USECASES.md がある構成では、各機能設計書の冒頭メタ情報に対象 UC が明記されている
 
 ## 構造（違反は major/minor）
