@@ -457,7 +457,7 @@ subagent は 3 者で唯一**書式変換が避けられない**要素である�
 deno test --allow-env --allow-run --allow-read --allow-write agents/
 ```
 
-dev-spec と dev-impl の skill に置いたスクリプトは、deno ではなく POSIX の sh と awk で書く。対象は `agents/skills/dev-spec/scripts/` (issue 作成・依存の段数・人が読む概要と issue 本文と実装先ファイルの作り手の検査) と `agents/skills/dev-impl/scripts/` (着手順・CI 待ちと merge・追加したコメント行の抽出) である。研修のプラグインで、deno の無い受講者の PC (macOS と Ubuntu) にも配るためである。触ったら、macOS の awk・GNU awk・dash と、docker の Ubuntu (dash と mawk) でテストを回す。`SH=dash` を付けると、テストが呼ぶスクリプトも dash で動く (付けないと macOS では `sh` = bash で動く)。テストは偽の gh (`tests/fake/gh` と、merge のテスト用の `tests/fake/gh-merge`) を使い、`gh` が偽物を指していなければ何もせずに止まる。
+dev-spec と dev-impl の skill に置いたスクリプトは、deno ではなく POSIX の sh と awk で書く。対象は 2 か所ある。`agents/skills/dev-spec/scripts/` は、issue 作成・依存の段数・人が読む概要と issue 本文と実装先ファイルの作り手の検査を持つ。`agents/skills/dev-impl/scripts/` は、着手順・CI 待ちと merge・追加したコメント行の抽出・テストの掛け合わせの検出を持つ。研修のプラグインで、deno の無い受講者の PC (macOS と Ubuntu) にも配るためである。触ったら、macOS の awk・GNU awk・dash と、docker の Ubuntu (dash と mawk) でテストを回す。`SH=dash` を付けると、テストが呼ぶスクリプトも dash で動く (付けないと macOS では `sh` = bash で動く)。テストは偽の gh (`tests/fake/gh` と、merge のテスト用の `tests/fake/gh-merge`) を使い、`gh` が偽物を指していなければ何もせずに止まる。
 
 ```bash
 for t in agents/skills/dev-spec/scripts/tests/*_test.sh agents/skills/dev-impl/scripts/tests/*_test.sh; do
@@ -624,6 +624,7 @@ hook を追加したくなったときの置き場は次のとおり。
 | 実装系ルールの遅延参照 | `agents/AGENTS.md`「実装時」 | TDD やテスト方針を知らないまま実装が進む | **無い**。リマインドも事後検出もしない |
 | コードコメントを基本的に書かない規範と、実装後に追加コメント行を抽出して判定する自己点検 | `agents/guidelines/core/implementation.md`「コードコメント」 | コードの言い換え・変更履歴・タスク ID がコメントに残り、人と AI の読み手の文脈を占める | dev-impl では親が `agents/skills/dev-impl/scripts/added-comments.sh` の出力を implementer の報告と照合し、`review-impl` の検査項目 3 が、例外の 5 種に当たらないコメントを `medium` / `code-quality` で指摘する。dev-impl の外では **無い** |
 | E2E の中で確かめるもの・確かめないもの (文言・書式・計算結果・API の応答・DB の値は下の段のテストで確かめ、流れの途中を API の直接呼び出しで済ませない) | `agents/guidelines/core/testing.md`「E2E で確かめること」 | 文言や計算を変えるたびに遅い E2E が落ちる。画面を通らない判定では、画面が送る要求と API のつなぎ目が確かめられないまま通る | `review-impl` の検査項目 4 が、画面を通らない判定を `high` / `e2e`、下の段で確かめるべきものの比較を `medium` / `test-quality` で指摘する |
+| テストの数 (入力の掛け合わせ・同じ規則を複数のレベルで確かめる重複) | `agents/guidelines/core/testing.md`「テストの数を決める」 | 同じ不具合でしか落ちないテストの行が増え、実行時間と直す手間だけが増える。1 つの関数の 227 件のテストが見つける書き換えを、そのうち 6 件ですべて見つけられた例がある | 生成した表の掛け合わせは、dev-impl の親が検収で `agents/skills/dev-impl/scripts/cross-product.sh` を流して止める。手で並べた表・境界から離れた値・レベルの重複は、`review-impl` の検査項目 1「重複したテスト」が `medium` で指摘する。dev-impl の外では **無い** |
 | subagent 起動時の `model` 明示 | `agents/guidelines/core/orchestration.md` | 未指定だと agent 定義の frontmatter ではなく親のセッションモデルを継承する。検証器が実行器より弱くなりうる | **無い**。セッションのログを人が読むしかない |
 | utility-doc-audit の起動経路 (ユーザー起動と `/workflow-design-notes` の落とし込みのみ) | `agents/skills/utility-doc-audit/SKILL.md` | 普段の作業で監査が自発起動し、観点サブエージェントの fan-out 分のトークンを消費する | **無い**。`disable-model-invocation` を使わない判断のため、SKILL.md の description と本文の記述が唯一の抑止 |
 | dev-spec で UI スケッチを最初に作るとき、frontend-design を Skill ツールで起動すること (既存のスケッチに画面を足す・直すときは起動しない) | `agents/skills/dev-spec/references/ui-sketch.md` の手順 5.3「frontend-design の起動のしかた」 | 記憶にあるデザインの知識で作り込み、ジェネリックな見た目のスケッチが実装の手本になる | `UI_SKETCH.html` の痕跡の行 `<!-- frontend-design: ... -->` と、ui-sketch.md 手順 8 のレビュー観点 8 (方針の見た目が全画面に出ているか)。痕跡の行は起動しなくても書けるので、起動したことの証明にはならない |

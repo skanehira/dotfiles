@@ -255,12 +255,13 @@ evidence_dir: <SCRATCH>/evidence-<N>
 - `self_review.basic_checks` の 4 つ (`new_behavior` / `removed_behavior` / `touched_specs` / `new_branches`) がすべて空でない。`self_review.change_types` が空でない
 - `self_review.change_types` に「その他」がある場合、`self_review.other` の各項目に `summary` / `axes` (`spec` / `layer` / `artifact`) / `answers` (4 問い) が埋まっている
 - `sh ~/.claude/skills/dev-impl/scripts/added-comments.sh "$WORK_DIR" "$BASE_SHA"` を親が実行し、出力の `<パス>:<行番号>` が `self_review.comments.kept` の `at` と過不足なく一致する。終了コードが 0 でなければ照合できないので、原因を直して実行し直す
+- `sh ~/.claude/skills/dev-impl/scripts/cross-product.sh "$WORK_DIR" "$BASE_SHA"` を親が実行し、終了コードが 0 である。1 なら、出力の `<パス>:<行番号>` が、理由のコメントの無い掛け合わせのテストである (`~/.claude/guidelines/core/testing.md`「テストの数を決める」)。2 なら原因を直して実行し直す
 - `evidence.manifest_path` の `manifest.json` があり、その `captured_mode` が今回起動した `mode` と一致し、`screens[].file` と `api[].file` の全パスが実在する (`ls` で確かめる)。実在しないパスを 2.4 手順 3 に渡すと添付が失敗し、本文にローカルのパスが残る。画面と API が両方とも空なら `note` に理由が書かれていること
 - UI に触れる issue でプロジェクトが視覚テストを持つ場合は、加えて `ui_evidence.screenshots` が空でないこと (implementer が自分で画像を見た記録)。親は画像を開かない。差分で追加・更新された基準画像は、2.3 の review-impl が検査項目 5 で開いて見る
 
 検収に落ちた報告の扱い:
 
-- **同じ `mode: implement` で 1 回だけ再起動する**。渡す内容に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」の行を足す。セルフチェックの記録が不足している場合は、`basic_checks` / `change_types` / `other` / `comments.kept` のどこが足りないか (コメントは一致しない行)を具体的に伝える
+- **同じ `mode: implement` で 1 回だけ再起動する**。渡す内容に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」の行を足す。セルフチェックの記録が不足している場合は、`basic_checks` / `change_types` / `other` / `comments.kept` のどこが足りないか (コメントは一致しない行)を具体的に伝える。`cross-product.sh` で落ちた場合は、その出力をそのまま渡す
 - `mode: fix` は使わない。`mode: fix` は `findings_path` の JSON の指摘を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる
 - **この再起動は 2.3 の周回に数えない**。実装の検収であって、レビュー指摘の修正ではないため
 - **2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)
@@ -285,6 +286,7 @@ evidence_dir: <SCRATCH>/evidence-<N>
 | `<SCRATCH>/r1part-<N>-<g>.json` | r1 の受け持ち `<g>` のレビュワーの JSON (`g` は 1 から) |
 | `<SCRATCH>/review-<N>-r<k>.json` | r<k> の JSON。r1 は受け持ちごとの JSON を親がまとめたもの |
 | `<SCRATCH>/impl-<N>-fix<k>.json` | fix<k> の implementer の報告 |
+| `<SCRATCH>/tree-<N>-fix<k>.txt` | fix<k> の報告を検収した時点の作業ツリーの tree の SHA (記録の手順は下のコードと同じで、出力先だけを変える) |
 
 **レビューを起動する前に、毎回、作業ツリーの tree を記録する。** implementer はコミットしないので、修正の前後の差分は tree でしか取れない。一時的な index を使うので、実際の index は変わらず、未追跡の新規ファイルも tree に入る。
 
@@ -408,13 +410,13 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 修正の後の分岐は次のとおり。
 
-- 検収を通った `done` → r<k> に high (`adjudication` の付いたものを除く) があれば、r<k+1> を回す。high が無く medium だけなら、確認レビューは回さず 2.4 へ進む。2.4 手順 2 の全テストで確かめる。ただし r<k> の `coverage.unscanned` が空でなければ、その範囲を見るために r<k+1> を回す
+- 検収を通った `done` → r<k> に high (`adjudication` の付いたものを除く) があれば、r<k+1> を回す。high が無く medium だけなら、確認レビューは回さず 2.4 へ進む。2.4 手順 2 の全テストで確かめる。ただし、次のどちらかに当たれば r<k+1> を回す。1 つは、r<k> の `coverage.unscanned` が空でないときで、その範囲を見るためである。もう 1 つは、その fix が `base_sha` の時点にあったテストの行を消したときで、review-impl が「テストの弱体化」の 4 条件を確かめるためである。消したかは、fix<k> の報告を検収した直後に `<SCRATCH>/tree-<N>-fix<k>.txt` を記録して決める。`git -C "$WORK_DIR" diff "$(cat <SCRATCH>/tree-<N>-r<k>.txt)" "$(cat <SCRATCH>/tree-<N>-fix<k>.txt)" -- <テストのファイル>` の `-` の行のうち、`git -C "$WORK_DIR" show "$BASE_SHA":<パス>` に同じ行があるものが、`base_sha` の時点にあった行である
 - `escalate` / `failed` → 2.6 へ
 - 検収落ち・subagent のエラー・report JSON が無い・パース不能 → 同じ `mode: fix` で 1 回だけ再起動する。渡す内容と `findings_path` は変えず、検収落ちのときは 2.2 と同じく満たさなかった項目の行を足す。**この再起動は周回に数えない**。再起動後も検収を通った `done` にならなければ 2.6 へ
 
 直す指摘が 0 件なら、`coverage.unscanned` が空のときは 2.4 へ進む。空でなければ、修正をせずに r<k+1> を回す (`fix_from_tree` と `fix_to_tree` は同じ tree になる)。
 
-**r5 の後は確認レビューを回さない。** r5 に high が残れば「収束の判定」の 3 で駐車する。high が無ければ、medium を直してから 2.4 へ進み、残った `coverage.unscanned` を 2.5 の完了コメントに書く。
+**r5 の後は確認レビューを回さない。** r5 に high が残れば「収束の判定」の 3 で駐車する。high が無ければ、medium を直してから 2.4 へ進み、残った `coverage.unscanned` を 2.5 の完了コメントに書く。その fix5 が `base_sha` の時点にあったテストの行を消したとき (調べ方は上の「修正の後の分岐」と同じ) は、親が「親の裁定」と同じく `~/.claude/agents/review-impl.md`「テストの弱体化」の 4 条件を自分で当てる。1 つでも満たさなければ、消した行を基準時点に戻す。戻すと red になるなら 2.6 へ駐車する。
 
 #### 収束の判定
 
@@ -432,7 +434,7 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 #### 親の裁定
 
-**`category: test-weakening` の finding** は、ラウンドを問わず implementer に直させず親が裁定する。弱体化が事実なら、該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要で、2.4 の検証が確かめる。周回にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む。**基準時点の強度に戻すとテストが red になる場合は裁定不能**で、実装が元の契約を満たしていないということなので 2.6 へ駐車する。implementer に渡すと `test_weakening_suspected` で escalate が返り、2.2 の分岐で 2.6 へ落ちて裁定を飛ばしてしまう。
+**`category: test-weakening` の finding** は、ラウンドを問わず implementer に直させず親が裁定する。パラメータ化テストの行の削除は、`~/.claude/agents/review-impl.md`「テストの弱体化」の 4 条件を当て、すべて満たせば誤検出とする。弱体化が事実なら、該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要で、2.4 の検証が確かめる。周回にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む。**基準時点の強度に戻すとテストが red になる場合は裁定不能**で、実装が元の契約を満たしていないということなので 2.6 へ駐車する。implementer に渡すと `test_weakening_suspected` で escalate が返り、2.2 の分岐で 2.6 へ落ちて裁定を飛ばしてしまう。
 
 **high は、修正に渡す前に、親が誤検出かを確かめる。** 次の 2 つは、判断を挟まずに実行で確かめる。それ以外の high は、`evidence` が指摘の結論を支えていないときだけ実行で確かめる。
 

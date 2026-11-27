@@ -10,6 +10,8 @@
 
 ## テーブル駆動テスト
 
+表の行は、`~/.claude/guidelines/core/testing.md`「テストの数を決める」の基準で決める。入れ子の `for … range` で表を作ったり、入れ子の `range` の中で `t.Run` を呼んだりして入力を掛け合わせない。
+
 ```go
 func TestParseVersion(t *testing.T) {
     tests := []struct {
