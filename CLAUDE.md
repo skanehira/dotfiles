@@ -620,7 +620,7 @@ hook を追加したくなったときの置き場は次のとおり。
 | 規律 | 正本 | 破られたときに何が起きるか | 事後に気づく手段 |
 | --- | --- | --- | --- |
 | コミット規約 (`<emoji> <type>: <subject>`) | `agents/guidelines/core/commit.md` | 形式の揃わないコミットが履歴に残る。push 前なら `git commit --amend` で直せる | `git log -1 --pretty=%s` を型と照合する (commit.md が手順として規定) |
-| dev-impl の修正ラウンド上限 (1 周) | `agents/skills/dev-impl/SKILL.md` | 収束しない issue に時間とトークンが溶ける。**実測で 22 issue 中 6 件が 3 周目以降に入り、超過分だけで 5.7h を消費したことがある** | issue の完了コメントに残る「レビュー: N 周」。規定どおりなら N は最大 2 (r1 と fix 後の r2) なので、3 以上なら上限超過 |
+| dev-impl の修正の周回の打ち切り (収束しなければ駐車、レビューは r5 まで) | `agents/skills/dev-impl/SKILL.md` 2.3「収束の判定」 | 収束しない issue に時間とトークンが溶ける。**実測で 22 issue 中 6 件が、当時の上限の 2 周を超えて 3 周目以降に入り、超過分だけで 5.7h を消費したことがある** | issue の完了コメントに残る「レビュー: N 周」。規定どおりなら N は最大 5 なので、6 以上なら上限超過。収束の判定を飛ばしたかは、SCRATCH の review JSON の `recurrence_of` と `origin` を数え直すと分かる |
 | 実装系ルールの遅延参照 | `agents/AGENTS.md`「実装時」 | TDD やテスト方針を知らないまま実装が進む | **無い**。リマインドも事後検出もしない |
 | コードコメントを基本的に書かない規範と、実装後に追加コメント行を抽出して判定する自己点検 | `agents/guidelines/core/implementation.md`「コードコメント」 | コードの言い換え・変更履歴・タスク ID がコメントに残り、人と AI の読み手の文脈を占める | dev-impl では親が `agents/skills/dev-impl/scripts/added-comments.sh` の出力を implementer の報告と照合し、`review-impl` の検査項目 3 が、例外の 5 種に当たらないコメントを `medium` / `code-quality` で指摘する。dev-impl の外では **無い** |
 | E2E の中で確かめるもの・確かめないもの (文言・書式・計算結果・API の応答・DB の値は下の段のテストで確かめ、流れの途中を API の直接呼び出しで済ませない) | `agents/guidelines/core/testing.md`「E2E で確かめること」 | 文言や計算を変えるたびに遅い E2E が落ちる。画面を通らない判定では、画面が送る要求と API のつなぎ目が確かめられないまま通る | `review-impl` の検査項目 4 が、画面を通らない判定を `high` / `e2e`、下の段で確かめるべきものの比較を `medium` / `test-quality` で指摘する |

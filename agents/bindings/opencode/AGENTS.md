@@ -134,4 +134,4 @@ readlink -f ~/.claude/guidelines                # dotfiles の agents/guidelines
 
 **OpenCode に hooks は配られていない。** そもそもこのハーネスは deny する hook を 1 本も持っていないうえ、OpenCode はシェルコマンドを hook として登録する仕組みを持たない (拡張手段は TypeScript のプラグインだけで、Claude Code の hooks のようにコマンドの終了コードで操作を拒否するゲートは作れない)。
 
-dev-impl の修正ラウンド上限は**自律遵守**である。
+dev-impl の修正の周回の打ち切り (収束の判定とレビューの上限) は**自律遵守**である。

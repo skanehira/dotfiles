@@ -1,6 +1,6 @@
 ---
 name: dev-impl
-description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー → 修正 ≤1 ラウンド (high と medium) → 検証 → 動作確認の証跡付き PR → CI pass (CI があれば) → merge → close」で自律実装するオーケストレーター。依存を守ってスコアの高い順 (緊急枠が先頭。スコアの無い issue は後ろ。同じなら番号の小さい順) に着手し、前提を満たすプロジェクトでは着手できる issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
+description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー (初回は受け持ちに分けて並列) → high と medium の修正 → high が無くなるまで修正の差分を確認レビュー (収束しなければ駐車) → 検証 → 動作確認の証跡付き PR → CI pass (CI があれば) → merge → close」で自律実装するオーケストレーター。依存を守ってスコアの高い順 (緊急枠が先頭。スコアの無い issue は後ろ。同じなら番号の小さい順) に着手し、前提を満たすプロジェクトでは着手できる issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
 argument-hint: "[issue 番号の絞り込み、省略時は ready 全件]"
 model: opus
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, Skill
@@ -262,7 +262,7 @@ evidence_dir: <SCRATCH>/evidence-<N>
 
 - **同じ `mode: implement` で 1 回だけ再起動する**。渡す内容に「前回の報告は `<満たさなかった項目>` で検収に落ちた。そこを満たしてから報告せよ」の行を足す。セルフチェックの記録が不足している場合は、`basic_checks` / `change_types` / `other` / `comments.kept` のどこが足りないか (コメントは一致しない行)を具体的に伝える
 - `mode: fix` は使わない。`mode: fix` は `findings_path` の JSON の指摘を直す契約なので、findings を伴わない差し戻しでは修正対象が 0 件になる
-- **この再起動は 2.3 の fix ラウンドに数えない**。実装の検収であって、レビュー指摘の修正ではないため
+- **この再起動は 2.3 の周回に数えない**。実装の検収であって、レビュー指摘の修正ではないため
 - **2 回目の報告も検収に落ちたら 2.6 へ** (数えない代わりの停止条件)
 
 分岐:
@@ -271,11 +271,44 @@ evidence_dir: <SCRATCH>/evidence-<N>
 - `escalate` / `failed` (`contract_break` / `spec_insufficient` / `tests_failing`。`test_weakening_suspected` は fix 時のみ発生) → 2.6 へ (report の summary にある試行記録を issue コメントに使う)
 - **subagent がエラー、または report JSON が無い・パース不能** → 同条件で 1 回だけ再起動する。再失敗なら 2.6 へ
 
-### 2.3 レビュー (review-impl subagent、修正 ≤ 1 ラウンド)
+### 2.3 レビューと修正 (review-impl subagent。high が無くなるまで)
 
-サブエージェント `review-impl` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (待ち方は 2.0)。
+**初回のレビュー r1 は、差分を受け持ちに分けて並列に網羅する。high と medium をまとめて直し、high が残る間は、修正の差分を確認レビューする。** 収束しなければ 2.6 で駐車する。網羅を r1 に寄せるのは、見落としを確認レビューで拾うより安いためである。レビュワーは並列に動くが、修正は implementer が 1 体ずつ動かすので、修正の周回が 1 回増えるたびに時間とトークンが同じだけ増える。
 
-- 説明: `issue #<N> のレビュー`
+#### 回数の数え方とファイル
+
+**初回レビューを r1 とし、レビューのたびに 1 ずつ増やす。レビューは r5 までとする。** r<k> の指摘を直す修正を fix<k> と呼ぶ。この採番がファイル名に出るので、あとから何周したかを人も自分も数えられる。
+
+| ファイル | 中身 |
+| --- | --- |
+| `<SCRATCH>/tree-<N>-r<k>.txt` | r<k> を起動する時点の作業ツリーの tree の SHA |
+| `<SCRATCH>/r1part-<N>-<g>.json` | r1 の受け持ち `<g>` のレビュワーの JSON (`g` は 1 から) |
+| `<SCRATCH>/review-<N>-r<k>.json` | r<k> の JSON。r1 は受け持ちごとの JSON を親がまとめたもの |
+| `<SCRATCH>/impl-<N>-fix<k>.json` | fix<k> の implementer の報告 |
+
+**レビューを起動する前に、毎回、作業ツリーの tree を記録する。** implementer はコミットしないので、修正の前後の差分は tree でしか取れない。一時的な index を使うので、実際の index は変わらず、未追跡の新規ファイルも tree に入る。
+
+```bash
+idx=$(mktemp) \
+  && cp "$(git -C "$WORK_DIR" rev-parse --path-format=absolute --git-path index)" "$idx" \
+  && GIT_INDEX_FILE="$idx" git -C "$WORK_DIR" add -A \
+  && GIT_INDEX_FILE="$idx" git -C "$WORK_DIR" write-tree > "<SCRATCH>/tree-<N>-r<k>.txt"; rm -f "$idx"
+```
+
+r<k> (k ≥ 2) の修正の差分は、`tree-<N>-r<k-1>.txt` と `tree-<N>-r<k>.txt` の差分である。
+
+#### r1: 受け持ちに分けて並列に起動する
+
+受け持つファイルは `git -C "$WORK_DIR" diff --name-only "$BASE_SHA" "$(cat <SCRATCH>/tree-<N>-r1.txt)"` の全ファイルである。
+
+- **分け方**: 10 ファイル以下なら 1 体にする。超えたら、パスの順に並べて 10 ファイルずつの組に分ける。組は 3 つまでとし、超えるときは 1 組のファイル数を増やす。同じディレクトリのファイルと、ファイル名からソースとテストの対応が分かるファイルは、同じ組に入れる。10 と 3 は初期値で、`coverage.unscanned` が出続けるなら 1 組のファイル数を減らす
+- **E2E と UI**: 1 組目のレビュワーだけを `primary: true` にし、`port` を渡す。dev server のポートは 1 つしかないためである
+
+組ごとにサブエージェント `review-impl` を起動する (モデル: opus を明示)。組が 2 つ以上なら、同一ターンで全員を起動して並列に動かす。全員の完了を待ってから次の手順へ進む (待ち方は 2.0)。
+
+**並列に動かせない理由があれば、組に分けたまま 1 体ずつ順に起動する。** 例は、2.0 の前提 2 (テストと E2E が固定ポートを共有しない) を満たさないとき、テストが共有の DB やファイルに書き込むときである。並列のレビュワーが同じ資源を取り合うと、誤った指摘が出る。順に起動しても、網羅を r1 で済ませる点は変わらない。
+
+- 説明: `issue #<N> のレビュー r1 (<g>/<組の数>)`
 - 次の内容を渡す:
 
 ```
@@ -283,53 +316,75 @@ repo_dir: <WORK_DIR>
 base_sha: <BASE_SHA>
 issue_number: <N>
 focus: all
+scope_files: <その組のファイル。1 行に 1 つ>
+primary: <1 組目なら true、それ以外は false>
 port: <スロットのポート>
-previous_findings_path: <SCRATCH>/review-<N>-r1.json
-report_path: <SCRATCH>/review-<N>-r<ラウンド>.json
+report_path: <SCRATCH>/r1part-<N>-<g>.json
 ```
 
 - `base_sha` は 2.1 で控えた値を渡す
-- `port` の行は 2.0 の決まりに従う
-- `previous_findings_path` の行は r2 でだけ渡し、r1 (初回) では行ごと省く
+- 1 体だけのときは、`scope_files` と `primary` の行を省き、`report_path` を `<SCRATCH>/review-<N>-r1.json` にする
+- `port` の行は 2.0 の決まりに従い、`primary: false` のレビュワーには渡さない
 
-**レビューと修正の回数はこう数える。初回レビューを r1 とし、レビューのたびに 1 ずつ増やす** (この採番が review JSON (`report_path` と `previous_findings_path`) のファイル名に出るので、あとから何周したかを人も自分も数えられる。r0 から始めると 1 周ぶん過少に数えることになる)。レビューは r1 (実装直後) と r2 (fix の後の確認) の**最大 2 回**、`mode: fix` は r1 の findings に対する**最大 1 回**。`previous_findings_path` は r2 の 1 回だけ渡る。
+組が 2 つ以上なら、組ごとの JSON に下の「JSON の検収」を当ててから、1 つにまとめる。1 組目を先頭に置く。
 
-`previous_findings_path` を渡すと、レビュワーは「前ラウンドの指摘が閉じたか」に加えて「同じ壊れ方が別の箇所へ転移していないか」を検査する (review-impl の検査項目 6)。渡さないと fresh context のレビュワーは前ラウンドの存在を知らないため、修正が作った同型の穴を見逃す。**再開 run で前 run の review JSON が SCRATCH に無い場合は渡さない** (SCRATCH は run ごとに新規作成されるため)。その場合は項目 6 が働かないことを、完了コメントの「レビュー:」の行に記す (2.5 の形式)。
+```bash
+jq -s '{base_sha: .[0].base_sha, focus: .[0].focus,
+  findings: (map(.findings) | add),
+  coverage: {scope: (map(.coverage.scope) | add), scanned: (map(.coverage.scanned) | add),
+             unscanned: (map(.coverage.unscanned) | add)},
+  checked: (.[0].checked + {docs_read: (map(.checked.docs_read) | add | unique)})}' \
+  <SCRATCH>/r1part-<N>-1.json <SCRATCH>/r1part-<N>-2.json ... > <SCRATCH>/review-<N>-r1.json
+```
 
-**`checked` の検収**: findings の件数を見る前に `checked` を確認する。次のいずれかなら検査が成立していないので、指示を明確化して 1 回再実行し、再発なら 2.6 へ (「何も検出できない検証の実行は検証ではない」):
+同じ形の箇所が組をまたぐと、同じ指摘が 2 体から出る。category と summary の中身で突き合わせ、1 件にまとめて `fix_hint.sites` を合わせる。
 
-- `tests_run: false`
-- UI に触れる差分なのに `e2e` が理由の無い `skipped`
-- 視覚テストを持つプロジェクトの UI に触れる差分なのに `ui_layout` が理由の無い `skipped`
-- `previous_findings_path` を渡したのに `previous_findings` が `none` (検査項目 6 の未実施) または `unreadable(...)` (パスの渡し間違い — この場合はパスを直して再実行する)
+#### r2 以降: 修正の差分を確認する
 
-review JSON が無い・パース不能の場合も同様に 1 回再起動 → 再失敗で 2.6。**検収の失敗による再実行は同じ `report_path` を上書きする** (r 番号を進めない。r 番号は fix 済みか否かの判定と `previous_findings_path` の選択に使われるので、実際には行われていない fix を数えてしまう)。
+確認レビューは、サブエージェント `review-impl` を 1 体だけ起動する (モデル: opus を明示)。`primary` は既定の `true` のままにする。完了を待ってから次の手順へ進む (待ち方は 2.0)。説明は `issue #<N> のレビュー r<k>` にし、次の内容を渡す。
+
+```
+repo_dir: <WORK_DIR>
+base_sha: <BASE_SHA>
+issue_number: <N>
+focus: all
+port: <スロットのポート>
+previous_findings_path: <SCRATCH>/review-<N>-r<k-1>.json
+fix_from_tree: <tree-<N>-r<k-1>.txt の SHA>
+fix_to_tree: <tree-<N>-r<k>.txt の SHA>
+report_path: <SCRATCH>/review-<N>-r<k>.json
+```
+
+レビュワーは、修正の差分・前ラウンドの指摘の再発と転移・前ラウンドの `coverage.unscanned` だけを見る (review-impl「検査の範囲」)。前ラウンドの指摘の再検査は、前ラウンドの JSON があるときにしか働かない。**再開 run で前 run の review JSON が SCRATCH に無ければ、r1 からやり直す** (SCRATCH は run ごとに新規作成されるため)。
+
+#### JSON の検収
+
+**findings の件数を見る前に `checked` と `coverage` を確かめる。** 次のどれかなら検査が成立していないので、指示を明確化して同じレビュワーを 1 回再実行し、再発なら 2.6 へ (「何も検出できない検証の実行は検証ではない」)。
+
+- `tests_run: false`。ただし、受け持ちにテストのファイルが 1 つも無い `primary: false` のレビュワーは除く
+- UI に触れる差分なのに、`primary: true` のレビュワーの `e2e` が理由の無い `skipped`
+- 視覚テストを持つプロジェクトの UI に触れる差分なのに、`primary: true` のレビュワーの `ui_layout` が理由の無い `skipped`
+- `previous_findings_path` を渡したのに `previous_findings` が `none` (検査項目 6 の未実施) または `unreadable(...)` (パスの渡し間違い。この場合はパスを直して再実行する)
+- `coverage.scanned` と `coverage.unscanned` のファイルを合わせたものが、受け持ちと過不足なく一致しない。受け持ちは、r1 では渡した `scope_files` (省いたときは差分の全ファイル) で、r2 以降では修正の差分のファイル (`git -C "$WORK_DIR" diff --name-only <fix_from_tree> <fix_to_tree>`) と前ラウンドの `coverage.unscanned` のファイルを合わせたものである。`unscanned` の `at` は `<file>` か `<file>:<要素>` で、最初の `:` より前をファイルとして扱う。受け持ちの外のファイルを指す `unscanned` は、照合から外す
+
+review JSON が無い・パース不能の場合も同様に 1 回再起動 → 再失敗で 2.6。**検収の失敗による再実行は同じ `report_path` を上書きする** (r 番号を進めない。r 番号は収束の判定と `previous_findings_path` の選択に使うので、実際には行われていない修正を数えてしまう)。
 
 #### 指摘の扱い
 
-severity ごとに、次のとおり扱う (基準の正本は review-impl の「severity と報告の基準」)。
+各ラウンドでは、最初に「親の裁定」を行い、r2 以降はその後で「収束の判定」を行う。修正を起動するのは最後である。指摘は、次の表の上から順に当てはめ、最初に当たった行で扱う (severity の基準の正本は review-impl の「severity と報告の基準」)。
 
-| severity | 動作 |
-| --- | --- |
-| `high` | 修正 1 回 → r2 |
-| `medium` | 修正 1 回。`high` が無ければ r2 を回さず、2.4 手順 2 の全テストで確かめる |
-| `decision` | 直さない。人が決めるまで merge せず、2.6 で駐車する |
-| `followup` | 直さない。merge を止めず、issue にする (下記「issue にする指摘」) |
+| 順 | 当たる指摘 | 扱い |
+| --- | --- | --- |
+| 1 | `category: test-weakening` | implementer に渡さず、親が裁定する (下記「親の裁定」) |
+| 2 | `decision` | 1 件でもあれば修正を起動せずに 2.6 で駐車する。決まった内容で直し方が変わり、先に直しても無駄になりうるため |
+| 3 | `high` | 親が誤検出かを確かめ (下記「親の裁定」)、誤検出でなければこのラウンドの修正で直す |
+| 4 | `followup` | 直さない。merge を止めず、issue にする (下記「issue にする指摘」) |
+| 5 | `medium` のうち、後に実装する issue が同じ箇所を書き換えるもの | 直さず、その issue の本文に引き継ぐ (下記「後の issue への引き継ぎ」) |
+| 6 | 残りの `medium` | このラウンドの修正で直す |
 
-r1 の findings による分岐:
+high と medium の両方を今の PR で直すのは、review-impl の severity が「この差分で直す」ことを表すためである。後に回すのは、直し方が決まらない `followup` と、後の issue がどうせ書き換える箇所だけにする。
 
-1. **`category: test-weakening` の finding を先に裁定する** (下記)。implementer に渡すと `test_weakening_suspected` で escalate が返り、2.2 の分岐で 2.6 へ落ちて裁定を飛ばしてしまう
-2. **`decision` が 1 件以上あれば、fix を起動せずに 2.6 で駐車する** (決まった内容で直し方が変わり、先に直しても無駄になりうるため)
-3. 残った `high` と `medium` で分ける:
-   - **どちらも 0 件** → 2.4 へ
-   - **1 件以上** → implementer を `mode: fix` (`findings_path` に review JSON を指定) で起動し、`high` と `medium` をまとめて直させる。**fix はこの 1 回だけ (固定)**
-
-`high` の有無は裁定の後に数える。`medium` だけの修正を再レビューしないのは、修正が小さく、周回を増やさないためである。
-
-fix は、サブエージェント `dev-impl-implementer` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (待ち方は 2.0)。
-
-- 説明: `issue #<N> の修正`
-- 次の内容を渡す:
+直す指摘が 1 件以上あれば、implementer を `mode: fix` で起動して、high と medium をまとめて直させる。説明は `issue #<N> の修正 fix<k>` にし、次の内容を渡す。サブエージェント `dev-impl-implementer` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (待ち方は 2.0)。
 
 ```
 mode: fix
@@ -337,51 +392,82 @@ repo_dir: <WORK_DIR>
 base_sha: <BASE_SHA>
 issue_number: <N>
 port: <スロットのポート>
-findings_path: <SCRATCH>/review-<N>-r1.json
-report_path: <SCRATCH>/impl-<N>-fix.json
+findings_path: <SCRATCH>/review-<N>-r<k>.json
+report_path: <SCRATCH>/impl-<N>-fix<k>.json
 evidence_dir: <SCRATCH>/evidence-<N>
 ```
 
 - `port` の行は 2.0 の決まりに従う
-- `findings_path` は、`test-weakening` の裁定の印 (`adjudication`) を書き足した後の r1 の review JSON を指す
+- `findings_path` は、親の裁定の印 (`adjudication`) と、引き継いだ指摘の印を書き足した後の r<k> の JSON を指す
 - `report_path` は 2.2 の `impl-<N>.json` と別名にする (実装時の報告を上書きしない)
 
-返った report には 2.2 と同じ検収 (`test_result` / `dod_result` の exit code と `self_review`、証跡の `manifest.json`、UI に触れる issue では `ui_evidence`) を当てる。加えて、`findings_result` に、対象の finding (裁定済みを除く `high` と `medium`) が 1 件ずつ過不足なく載っていることを確かめる。fix は `implement` と同じ `evidence_dir` に証跡を取り直すので、検収後の `manifest.json` の `captured_mode` は `fix` になる。
+返った report には 2.2 と同じ検収 (`test_result` / `dod_result` の exit code と `self_review`、証跡の `manifest.json`、UI に触れる issue では `ui_evidence`) を当てる。fix は `implement` と同じ `evidence_dir` に証跡を取り直すので、検収後の `manifest.json` の `captured_mode` は `fix` になる。加えて、次の 2 つを確かめる。
 
-- 検収を通った `done` → r1 に `high` があれば r2 を回す。無ければ 2.4 へ
+- `findings_result` に、直す対象にした finding が 1 件ずつ過不足なく載っている
+- `findings_result` の `sites_fixed` が `fix_hint.sites` をすべて含む。足りない分があれば、その理由が `deviation` に書かれている。どちらも無ければ検収落ちとする
+
+修正の後の分岐は次のとおり。
+
+- 検収を通った `done` → r<k> に high (`adjudication` の付いたものを除く) があれば、r<k+1> を回す。high が無く medium だけなら、確認レビューは回さず 2.4 へ進む。2.4 手順 2 の全テストで確かめる。ただし r<k> の `coverage.unscanned` が空でなければ、その範囲を見るために r<k+1> を回す
 - `escalate` / `failed` → 2.6 へ
-- 検収落ち・subagent のエラー・report JSON が無い・パース不能 → 同じ `mode: fix` で 1 回だけ再起動する。渡す内容と `findings_path` は変えず、検収落ちのときは 2.2 と同じく満たさなかった項目の行を足す。**この再起動は fix ラウンドに数えない** (「fix はこの 1 回だけ」の 1 回は、r1 の findings に対する修正の機会を数える)。再起動後も検収を通った `done` にならなければ 2.6 へ
+- 検収落ち・subagent のエラー・report JSON が無い・パース不能 → 同じ `mode: fix` で 1 回だけ再起動する。渡す内容と `findings_path` は変えず、検収落ちのときは 2.2 と同じく満たさなかった項目の行を足す。**この再起動は周回に数えない**。再起動後も検収を通った `done` にならなければ 2.6 へ
 
-**r2 に `decision` があれば 2.6 で駐車する。`decision` も high も無ければ 2.4 へ進む。** r2 で新たに出た `medium` は直さない (「issue にする指摘」)。r2 に high がある場合 (r1 の残存か、r2 で新たに出たかを問わない) は、その high の `category` で分岐する。**契約・証跡・検証器が壊れているものだけを駐車し、成果物の内部品質は issue にして先へ進む**:
+直す指摘が 0 件なら、`coverage.unscanned` が空のときは 2.4 へ進む。空でなければ、修正をせずに r<k+1> を回す (`fix_from_tree` と `fix_to_tree` は同じ tree になる)。
 
-| `category` | 動作 |
-| --- | --- |
-| `spec-compliance` | 2.6 で駐車。契約が壊れたまま merge すると、後続 issue がその契約に依存して誤った土台の上に積み上がる |
-| `e2e` | 2.6 で駐車。E2E の不在・失敗は「画面が動く証跡が無い」ことを意味する |
-| `test-weakening` | 下記の裁定を先に行い、**裁定できないときだけ** 2.6 で駐車する (裁定して直せたら 2.4 へ。再レビューはしない) |
-| `test-quality` | issue にして 2.4 へ。実装は契約を満たしており、テストが弱いだけなので後から独立に直せる |
-| `code-quality` | issue にして 2.4 へ。動作は正しく、DI 違反などは後から直せる |
-| `ui-layout` | issue にして 2.4 へ。契約は満たしており、見た目の崩れは後から独立に直せる |
+**r5 の後は確認レビューを回さない。** r5 に high が残れば「収束の判定」の 3 で駐車する。high が無ければ、medium を直してから 2.4 へ進み、残った `coverage.unscanned` を 2.5 の完了コメントに書く。
 
-**駐車する category と issue にする category が混在したら、issue 全体を 2.6 へ駐車する** (issue にするはずだったぶんは駐車コメントに列挙する。壊れた契約を抱えた issue を merge しないことが優先する)。
+#### 収束の判定
 
-`test-quality` の high を issue にして merge するのは、no-op に置き換えても通るテスト (`~/.claude/guidelines/core/testing.md` のリトマス試験 B に落ちるもの) を抱えたまま先へ進むことを意味する。**これは意図した受容**なので、完了コメントと最終報告では、high から作った issue を先に出し、ユーザーが気付ける状態にする。
+**確認レビュー r<k> (k ≥ 2) の後、high が残っていれば、修正の前に次の 3 つを確かめ、1 つでも当たれば 2.6 で駐車する。** 判定は review JSON だけから機械的に行う。この上限を強制する機械ゲートは無いので、毎回 JSON のファイル名にあるラウンド番号を自分で読んで判定する。
 
-**3 周目に入りたくなったら、それは「収束していない」という信号**なので、上の表に従う。**この上限を強制する機械ゲートは無い。自律遵守する。** 上限は機械ゲートが無い状態で実際に破られる (実測: 22 issue 中 6 件が 3 周目以降に入り、規定超過分だけで 5.7h を消費した)。破らないための手立ては、review JSON のファイル名にあるラウンド番号を毎回自分で読むことだけである。3 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)。
+1. r<k-1> と r<k> の両方に、`recurrence_of` を持つ high がある (同じ壊れ方が 2 ラウンド続いた)
+2. r<k-1> の数える high が 1 件以上あり、r<k> の数える high がそれより減っていない
+3. k が 5 である (r5 の後に high が残った)
 
-**`category: test-weakening` の finding** は、ラウンドを問わず implementer に直させず親が裁定する: 弱体化が事実なら該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要 — 2.4 の検証が確かめる。ラウンド数にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む。**基準時点の強度に戻すとテストが red になる場合は裁定不能**で、実装が元の契約を満たしていないということなので 2.6 へ駐車する。
+**数える high は、`origin` が `fix_delta` の high だけである** (r1 は全部の high を数える)。`unscanned` と `outside` の high は r1 の見落としで、修正が作った穴ではない。この 2 つは直すが、収束の判定には数えない。どれも誤検出と裁定したものは除く。
 
-**裁定した finding には、その review JSON の該当 finding へ `"adjudication": {"verdict": "false_positive|fixed_by_parent", "rationale": "<根拠の一文>"}` を足す。** r1 の JSON は r2 で `previous_findings_path` としてレビュワーに渡るため、印を付けないと裁定済みの指摘が「未解消」として再計上され、同じ指摘で駐車に落ちる (レビュワー側は `adjudication` の付いた finding を残存判定の対象外にする規約)。
+駐車するときは、category を問わず残った high を全部駐車コメントに書く。high は後の issue の土台になるので、残したまま merge しない。
+
+3 つのどれにも当たらなければ、上の「指摘の扱い」に戻って fix<k> を起動する。6 周目を回してよいのは、2.6 で駐車して人間の回答を得たうえでスキルを再実行した場合だけである (新しい SCRATCH で r1 から採番し直す)。
+
+#### 親の裁定
+
+**`category: test-weakening` の finding** は、ラウンドを問わず implementer に直させず親が裁定する。弱体化が事実なら、該当テストを基準時点の強度に戻す修正だけを親が直接行う (最小差分。再レビューは不要で、2.4 の検証が確かめる。周回にも数えない)。誤検出なら根拠を review JSON に追記して次へ進む。**基準時点の強度に戻すとテストが red になる場合は裁定不能**で、実装が元の契約を満たしていないということなので 2.6 へ駐車する。implementer に渡すと `test_weakening_suspected` で escalate が返り、2.2 の分岐で 2.6 へ落ちて裁定を飛ばしてしまう。
+
+**high は、修正に渡す前に、親が誤検出かを確かめる。** 次の 2 つは、判断を挟まずに実行で確かめる。それ以外の high は、`evidence` が指摘の結論を支えていないときだけ実行で確かめる。
+
+- リトマス試験 B (no-op に置き換えても通るか) を根拠にした空虚テストの high: 対象を no-op に置き換え (`~/.claude/scripts/mutate-check.ts --root "$WORK_DIR"`)、同じ対象を検査するテストのファイルをすべて流す。落ちれば、同じ対象の正の振る舞いを別のテストが固定しているので、誤検出である。指摘されたテスト 1 件だけで判定した `evidence` は、この確認を省く理由にならない
+- 実行の結果を根拠にしていない high: `evidence` に書かれた主張を、そのとおりに実行して確かめる
+
+どちらの場合も、次の 2 つを守る。
+
+- 誤検出と裁定してよいのは、実行の結果が指摘の主張と食い違ったときだけである。読んだだけでは裁定しない
+- 裁定は誤検出かどうかだけを決め、severity を下げない。親には周回を減らしたい動機があるので、判断の余地を残さない
+
+**裁定した finding には、その review JSON の該当 finding へ `"adjudication": {"verdict": "false_positive|fixed_by_parent", "rationale": "<実行したコマンドと結果を含む根拠の一文>"}` を足す。** この JSON は次の確認レビューで `previous_findings_path` としてレビュワーに渡る。印を付けないと、裁定済みの指摘が「未解消」として再計上され、同じ指摘で駐車に落ちる (レビュワー側は `adjudication` の付いた finding を残存判定の対象外にする規約)。
+
+#### 後の issue への引き継ぎ
+
+**medium の箇所を、この run で後に実装する issue が書き換えるなら、その issue に引き継ぐ。** 今直しても、すぐ後の issue が同じ箇所を書き直すからである。次の 2 つを両方満たすときだけ引き継ぐ。
+
+- 引き継ぐ先は、この run でまだ着手していない open の issue である。その issue の `## 設計` か、参照する機能設計書の「実装の配置」の実装先ファイルに、指摘の `file` がある
+- その issue の `## 設計` を読むと、指摘の箇所の処理を書き換えることが分かる
+
+引き継ぐ先の issue の本文の末尾に、次の節を足す (既にあれば項目を足す)。implementer はこの節の指摘も直す。引き継いだ finding には、review JSON に `"handed_over_to": <issue 番号>` を足す。implementer はこの印の付いた finding を直さない。
+
+```markdown
+## 引き継いだ指摘
+- [<severity>/<category>] <summary> (`<file>:<line>`、#<N> のレビューで検出)。直し方: <fix_hint.approach>
+```
 
 #### issue にする指摘
 
 次の指摘は、この PR では直さず、merge の後に issue にする。
 
-- r1 と r2 の `followup`
-- r2 を回したとき: r2 の `medium` (新しく出たものも、r1 から残ったものも) と、r2 に残った `test-quality` / `code-quality` / `ui-layout` の `high`
-- r2 を回さなかったとき: fix の `findings_result` が `not_fixed` の `medium`
+- 各ラウンドの `followup`
+- high の無いラウンドを最後に 2.4 へ進んだとき、その fix で `findings_result` が `not_fixed` になった `medium`
 
-r1 と r2 の両方にある指摘は、category と summary の中身で突き合わせて 1 件にする (fix で行がずれるので `file:line` では判定しない)。
+複数のラウンドにある指摘は、category と summary の中身で突き合わせて 1 件にする (修正で行がずれるので `file:line` では判定しない)。
 
 1 件以上あれば、**PR を作った直後 (2.4 手順 3) に、全文を PR のコメントに 1 件で残す。** 指摘は SCRATCH にしか無く、SCRATCH は次の run に引き継がれないので、途中で止まっても落とさないためである。コメントは `<SCRATCH>/findings-<N>.md` に Write し、`gh pr comment <PR 番号> --repo "$REPO_SLUG" --body-file` で投稿する。同じ PR に以前の `dev-impl-findings` のコメントがあれば、`gh api -X PATCH "repos/$REPO_SLUG/issues/comments/<ID>" -F body=@<SCRATCH>/findings-<N>.md` で置き換える (レビューをやり直さずに再開した run では触らない)。
 
@@ -393,7 +479,7 @@ r1 と r2 の両方にある指摘は、category と summary の中身で突き�
 - 場所: `<file>:<line>`
 - 起きること: <impact>
 - 根拠: <evidence>
-- 直し方の案: <fix_hint。`not_fixed` なら、直せなかった理由も書く>
+- 直し方の案: <fix_hint.approach。`not_fixed` なら、直せなかった理由も書く>
 - 決めること: <直し方が決まらない `followup` のときだけ。選択肢と、それぞれを選ぶと起きること>
 ```
 
@@ -449,7 +535,7 @@ Closes #<N>
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
-   続けて Skill ツールで `workflow-create-pr` を次の引数で起動する。`--evidence` には、**最後に done になった implementer の報告** (fix を回したなら `impl-<N>-fix.json`) の `evidence.manifest_path` を渡す。`--draft` は渡さない (Draft PR は手順 4 で merge できない):
+   続けて Skill ツールで `workflow-create-pr` を次の引数で起動する。`--evidence` には、**最後に done になった implementer の報告** (fix を回したなら、最後の `impl-<N>-fix<k>.json`) の `evidence.manifest_path` を渡す。`--draft` は渡さない (Draft PR は手順 4 で merge できない):
 
 ```
 --yes --repo <REPO_SLUG> --repo-dir <WORK_DIR> --base <DEFAULT> --head issue-<N> --title "<issue タイトル>" --body-file <SCRATCH>/pr-<N>.md --evidence <manifest_path>
@@ -536,7 +622,7 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 ## 直し方の案
 <直し方の案>
 
-#<N> の実装 (PR #<PR 番号>) のレビューで見つかり、直さずに merge した指摘。severity は <high|medium|followup>。
+#<N> の実装 (PR #<PR 番号>) のレビューで見つかり、直さずに merge した指摘。severity は <medium|followup>。
 
 <!-- dev-impl-finding: PR #<PR 番号>-<通し番号> -->
 ```
@@ -550,8 +636,8 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 - 変更: <summary と主要ファイル>
 - テスト + lint + フォーマット検査 + DoD: <2.4 手順 2 で最後に実行した巡の結果 (件数)>、green (フォーマット検査が定義なしならその旨)
 - CI: <pass (check 名の列挙) / なし (checks 未登録)>
-- レビュー: <ラウンド数> 周 (直した指摘: high <h> 件・medium <m> 件)<前 run の review JSON が無く前ラウンドの指摘を再検査していなければ「(前ラウンドの指摘の再検査なし)」>
-- issue にした指摘: <high から先に、各 1 行で `#<作った番号>` + severity + summary。なければ「なし」>
+- レビュー: <ラウンド数> 周 (直した指摘: high <h> 件・medium <m> 件・後の issue に引き継いだ指摘 <c> 件)<r5 の後に `coverage.unscanned` が残っていれば「未走査: <範囲>」>
+- issue にした指摘: <各 1 行で `#<作った番号>` + severity + summary。なければ「なし」>
 - 設計判断・docs 更新: <design_decisions / docs_updates の要約、なければ「なし」>
 ```
 
@@ -561,8 +647,8 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 
 次の解消できない issue を駐車する:
 
-- r2 の後に残った `spec-compliance` / `e2e` の high (fix で `not_fixed` になったものを含む) と、裁定できない `test-weakening`
-- r1 か r2 の `decision` (指摘ごとに、起きること・選択肢・それぞれを選ぶと起きることを駐車コメントに書く)
+- 2.3「収束の判定」で収束しなかったときに残った high (category を問わない。fix で `not_fixed` になったものを含む) と medium、裁定できない `test-weakening`
+- どれかのラウンドの `decision` (指摘ごとに、起きること・選択肢・それぞれを選ぶと起きることを駐車コメントに書く)
 - implementer の `escalate`、DoD の失敗、テストの red、subagent の再失敗
 - 直せないコミットの失敗、push の失敗
 - 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR の作成、issue の Development に紐づかない PR
@@ -610,7 +696,7 @@ done
 2. レビューの指摘から作った issue をまとめる:
    - デフォルトブランチへ戻って `git pull` する (`git fetch origin` のあと `git switch "$DEFAULT" && git pull`。$REPO_DIR が worktree で既定ブランチを別の checkout が使っていて switch できなければ `git switch --detach "origin/$DEFAULT"`)
    - **作り残しを拾う**: `gh pr list --repo "$REPO_SLUG" --state merged --limit 50 --json number,headRefName,comments --jq '.[] | select(.headRefName | startswith("issue-")) | select(any(.comments[]; .body | contains("<!-- dev-impl-findings: pending -->"))) | .number'` に出た PR について、2.5 の手順で issue を作る (merge の後に止まった run・終了コード 15 と `MERGE_UNKNOWN` で 2.5 を通らなかった PR を拾うため)
-   - この run で作った issue を、severity (high → followup → medium) ごとに番号とタイトルで最終報告の先頭に出す。0 件なら出さない
+   - この run で作った issue を、severity (followup → medium) ごとに番号とタイトルで最終報告の先頭に出す。0 件なら出さない
    - 直した指摘と issue にした指摘を「早見表にあった種類か」で分ける。早見表 (`dev-impl-implementer.md`「実装後のセルフチェック」) に無かった種類は、次回の早見表に足す候補として最終報告に列挙する (表に足すかは人間が決める)
    - `docs/pending-review/` が残っているリポジトリでは、ファイル数とパスだけを最終報告に 1 行で出す。中身は読まず、ファイルも足さない
 3. 最終報告 (会話で 1 回だけ。run レポート文書は作らない):
@@ -637,5 +723,5 @@ done
 
 - **dev-spec**: 上流の設計ループ。issue の生成元
 - **dev-impl-implementer** (subagent): 実装の葉。issue と docs を直読する
-- **review-impl** (subagent): 統合レビュワー (テスト品質 / 設計準拠 / コード品質 / E2E / UI レイアウト。r2 では前ラウンド指摘の再発・転移も)
+- **review-impl** (subagent): 統合レビュワー (テスト品質 / 設計準拠 / コード品質 / E2E / UI レイアウト。r1 は受け持ちに分けて並列、r2 以降は修正の差分と前ラウンド指摘の再発・転移)
 - **workflow-create-pr**: 2.4 手順 3 で非対話モードで起動する。implementer が集めた証跡を PR 本文の「動作確認」節に載せ、スクリーンショットを添付する。証跡の集め方の正本は同スキルの `references/evidence.md`

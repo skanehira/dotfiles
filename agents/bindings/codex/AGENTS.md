@@ -110,7 +110,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 - **`~/.codex/hooks.json` (user レイヤー) の 1 件**: herdr 連携の SessionStart hook (2026-10-04 に確認)。このファイルは dotfiles の管理外なので、外部ツールが hook を書き足すとここに増える
 - **compact-plus プラグインが持つ 7 件** (compact-plus 1.3.2 の場合、2026-10-03 に確認): `~/.codex/hooks.json` には無く、プラグインに同梱の `hooks/hooks.json` から登録される。プラグインは `nix/modules/home/codex.nix` の activation が入れる
 
-どちらも承認状態は `~/.codex/config.toml` の `[hooks.state]` に残る。いずれもこのハーネスが書いたゲートではない。dev-impl 系のスキルを Codex で回すときは、修正ラウンド上限を自律遵守する。
+どちらも承認状態は `~/.codex/config.toml` の `[hooks.state]` に残る。いずれもこのハーネスが書いたゲートではない。dev-impl 系のスキルを Codex で回すときは、修正の周回の打ち切り (収束の判定とレビューの上限) を自律遵守する。
 
 ## hooks を追加するときの置き場
 
