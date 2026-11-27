@@ -19,10 +19,10 @@
 
 文字列置換が空振りしたまま「テストが緑 = 変異を殺せなかった」と判定した。**実験そのものが成立していなかった。**
 
-**対策: 変異検証は手で組まず `agents/scripts/mutate-check.ts` を使う。** baseline が緑であること・変異が実際にファイルへ適用されたこと・復元がバイト一致したことを対照として取り、1 つでも崩れたら `killed` / `survived` ではなく **`invalid`** を返す。exit code は `killed=0` / `survived=1` / `invalid=2` で区別できる。
+**対策: 変異検証は手で組まず `agents/scripts/mutate-check.ts` を使う。** baseline が緑であること・変異が実際にファイルへ適用されたこと・復元がバイト一致したことを対照として取り、1 つでも崩れたら `killed` / `survived` ではなく **`invalid`** を返す。exit code は `killed=0` / `survived=1` / `invalid=2` で区別できる。変異とテストは作業ツリーの複製の中で行い、原本は書き換えない。そのため、同じ作業ツリーでほかのエージェントがテストを並列に実行していても、変異中のコードを読まない。テストのコマンドは複製の根で実行されるので、パスは根からの相対で書く。原本のパスや `cd` を使うと、変異していないコードをテストして survived と誤って結論する。
 
 ```bash
-agents/scripts/mutate-check.ts <file> <old> <new> -- <test command...>
+agents/scripts/mutate-check.ts [--root <作業ツリーの根>] <file> <old> <new> -- <test command...>
 ```
 
 手で書く場合も同じ 3 対照を必ず取る。`s.replace(old, new)` の前に `assert old in s` を置く。
