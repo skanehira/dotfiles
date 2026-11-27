@@ -382,7 +382,7 @@ review JSON が無い・パース不能の場合も同様に 1 回再起動 → 
 | 5 | `medium` のうち、後に実装する issue が同じ箇所を書き換えるもの | 直さず、その issue の本文に引き継ぐ (下記「後の issue への引き継ぎ」) |
 | 6 | 残りの `medium` | このラウンドの修正で直す |
 
-high と medium の両方を今の PR で直すのは、review-impl の severity が「この差分で直す」ことを表すためである。後に回すのは、直し方が決まらない `followup` と、後の issue がどうせ書き換える箇所だけにする。
+high と medium の両方を今の PR で直すのは、review-impl の severity が「この差分で直す」ことを表すためである。後に回すのは、`followup` (この差分による直し方の決まらない小さな指摘と、差分より前からある小さいか直し方の決まらない不具合) と、後の issue がどうせ書き換える箇所だけにする。
 
 直す指摘が 1 件以上あれば、implementer を `mode: fix` で起動して、high と medium をまとめて直させる。説明は `issue #<N> の修正 fix<k>` にし、次の内容を渡す。サブエージェント `dev-impl-implementer` を起動する (モデル: opus を明示)。完了を待ってから次の手順へ進む (待ち方は 2.0)。
 
