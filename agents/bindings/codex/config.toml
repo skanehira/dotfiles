@@ -17,6 +17,9 @@ plan_mode_reasoning_effort = "high"
 web_search = "live"
 suppress_unstable_features_warning = true
 
+[agents]
+max_concurrent_threads_per_session = 10
+
 [features]
 memories = true
 default_mode_request_user_input = true
