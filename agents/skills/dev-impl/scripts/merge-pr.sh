@@ -3,7 +3,7 @@
 #
 # 使い方: sh merge-pr.sh <issue 番号> [--worktree <パス>] [--ci-timeout <分>]
 #   dev-impl の REPO_DIR (clone の直下か、セッションが動いている worktree) で実行する。実行した場所を REPO_DIR として扱う
-#   --worktree <パス>: 並列実行と、Step 1 で引き継いだ issue の worktree。merge の後、ブランチより先に消す。
+#   --worktree <パス>: 作業場所が worktree のときと、Step 1 で引き継いだ issue の worktree。merge の後、ブランチより先に消す。
 #                     issue の worktree (名前が issue-<番号>) の中で --worktree なしに実行すると、何も変えずに止まる
 #   --ci-timeout <分>: CI の待ちの上限 (既定 60 分)。checks の登録を待ち始めてからの経過時間で数える
 #

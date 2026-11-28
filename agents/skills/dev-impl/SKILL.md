@@ -3,7 +3,7 @@ name: dev-impl
 description: 実装ループ。/dev-spec が作成した GitHub issue (ゴール / 設計参照 / DoD / 非スコープ / 依存の thin 構成) を入力に、依存順に「implementer subagent → 統合レビュー (初回は受け持ちに分けて並列) → high と medium の修正 → high が無くなるまで修正の差分を確認レビュー (収束しなければ駐車) → 検証 → 動作確認の証跡付き PR → CI pass (CI があれば) → merge → close」で自律実装するオーケストレーター。依存を守ってスコアの高い順 (緊急枠が先頭。スコアの無い issue は後ろ。同じなら番号の小さい順) に着手し、前提を満たすプロジェクトでは着手できる issue を worktree で最大 3 並列に流す (merge は直列)。子が全完了した親 (tracking) issue はその場で close し、取りこぼしは run 終了時に回収する。進捗は issue コメントに残し、詰まった issue は needs-human で駐車して次へ進む。人間の介入はエスカレーション時のみ。issue 作成後にユーザーが直接起動し、エスカレーション回答後の再開も本スキルの再実行で行う。「実装ループを開始」「issue を順に実装して」「残りタスクを自動で実装」などで起動。
 argument-hint: "[issue 番号の絞り込み、省略時は ready 全件]"
 model: opus
-allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, Skill
+allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, Skill, AskUserQuestion
 ---
 
 # dev-impl — 実装ループ
@@ -66,7 +66,8 @@ repo_dir: <WORK_DIR> (すべてのコマンドを cd <WORK_DIR> && ... の形で
 REPO_DIR=$(git rev-parse --show-toplevel)
 REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
-rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>/dev/null
+git -C "$REPO_DIR" fetch origin
+git -C "$REPO_DIR" grep -n 'POC_NEEDED:.*blocker=true' "origin/$DEFAULT" -- docs/design/DESIGN.md docs/design/features/
 ```
 
 - git / gh が解決できない → 停止して案内する
@@ -75,6 +76,34 @@ rg -n 'POC_NEEDED:.*blocker=true' docs/design/DESIGN.md docs/design/features/ 2>
 - ラベル 4 種を冪等に用意する (dev-spec を経ずに用意された issue でも 2.1 のラベル操作が失敗しないように。コマンドは `~/.claude/skills/dev-spec/references/issue-template.md`「ラベルの用意」と同一)
 - **docs が push 済みか確認する**: ローカルに `docs/design/DESIGN.md` があるのに `git log origin/$DEFAULT -1 -- docs/design/DESIGN.md docs/design/features/` が空なら、ブランチ基点 (origin) に設計 docs が無い。docs を含むコミットの push を人間に依頼して停止する (2.1 のブランチは origin から切るため、push されていないと implementer が docs を読めない)。push が済んだら、人間が本スキルを再実行する
 - `docs/design/DESIGN.md` が無い構成でも、issue が自己完結していれば続行してよい (issue の DoD に実行コマンドが揃っていることが条件)
+
+### 作業場所を決める
+
+起動の最初に 1 回だけ、作業場所を選択式の質問でユーザーに聞く。質問を出せない実行 (非対話の `claude -p` など) では A にする。
+
+- A (既定): issue ごとに、最新の `origin/$DEFAULT` から worktree を作って実装する (2.0)。手元の clone のブランチと未コミットの変更に触れない。前提を満たせば最大 3 件を並列に流す
+- B: 手元の clone (`$REPO_DIR`) でブランチを切り替え、1 件ずつ実装する。worktree では依存やローカルの設定を用意しにくいプロジェクト向けで、clone が dirty なら止まる
+
+以下、A を「worktree のとき」、B を「clone のとき」と書く。worktree のときは、worktree の置き場所 (`$REPO_DIR/.claude/worktrees/`) が clone の作業ツリーを dirty にしないよう、無視の設定を確かめる。`info/exclude` に足すので、`.gitignore` と違ってコミットは要らない:
+
+```bash
+git -C "$REPO_DIR" check-ignore -q .claude/worktrees/x ||
+  echo '.claude/worktrees/' >>"$(git -C "$REPO_DIR" rev-parse --path-format=absolute --git-common-dir)/info/exclude"
+```
+
+worktree のときは、チェックアウト直後の worktree でテストと DoD を動かす手順 (以下「セットアップ手順」) も決める。手元の clone が別のブランチにいても同じ手順を選ぶよう、`origin/$DEFAULT` のファイルで決める (`git -C "$REPO_DIR" show "origin/$DEFAULT:docs/design/DESIGN.md"` と `git -C "$REPO_DIR" ls-tree --name-only "origin/$DEFAULT"`)。DESIGN.md「開発・検証コマンド」に worktree セットアップ手順が書かれていれば、それを使う。書かれていなければ、リポジトリの最上位にあるファイルから依存のインストールのコマンドを決め、使ったコマンドを最終報告に書く:
+
+| ファイル | コマンド |
+| --- | --- |
+| `pnpm-lock.yaml` | `pnpm install --frozen-lockfile` |
+| `package-lock.json` | `npm ci` |
+| `yarn.lock` | `yarn install --frozen-lockfile` |
+| `bun.lock` / `bun.lockb` | `bun install --frozen-lockfile` |
+| `uv.lock` | `uv sync` |
+| `poetry.lock` | `poetry install` |
+| `Gemfile.lock` | `bundle install` |
+
+`go.mod` と `Cargo.toml` は、ビルドのときに依存を取るのでコマンドは要らない。その手順でテストが動くかは、2.0 で最初の worktree を作ったときに確かめる。
 
 作業ログ用のディレクトリを作る: `SCRATCH=<scratchpad>/dev-impl-$(date +%Y%m%d-%H%M%S)` (`<scratchpad>` はこのセッションの scratchpad のディレクトリ。report JSON の置き場で、git 管理外)。
 
@@ -134,39 +163,40 @@ WT=$(git -C "$REPO_DIR" worktree list --porcelain \
   | awk -v b="branch refs/heads/issue-$N" '/^worktree /{p=substr($0,10)} $0==b{print p}')
 ```
 
-`WT` が空なら下の再開表へ進む。空でなければ、その worktree を引き継ぐ (下記)。
+`WT` が空なら下の再開表へ進む。`WT` が `$REPO_DIR` と同じなら、手元の clone 自体が `issue-<N>` に乗っている (作業場所 B の前の run が途中で止まった)。B のときは `WORK_DIR=$REPO_DIR` として引き継ぎ、`merge-pr.sh` と 2.6 では `--worktree` も `worktree remove` も使わない。A のときは手元の clone のブランチに触れないので、この issue には着手せず、clone を別のブランチに戻してから再実行するよう最終報告に書く。それ以外なら、その worktree を引き継ぐ (下記)。
 
-**引き継ぐときは `WORK_DIR=$WT` とし、新しい worktree を作らず、未コミットの差分も捨てない。** 直列実行でも同じにする (`$REPO_DIR` ではこのブランチへ switch できないため)。そのうえで下の再開表から再開位置を決め、次のように読み替える。
+**引き継ぐときは `WORK_DIR=$WT` とし、新しい worktree を作らず、未コミットの差分も捨てない。** clone のときも同じにする (`$REPO_DIR` ではこのブランチへ switch できないため)。そのうえで下の再開表から再開位置を決め、次のように読み替える。
 
 - 「PR が open」の行: worktree を作り直さずに `$WT` を使う
 - 「ブランチのみ残存」の行: switch を飛ばし、基準は `BASE_SHA=$(git -C "$WT" merge-base "origin/$DEFAULT" HEAD)` で復元する。implementer に足す行は「ブランチと作業ツリー (未コミットの差分を含む) に前回の差分がある。既存差分を前提に続きから実装せよ」とする
-- 後片付け: 2.4 の merge の後は `merge-pr.sh --worktree "$WT"` が消す。2.6 の駐車では、並列実行の worktree と同じく `$WT` を `git -C "$REPO_DIR" worktree remove` で消す
+- 後片付け: 2.4 の merge の後は `merge-pr.sh --worktree "$WT"` が消す。2.6 の駐車では、2.0 で作った worktree と同じく `$WT` を `git -C "$REPO_DIR" worktree remove` で消す
 
 前の run の SCRATCH (review JSON や証跡) は引き継がない。SCRATCH は run ごとに新しく作るため、レビューは r1 から数え直す。
 
 | 状態 (`gh pr list --repo "$REPO_SLUG" --head issue-<N>` と、`git fetch origin` 後の `git branch --list issue-<N>` / `git branch -r --list "origin/issue-<N>"`) | 再開位置 |
 | --- | --- |
-| PR が open | 2.4 手順 4 (CI ゲートと merge) から。`merge-pr.sh` が PR の番号を引き直すので番号の復元は要らない。**直列実行では、先にブランチ `issue-<N>` へ switch する** (ローカルと origin で食い違えば、下の段落の ahead/behind の手順で合わせる。switch しないと `$WORK_DIR` が既定のブランチのままで、HEAD の照合が誤る)。**並列実行では worktree を作り直して `$WORK_DIR` を再設定してから入る** (rebase 分岐が使う。ブランチ `issue-<N>` が既にあるので `git -C "$REPO_DIR" worktree add "$WT" "issue-<N>"` と `-b` を付けずに作り、2.0 と同じく `.worktreeinclude` の複製と前提 1 のセットアップを行う)。検証は push 前に済んでいる前提なので繰り返さないが、`gh pr view --json headRefOid` と `git -C "$WORK_DIR" rev-parse HEAD` が一致しなければ PR 作成後に差分が足されているので、手順 2 の検証を 1 巡し、push してから CI ゲートを通して merge する (push で CI が新しい HEAD で走り直すため、push より前の CI の結果は使わない)。PR の動作確認の証跡は作成時点のもので、この run では取り直せない (implementer を起動していない)。merge の前に `gh pr comment` で「`<PR 作成時の headRefOid>` 以降の差分は動作確認の証跡を取っていない」と 1 件残す。レビュー未実施が疑われる場合は 2.3 から |
-| ブランチのみ残存 (ローカルまたは origin、PR なし) | ブランチへ switch し (origin のみに在る場合は `git switch issue-<N>` が追跡ブランチを作る)、`BASE_SHA=$(git merge-base origin/$DEFAULT HEAD)` で基準を復元して 2.2 から。implementer に渡す内容 (2.2) に「ブランチに前回の差分がある。既存差分を前提に続きから実装せよ」の行を足す |
+| PR が open | 2.4 手順 4 (CI ゲートと merge) から。`merge-pr.sh` が PR の番号を引き直すので番号の復元は要らない。**clone のときは、先にブランチ `issue-<N>` へ switch する** (ローカルと origin で食い違えば、下の段落の ahead/behind の手順で合わせる。worktree のときも、作る前に同じ手順で合わせる。switch しないと `$WORK_DIR` が既定のブランチのままで、HEAD の照合が誤る)。**worktree のときは worktree を作り直して `$WORK_DIR` を再設定してから入る** (rebase 分岐が使う。ブランチ `issue-<N>` が既にあるので `git -C "$REPO_DIR" worktree add "$WT" "issue-<N>"` と `-b` を付けずに作り、2.0 と同じく `.worktreeinclude` の複製とセットアップ手順を行う)。検証は push 前に済んでいる前提なので繰り返さないが、`gh pr view --json headRefOid` と `git -C "$WORK_DIR" rev-parse HEAD` が一致しなければ PR 作成後に差分が足されているので、手順 2 の検証を 1 巡し、push してから CI ゲートを通して merge する (push で CI が新しい HEAD で走り直すため、push より前の CI の結果は使わない)。PR の動作確認の証跡は作成時点のもので、この run では取り直せない (implementer を起動していない)。merge の前に `gh pr comment` で「`<PR 作成時の headRefOid>` 以降の差分は動作確認の証跡を取っていない」と 1 件残す。レビュー未実施が疑われる場合は 2.3 から |
+| ブランチのみ残存 (ローカルまたは origin、PR なし) | clone のときはブランチへ switch する (origin のみに在る場合は `git switch issue-<N>` が追跡ブランチを作る)。worktree のときは、上の行と同じく `-b` を付けずに worktree を作り、`.worktreeinclude` の複製とセットアップ手順を行う。そのうえで `BASE_SHA=$(git -C "$WORK_DIR" merge-base origin/$DEFAULT HEAD)` で基準を復元して 2.2 から。implementer に渡す内容 (2.2) に「ブランチに前回の差分がある。既存差分を前提に続きから実装せよ」の行を足す |
 | どちらも無い | 最初から (2.1 から) |
 
-実装途中の**未コミット**差分はマシンローカルで、別マシンには引き継げない (同じマシンなら、上の手順で worktree ごと引き継ぐ)。ブランチも push されるまではマシンローカル (2.6 の駐車時は WIP を退避して push を試みる)。別マシンで再開して残置ブランチが origin に無い場合、その issue は最初からやり直しになる — これは仕様で、issue 単位が再開の粒度である。ローカルと origin の両方にブランチが在る場合は fetch 後に ahead/behind を確認し、behind ならローカルを origin に合わせ (`git switch -C "issue-<N>" "origin/issue-<N>"`)、ahead なら push してから続行する。
+実装途中の**未コミット**差分はマシンローカルで、別マシンには引き継げない (同じマシンなら、上の手順で worktree ごと引き継ぐ)。ブランチも push されるまではマシンローカル (2.6 の駐車時は WIP を退避して push を試みる)。別マシンで再開して残置ブランチが origin に無い場合、その issue は最初からやり直しになる — これは仕様で、issue 単位が再開の粒度である。ローカルと origin の両方にブランチが在る場合は fetch 後に ahead/behind を確認し、ahead なら `git -C "$REPO_DIR" push origin "issue-<N>"` してから続行する。behind ならローカルを origin に合わせる。clone のときは `git -C "$REPO_DIR" switch -C "issue-<N>" "origin/issue-<N>"`、worktree のときは worktree を作る前に `git -C "$REPO_DIR" branch -f "issue-<N>" "origin/issue-<N>"` で合わせる (手元の clone のブランチを切り替えないため)。
 
 ## Step 2: issue ごとの実装サイクル
 
-対象 issue を Step 1 の着手順に、次のサイクルで消化する。**着手できる issue は、着手順の上から最大 3 件まで並列に走らせる** (2.0)。並列の前提が満たせないプロジェクトでは 1 件ずつになる。
+対象 issue を Step 1 の着手順に、次のサイクルで消化する。**worktree のときは、着手できる issue を着手順の上から最大 3 件まで並列に走らせる** (2.0)。clone のときと、並列の前提を満たさないプロジェクトでは 1 件ずつになる。
 
-### 2.0 並列実行の可否と枠組み
+### 2.0 worktree と並列実行
 
-直列実行では実装ループの経過時間が消化コストの総和になる。着手できる issue は互いに依存しないので、実装とレビューは同時に走らせてよい。**ただし merge は必ず 1 件ずつ直列に行う** (2.4 手順 4)。並列で merge するとデフォルトブランチが競合し、後続の rebase が連鎖する。
+worktree のときは、issue ごとに worktree を作り、その中で実装する。clone のときは worktree を作らず、この節を飛ばして 2.1 へ進む。
 
-**並列にしてよいのは、プロジェクトが次の 3 つを満たすときだけ。** 満たさなければ**並列度 1** で回す (誤った green を出すより遅い方がよい):
+着手できる issue は互いに依存しないので、実装とレビューは同時に走らせてよい。**ただし merge は必ず 1 件ずつ直列に行う** (2.4 手順 4)。並列で merge するとデフォルトブランチが競合し、後続の rebase が連鎖する。
 
-1. `docs/design/DESIGN.md`「開発・検証コマンド」に **worktree セットアップ手順**が書かれている (依存インストールなど、チェックアウト直後の作業ツリーで DoD を実行可能にする手順)
-2. テスト・E2E が**固定ポートを共有しない**こと。dev server を起動する検証がある場合、ポートを外から指定でき、指定したポートで起動できなければ失敗する (既存サーバに相乗りしない) 契約になっていること。**相乗りする設定 (Playwright の `reuseExistingServer: true` + 固定 `baseURL` など) のまま並列にすると、別の worktree のサーバに対してテストが通り、静かに誤った green を出す**。worktree セットアップ手順に、並列で使う基準ポートが書かれていること
-3. `.claude/worktrees/` が `.gitignore` にあること。無いと、worktree を作った時点で親の作業ツリーが dirty になり、2.1 の clean チェックが全 issue で失敗する。並列を使うなら先に `.gitignore` へ追加する (それ自体を 1 コミットにしてよい)
+**並列にしてよいのは、プロジェクトが次の 2 つを満たすときだけ。** 満たさなければ**並列度 1** で回す (誤った green を出すより遅い方がよい):
 
-満たす場合、空いている枠 (スロット) をすべて、Step 1 の着手順の上から埋めて流す。2.5 の完了処理か 2.6 の駐車で枠が空くたびに、着手できる issue を計算し直し、空いた枠をすべて埋め直す (1 件の merge で複数の issue が着手できるようになることがあるため)。issue を割り当てる前に、2.1 の手順 0 で担当の印を取る。取れなければ (終了コード 3) その issue は割り当てず、着手順の次の issue に移る。印を取れた issue にだけ、次の手順で worktree を作る:
+1. `docs/design/DESIGN.md`「開発・検証コマンド」に **worktree セットアップ手順**が書かれていて、並列で使う基準ポートがそこにある。Step 0 でファイルから推し量ったセットアップ手順では並列にしない
+2. テスト・E2E が**固定ポートを共有しない**こと。dev server を起動する検証がある場合、ポートを外から指定でき、指定したポートで起動できなければ失敗する (既存サーバに相乗りしない) 契約になっていること。**相乗りする設定 (Playwright の `reuseExistingServer: true` + 固定 `baseURL` など) のまま並列にすると、別の worktree のサーバに対してテストが通り、静かに誤った green を出す**
+
+空いている枠 (スロット) をすべて、Step 1 の着手順の上から埋めて流す (並列度 1 なら枠は 1 つ)。2.5 の完了処理か 2.6 の駐車で枠が空くたびに、着手できる issue を計算し直して空いた枠をすべて埋め直す。1 件の merge で、複数の issue が着手できるようになることがあるためである。issue を割り当てる前に、2.1 の手順 0 で担当の印を取る。取れなければ (終了コード 3) その issue は割り当てず、着手順の次の issue に移る。印を取れた issue にだけ、次の手順で worktree を作る:
 
 ```bash
 # スロット s (0 始まり、最大 3) に issue N を割り当てる
@@ -176,7 +206,7 @@ WT="$REPO_DIR/.claude/worktrees/issue-$N"
 git -C "$REPO_DIR" worktree add -b "issue-$N" "$WT" "origin/$DEFAULT"
 ```
 
-worktree には git 管理外のファイル (`.env` 系・ローカル設定) が無いので、そのままでは DoD が実行できない。**リポジトリルートの `.worktreeinclude` に列挙されたものを複製する。** これは Claude Code が worktree を作るときにも使うファイルで、書式は `.gitignore` と同じ (1 行 1 パターン、`#` はコメント)。**複製するのは gitignored なファイルだけ**で、追跡されているファイルと、gitignore されていないファイルは対象にしない。用意するのは人間か、プロジェクトを scaffold したスキル。無ければ何も複製しない (その場合は前提 1 のセットアップ手順が代わりを果たす必要がある)。上の `worktree add` の直後に次を実行する (`git worktree add` は複製しないので、ここで行う):
+worktree には git 管理外のファイル (`.env` 系・ローカル設定) が無いので、そのままでは DoD が実行できない。**リポジトリルートの `.worktreeinclude` に列挙されたものを複製する。** これは Claude Code が worktree を作るときにも使うファイルで、書式は `.gitignore` と同じ (1 行 1 パターン、`#` はコメント)。**複製するのは gitignored なファイルだけ**で、追跡されているファイルと、gitignore されていないファイルは対象にしない。用意するのは人間か、プロジェクトを scaffold したスキル。無ければ何も複製しない。上の `worktree add` の直後に次を実行する (`git worktree add` は複製しないので、ここで行う):
 
 ```bash
 if [ -f "$REPO_DIR/.worktreeinclude" ]; then
@@ -194,17 +224,29 @@ fi
 .env.local
 ```
 
-依存ディレクトリ (`node_modules` 等) は容量が大きいのでここに列挙せず、前提 1 のセットアップ手順でインストールする。
+複製の後に、Step 0 で決めたセットアップ手順を `$WT` で実行する。依存ディレクトリ (`node_modules` 等) は容量が大きいので `.worktreeinclude` に列挙せず、セットアップ手順でインストールする。
 
-- **ポート**: スロット番号から決めて渡す (worktree セットアップ手順の基準ポート + s × 10)。implementer と review-impl には起動時の `port` の行で渡し (2.2・2.3 の fix を含む)、直列実行では `port` の行ごと省く。Haiku に委譲する検証では、プロジェクトの worktree セットアップ手順が定める形でコマンドに含める (モデル方針「Haiku への委譲」)
+この run で最初に作った worktree では、セットアップの後にプロジェクトのテストを 1 回実行する。コマンドが見つからない・設定ファイルが無い・接続できないなど、環境の原因で動かなければ、実装に入らずに run を止める。止める前に、作った worktree とブランチを消す (残すと、次の run が「ブランチのみ残存」として空の差分から再開する)。止めたら、セットアップ手順を DESIGN.md に書くか、作業場所 B で起動し直すよう案内する:
+
+```bash
+git -C "$REPO_DIR" worktree remove --force "$WT" && git -C "$REPO_DIR" branch -D "issue-$N"
+```
+
+テストが動いたら、テストが作ったファイルを消してから 2.1 へ進む (2.1 の clean チェックに掛からないように)。`-x` を付けないので、無視されているファイル (インストールした依存など) は残る:
+
+```bash
+git -C "$WT" checkout -- . && git -C "$WT" clean -fd
+```
+
+- **ポート**: 並列のときは、スロット番号から決めて渡す (worktree セットアップ手順の基準ポート + s × 10)。implementer と review-impl には起動時の `port` の行で渡し (2.2・2.3 の fix を含む)、並列度 1 では `port` の行ごと省く。Haiku に委譲する検証では、プロジェクトの worktree セットアップ手順が定める形でコマンドに含める (モデル方針「Haiku への委譲」)
 - **待ち方**: subagent を起動したら、その issue の subagent の完了だけを待つ。並列で走る他の issue の subagent の起動とは並列でよく、他の issue の進行は待たない
-- merge した issue の worktree は、`merge-pr.sh --worktree "$WT"` (2.4 手順 4) が消す。駐車 (2.6) した issue の worktree は、WIP を push したうえで `git -C "$REPO_DIR" worktree remove "$WT"` で削除する (残すと次回の clean チェックに掛かる)
+- merge した issue の worktree は、`merge-pr.sh --worktree "$WT"` (2.4 手順 4) が消す。駐車 (2.6) した issue の worktree は、WIP を push したうえで `git -C "$REPO_DIR" worktree remove "$WT"` で削除する (残すと、次回の再開で `issue-<N>` のブランチを checkout できない)
 
 ### 2.1 着手
 
-以下の `$WORK_DIR` は、直列実行なら `$REPO_DIR`、並列実行なら 2.0 で作った worktree のパス。**implementer・review-impl には `repo_dir` としてこの `$WORK_DIR` を渡す** (どちらも絶対パスで受ける契約なので、直列・並列で指示の形は変わらない)。
+以下の `$WORK_DIR` は、worktree のときは 2.0 で作った worktree のパス、clone のときは `$REPO_DIR`。**implementer・review-impl には `repo_dir` としてこの `$WORK_DIR` を渡す** (どちらも絶対パスで受ける契約なので、作業場所で指示の形は変わらない)。
 
-0. 担当の印を取る。ブランチ・worktree・ラベルに触れる前に行う (印を取る前に触ると、同じ issue を取りに来た別のセッションと手順が交錯する)。並列実行では 2.0 で worktree を作る前にここを行う:
+0. 担当の印を取る。ブランチ・worktree・ラベルに触れる前に行う (印を取る前に触ると、同じ issue を取りに来た別のセッションと手順が交錯する)。worktree のときは 2.0 で worktree を作る前にここを行う:
 
 ```bash
 sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" "$N" started
@@ -213,11 +255,11 @@ sh ~/.claude/skills/dev-impl/scripts/next-issues.sh mark "$SCRATCH/issues.tsv" "
 終了コードが 3 なら、別のセッションが先に印を取っている。この issue には着手せず、出力の着手順で次の issue へ進み、最終報告の「着手できなかった issue」に `claimed` の行のセッション ID と一緒に載せる。0 なら続ける (標準エラーに「担当の印を残せない」と出たら、印は無いまま進むことになるので、最終報告に載せる)
 
 1. `git -C "$WORK_DIR" status --porcelain` が空であることを確認する。残骸があれば run を止めて人間に報告する (前作業の未コミット差分の上に実装しない)。人間は差分を commit か stash してから本スキルを再実行する
-2. ブランチを origin のデフォルトブランチ最新から切り、基準 SHA を控える。並列実行では 2.0 の `worktree add -b` で既にブランチが作られているので `switch` は行わず、`fetch` と `BASE_SHA` の取得だけを行う:
+2. ブランチを origin のデフォルトブランチ最新から切り、基準 SHA を控える。worktree のときは 2.0 の `worktree add -b` で既にブランチが作られているので `switch` は行わず、`fetch` と `BASE_SHA` の取得だけを行う:
 
 ```bash
 git -C "$REPO_DIR" fetch origin
-git -C "$WORK_DIR" switch -c "issue-$N" "origin/$DEFAULT"   # 直列実行のみ
+git -C "$WORK_DIR" switch -c "issue-$N" "origin/$DEFAULT"   # clone のときだけ
 BASE_SHA=$(git -C "$WORK_DIR" rev-parse HEAD)
 ```
 
@@ -552,7 +594,7 @@ Closes #<N>
    | `PR_FAILED issue_link <url>` | PR はできたが issue の Development に紐づいていない。下書きの先頭行が `Closes #<N>` であることを確かめ、違っていれば直して同じ引数で 1 回だけ再起動する。下書きが正しいか、再発したら merge せずに 2.6 へ (人が issue の画面の Development から紐づける) |
    | それ以外の `PR_FAILED` | 理由を見て直せるもの (引数の渡し間違い) は直して 1 回だけ再起動し、直せなければ 2.6 へ |
 
-4. **CI ゲートと merge**: ローカル検証は手順 2 で済んでいる。ここでは、CI があればその pass を待ってから merge し、後片付けと 2.5 の完了処理までをスクリプトで行う。`$REPO_DIR` (clone の直下か、セッションが動いている worktree) で実行する。並列実行と Step 1 で引き継いだ worktree では `--worktree "$WT"` を付ける。スクリプトは実行した場所を `$REPO_DIR` として扱うので、セッションが動いている worktree を消すことはない。issue の worktree (名前が `issue-<番号>`) の中で `--worktree` なしに実行すると、何も変えずに終了コード 1 で止まる:
+4. **CI ゲートと merge**: ローカル検証は手順 2 で済んでいる。ここでは、CI があればその pass を待ってから merge し、後片付けと 2.5 の完了処理までをスクリプトで行う。`$REPO_DIR` (clone の直下か、セッションが動いている worktree) で実行する。worktree のときと Step 1 で引き継いだ worktree では `--worktree "$WT"` を付ける。スクリプトは実行した場所を `$REPO_DIR` として扱うので、セッションが動いている worktree を消すことはない。issue の worktree (名前が `issue-<番号>`) の中で `--worktree` なしに実行すると、何も変えずに終了コード 1 で止まる:
 
 ```bash
 sh ~/.claude/skills/dev-impl/scripts/merge-pr.sh "$N" [--worktree "$WT"]
@@ -655,7 +697,7 @@ CI を最大 60 分待つので、Bash ツールの上限 (600000 ms) を超え�
 - 再起動しても `PR_CREATED` / `PR_UPDATED` を返さない PR の作成、issue の Development に紐づかない PR
 - `merge-pr.sh` の終了コード 10・11・12・14・16 と、復旧しても 13 のもの、merge の前の 1 (2.4 手順 4 の表)
 
-駐車するときは、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる** (push 失敗は続行してよいが、その場合ブランチはマシンローカルに残る旨を駐車コメントに書く)。コミット条件 (全テスト green) は merge されるコミットの規律であり、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする — 退避しないと作業ツリーが dirty のまま残り、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しない。**並列実行と、Step 1 で引き継いだ worktree では、この退避を worktree の中で行い、push まで済ませてから 2.0 の手順で worktree を削除する** (残すと親の作業ツリーが dirty のままになる)。退避後:
+駐車するときは、まず**未コミットの作業をブランチへ WIP コミットとして退避し、`git push -u origin "issue-$N"` を試みる**。push に失敗しても続行してよく、その場合はブランチがマシンローカルに残ることを駐車コメントに書く。コミット条件 (全テスト green) は merge されるコミットの規律で、この退避コミットは merge しない駐車ブランチ上の記録なので例外とする。退避しないと作業ツリーが dirty のまま残る。clone のときは、次の issue の 2.1 (clean チェック) と run 停止時の Step 3 (デフォルトブランチへの switch) が成立しなくなる。**worktree のときと、Step 1 で引き継いだ worktree では、この退避を worktree の中で行う。push まで済ませてから、2.0 の手順で worktree を削除する** (残すと、次回の再開で `issue-<N>` のブランチを checkout できない)。退避後:
 
 ```bash
 gh issue edit "$N" --repo "$REPO_SLUG" --remove-label in-progress --add-label needs-human
@@ -693,7 +735,7 @@ done
 **この走査は `tracking` ラベルの open issue を repo 全件対象にするが、close するのは dev-spec が作った形のタイトルの親だけにする**: `UC-<番号>: ` で始まる、`基盤: UC に属さない共通実装`、` トラッキング` で終わる、のどれか。それ以外の `tracking` (dev-triage や人が付けたもの) は close せず、最終報告に一覧で出して人間の判断を仰ぐ。
 
 2. レビューの指摘から作った issue をまとめる:
-   - デフォルトブランチへ戻って `git pull` する (`git fetch origin` のあと `git switch "$DEFAULT" && git pull`。$REPO_DIR が worktree で既定ブランチを別の checkout が使っていて switch できなければ `git switch --detach "origin/$DEFAULT"`)
+   - `git -C "$REPO_DIR" fetch origin` する。clone のときは、続けてデフォルトブランチへ戻って `git pull` する (`git switch "$DEFAULT" && git pull`。$REPO_DIR が worktree で既定ブランチを別の checkout が使っていて switch できなければ `git switch --detach "origin/$DEFAULT"`)。worktree のときは手元の clone のブランチに触れない
    - **作り残しを拾う**: `gh pr list --repo "$REPO_SLUG" --state merged --limit 50 --json number,headRefName,comments --jq '.[] | select(.headRefName | startswith("issue-")) | select(any(.comments[]; .body | contains("<!-- dev-impl-findings: pending -->"))) | .number'` に出た PR について、2.5 の手順で issue を作る (merge の後に止まった run・終了コード 15 と `MERGE_UNKNOWN` で 2.5 を通らなかった PR を拾うため)
    - この run で作った issue を、severity (followup → medium) ごとに番号とタイトルで最終報告の先頭に出す。0 件なら出さない
    - 直した指摘と issue にした指摘を「早見表にあった種類か」で分ける。早見表 (`dev-impl-implementer.md`「実装後のセルフチェック」) に無かった種類は、次回の早見表に足す候補として最終報告に列挙する (表に足すかは人間が決める)

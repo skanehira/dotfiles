@@ -31,13 +31,36 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, AskUserQuestion
 REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
 ~/.claude/skills/dev-triage/scripts/setup-labels.sh "$REPO_SLUG"
-ls docs/ISSUE_TRIAGE.md 2>/dev/null
 ```
 
-- Claude Code の Bash ではシェルの変数が呼び出しをまたいで残らない。ここで得た `REPO_SLUG` / `DEFAULT` と、手順 2 の `SCRATCH` の値を控え、以降のコマンドの `$REPO_SLUG` / `$DEFAULT` / `$SCRATCH` はその値に置き換えて書く (変数のまま書くと、空の値で `gh` や `git` が動く)
+- Claude Code の Bash ではシェルの変数が呼び出しをまたいで残らない。ここで得た `REPO_SLUG` / `DEFAULT` と、下の「作業用の worktree を作る」の `CLONE` / `WT`、手順 2 の `SCRATCH` の値を控え、以降のコマンドではその値に置き換えて書く (変数のまま書くと、空の値で `gh` や `git` が動く)
 - `setup-labels.sh` は、このスキルが付け外しする状態のラベル (`needs-design` / `design-review` / `needs-human` / `tracking`) を含む状態と種別のラベルを、無ければ作る。失敗したら、GitHub に書き込めないので止まって報告する
-- 作業ツリーが dirty なら止まる。設計は issue ごとに `origin/$DEFAULT` から切ったブランチで行う
-- `~/.claude/skills/dev-triage/references/issue-states.md` と、対象リポジトリの `AGENTS.md` (無ければ `CLAUDE.md`) を Read する。`docs/ISSUE_TRIAGE.md` があれば、それも Read する。受け入れ基準の ID の振り方、設計書の置き場所、ドキュメントの書き方などのプロジェクトの規約は、このスキルより優先する
+
+## 作業用の worktree を作る
+
+設計は手元の clone ではなく、起動のたびに最新の `origin/$DEFAULT` から作る worktree で行う。手元の clone のブランチと未コミットの変更に触れないためで、clone が dirty でも止まらない。
+
+```bash
+CLONE=$(git rev-parse --show-toplevel)
+git -C "$CLONE" fetch origin
+git -C "$CLONE" check-ignore -q .claude/worktrees/x ||
+  echo '.claude/worktrees/' >>"$(git -C "$CLONE" rev-parse --path-format=absolute --git-common-dir)/info/exclude"
+WT="$CLONE/.claude/worktrees/dev-feat-spec-$(date +%Y%m%d-%H%M%S)"
+git -C "$CLONE" worktree add --detach "$WT" "origin/$DEFAULT"   # 直しのモードでは "origin/<PR のブランチ>"
+cd "$WT"
+```
+
+- `info/exclude` に足すのは、worktree の置き場所が clone の作業ツリーを dirty にしないためである。`.gitignore` と違ってコミットが要らない
+- 以降のコマンドは、すべて `$WT` で実行する。Bash の作業ディレクトリは呼び出しをまたいで残らないことがあるので、上の `cd` に頼らず、毎回 `git -C "$WT" …` か `cd "$WT" && …` の形で書く (`gh pr create` と検査のスクリプトも `cd "$WT" && …` で動かす)。残らないまま素の `git switch` を流すと、手元の clone のブランチが切り替わる
+- ファイルの Read・Edit・Write も `$WT` の下の絶対パスで行う (`$CLONE` の下のファイルは古いことがある)。手順 6 の検査とコミットを委ねる subagent にも、`$WT` と `$WT` の下の絶対パスを渡す
+- 直しのモードでは、PR のブランチ (`gh pr view <PR 番号> --json headRefName -q .headRefName`) の `origin/<ブランチ>` から detach で作る。手元のブランチを checkout しないので、そのブランチを別の worktree が使っていても作れる。push は `git push origin HEAD:<ブランチ>` で行う
+- 終わったら (最終報告の後と、途中で止まったとき)、次の 2 つがどちらも空なら `git -C "$CLONE" worktree remove "$WT"` で消す。空でなければ消さず、`$WT` のパスを最終報告に書く。ブランチは push してあるので、worktree を消しても PR は残る
+  - `git -C "$WT" status --porcelain` (未コミットの変更)
+  - `git -C "$WT" rev-list HEAD --not --remotes` (push していないコミット。直しのモードは detach で作業するので、push に失敗したコミットは worktree を消すと辿れなくなる)
+
+## 読むもの
+
+`~/.claude/skills/dev-triage/references/issue-states.md` と、`$WT` の `AGENTS.md` (無ければ `CLAUDE.md`) を Read する。`docs/ISSUE_TRIAGE.md` があれば、それも Read する。受け入れ基準の ID の振り方、設計書の置き場所、ドキュメントの書き方などのプロジェクトの規約は、このスキルより優先する
 
 ## 設計モード
 
@@ -53,7 +76,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,headRefNam
 - 引数で issue 番号を指定されたら、その 1 件だけにする
 - 並べ方: 本文の `## 優先度` に緊急枠の行 (行の先頭が `緊急枠 (`) がある issue を先頭に置き、次に `スコア <数値>` の高い順に並べる。どちらも無い issue はその後ろに、番号の小さい順に並べる (書式は `~/.claude/skills/dev-triage/references/priority.md`「issue への書き方」)
 - 本文に `Design-for: #<この issue>` の行を持つ open の PR がある issue は飛ばし、最終報告に理由を書く (設計済みで、人のレビュー待ち)
-- ブランチ `design/issue-<N>` が origin にあるのに open の PR が無い issue は、設計 PR が merge されずに close されたあと、人が `needs-design` を付け直したものとして扱う。古いブランチを消してから設計し直す (`git push origin --delete design/issue-<N>`)。このスキルは同じリポジトリで同時に 1 つだけ起動する前提で、別の起動が設計中のブランチと区別しない
+- ブランチ `design/issue-<N>` が origin にあるのに open の PR が無い issue は、設計 PR が merge されずに close されたあと、人が `needs-design` を付け直したものとして扱う。古いブランチを origin と手元の両方から消してから設計し直す (`git -C "$WT" push origin --delete design/issue-<N>` と `git -C "$WT" branch -D design/issue-<N>`。手元に無ければ後者の失敗は無視する)。このスキルは同じリポジトリで同時に 1 つだけ起動する前提で、別の起動が設計中のブランチと区別しない
 
 ### 2. 1 件ずつ設計する
 
@@ -61,7 +84,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,headRefNam
 
 手順 3〜6 では GitHub の issue を変えない。本文の下書き、子の issue の下書き、PR の本文の下書きは作業用のディレクトリ (起動の最初に `SCRATCH=$(mktemp -d)` で作り、issue ごとに `$SCRATCH/issue-<N>/`) にファイルで書き、検査を通ってから手順 7 でまとめて反映する (途中で止めたときに、書きかけの本文やどこにもつながらない子の issue を残さないため)。
 
-1 件が終わるたびに `git switch --detach "origin/$DEFAULT"` で戻り、`git status --porcelain` が空であることを確かめてから次の issue へ進む (`git switch "$DEFAULT"` は、デフォルトブランチを別の worktree が使っていると失敗する)。
+1 件が終わるたびに `git -C "$WT" switch --detach "origin/$DEFAULT"` で戻り、`git -C "$WT" status --porcelain` が空であることを確かめてから次の issue へ進む (`git switch "$DEFAULT"` は、デフォルトブランチを手元の clone が使っていると失敗する)。push 済みの `design/issue-<N>` は、戻った後に `git -C "$WT" branch -D design/issue-<N>` で手元から消す (ブランチは clone と共有なので、残すと次に同じ issue を設計し直すときに作れない)。
 
 ### 3. 読んで振り分ける
 
@@ -86,7 +109,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,body,files
 
 変える機能設計書のどれかを、別の open の設計 PR がすでに変えていれば、この issue は飛ばして最終報告に理由を書く (先の PR の merge のあとの起動で設計する)。この起動の中で先に出した PR もこの一覧に入るので、issue ごとに取り直す。`USECASES.md`・`DESIGN.md`・`OVERVIEW.md` は複数の機能が共有するので、変える節が重ならなければ衝突として扱わない。`OVERVIEW.md`「機能の一覧」の行の追加は、重なっても衝突として扱わない。
 
-`git switch -c design/issue-<N> origin/$DEFAULT` で切ったブランチで書く。
+`git -C "$WT" switch -c design/issue-<N> origin/$DEFAULT` で切ったブランチで書く。
 
 - **機能設計書**: 既存の `docs/design/features/<機能名>.md` を変えるか、新しく作る。型と記入基準は `~/.claude/skills/dev-spec/references/feature-doc.md` に従う (/dev-impl の implementer と review-impl がこの型で読むため)。「細部は方針から導き、聞くものを絞る」の基準のうち、その場でユーザーに確認する部分だけは、このスキルでは「質問せずに決めて確認点に書く」に読み替える
 - **人が読む概要**: 機能設計書の「何を作るか」と `docs/design/OVERVIEW.md` は、人が仕様の概要を知るための要約である (書き方は `~/.claude/skills/dev-spec/references/overview-doc.md` と `feature-doc.md`)。次の表で扱いを決める
@@ -104,7 +127,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,body,files
 - **横断の設計**: スキーマ、API の共通規約、横断の決まりが変わるときは `docs/design/DESIGN.md` の該当の節を直す。触れる範囲に「既知の制約」があれば、機能設計書から節名で参照する
 - **ユーザーから見た変化**: 画面が変わるときは、機能設計書の「入出力と振る舞い」に、操作と画面に起きることの表を書く。あわせて `docs/design/UI_SKETCH.html` を設計どおりに直し、変わる画面の変更前と変更後をスクリーンショットに撮る。PR の本文には、その画像を貼る (レビューする人が、設計書を全部読まずに見た目の変化をつかめるようにするため。テキストの図は全角と罫線の表示幅で崩れて読みにくい)。変更前はスケッチを直す前に撮るので、設計書を書き始める前に `references/sketch-capture.md` を Read し、その手順 1〜5 に従う。スケッチが無いプロジェクトと、gh が画像の添付に対応していないときの扱いも同書にある
 - **既存の実装と合わせる**: 「実装の配置」は、実際のコードを読んで、既存のどのファイルとどの層を変えるかまで書く。既存の実装と食い違う設計にするなら、理由を設計書に書く
-- **実装先ファイルの作り手**: 変えた機能設計書の「実装の配置」の表は、「作る / 足す」の列を持つ形で書く (書き方は `feature-doc.md` の記入基準「実装先ファイルの作り手を 1 本に決める」)。書き終えたら、clone の最上位で `sh ~/.claude/skills/dev-spec/scripts/placement-check.sh docs/design` を実行する。この PR で変えた機能設計書の行と、その表に書いたファイルの行の指摘が無くなるまで直す。変えていない機能設計書の「列が無い」の指摘は直さない (旧い形の移行は `/dev-spec` で行う。上の「人が読む概要」と同じ理由)。「作る機能設計書が無い」の指摘のうち、列の無い機能設計書がそのファイルを表に書いているものも直さない (作り手がその機能設計書にあるか判定できないため。「足す」のままにする)
+- **実装先ファイルの作り手**: 変えた機能設計書の「実装の配置」の表は、「作る / 足す」の列を持つ形で書く (書き方は `feature-doc.md` の記入基準「実装先ファイルの作り手を 1 本に決める」)。書き終えたら、`$WT` の最上位で `sh ~/.claude/skills/dev-spec/scripts/placement-check.sh docs/design` を実行する。この PR で変えた機能設計書の行と、その表に書いたファイルの行の指摘が無くなるまで直す。変えていない機能設計書の「列が無い」の指摘は直さない (旧い形の移行は `/dev-spec` で行う。上の「人が読む概要」と同じ理由)。「作る機能設計書が無い」の指摘のうち、列の無い機能設計書がそのファイルを表に書いているものも直さない (作り手がその機能設計書にあるか判定できないため。「足す」のままにする)
 
 設計書は `~/.claude/skills/workflow-doc-write/SKILL.md` の手順 1〜7 で書く (このスキルの中では手順 8 の監査依頼は出さない。下の検査がその代わりになる)。
 
@@ -149,7 +172,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 
 1. 分けたときは、先に子の issue を依存の上流から順に作る (`--label design-review`)。作るたびに、残りの下書きの `Depends on <子の下書きの名前>` を `Depends on #<番号>` へ置き換える。子を親の sub-issue に紐付ける (手順は `~/.claude/skills/dev-spec/references/issue-template.md`「親への紐付け」)
 2. 変更を Conventional Commit でコミットする (`📝 docs: [BEHAVIORAL] ...`。スケッチに口といまの画面を足したときは、そのコミット (`[STRUCTURAL]`。`references/sketch-capture.md` の手順 1) が先に積まれている。コミットの実行は `~/.claude/guidelines/core/orchestration.md`「委譲の判断」に従って haiku に委譲してよい。subject の照合は自分で行う)
-3. `git push -u origin design/issue-<N>` し、PR を作る。本文は `references/templates.md`「設計 PR の本文」で、`Design-for:` の行を必ず書く。分けなかったときは `Design-for: #<N>` の 1 行、分けたときは子の番号だけを 1 行ずつ書き、親は書かない。この行は、merge した人が `ready` を付ける issue を示す (本文の「承認したら」のコマンドも同じ issue を並べる)。**設計 PR は issue の Development に紐づけない**。本文に `Closes` などのキーワードを書かず、issue の画面からも紐づけない。Development に紐づいた PR は、デフォルトブランチへの merge で issue を close するので、`ready` が付いても /dev-impl が拾えなくなるため。issue の Development に載せるのは /dev-impl の実装 PR だけである。画面の画像があるときは、`gh pr create` に撮った png を全件 `--attach` で渡し、作った後に本文にローカルのパスが残っていないことを確かめる (`references/sketch-capture.md`「添付して PR を作る」)
+3. `git -C "$WT" push -u origin design/issue-<N>` し、`cd "$WT" && gh pr create …` で PR を作る。本文は `references/templates.md`「設計 PR の本文」で、`Design-for:` の行を必ず書く。分けなかったときは `Design-for: #<N>` の 1 行、分けたときは子の番号だけを 1 行ずつ書き、親は書かない。この行は、merge した人が `ready` を付ける issue を示す (本文の「承認したら」のコマンドも同じ issue を並べる)。**設計 PR は issue の Development に紐づけない**。本文に `Closes` などのキーワードを書かず、issue の画面からも紐づけない。Development に紐づいた PR は、デフォルトブランチへの merge で issue を close するので、`ready` が付いても /dev-impl が拾えなくなるため。issue の Development に載せるのは /dev-impl の実装 PR だけである。画面の画像があるときは、`gh pr create` に撮った png を全件 `--attach` で渡し、作った後に本文にローカルのパスが残っていないことを確かめる (`references/sketch-capture.md`「添付して PR を作る」)
 4. 書き直した本文を issue に反映し、ラベルを付け替える
    - 分けなかったとき: `needs-design` を外して `design-review` を付ける
    - 分けたときの親: `needs-design` を外して `tracking` を付ける。`design-review` は付けない (親は実装の対象ではなく、`design-review` を付けると、人が子と一緒に `ready` にして /dev-impl の対象に紛れるため)
@@ -157,7 +180,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 
 **修正方針のとき**: 書き直した本文を issue に反映し、ラベルを `needs-design` から `design-review` に付け替える。issue に、本文を読んで承認したら `gh issue edit <N> --repo <REPO_SLUG> --add-label ready --remove-label design-review` を実行するよう 1 行でコメントする (番号とリポジトリは実際の値にする)。
 
-**止める (判断待ち、または検査で high が残ったとき)**: `references/templates.md`「判断を求めるコメント」で issue にコメントし、`needs-human` を足す。`needs-design` は外さない (人が回答して `needs-human` を外せば、次の起動で設計し直すため)。ブランチを作っていたら消す。
+**止める (判断待ち、または検査で high が残ったとき)**: `references/templates.md`「判断を求めるコメント」で issue にコメントし、`needs-human` を足す。`needs-design` は外さない (人が回答して `needs-human` を外せば、次の起動で設計し直すため)。ブランチを作っていたら、`git -C "$WT" switch --detach "origin/$DEFAULT"` で離れてから `git -C "$WT" branch -D design/issue-<N>` で消す (push していれば origin からも消す)。
 
 ### 8. 最終報告
 
@@ -169,15 +192,15 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 
 1. PR の本文、差分、レビューのコメント、`Design-for:` の issue (子を含む) の本文を読む
 2. 人の指摘を聞く。指摘が設計時の仮定や採らなかった案と食い違うときは、その仮定を示して、どちらにするかを人に確かめる (このモードでは質問してよい)
-3. PR のブランチで設計書を直す。設計書に合わせて、次も直す (設計書だけを直すと、古い本文のまま `ready` になった issue を /dev-impl が実装してしまうため)
+3. 「作業用の worktree を作る」で PR のブランチから作った `$WT` で設計書を直す。設計書に合わせて、次も直す (設計書だけを直すと、古い本文のまま `ready` になった issue を /dev-impl が実装してしまうため)
    - `Design-for:` の issue の本文 (ゴール、設計、DoD、非スコープ、依存)。本文をファイルに取り、旧い形 (折りたたみが無い) なら新しい形に直し、`issue-check.sh` の出力が無くなってから反映する
    - 子の issue。分け方が変わったら、足りない子を設計モードの手順 7 の 1 と同じく `--label design-review` で作って親に紐付け、要らなくなった子は close して理由をコメントする。分けていなかった issue を分けたときは、親を `design-review` から `tracking` に付け替える
    - PR の本文の `Design-for:` の行と「承認したら」のコマンド (`Design-for:` の行と同じ issue を同じ順に並べる)、「仮定」「採らなかった案」「確認点」
    - 人が読む概要 (設計モードの手順 4「人が読む概要」の表と、`overview-check.sh` の実行)
    - 画面が変わる指摘なら、`docs/design/UI_SKETCH.html` と PR の本文の「画面の変化」の画像 (`references/sketch-capture.md`「直しのモード」)
 4. 設計モードの手順 6 の検査をやり直す
-5. コミットして push し (画像を撮り直したときは `gh pr edit --attach` で本文も更新する)、受けた指摘と直した内容を PR にコメントで残す (指摘がチャットにしか無いと、あとから PR を読む人が経緯を追えないため)
-6. 人に、直した内容と残った確認点を報告する。merge は人が行う
+5. コミットして `git -C "$WT" push origin HEAD:<PR のブランチ>` で push し (画像を撮り直したときは `gh pr edit --attach` で本文も更新する)、受けた指摘と直した内容を PR にコメントで残す (指摘がチャットにしか無いと、あとから PR を読む人が何をなぜ直したかを追えないため)
+6. 人に、直した内容と残った確認点を報告する。merge は人が行う。報告の後に `$WT` を消す (「作業用の worktree を作る」)
 
 ## 関連
 

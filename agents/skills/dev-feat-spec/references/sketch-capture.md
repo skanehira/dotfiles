@@ -9,6 +9,8 @@
 
 ## 使えるか確かめる
 
+このファイルのコマンドは、相対パスを作業用の worktree の最上位から解く。`cd "$WT" && …` の形で実行する (SKILL.md「作業用の worktree を作る」)。
+
 ```bash
 ls docs/design/UI_SKETCH.html
 gh --version | head -1
