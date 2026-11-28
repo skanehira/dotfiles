@@ -15,7 +15,7 @@
 | **M: 単発の機能追加・リファクタ (対話しながら)** | plan mode → そのまま実装                                                | スキル不要。メインループ直営 TDD。まとまったテスト差分を書いたら完了前に `review-impl` を自分で起動する                                                                                                                                                                                                                                                                                                           |
 | **S: バグ修正・typo**                            | 直接依頼                                                                | スキル不要。グローバル指示 (CLAUDE.md) の「実装時」の guidelines を自分で Read して守る                                                                                                                                                                                                                                                                                                                                |
 
-**既存のプロダクトで issue から進める機能追加とバグ修正**は、規模ではなく issue の状態のラベルで入口が決まる。未整理は `/dev-triage`、`needs-design` は `/dev-feat-spec`、`ready` は `/dev-impl` で、設計 PR への指摘は `/dev-feat-spec <PR 番号>` で直させる。これらは dotfiles の `agent-loop` が 30 分おきに起動するが、どれも agent-loop に依存せず、人が手元で 1 つずつ起動できる (issue 番号を渡すとその 1 件だけを扱う)。L の `/dev-spec` → `/dev-impl` も agent-loop の外で動く。全体の構成と、手元で起動するときの注意 (`/dev-impl` は担当の印で取り合わないので同時に動かしてよく、`/dev-triage` と `/dev-feat-spec` は agent-loop と同時に動かさない、`/dev-spec` の子の issue は agent-loop が次の見回りで実装を始める) は dotfiles の `CLAUDE.md`「AI が issue を進める開発フロー (agent-loop)」にある。
+**既存のプロダクトで issue から進める機能追加とバグ修正**は、規模ではなく issue の状態のラベルで入口が決まる。未整理は `/dev-triage`、`needs-design` は `/dev-feat-spec`、`ready` は `/dev-impl` で、設計 PR への指摘は `/dev-feat-spec <PR 番号>` で直させる。どれも人が手元で 1 つずつ起動する (issue 番号を渡すとその 1 件だけを扱う)。ラベルは各スキルが前提の確認で用意する。設計 PR か修正方針を承認したら、人が issue に `ready` を付けてから `/dev-impl` を起動する。`/dev-impl` は担当の印で取り合わないので同時に動かしてよいが、`/dev-triage` と `/dev-feat-spec` は同じリポジトリで同時に動かさない。状態の定義は `dev-triage/references/issue-states.md` にある。
 
 横断ユーティリティ: `/workflow-review` (手動レビュー) / `/workflow-commit` (コミット) / `/workflow-debate` (壁打ち) / `/workflow-create-pr` (PR 作成。`--draft` で Draft) / `/workflow-design-notes` (設計の壁打ち台帳 → dev-spec 互換 docs へ落とし込み)。
 
@@ -37,8 +37,6 @@ Neovim プラグインの UI 確認は `/utility-nvim-ui-capture` を使う。�
 │  クイックモード: 6〜10 のみ (不確実性があれば 4〜5 を通す)     │
 └──────────────────────────┬─────────────────────────────────────┘
                            │ 人間が issue をざっと読んで GO (= /dev-impl を起動)
-                           │ agent-loop に登録したリポジトリでは、
-                           │ 次の見回り (30 分以内) で agent-loop が起動する
 ┌──────────────────────────▼─────────────────────────────────────┐
 │  /dev-impl — 実装ループ (model: opus、直接起動で切り替わる)    │
 │                                                                │
@@ -67,7 +65,6 @@ skills/
 ├── dev-impl/                  # 実装ループ (GitHub issue 駆動・依存順)
 ├── dev-impl-quick/            # 軽量実装ループ (docs 不要)
 ├── dev-feat-spec/             # 機能追加の設計ループ (needs-design の issue → 設計 PR か修正方針)
-├── dev-project-setup/         # issue の運用の土台 (ラベル・Project・同期の Actions)
 ├── dev-triage/                # issue の整理ループ (未整理の issue → 採点と状態のラベル。状態・優先度の定義は references/)
 ├── workflow-commit/
 ├── workflow-create-pr/        # PR 作成 (証跡の集め方は references/)
@@ -162,9 +159,8 @@ git index を共有する操作 (コミット) は並列化できないので親
 | [dev-spec](./dev-spec/)             | 設計ループ。ユーザーストーリー〜PoC 検証〜横断設計 (DESIGN.md 1 枚)〜機能設計 (docs/design/features/)〜設計チェック〜issue ドラフトチェック〜GitHub issue 生成。クイックモード・部分実行・途中再開可。プロダクトモード (`cli`/`webapp`) 指定で CLI ツール開発時は UI スケッチ等を軽量化                                                                                                                                                                                                                                                                              | `cli`/`webapp` + タスク説明 (省略時は推論して確認)                                         | USER_STORIES.md 〜 DESIGN.md (product-mode スタンプ付き) + docs/design/features/*.md + GitHub issue 群 (ユースケース単位の親 `tracking` + 子 N 件 `ready`、sub-issue 紐付け) |
 | [dev-impl](./dev-impl/)             | 実装ループ。GitHub issue を `Depends on #N` の依存順に自律実装 (着手できる issue をスコアの高い順に最大 3 並列、merge は直列。implementer subagent が issue と docs を直読して TDD → review-impl (初回は受け持ちに分けて並列) → high と medium を修正し、high が無くなるまで修正の差分を確認レビュー (収束しなければ駐車) → 検証 green (テスト・lint・フォーマット検査・DoD) → PR → CI pass (CI があれば) → merge → close)。詰まった issue は needs-human で駐車して次へ。進捗は issue コメントのみで、この差分で直さない指摘 (followup) と直らなかった medium は、merge の後に issue にして dev-triage に渡す | GitHub issue (必須)。docs/design/DESIGN.md + docs/design/features/ は issue から参照される | issue ごとの PR + merge コミット                                                                                                                                             |
 | [dev-impl-quick](./dev-impl-quick/) | 軽量実装ループ。依頼文をタスク分解 → 1 件ずつ直営 TDD → テストゲート → review-impl (focus: tests、モデル: opus を明示) → タスク単位 commit                                                                                                                                                                                                                                                                                                                                                                                                                            | 依頼文または簡易タスクリスト (docs 不要)                                                   | タスク単位のコミット                                                                                                                                                         |
-| [dev-project-setup](./dev-project-setup/) | 本格的な開発を始める前に、issue の状態のラベル、非公開の GitHub Project と Status の列、ラベルと列を同期する GitHub Actions、設計 PR の merge で `ready` を付ける GitHub Actions、AGENTS.md の運用の節の雛形を用意する。`/dev-spec` より前に使う。何度実行しても結果は変わらない |
 | [dev-triage](./dev-triage/) | issue の整理ループ。状態のラベルが無い open の issue を質問せずに整理する。種別のラベルを確かめ、11 観点で採点して本文に `## 優先度` を書き、`tracking` / `needs-human` / `needs-design` のどれかを付ける。状態・着手可能の基準・優先度の定義の正本を references に持ち、リポジトリに `docs/ISSUE_TRIAGE.md` があればそちらを優先する |
-| [dev-feat-spec](./dev-feat-spec/) | 機能追加の設計ループ。`needs-design` の issue を質問せずに設計し、設計書の変更が要るものは設計 PR (`Design-for: #N`、仮定と確認点) を、要らないものは issue に修正方針を出して `design-review` にする。人の判断が要るものは `needs-human` で止める。設計 PR の merge で `ready` になり、`/dev-impl` に渡る。`/dev-feat-spec <PR 番号>` で人の指摘を受けて直す |
+| [dev-feat-spec](./dev-feat-spec/) | 機能追加の設計ループ。`needs-design` の issue を質問せずに設計し、設計書の変更が要るものは設計 PR (`Design-for: #N`、仮定と確認点) を、要らないものは issue に修正方針を出して `design-review` にする。人の判断が要るものは `needs-human` で止める。人が承認して `ready` を付けると、`/dev-impl` に渡る。`/dev-feat-spec <PR 番号>` で人の指摘を受けて直す |
 
 dev-spec の各フェーズ手順書は [dev-spec/references/](./dev-spec/references/) にある (user-story / ui-sketch / usecase-description / feasibility-check / **poc-verification** / design-doc / feature-doc / issue-template)。
 

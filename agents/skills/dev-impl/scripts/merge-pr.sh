@@ -2,7 +2,7 @@
 # dev-impl の 2.4 手順 4 (CI ゲートと merge) と 2.5 (完了処理) を行う。規則の正本は SKILL.md の同じ節。
 #
 # 使い方: sh merge-pr.sh <issue 番号> [--worktree <パス>] [--ci-timeout <分>]
-#   dev-impl の REPO_DIR (clone の直下か、agent-loop の run の worktree) で実行する。実行した場所を REPO_DIR として扱う
+#   dev-impl の REPO_DIR (clone の直下か、セッションが動いている worktree) で実行する。実行した場所を REPO_DIR として扱う
 #   --worktree <パス>: 並列実行と、Step 1 で引き継いだ issue の worktree。merge の後、ブランチより先に消す。
 #                     issue の worktree (名前が issue-<番号>) の中で --worktree なしに実行すると、何も変えずに止まる
 #   --ci-timeout <分>: CI の待ちの上限 (既定 60 分)。checks の登録を待ち始めてからの経過時間で数える
@@ -85,8 +85,8 @@ run_gh() { gh "$@" </dev/null; }
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/merge-pr.XXXXXX") || die 1 "一時ディレクトリを作れない"
 trap 'rm -rf "$TMP"' EXIT
 
-# 実行した場所 (dev-impl の REPO_DIR) を基準にする。agent-loop は dev-impl を run の worktree の中で動かすので、
-# 本体の clone を探して使うと、run の worktree を issue の worktree と取り違えて消しうる
+# 実行した場所 (dev-impl の REPO_DIR) を基準にする。dev-impl のセッション自身が worktree (claude --worktree) で
+# 動くことがあり、本体の clone を探して使うと、セッションの worktree を issue の worktree と取り違えて消しうる
 TOPLEVEL=$(git rev-parse --show-toplevel 2>/dev/null) || die 1 "git のリポジトリの中で実行する"
 REPO_DIR=$(cd "$TOPLEVEL" && pwd -P) || die 1 "作業ツリーを決められない"
 if [ -n "$WT" ]; then

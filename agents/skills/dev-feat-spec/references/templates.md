@@ -2,7 +2,7 @@
 
 - 種別: テンプレート
 - 生成者: dev-feat-spec の設計モード (手順 5・7) と直しのモード
-- 消費者: 設計 PR をレビューする人、直しのモードで起動したセッション (設計時の判断を引き継ぐ)、GitHub Actions `design-approved.yml` (`Design-for:` の行)
+- 消費者: 設計 PR をレビューする人 (merge した後に `Design-for:` の issue を `ready` にする)、直しのモードで起動したセッション (設計時の判断を引き継ぐ)、設計モードの手順 1・4 (`Design-for:` の行で設計済みの issue を見分ける)
 
 ## 人が読む文章の書き方
 
@@ -21,6 +21,10 @@ PR のタイトルは `📝 docs: [BEHAVIORAL] <issue のタイトルを要約�
 
 ```markdown
 Design-for: #<issue 番号。issue を分けたときはこの行を書かず、子の番号を 1 件につき 1 行書く (親に ready を付けないため)>
+
+## 承認したら
+merge した後に、次を実行して実装に渡す (`Design-for:` の issue ごとに 1 行)。
+- `gh issue edit <番号> --repo <owner/repo> --add-label ready --remove-label design-review`
 
 ## 何を決めたか
 <この設計で、利用者から見て何がどう変わるかを 2〜5 行。誰の要望で、誰がどの画面で何をできるようになるかを書く>
@@ -57,7 +61,8 @@ Design-for: #<issue 番号。issue を分けたときはこの行を書かず、
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
-- `Design-for:` の行は、行の先頭から `Design-for: #<番号>` だけを書く (`design-approved.yml` は 1 行に 1 件の番号だけを読む)
+- `Design-for:` の行は、行の先頭から `Design-for: #<番号>` だけを書く (設計モードの手順 1・4 が、1 行に 1 件の番号だけを読む)
+- 「承認したら」のコマンドは、`<番号>` と `<owner/repo>` を実際の値にして、`Design-for:` の行と同じ issue を同じ順に並べる。人はこの行を写して実行する
 - `Closes` / `Fixes` / `Resolves` などのキーワードは書かない。書くと PR が issue の Development に紐づき、merge で issue が close される (SKILL.md 手順 7)
 - 「確認点」はチェックボックスにする。人がレビューで 1 つずつ確かめた印になる
 - 「何を決めたか」「画面の変化」「確認点」は、上の「人が読む文章の書き方」に従う

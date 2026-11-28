@@ -7,7 +7,7 @@ description: >-
   `needs-design` の issue は /dev-feat-spec が設計する。本文の書き直しや子への分割はしない。
   状態の定義・着手可能の基準・優先度の定義はこのスキルの references が正本で、
   対象のリポジトリの docs/ISSUE_TRIAGE.md に緊急枠・点数の定義・要件の正本・着手可能の基準などが書かれていれば、そちらを優先する。
-  定期起動でも手元でも動く。「issue を整理して」「未整理の issue を採点して」
+  人が手元で起動する。「issue を整理して」「未整理の issue を採点して」
   「issue にラベルを付けて」「issue をトリアージして」などで起動する。
 argument-hint: "[issue 番号。省略時は未整理の issue を最大 10 件]"
 allowed-tools: Read, Write, Glob, Grep, Bash
@@ -15,7 +15,7 @@ allowed-tools: Read, Write, Glob, Grep, Bash
 
 # dev-triage — issue の整理ループ
 
-運用の前提: AI が issue を整理・設計・実装し、人は設計の確認だけを行う。issue の状態はラベルが正本で、このスキルは「未整理」(状態のラベルなし) の issue に状態のラベルを 1 つ付けるところまでを受け持つ。`ready` と `design-review` は付けない。
+運用の前提: AI が issue を整理・設計・実装し、人はスキルの起動と設計の確認と `ready` の付与を行う。issue の状態はラベルが正本で、このスキルは「未整理」(状態のラベルなし) の issue に状態のラベルを 1 つ付けるところまでを受け持つ。`ready` と `design-review` は付けない。
 
 | 定義 | 正本 |
 | --- | --- |
@@ -23,25 +23,24 @@ allowed-tools: Read, Write, Glob, Grep, Bash
 | 優先度 (緊急枠、11 観点、計算式、issue への書き方) | `references/priority.md` |
 | `needs-human` にするときのコメント | `references/templates.md` |
 
-対象のリポジトリに `docs/ISSUE_TRIAGE.md` があれば、references と同じ見出しの節 (例: `## 着手可能の基準`、`## 判定の流れ`、`### 業務への影響 (影響)`) を、references の同じ節の代わりに使う。要件の正本や利用者の範囲のように references に見出しが無い事柄は、どの節に書かれていても採点に使う。ラベルの名前と状態の遷移は上書きできない (ラベル名は GitHub Actions と他のスキルに固定で書かれているため)。**手順と振り分け (下の「手順」) はこのスキルに従う**。`docs/ISSUE_TRIAGE.md` の判定の手順に本文の書き直しなどの設計の作業が含まれていても、それは `dev-feat-spec` の役割なのでここでは行わない。
+対象のリポジトリに `docs/ISSUE_TRIAGE.md` があれば、references と同じ見出しの節 (例: `## 着手可能の基準`、`## 判定の流れ`、`### 業務への影響 (影響)`) を、references の同じ節の代わりに使う。要件の正本や利用者の範囲のように references に見出しが無い事柄は、どの節に書かれていても採点に使う。ラベルの名前と状態の遷移は上書きできない (ラベル名はスキルとスクリプトに固定で書かれているため)。**手順と振り分け (下の「手順」) はこのスキルに従う**。`docs/ISSUE_TRIAGE.md` の判定の手順に本文の書き直しなどの設計の作業が含まれていても、それは `dev-feat-spec` の役割なのでここでは行わない。
 
-人に質問しない。定期起動 (dotfiles リポジトリの `docs/DESIGN_NOTES.md`「ローカルの指揮」の `agent-loop`) でも止まらずに最後まで進む。subagent は使わない。**同時に 1 つだけ起動する前提**で作ってある (`agent-loop` はリポジトリごとに 1 つしか起動しない。それでも重なったときに壊れないよう、反映の直前に取り直して確かめる。手順 5)。作業ディレクトリは対象のリポジトリの clone (か、その worktree) であること (`gh repo view` と `git` がそれに依存する)。
+人に質問せず、止まらずに最後まで進む。subagent は使わない。**同じリポジトリで同時に 1 つだけ起動する前提**で作ってある (重なったときに壊れないよう、反映の直前に取り直して確かめる。手順 5)。作業ディレクトリは対象のリポジトリの clone (か、その worktree) であること (`gh repo view` と `git` がそれに依存する)。
 
 ## 前提を確かめる
 
 ```bash
 gh repo view --json nameWithOwner,defaultBranchRef -q '"\(.nameWithOwner) \(.defaultBranchRef.name)"'
-gh label list --repo <REPO_SLUG> --limit 500 --json name -q '.[].name' \
-  | rg -x 'needs-design|design-review|ready|in-progress|needs-human|tracking|bug|enhancement|refactoring|question|事業・運営'
-gh variable list --repo <REPO_SLUG> --json name -q '.[].name' | rg -x 'PROJECT_OWNER|PROJECT_NUMBER'
+~/.claude/skills/dev-triage/scripts/setup-labels.sh <REPO_SLUG>
+gh label list --repo <REPO_SLUG> --limit 500 --json name -q '.[].name' | rg -x '事業・運営'
 git fetch origin
 mktemp -d
 ```
 
 - Claude Code の Bash ではシェルの変数が呼び出しをまたいで残らない。ここで得た値 (`REPO_SLUG` = リポジトリ名、`DEFAULT` = デフォルトブランチ、`SCRATCH` = `mktemp -d` の出力) を控え、以降のコマンドには値をそのまま書く
-- ラベルに、状態の 6 つ (`needs-design` / `design-review` / `ready` / `in-progress` / `needs-human` / `tracking`) と種別の 4 つ (`bug` / `enhancement` / `refactoring` / `question`) が揃っていなければ、`dev-project-setup` を先に実行するよう伝えて止まる (ラベルが 1 つでも無いと、手順 5 の `gh issue edit` が失敗するため)
-- `事業・運営` のラベルがあるか、`PROJECT_OWNER` / `PROJECT_NUMBER` の変数があるかを控える (手順 3 と 5 で使う)
-- ファイルは手元の作業ツリーではなく `origin/<DEFAULT>` から読む (`git show origin/<DEFAULT>:<path>`、検索は `git grep -n <パターン> origin/<DEFAULT>`)。無人で動くと手元の clone が古いことがあり、採点は現物で行う決まりのため。Glob と Grep は手元の作業ツリーを探すので、コードを探すのには使わない
+- `setup-labels.sh` は、状態の 6 つ (`needs-design` / `design-review` / `ready` / `in-progress` / `needs-human` / `tracking`) と種別の 4 つ (`bug` / `enhancement` / `refactoring` / `question`) のラベルを、無ければ作る。ラベルが 1 つでも無いと、手順 5 の `gh issue edit` が失敗するため。失敗したら、GitHub に書き込めないので止まって報告する
+- `事業・運営` のラベルがあるかを控える (手順 3 で使う)。このラベルはスクリプトでは作らない。事業・運営の issue を同じリポジトリに置くかは、プロジェクトが決めるため
+- ファイルは手元の作業ツリーではなく `origin/<DEFAULT>` から読む (`git show origin/<DEFAULT>:<path>`、検索は `git grep -n <パターン> origin/<DEFAULT>`)。手元の clone が古いことがあり、採点は現物で行う決まりのため。Glob と Grep は手元の作業ツリーを探すので、コードを探すのには使わない
 - references の 3 ファイルを Read する。`docs/ISSUE_TRIAGE.md` と `AGENTS.md` (無ければ `CLAUDE.md`) が `origin/<DEFAULT>` にあれば読む。要件の正本の場所が書かれていれば採点に使う
 
 ## 手順
@@ -53,7 +52,7 @@ mktemp -d
 ~/.claude/skills/dev-triage/scripts/list-untriaged.sh <REPO_SLUG> --excluded   # 外した件数 (最終報告に使う)
 ```
 
-- このスクリプトが「未整理の issue」の唯一の定義である。`agent-loop` も仕事があるかをこのスクリプトで判定する (作成者の条件で外した issue はラベル無しのまま残るので、判定がずれると、何もしない起動が毎回走る)
+- このスクリプトが「未整理の issue」の唯一の定義である
 - 作成者が `OWNER` / `MEMBER` / `COLLABORATOR` でない issue は対象にしない。公開のリポジトリで、外部の人が書いた本文を、権限の確認なしで動く Claude Code に読ませないため
 - 作られてから 10 分 (600 秒) 経っていない issue は飛ばす。書きかけの本文を「読み取れない」と判定しないため
 - 出力の順 (番号の小さい順) に、**1 回の起動で最大 10 件**を整理する。残りは次の起動で扱う (溜まった issue を一度に処理して、1 つの会話に積もらないようにするため)。ただし、10 件の中に親と子が両方あり、親が未採点なら、親を先に整理する (子は親のスコアを写すため)
@@ -138,24 +137,14 @@ gh issue view <N> --repo <REPO_SLUG> --json body --jq .body > <SCRATCH>/issue-<N
 そのうえで、次の順に反映する。ラベルを最後に付けるのは、`## 優先度` が書かれる前に `dev-feat-spec` が拾わないようにするため。
 
 1. `## 優先度` を書く行なら、取り直した本文の末尾に、空行を 1 行はさんで足して `gh issue edit <N> --repo <REPO_SLUG> --body-file <ファイル>` で書き戻す。取り直した本文に足すのは、読んでから反映するまでに人が本文を直していた場合に、その変更を消さないため。緊急枠を置き換えるときは、`^## 優先度` の行から、次の `^## ` の行の直前 (無ければ末尾) までを消してから足す
-2. コメントを書く行なら、`references/templates.md` の型で 1 つだけ書く (`gh issue comment <N> --repo <REPO_SLUG> --body-file <ファイル>`)。末尾の `<!-- dev-triage -->` を必ず残す。`needs-human` を付けるコメントでは、`references/issue-states.md`「needs-human のコメントに載せる会話の入口」に従って会話の入口を足す
+2. コメントを書く行なら、`references/templates.md` の型で 1 つだけ書く (`gh issue comment <N> --repo <REPO_SLUG> --body-file <ファイル>`)。末尾の `<!-- dev-triage -->` を必ず残す
 3. 種別のラベルと状態のラベルを 1 回の `gh issue edit <N> --repo <REPO_SLUG> --add-label <a>,<b>` で付ける
-4. `PROJECT_OWNER` / `PROJECT_NUMBER` の変数があり、Project に `区分` の項目があれば (`dev-project-setup` が `--business` 付きで作る)、事業・運営の行では「事業・運営」に、それ以外では「開発」に設定する。変数か項目が無ければ設定せず、最終報告に書く。次のブロックは変数を行をまたいで使うので、**1 回の Bash の呼び出しで**実行する
 
-   ```bash
-   item=$(gh project item-add <PROJECT_NUMBER> --owner <PROJECT_OWNER> --url "https://github.com/<REPO_SLUG>/issues/<N>" --format json --jq .id)
-   project=$(gh project view <PROJECT_NUMBER> --owner <PROJECT_OWNER> --format json --jq .id)
-   read -r field option < <(gh project field-list <PROJECT_NUMBER> --owner <PROJECT_OWNER> --format json \
-     --jq '.fields[] | select(.name == "区分") | .id as $f | .options[] | select(.name == "<開発 か 事業・運営>") | "\($f) \(.id)"')
-   [ -n "$option" ] || { echo "区分 の項目か選択肢が無い"; exit 0; }
-   gh project item-edit --id "$item" --project-id "$project" --field-id "$field" --single-select-option-id "$option"
-   ```
-
-**失敗したとき**: 状態のラベルを付ける前 (1〜3) に失敗して状態を決められなかった issue は、`references/templates.md`「整理に失敗したときのコメント」を書いて `needs-human` を付ける。ラベル無しのまま残すと、次の起動で同じ失敗を繰り返すため。状態のラベルを付けたあと (4 の `区分`) の失敗は、最終報告に書くだけにする (`needs-human` を重ねると、状態のラベルが 2 つになるため)。`needs-human` も付けられないとき (GitHub に書き込めないなど) は、残りの issue も同じ原因で失敗するので、そこで止めて報告する。この場合は issue がラベル無しのまま残るので、定期起動が同じ失敗を繰り返さないようにするのは起動する側 (`agent-loop`) の役割である。
+**失敗したとき**: 状態のラベルを付ける前に失敗して状態を決められなかった issue は、`references/templates.md`「整理に失敗したときのコメント」を書いて `needs-human` を付ける。ラベル無しのまま残すと、次の起動で同じ失敗を繰り返すため。`needs-human` も付けられないとき (GitHub に書き込めないなど) は、残りの issue も同じ原因で失敗するので、そこで止めて報告する。
 
 ### 6. 最終報告
 
-issue ごとに 1 行で並べる: 番号、付けたラベル (種別と状態)、スコア (`新規 <値>` / `既存 <値>` / `親から <値>` / `緊急枠` / `なし`)、`区分`、理由の 1 句。最後に次の 3 つを書く。
+issue ごとに 1 行で並べる: 番号、付けたラベル (種別と状態)、スコア (`新規 <値>` / `既存 <値>` / `親から <値>` / `緊急枠` / `なし`)、理由の 1 句。最後に次の 3 つを書く。
 
 - 対象の件数と、上限 (10 件) を超えて次の起動に回した件数
 - 作成者の条件で外した件数と、10 分の条件で飛ばした件数 (`list-untriaged.sh <REPO_SLUG> --excluded` の出力)
@@ -165,7 +154,6 @@ issue ごとに 1 行で並べる: 番号、付けたラベル (種別と状態)
 
 ## 関連
 
-- `dev-project-setup`: 状態と種別のラベル、Project と (`--business` のとき) `区分` の項目、変数 `PROJECT_OWNER` / `PROJECT_NUMBER`、ラベルと列を同期する Actions を用意する。このスキルの前提
 - `/dev-feat-spec`: `needs-design` の issue を、緊急枠を先頭に、スコアの高い順に設計する
 - `/dev-impl`: `ready` の issue を、依存を守って実効スコアの高い順 (緊急枠が先頭) に実装する (`dev-impl/SKILL.md`「Step 1」)
-- 運用の決定の記録: dotfiles リポジトリの `docs/DESIGN_NOTES.md`「優先度」「状態の定義」「ローカルの指揮」「整理のスキル (dev-triage)」
+- 運用の決定の記録: dotfiles リポジトリの `docs/DESIGN_NOTES.md`「優先度」「状態の定義」「整理のスキル (dev-triage)」

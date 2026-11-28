@@ -4,7 +4,7 @@
 
 - 種別: プロジェクト運用ガイド
 - 対象読者: このリポジトリで作業する Claude / Codex / OpenCode
-- 最終確認: 2026-11-21。**本書の件数 (スキル 52 本・subagent 4 本・`enabledPlugins` 23 件で有効 20 本・`settings.json` の hooks 1 件・`packages-android.nix` 19 エントリ) は実環境に依存するので、疑わしいときは数え直す**
+- 最終確認: 2026-11-28。**本書の件数 (スキル 51 本・subagent 4 本・`enabledPlugins` 23 件で有効 20 本・`settings.json` の hooks 1 件・`packages-android.nix` 19 エントリ) は実環境に依存するので、疑わしいときは数え直す**
 
 ## Repository Overview
 
@@ -390,7 +390,7 @@ ccds off                 # Anthropic 用へ戻す
 agents/
 ├── AGENTS.md            ← グローバル指示の正本 (`~/.claude/CLAUDE.md` へ symlink)
 ├── guidelines/          ← core/ backend/ frontend/ infra/ (起動時には自動で読まれない。グローバル指示が Read を指示する)
-├── skills/              ← 52 本 (git 管理分。16 本は外部からの vendor で、wondelai/skills の 11 本、openai/skills の 2 本、ayghri/i-have-adhd・nanaism/yomiyasu・cloudflare/security-audit-skill の各 1 本。出典は `LICENSE-wondelai` / `LICENSE-yomiyasu` / `LICENSE-cloudflare`、openai の 2 本は各ディレクトリの `LICENSE.txt`、i-have-adhd は `SKILL.md` の frontmatter。配布除外は →「スキルの配布先の限定」節)
+├── skills/              ← 51 本 (git 管理分。16 本は外部からの vendor で、wondelai/skills の 11 本、openai/skills の 2 本、ayghri/i-have-adhd・nanaism/yomiyasu・cloudflare/security-audit-skill の各 1 本。出典は `LICENSE-wondelai` / `LICENSE-yomiyasu` / `LICENSE-cloudflare`、openai の 2 本は各ディレクトリの `LICENSE.txt`、i-have-adhd は `SKILL.md` の frontmatter。配布除外は →「スキルの配布先の限定」節)
 ├── subagents/           ← 4 本 (Claude Code 形式が正本。Codex / OpenCode へは書式変換して配る)
 ├── hooks/               ← herdr-agent-state.sh のみ (herdr 本体の配布物。自作ゲートは無い)
 ├── scripts/             ← sync-subagents.ts (Codex / OpenCode への書式変換) / subagent-format.ts / mutate-check.ts ほか
@@ -470,7 +470,7 @@ shellcheck -x -P SCRIPTDIR -s sh agents/skills/dev-spec/scripts/*.sh agents/skil
 
 ### スキルの配布先の限定 (`~/.agents/skills` への配布から除外)
 
-スキルは既定で 3 ランタイムへ配られる (同じ実体への symlink)。`~/.agents/skills` へ配らないものは `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。変数名は「Claude Code だけに残す」だが、**実際に除外が効くのは Codex だけ**である。**このリストが除外の唯一の正**で、現在の宣言は 2 件。`agents/skills/` にある git 管理のスキル 52 本のうち除外は 1 本で、もう 1 件はスキルではなく未追跡の同期キャッシュ。
+スキルは既定で 3 ランタイムへ配られる (同じ実体への symlink)。`~/.agents/skills` へ配らないものは `nix/modules/home/codex.nix` の `claude_only_skills` に列挙する。変数名は「Claude Code だけに残す」だが、**実際に除外が効くのは Codex だけ**である。**このリストが除外の唯一の正**で、現在の宣言は 2 件。`agents/skills/` にある git 管理のスキル 51 本のうち除外は 1 本で、もう 1 件はスキルではなく未追跡の同期キャッシュ。
 
 除外の効く先は `~/.agents/skills` なので Codex からは消える。**OpenCode からは消えない** (OpenCode は `~/.claude/skills` も読み、そこには残っているため)。OpenCode で除外する手段は V2 に無い。
 
@@ -503,7 +503,7 @@ shellcheck -x -P SCRIPTDIR -s sh agents/skills/dev-spec/scripts/*.sh agents/skil
 /dev-spec (設計ループ) → 承認ゲート (人間が起動) → /dev-impl (実装ループ)
 ```
 
-どのスキルも人が手元で起動する。`agent-loop` に登録したリポジトリでは、`/dev-spec` が作った `ready` の子の issue を、次の見回りで `/dev-impl` が実装し始める。そのため承認ゲートは「issue の作成に同意する時点」になる (→「AI が issue を進める開発フロー (agent-loop)」)。
+どのスキルも人が手元で起動する。承認ゲートは、人が `/dev-impl` を起動する時点である。`/dev-spec` が作る子の issue には `ready` が付くが、`/dev-impl` を起動するまで実装は始まらない。
 
 詳細は `agents/skills/README.md` を参照 (タスク規模別の入口・モデル方針を含む)。主要スキル:
 - `/dev-spec` — 設計ループ (ユーザーストーリー → ... → PoC 検証 → `docs/design/DESIGN.md` 1 枚 + `docs/design/features/` → GitHub issue をユースケース単位の親子 2 階層で生成 → 人間が確認)
@@ -511,58 +511,17 @@ shellcheck -x -P SCRIPTDIR -s sh agents/skills/dev-spec/scripts/*.sh agents/skil
 - `/dev-impl-quick` — 軽量実装ループ (docs 不要。依頼文をタスク分解して直営 TDD → review-impl → タスク単位コミット)
 - `/workflow-review` (レビュー) / `/workflow-commit` (コミット) / `/workflow-create-pr` (PR 作成。`--draft` で Draft) / `/workflow-debate` (壁打ち)
 
-### AI が issue を進める開発フロー (agent-loop)
+### issue から進める機能追加とバグ修正
 
-機能追加とバグ修正は、人が issue を作り、設計を確認するだけで進む。整理・設計・実装・merge は、`agent-loop` が起動する Claude Code が行う。Deploy は人が行う。決定の台帳は `docs/DESIGN_NOTES.md` にある。
-
-全体の構成は次のとおり。状態の正本は issue のラベルで、スキルはラベルだけを読み書きする。Project のボードは人が見るためのもので、Actions がラベルに合わせて動かす。
+機能追加とバグ修正は、人が issue を作り、スキルを順に起動して進める。整理・設計・実装・merge は Claude Code が行い、人は設計の確認と `ready` の付与と Deploy を行う。状態の正本は issue のラベルで、スキルはラベルだけを読み書きする。決定の台帳は `docs/DESIGN_NOTES.md` にある。
 
 ```text
-[このマシン] agent-loop を入れた mac 1 台
-│
-├─ launchd (local.agent-loop) が 30 分おきに agents/scripts/agent-loop.ts を動かす (LLM を使わない)
-│    1. ~/.config/agent-loop/repos.yaml のリポジトリごとに、gh で仕事を探す
-│         triage: 状態のラベルが無い issue           → /dev-triage
-│         design: needs-design で設計 PR が無い issue → /dev-feat-spec
-│         impl  : ready か in-progress の issue       → /dev-impl
-│                 (動いている Claude Code が担当の印を持つ issue は数えない)
-│    2. 種類ごとに 1 つだけ起動する (前回と入力が同じなら起動しない。6 時間経てば 1 回だけ起動し直す)
-│         claude --bg --worktree <名前> --model opus --permission-mode bypassPermissions "/dev-…"
-│    3. 終わった run を片付ける
-│         done             → 会話と worktree を消す (worktree に未保存の作業があれば残す)
-│         それ以外か、needs-human の印がある → 残す (claude attach <id> で開ける)
-│         残した run の PR がすべて merge か close されたら → worktree だけを消す (会話は残す)
-│    4. done 以外の終わり方と、見回りの中断を通知センターに出す (terminal-notifier)
-│
-└─ Claude Code のバックグラウンド run (<clone>/.claude/worktrees/<名前> で動く)
-     /dev-triage    採点して ## 優先度 を書き、状態のラベルを付ける
-     /dev-feat-spec 設計 PR か修正方針を出す
-     /dev-impl      実装して PR を merge し、issue を close する (worktree で最大 3 並列)
-     人の判断が要るときは needs-human を付け、コメントに claude attach <id> を載せる
-          │
-          │ gh でラベル・コメント・PR を読み書きする
-          ▼
-[GitHub] 対象のリポジトリ
-│
-├─ issue のラベル (状態の正本)
-│    なし (未整理) ── /dev-triage ──┬─▶ tracking     (親。子が全部閉じたら /dev-impl が close)
-│                                   ├─▶ needs-human  (人が答え、コメントに書かれた状態へ戻す)
-│                                   └─▶ needs-design
-│    needs-design ── /dev-feat-spec ──▶ design-review (判断が要るものは needs-human)
-│    design-review ── 人が設計 PR を merge (Actions が ready を付ける)
-│                     か、修正方針を読んで人が ready を付ける ──▶ ready
-│    ready ── /dev-impl ──▶ in-progress ──▶ close
-│
-├─ Actions (/dev-project-setup が置く)
-│    issue-state-sync.yml : ラベルに合わせて Project の Status を動かす。close で「完了」
-│    design-approved.yml  : Design-for: #N の設計 PR が merge されたら、その issue に ready を付ける
-│
-└─ Project (非公開のボード。issue だけを載せる。人が状況を見るためのもの)
-
-[人]
-  issue を作る / needs-human に答える / 設計 PR を merge する / Deploy する
-  見る: 通知、claude agents、claude attach <id>、issue のコメント、Project のボード
-  急ぐときや agent-loop の外で使うときは、スキルを手元で起動する (下の「手元で起動する」)
+なし (未整理) ── /dev-triage ──┬─▶ tracking     (親。子が全部閉じたら /dev-impl が close)
+                               ├─▶ needs-human  (人が答え、コメントに書かれた状態へ戻す)
+                               └─▶ needs-design
+needs-design ── /dev-feat-spec ──▶ design-review (判断が要るものは needs-human)
+design-review ── 人が設計 PR を merge するか修正方針を読み、ready を付ける ──▶ ready
+ready ── /dev-impl ──▶ in-progress ──▶ close
 ```
 
 | 状態のラベル | 次に動くもの | 状態の定義の正本 |
@@ -572,20 +531,15 @@ shellcheck -x -P SCRIPTDIR -s sh agents/skills/dev-spec/scripts/*.sh agents/skil
 | `design-review` / `needs-human` | 人 | 同上 |
 | `ready` / `in-progress` | `/dev-impl` | 同上 |
 
-- **リポジトリの準備**: `/dev-project-setup` がラベル・Project・Actions 2 本・`AGENTS.md` の運用の節を用意する。優先度などの定義は dev-triage の references にあり、プロジェクト固有の定義があるときだけ `docs/ISSUE_TRIAGE.md` を置く
-- **agent-loop の動き**: launchd のユーザー用エージェント (`local.agent-loop`) が 30 分おきに `agents/scripts/agent-loop.ts` を動かす (急ぐときは、人がスキルを手元で起動する)。スクリプトは LLM を使わず、`~/.config/agent-loop/repos.yaml` の各リポジトリで仕事を探し、種類ごとに `claude --bg --worktree <名前> --model opus --permission-mode bypassPermissions "/dev-triage"` のように起動する。同じリポジトリの同じ種類は同時に 1 つだけで、前回の run と入力が同じなら起動しない (6 時間経てば 1 回だけ起動し直す)。仕組みの詳細はスクリプトの冒頭にある
-- **対象のリポジトリの追加**: `~/.config/agent-loop/repos.yaml` に足す (書式は `agents/scripts/agent-loop.repos.example.yaml`)。このファイルは dotfiles の外にあり、git 管理しない (業務のリポジトリの名前が入るため)。clone は Claude Code の trust を受け入れ済みであること
-- **知らせ**: run が `done` 以外 (`blocked` / `failed` / `stopped` / `error`) で終わったときと、見回りが中断・停止したときは、mac の通知センターに通知が出る (`terminal-notifier`)。run の通知の本文に、その run の会話を開くコマンド (`claude attach <id>`) が載る。通知が出ないときは、システム設定 → 通知 で terminal-notifier を許可する (通知を出せなかったことは、見回りのログに残る)
-- **見る**: `claude agents` (一覧)、`claude attach <名前>` (動いている画面)、`claude logs <名前>`。見回りのログは `~/.local/state/agent-loop/agent-loop.log` と `~/Library/Logs/agent-loop.log`、状態は `~/.local/state/agent-loop/state.json`
-- **入れる・止める**: agent-loop は動かすマシンを 1 台に限るので、nix では配らない。入れるのは `./agents/scripts/agent-loop-install.sh` (plist を書いて読み込む。何度実行してもよい)、外すのは `./agents/scripts/agent-loop-install.sh --uninstall`。一時的に止めるのは `launchctl bootout gui/$(id -u)/local.agent-loop`、再開は `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.agent-loop.plist`。動いているセッションは `claude stop <id>`。1 つのリポジトリだけ外すときは `repos.yaml` から消す
-- **手元で起動する**: スキルは agent-loop に依存しないので、対象のリポジトリの clone で人が 1 つずつ起動できる。agent-loop は定期的に起動する役を代わるだけで、ラベルと Actions (`/dev-project-setup` が置く) があれば、agent-loop に登録していないリポジトリでも同じ流れで進む
-  - `/dev-triage [issue 番号]` / `/dev-feat-spec [issue 番号]` / `/dev-impl [issue 番号]`: 次の見回りを待たずに進めたいとき。番号を渡すと、その issue だけを扱う (`/dev-impl` は未完了の依存先も含める)
-  - `/dev-feat-spec <PR 番号>`: 設計 PR への指摘を伝えて直させる。人が手元で起動するときだけ使い、agent-loop は起動しない
-  - `/dev-spec`: 新規プロダクトや大きい機能を、ユーザーストーリーから対話で設計して issue に落とす。agent-loop は起動しない。作った子の issue には `ready` が付くので、agent-loop に登録したリポジトリでは次の見回り (30 分以内) で `/dev-impl` が実装を始める。issue を読んでから実装させたいときは、それまで agent-loop を止めておく
-  - `/dev-impl` は、手元と agent-loop で同時に動かしてよい: `/dev-impl` は着手した issue に担当の印 (clone の共通の git ディレクトリの `dev-impl-claims/<番号>`。Claude Code のプロセスの pid とセッション ID) を残し、merge で消す。駐車しても消さない。agent-loop と別の `/dev-impl` は、印の持ち主の Claude Code が動いている issue を拾わない (`agents/skills/dev-impl/SKILL.md` Step 1「担当の印」)。Claude Code の外から `/dev-impl` を動かすと印を書けないので、そのときは agent-loop を一時的に止める (上の「入れる・止める」)
-  - `/dev-triage` と `/dev-feat-spec` は同時に動かさない: agent-loop は、これらについては自分が起動した run しか見ない。手元と agent-loop で同時に動かすと、同じ issue を取り合う。手元で起動する前に `claude agents` で同じリポジトリの run が動いていないかを確かめ、動かしている間は agent-loop を一時的に止める
-- **手で 1 回動かす**: `./agents/scripts/agent-loop.ts --dry-run` で、起動せずに判定だけを見られる
-- **残った会話と worktree**: `agent-loop` は、次の 2 つのときに会話と worktree を残し、`<名前> は <状態> で終わった。会話と worktree を残す (claude attach <id>)` をログに書く。1 つは run が `done` 以外 (`blocked` / `failed` / `stopped`) で終わったときである。`blocked` は人の返事を待って止まった状態で、最終報告での質問のほか、subagent の Bash の権限確認でも起きる。もう 1 つは、run が `needs-human` のコメントに `claude attach <id>` を載せたとき (`~/.claude/jobs/<id>/needs-human` の印がある) である。`done` でも、worktree に未保存の作業がある (追跡中のファイルの変更・push していない HEAD・中に残った worktree) と残す。残した run は状態の `kept` に記録し、見回りのたびに、その run の PR がすべて merge か close されたかを確かめる。そうなっていて worktree に未保存の作業が無ければ、worktree と `worktree-<名前>` のブランチを消し、`<名前> の PR がすべて merge か close されたので、worktree を消した` をログに書く。会話は消さない。run の PR は、Claude Code がジョブのディレクトリに書く `~/.claude/jobs/<id>/state.json` の `children` から、対象のリポジトリのものだけを読む。これは会話に出てきた PR のリンクも含むので、関係の無い open の PR があると消すのが遅れる。PR を 1 つも作らずに止まった run と、この記録を読めない run は残したままにする (公式に安定した形ではないので、読めなければ消さない)。読み終えたら、`claude rm <id>` で消す。worktree が残るときは、`git -C <clone> worktree remove --force <clone>/.claude/worktrees/<名前>` と `git -C <clone> branch -D worktree-<名前>` で片付けてから、もう一度 `claude rm <id>` する (`claude rm` は、フックが作った worktree を消さずに `kept` と出して終わるため)。止まった impl の run の中に残った `issue-<N>` の worktree は、次の `/dev-impl` が、担当の印の持ち主の Claude Code が動いていないことを確かめてから、未コミットの差分ごと引き継ぐ (`agents/skills/dev-impl/SKILL.md` Step 1)
+- **リポジトリの準備**: 要らない。ラベルは各スキルが前提の確認で作る。`/dev-triage` と `/dev-feat-spec` は `agents/skills/dev-triage/scripts/setup-labels.sh` を、`/dev-spec` と `/dev-impl` は `agents/skills/dev-spec/references/issue-template.md`「ラベルの用意」を実行する。優先度などの定義は dev-triage の references にあり、プロジェクト固有の定義があるときだけ `docs/ISSUE_TRIAGE.md` を置く
+- **旧い運用のまま残ったリポジトリ**: 削除した `dev-project-setup` が用意したものは、そのリポジトリに残る。`AGENTS.md` の「issue とボードの運用」節は「`ready` は設計 PR の merge で Actions が付ける」と書いており、スキルより優先して読まれるので、消すか書き直す。`.github/workflows/design-approved.yml` と `issue-state-sync.yml`、Project、変数 `PROJECT_*` と secret `PROJECT_APP_PRIVATE_KEY` は、使わないなら消す
+- **起動のしかた**: スキルは対象のリポジトリの clone で起動する。番号を渡すと、その issue だけを扱う (`/dev-impl` は未完了の依存先も含める)
+  - `/dev-triage [issue 番号]` / `/dev-feat-spec [issue 番号]` / `/dev-impl [issue 番号]`
+  - `/dev-feat-spec <PR 番号>`: 設計 PR への指摘を伝えて直させる
+  - `/dev-spec`: 新規プロダクトや大きい機能を、ユーザーストーリーから対話で設計して issue に落とす
+- **承認**: 設計 PR は、merge した後に本文の「承認したら」のコマンド (`gh issue edit <番号> --add-label ready --remove-label design-review`) で、`Design-for:` の issue を `ready` にする。修正方針は、issue の本文を読んでから同じコマンドを実行する
+- **同時に動かすとき**: `/dev-impl` は同時に動かしてよい。`/dev-impl` は着手した issue に担当の印 (clone の共通の git ディレクトリの `dev-impl-claims/<番号>`。Claude Code のプロセスの pid とセッション ID) を残し、merge で消す。駐車しても消さない。別の `/dev-impl` は、印の持ち主の Claude Code が動いている issue を拾わない (`agents/skills/dev-impl/SKILL.md` Step 1「担当の印」)。Claude Code の外から `/dev-impl` を動かすと印を書けないので、そのときは同じ clone で別の `/dev-impl` を動かさない
+- **`/dev-triage` と `/dev-feat-spec` は同時に動かさない**: 同じリポジトリで 2 つ動かすと、同じ issue を取り合う
 
 ### hooks (agents/hooks/)
 

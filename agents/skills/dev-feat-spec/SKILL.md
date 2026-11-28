@@ -6,8 +6,8 @@ description: >-
   要らないもの (バグ・小さな修正) は issue に修正方針を出して `design-review` にする。
   人か顧客の判断が要るものは質問を書いて `needs-human` で止める。
   issue の本文は /dev-impl が読む形 (ゴール / 設計 / DoD / 非スコープ / 依存 / 優先度) に書き直すので、
-  人が設計 PR を merge すると GitHub Actions が `ready` を付け、そのまま /dev-impl に渡る。
-  定期起動 (agent-loop) でも手元でも動く。`/dev-feat-spec <PR 番号>` で起動すると、人の指摘を受けて設計 PR を直す。
+  人が設計 PR を merge して `ready` を付けると、そのまま /dev-impl に渡る。
+  人が手元で起動する。`/dev-feat-spec <PR 番号>` で起動すると、人の指摘を受けて設計 PR を直す。
   「needs-design の issue を設計して」「機能追加の設計 PR を出して」「issue の修正方針を書いて」
   「この設計 PR を直して」などで起動する。新規開発の初期段階 (ユーザーストーリーから作る) は /dev-spec を使う。
 argument-hint: "[issue 番号 | PR 番号。省略時は needs-design の全件]"
@@ -16,11 +16,11 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, AskUserQuestion
 
 # dev-feat-spec — 機能追加の設計ループ
 
-運用の前提: AI が issue を整理・設計・実装し、人は設計の確認だけを行う。issue の状態はラベルが正本で、`ready` は人が設計を承認した印である。このスキルは `needs-design` の issue を設計して `design-review` にするところまでを受け持ち、`ready` は付けない。状態の定義と着手可能の基準は `~/.claude/skills/dev-triage/references/issue-states.md` が正本で、対象リポジトリに `docs/ISSUE_TRIAGE.md` があれば、そこに書かれた定義を優先する。スコアは `dev-triage` が本文の `## 優先度` に書く。
+運用の前提: AI が issue を整理・設計・実装し、人はスキルの起動と設計の確認と `ready` の付与を行う。issue の状態はラベルが正本で、`ready` は人が設計を承認した印である。このスキルは `needs-design` の issue を設計して `design-review` にするところまでを受け持ち、`ready` は付けない。状態の定義と着手可能の基準は `~/.claude/skills/dev-triage/references/issue-states.md` が正本で、対象リポジトリに `docs/ISSUE_TRIAGE.md` があれば、そこに書かれた定義を優先する。スコアは `dev-triage` が本文の `## 優先度` に書く。
 
 | 起動 | モード | 人への質問 |
 | --- | --- | --- |
-| 引数なし、または issue 番号 | 設計モード (下の「設計モード」) | しない。定期起動 (`agent-loop` が新しい Claude Code で起動する) でも止まらずに最後まで進む |
+| 引数なし、または issue 番号 | 設計モード (下の「設計モード」) | しない。止まらずに最後まで進む (人の判断は PR の「確認点」と `needs-human` のコメントに集める) |
 | PR 番号 | 直しのモード (下の「直しのモード」) | してよい。人が手元で起動し、指摘を伝える |
 
 引数の番号が issue か PR かは `gh pr view <番号>` が成功するかで判定する。
@@ -30,13 +30,12 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash, Agent, AskUserQuestion
 ```bash
 REPO_SLUG=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
-gh label list --repo "$REPO_SLUG" --limit 500 --json name -q '.[].name' | rg -x 'needs-design|design-review|needs-human|ready'
-ls .github/workflows/design-approved.yml
+~/.claude/skills/dev-triage/scripts/setup-labels.sh "$REPO_SLUG"
 ls docs/ISSUE_TRIAGE.md 2>/dev/null
 ```
 
 - Claude Code の Bash ではシェルの変数が呼び出しをまたいで残らない。ここで得た `REPO_SLUG` / `DEFAULT` と、手順 2 の `SCRATCH` の値を控え、以降のコマンドの `$REPO_SLUG` / `$DEFAULT` / `$SCRATCH` はその値に置き換えて書く (変数のまま書くと、空の値で `gh` や `git` が動く)
-- ラベルの出力が 4 行で、`design-approved.yml` があることを確かめる。揃っていなければ、`dev-project-setup` を先に実行するよう伝えて止まる (設計 PR の merge で `ready` が付かないまま、人が承認したつもりの issue が残るため)
+- `setup-labels.sh` は、このスキルが付け外しする状態のラベル (`needs-design` / `design-review` / `needs-human` / `tracking`) を含む状態と種別のラベルを、無ければ作る。失敗したら、GitHub に書き込めないので止まって報告する
 - 作業ツリーが dirty なら止まる。設計は issue ごとに `origin/$DEFAULT` から切ったブランチで行う
 - `~/.claude/skills/dev-triage/references/issue-states.md` と、対象リポジトリの `AGENTS.md` (無ければ `CLAUDE.md`) を Read する。`docs/ISSUE_TRIAGE.md` があれば、それも Read する。受け入れ基準の ID の振り方、設計書の置き場所、ドキュメントの書き方などのプロジェクトの規約は、このスキルより優先する
 
@@ -54,7 +53,7 @@ gh pr list --repo "$REPO_SLUG" --state open --limit 200 --json number,headRefNam
 - 引数で issue 番号を指定されたら、その 1 件だけにする
 - 並べ方: 本文の `## 優先度` に緊急枠の行 (行の先頭が `緊急枠 (`) がある issue を先頭に置き、次に `スコア <数値>` の高い順に並べる。どちらも無い issue はその後ろに、番号の小さい順に並べる (書式は `~/.claude/skills/dev-triage/references/priority.md`「issue への書き方」)
 - 本文に `Design-for: #<この issue>` の行を持つ open の PR がある issue は飛ばし、最終報告に理由を書く (設計済みで、人のレビュー待ち)
-- ブランチ `design/issue-<N>` が origin にあるのに open の PR が無い issue は、設計 PR が merge されずに close されたあと、人が `needs-design` を付け直したものとして扱う。古いブランチを消してから設計し直す (`git push origin --delete design/issue-<N>`)。このスキルは同時に 1 つだけ起動する前提で、別の起動が設計中のブランチと区別しない (定期起動の設計で同時実行を 1 にする)
+- ブランチ `design/issue-<N>` が origin にあるのに open の PR が無い issue は、設計 PR が merge されずに close されたあと、人が `needs-design` を付け直したものとして扱う。古いブランチを消してから設計し直す (`git push origin --delete design/issue-<N>`)。このスキルは同じリポジトリで同時に 1 つだけ起動する前提で、別の起動が設計中のブランチと区別しない
 
 ### 2. 1 件ずつ設計する
 
@@ -122,7 +121,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 
 下書きを書いたら、`sh ~/.claude/skills/dev-spec/scripts/issue-check.sh <下書きのファイル>...` を実行し、何も出力しなくなるまで直す。分けたときは子の下書きだけを渡す。親の本文は検査せず、元の本文の先頭に「ゴール」の形の要約を足し、末尾に `## 実装の分け方` (子の番号と作業) と `## 優先度` を置く。手順 6 で本文を直したときも、反映する前に実行する。
 
-書き直した本文は、着手可能の基準 (`issue-states.md`「着手可能の基準」。`docs/ISSUE_TRIAGE.md` が基準を定めていればそちら) を満たしていなければならない。人が承認したら、そのまま `ready` になるため。
+書き直した本文は、着手可能の基準 (`issue-states.md`「着手可能の基準」。`docs/ISSUE_TRIAGE.md` が基準を定めていればそちら) を満たしていなければならない。人は承認したら、本文を直さずに `ready` を付けるため。
 
 ### 6. 別のコンテキストで検査する
 
@@ -150,19 +149,19 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 
 1. 分けたときは、先に子の issue を依存の上流から順に作る (`--label design-review`)。作るたびに、残りの下書きの `Depends on <子の下書きの名前>` を `Depends on #<番号>` へ置き換える。子を親の sub-issue に紐付ける (手順は `~/.claude/skills/dev-spec/references/issue-template.md`「親への紐付け」)
 2. 変更を Conventional Commit でコミットする (`📝 docs: [BEHAVIORAL] ...`。スケッチに口といまの画面を足したときは、そのコミット (`[STRUCTURAL]`。`references/sketch-capture.md` の手順 1) が先に積まれている。コミットの実行は `~/.claude/guidelines/core/orchestration.md`「委譲の判断」に従って haiku に委譲してよい。subject の照合は自分で行う)
-3. `git push -u origin design/issue-<N>` し、PR を作る。本文は `references/templates.md`「設計 PR の本文」で、`Design-for:` の行を必ず書く。分けなかったときは `Design-for: #<N>` の 1 行、分けたときは子の番号だけを 1 行ずつ書き、親は書かない。この行が無いと、merge しても `ready` が付かない。**設計 PR は issue の Development に紐づけない**。本文に `Closes` などのキーワードを書かず、issue の画面からも紐づけない。Development に紐づいた PR は、デフォルトブランチへの merge で issue を close するので、`ready` が付いても /dev-impl が拾えなくなるため。issue の Development に載せるのは /dev-impl の実装 PR だけである。画面の画像があるときは、`gh pr create` に撮った png を全件 `--attach` で渡し、作った後に本文にローカルのパスが残っていないことを確かめる (`references/sketch-capture.md`「添付して PR を作る」)
+3. `git push -u origin design/issue-<N>` し、PR を作る。本文は `references/templates.md`「設計 PR の本文」で、`Design-for:` の行を必ず書く。分けなかったときは `Design-for: #<N>` の 1 行、分けたときは子の番号だけを 1 行ずつ書き、親は書かない。この行は、merge した人が `ready` を付ける issue を示す (本文の「承認したら」のコマンドも同じ issue を並べる)。**設計 PR は issue の Development に紐づけない**。本文に `Closes` などのキーワードを書かず、issue の画面からも紐づけない。Development に紐づいた PR は、デフォルトブランチへの merge で issue を close するので、`ready` が付いても /dev-impl が拾えなくなるため。issue の Development に載せるのは /dev-impl の実装 PR だけである。画面の画像があるときは、`gh pr create` に撮った png を全件 `--attach` で渡し、作った後に本文にローカルのパスが残っていないことを確かめる (`references/sketch-capture.md`「添付して PR を作る」)
 4. 書き直した本文を issue に反映し、ラベルを付け替える
    - 分けなかったとき: `needs-design` を外して `design-review` を付ける
-   - 分けたときの親: `needs-design` を外して `tracking` を付ける。`design-review` は付けない (親は実装の対象ではなく、状態のラベルを付けると、merge で `ready` が付いて /dev-impl の対象に紛れるため)
-5. issue (分けたときは親) に PR の URL をコメントする
+   - 分けたときの親: `needs-design` を外して `tracking` を付ける。`design-review` は付けない (親は実装の対象ではなく、`design-review` を付けると、人が子と一緒に `ready` にして /dev-impl の対象に紛れるため)
+5. issue (分けたときは親) に、PR の URL と、PR を merge した後に本文の「承認したら」のコマンドを実行するよう案内する 1 文をコメントする
 
-**修正方針のとき**: 書き直した本文を issue に反映し、ラベルを `needs-design` から `design-review` に付け替える。人が本文を読んで `ready` を付ける。
+**修正方針のとき**: 書き直した本文を issue に反映し、ラベルを `needs-design` から `design-review` に付け替える。issue に、本文を読んで承認したら `gh issue edit <N> --repo <REPO_SLUG> --add-label ready --remove-label design-review` を実行するよう 1 行でコメントする (番号とリポジトリは実際の値にする)。
 
-**止める (判断待ち、または検査で high が残ったとき)**: `references/templates.md`「判断を求めるコメント」で issue にコメントし、`needs-human` を足す。コメントには `~/.claude/skills/dev-triage/references/issue-states.md`「needs-human のコメントに載せる会話の入口」に従って会話の入口を足す。`needs-design` は外さない (人が回答して `needs-human` を外せば、次の起動で設計し直すため)。ブランチを作っていたら消す。
+**止める (判断待ち、または検査で high が残ったとき)**: `references/templates.md`「判断を求めるコメント」で issue にコメントし、`needs-human` を足す。`needs-design` は外さない (人が回答して `needs-human` を外せば、次の起動で設計し直すため)。ブランチを作っていたら消す。
 
 ### 8. 最終報告
 
-次を issue ごとに 1 行で並べる: 番号、振り分け (設計 PR / 修正方針 / 判断待ち / 飛ばした)、PR の URL か理由、検査の結果 (high・medium の件数)。定期起動で動いたときも同じ形で出力する。
+次を issue ごとに 1 行で並べる: 番号、振り分け (設計 PR / 修正方針 / 判断待ち / 飛ばした)、PR の URL か理由、検査の結果 (high・medium の件数)。最後に、設計 PR を出した issue と修正方針を出した issue を並べ、人が承認したら `ready` を付ける必要があることを 1 文で書く。あわせて、`Design-for:` の PR が merge 済みなのに `design-review` のまま残る issue を並べる (`ready` の付け忘れ。このスキルは付け替えず、人に知らせるだけにする)。
 
 ## 直しのモード
 
@@ -172,8 +171,8 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 2. 人の指摘を聞く。指摘が設計時の仮定や採らなかった案と食い違うときは、その仮定を示して、どちらにするかを人に確かめる (このモードでは質問してよい)
 3. PR のブランチで設計書を直す。設計書に合わせて、次も直す (設計書だけを直すと、古い本文のまま `ready` になった issue を /dev-impl が実装してしまうため)
    - `Design-for:` の issue の本文 (ゴール、設計、DoD、非スコープ、依存)。本文をファイルに取り、旧い形 (折りたたみが無い) なら新しい形に直し、`issue-check.sh` の出力が無くなってから反映する
-   - 子の issue。分け方が変わったら、足りない子を作り、要らなくなった子は close して理由をコメントする
-   - PR の本文の `Design-for:` の行、「仮定」「採らなかった案」「確認点」
+   - 子の issue。分け方が変わったら、足りない子を設計モードの手順 7 の 1 と同じく `--label design-review` で作って親に紐付け、要らなくなった子は close して理由をコメントする。分けていなかった issue を分けたときは、親を `design-review` から `tracking` に付け替える
+   - PR の本文の `Design-for:` の行と「承認したら」のコマンド (`Design-for:` の行と同じ issue を同じ順に並べる)、「仮定」「採らなかった案」「確認点」
    - 人が読む概要 (設計モードの手順 4「人が読む概要」の表と、`overview-check.sh` の実行)
    - 画面が変わる指摘なら、`docs/design/UI_SKETCH.html` と PR の本文の「画面の変化」の画像 (`references/sketch-capture.md`「直しのモード」)
 4. 設計モードの手順 6 の検査をやり直す
@@ -182,8 +181,7 @@ issue の本文を、/dev-impl が読む形に書き直した下書きを作る 
 
 ## 関連
 
-- `dev-project-setup`: ラベル、Project、`design-approved.yml` (merge で `ready` を付ける) を用意する。このスキルの前提
-- `dev-triage`: 未整理の issue を採点して `needs-design` にする。このスキルの入力を作る。状態の定義と着手可能の基準の正本を持つ
+- `dev-triage`: 未整理の issue を採点して `needs-design` にする。このスキルの入力を作る。状態の定義と着手可能の基準の正本と、ラベルを用意する `setup-labels.sh` を持つ
 - `/dev-spec`: 新規開発の初期段階 (ユーザーストーリーから作る)。機能設計書と issue の型はこのスキルと共有する
 - `/dev-impl`: `ready` の issue を実装する
 - 運用の決定の記録: dotfiles の `docs/DESIGN_NOTES.md`「設計 (dev-feat-spec)」「dev-feat-spec の設計」

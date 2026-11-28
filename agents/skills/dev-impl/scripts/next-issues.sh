@@ -35,7 +35,7 @@
 #   バックグラウンドのセッションは done になってもプロセスが残るので、claude stop するまで印は生きている。
 #   pid が別の Claude Code のプロセスに使い回されると、そのプロセスが終わるまで死んだ印も生きて見える (止まる側に倒れ、
 #   claimed の行にセッション ID が出るので人は気付ける)。
-#   自分の pid (CLAUDE_PID) の印は自分のものなので着手してよい。agent-loop.ts も同じ印を読む。
+#   自分の pid (CLAUDE_PID) の印は自分のものなので着手してよい。
 #   Claude Code の外 (CLAUDE_PID が無い) と git リポジトリの外では印を使えず、標準エラーで知らせる。
 # 実効スコア: 自分と、自分に直接・間接に依存する対象 issue の「## 優先度」のスコア (緊急枠は U) の最大値。
 #
@@ -91,11 +91,11 @@ held_by_other() {
 take_claim() {
   dir=$(claims_dir)
   if [ -z "$dir" ]; then
-    echo "#$1 の担当の印を残せない (git リポジトリの外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある" >&2
+    echo "#$1 の担当の印を残せない (git リポジトリの外で動いている)。別のセッションが同じ issue を拾うことがある" >&2
     return 0
   fi
   if [ -z "${CLAUDE_PID:-}" ]; then
-    echo "#$1 の担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある" >&2
+    echo "#$1 の担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。別のセッションが同じ issue を拾うことがある" >&2
     return 0
   fi
   f="$dir/$1"
@@ -294,7 +294,7 @@ case $CMD in
     TARGETS=$(awk -F '\t' '$2 == "target" { print $1 }' "$SNAP")
     if [ -n "$TARGETS" ] && [ -n "$(claims_dir)" ]; then
       if [ -z "${CLAUDE_PID:-}" ]; then
-        echo "担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある" >&2
+        echo "担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。別のセッションが同じ issue を拾うことがある" >&2
       else
         for n in $TARGETS; do take_claim "$n"; done
       fi

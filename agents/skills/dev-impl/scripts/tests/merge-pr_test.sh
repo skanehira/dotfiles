@@ -376,7 +376,7 @@ test_run_inside_issue_worktree_stops() {
   assert_file_eq "$T/empty.txt" "$T/calls.txt"
 }
 
-# agent-loop の run の worktree (名前が issue-<番号> でない) の中で実行したら、そこを REPO_DIR として扱う。
+# セッションが動いている worktree (名前が issue-<番号> でない。claude --worktree で作るもの) の中で実行したら、そこを REPO_DIR として扱う。
 # run の worktree は消さず、既定のブランチは本体の clone が使っているので detach してから issue のブランチを消す
 test_run_inside_run_worktree_keeps_it() {
   setup

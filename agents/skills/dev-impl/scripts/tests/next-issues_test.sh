@@ -356,7 +356,7 @@ test_mark_writes_claim_on_start_removes_on_close_and_keeps_on_park() {
   assert_file_eq "$T/exp.txt" "$CLAIMS/2"
 }
 
-# collect は対象の issue すべての印を取る。依存先を待つ issue も取るので、別のセッション (agent-loop の run など) は
+# collect は対象の issue すべての印を取る。依存先を待つ issue も取るので、別のセッションは
 # 依存先が close された直後でもその issue を拾わない
 test_collect_claims_all_targets_including_waiting() {
   setup
@@ -388,7 +388,7 @@ test_collect_outside_claude_code_warns_once_and_writes_no_claim() {
   (cd "$T/repo" && collect)
   printf 'start\t1\t-\nwait\t2\t1\n' >"$T/exp.txt"
   assert_file_eq "$T/exp.txt" "$T/out.txt"
-  printf '担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある\n' >"$T/exp.txt"
+  printf '担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。別のセッションが同じ issue を拾うことがある\n' >"$T/exp.txt"
   assert_file_eq "$T/exp.txt" "$T/err.txt"
   assert_eq "なし" "$([ -d "$CLAIMS" ] && ls "$CLAIMS" | head -1 | sed 's/^$/なし/' || echo なし)"
 }
@@ -404,7 +404,7 @@ test_mark_started_outside_claude_code_warns_and_writes_no_claim() {
   assert_eq 0 $?
   printf 'start\t2\t-\n' >"$T/exp.txt"
   assert_file_eq "$T/exp.txt" "$T/out.txt"
-  assert_file_contains_line "$T/err.txt" '#1 の担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある'
+  assert_file_contains_line "$T/err.txt" '#1 の担当の印を残せない (CLAUDE_PID が無い。Claude Code の外で動いている)。別のセッションが同じ issue を拾うことがある'
   assert_eq "なし" "$([ -e "$CLAIMS/1" ] && echo あり || echo なし)"
 }
 
@@ -460,7 +460,7 @@ test_outside_git_warns_that_claims_are_not_used() {
   (cd "$T/plain" && collect)
   assert_file_contains_line "$T/err.txt" '担当の印を読めない (git リポジトリの外で動いている)。別のセッションが担当中の issue も着手順に出る'
   (cd "$T/plain" && ${SH:-sh} "$SCRIPT" mark "$SNAP" 1 started >/dev/null 2>"$T/err.txt")
-  assert_file_contains_line "$T/err.txt" '#1 の担当の印を残せない (git リポジトリの外で動いている)。agent-loop や別のセッションが同じ issue を拾うことがある'
+  assert_file_contains_line "$T/err.txt" '#1 の担当の印を残せない (git リポジトリの外で動いている)。別のセッションが同じ issue を拾うことがある'
   unset GIT_CEILING_DIRECTORIES
 }
 

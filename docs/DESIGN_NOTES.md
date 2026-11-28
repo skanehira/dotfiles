@@ -7,7 +7,7 @@
 ## 全体の流れ
 
 - [決定] 新規開発は `/dev-spec` でユーザーストーリー・ユースケース・UI スケッチ・機能設計書を作り、`/dev-impl` で依存順に実装する — スクラッチ開発の初期段階は `/dev-spec` の役割のままにするため
-- [決定] 機能追加は「人が issue を作る → AI が整理する → `dev-feat-spec` が設計 PR を出す → 人が PR をレビューして merge する → issue が ready になる → `/dev-impl` が実装・PR・merge まで進める → merge で close」とする — 人の作業を設計の確認に絞るため
+- [決定] 機能追加は「人が issue を作る → AI が整理する → `dev-feat-spec` が設計 PR を出す → 人が PR をレビューして merge する → issue が ready になる → `/dev-impl` が実装・PR・merge まで進める → merge で close」とする — 人の作業を設計の確認に絞るため → `ready` は人が付けるに変更 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 - [決定] 人の役割は設計の確認だけとする。実装 PR は人が確認せず AI が merge する — 設計が正しければ、ハーネスが設計どおりに実装すると信用する運用にするため
 - [決定] Deploy は人が実行する — 本番のデータに影響する変更 (例: あるテーブルの全行の削除) があるため
 - [決定] 実装の merge で issue を自動 close する。`Closes #N` のまま使う — 人の確認を設計に絞ったので、merge 後の確認の状態は要らないため
@@ -26,12 +26,12 @@
 
 ## 状態の管理
 
-- [決定] ラベルは状態の管理、Project は人が状況を把握する目的で使う — AI が読むものと人が見るものの役割を分けるため
+- [決定] ラベルは状態の管理、Project は人が状況を把握する目的で使う — AI が読むものと人が見るものの役割を分けるため → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 - [決定] `ready` は「人が仕様を承認した」印とする — 自律で実装を始める条件を、人の承認に結びつけるため
 - [棄却] `ready` を「順位を見て人が今着手するものに付ける」印にする — 人が毎回選ぶ作業が残り、自律で回らないため
 - [決定] 設計 PR の merge で `ready` を付ける処理は GitHub Actions で行う — AI の定期実行に頼るより確実なため
-- [決定] Project に「設計レビュー」の列を足す — AI が検討中のものと人の確認待ちを分けるため
-- [決定] リポジトリ作成時にラベルと Project を用意するセットアップスキルを新設し、用意された状態で `/dev-spec` を実行する — 状態の管理の前提を揃えるため
+- [決定] Project に「設計レビュー」の列を足す — AI が検討中のものと人の確認待ちを分けるため → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
+- [決定] リポジトリ作成時にラベルと Project を用意するセットアップスキルを新設し、用意された状態で `/dev-spec` を実行する — 状態の管理の前提を揃えるため → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 
 ## 優先度
 
@@ -70,7 +70,7 @@
 - [決定] 状態は 未整理 (ラベルなし) / 設計待ち (`needs-design`) / 設計レビュー (`design-review`) / 着手可能 (`ready`) / 作業中 (`in-progress`) / 判断待ち (`needs-human`) の 6 つとし、merge で close して「完了」になる — 次に動くのが AI か人かをラベルだけで判定できるようにするため
 - [決定] 承認の印は `ready` ラベルに統一する。設計 PR は人の merge で GitHub Actions が付け、修正方針は人が issue に付ける — ラベルなら Actions の起動条件に使え、AI も読めるため
 - [棄却] 人が Project の列を動かして承認する — ラベルを状態の正本にする方針と合わないため
-- [決定] ラベルが変わったら GitHub Actions が Project の列を動かす。`project` 権限のトークンはセットアップスキルで用意する — AI も人もラベルだけを見れば済むようにするため
+- [決定] ラベルが変わったら GitHub Actions が Project の列を動かす。`project` 権限のトークンはセットアップスキルで用意する — AI も人もラベルだけを見れば済むようにするため → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 - [決定] 列は状態だけにし、種別はラベルで見る。「バグ」「リファクタリング」の列はなくす — 種別の列では進み具合が読めないため
 - [棄却] 今の列を残して新しい列を足す — バグの進み具合が列から読めないため
 - [決定] 事業・運営の issue は区分で分け、開発の状態の列を使わず、AI の整理の対象から外す — 開発の流れに混ぜないため
@@ -83,7 +83,7 @@
 
 ## セットアップスキル (dev-project-setup)
 
-- [決定] スキル名は `dev-project-setup`。新しいリポジトリで `/dev-spec` より前に起動し、既存のリポジトリに足りないものを足す用途にも使えるよう、何度実行しても結果が変わらない作りにする — 運用中の既存のリポジトリにも同じ手順で入れるため
+- [決定] スキル名は `dev-project-setup`。新しいリポジトリで `/dev-spec` より前に起動し、既存のリポジトリに足りないものを足す用途にも使えるよう、何度実行しても結果が変わらない作りにする — 運用中の既存のリポジトリにも同じ手順で入れるため → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 - [決定] 作るものはラベル (状態と種別)、Project (Status の列と区分の項目)、GitHub Actions 2 本 (ラベル → 列の同期、設計 PR の merge → `ready`)、`docs/ISSUE_TRIAGE.md` と `AGENTS.md` の運用の節の雛形 — 状態の管理の前提を揃えるため → `docs/ISSUE_TRIAGE.md` の雛形は撤回 (下の「整理のスキル (dev-triage)」)
 - [決定] 「事業・運営」は使うかを起動時に選ぶ — プロジェクトによって要らないため
 - [決定] Project はリポジトリの持ち主 (組織か個人) に作り、非公開にする — どのリポジトリでも使え、issue の状況を外に出さないため
@@ -124,7 +124,7 @@
 - [決定] issue を分けたときは、PR の `Design-for:` に子だけを書き、親は `needs-design` を外して `tracking` にする。子は本文に親の `## 優先度` を写す — 親に書くと merge で `tracking` の親にも `ready` が付き、/dev-impl の対象に紛れるため (2026-11-11、advisor の指摘)
 - [決定] 同じ機能設計書に触れる設計 PR の判定は、issue ごとに PR の一覧を取り直して行う — 同じ起動の中で先に出した PR を見落とさないため
 - [決定] `design/issue-<N>` のブランチが origin にあるのに open の PR が無い issue は、設計 PR が merge されずに close されたものとして、古いブランチを消して設計し直す。dev-feat-spec は同時に 1 つだけ起動する前提にする — 人が設計を却下して `needs-design` を付け直したあとも、ずっと飛ばし続けないため
-- [保留] dev-feat-spec の同時実行を 1 にする仕組み — 定期起動の設計で決める → 解決 (下の「agent-loop」)
+- [保留] dev-feat-spec の同時実行を 1 にする仕組み — 定期起動の設計で決める → 解決 (下の「agent-loop」) → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 
 ## 起動の仕組み (2026-11-11)
 
@@ -144,7 +144,7 @@
 - [決定] dev-feat-spec を既存のリポジトリで試した。3 件のうち 2 件は設計 PR になり、1 件は先の設計 PR と同じ設計書に触れるので飛ばした。1 件あたり 13〜18 ドル相当、18〜20 分かかった — 定期起動の件数の上限を決める材料にするため
 - [保留] 指揮の形 — 案は、launchd が 10 分おきにスクリプトを動かし、スクリプトが `gh` で仕事を探して、仕事ごとに新しい Claude Code を tmux で起動する形 (どの org・リポジトリでも使えるよう、対象は `repos.yaml` で選ぶ)。24 時間動く 1 つの Claude Code がチーム機能で指揮をとる形は、会話が積もり、待っている間も使用量を使うため推さない → 解決 (下の決定)
 - [保留] 対象の issue の書き手を org のメンバーと collaborator に限るか — 公開のリポジトリで、外部の人が書いた本文が、権限の確認なしで動く Claude Code に読まれるのを防ぐため → 解決 (下の決定)
-- [決定] 指揮は、launchd が 10 分おきにスクリプト (`agent-loop`) を動かし、スクリプトが `gh` で仕事を探して、仕事ごとに新しい Claude Code を tmux のウィンドウで起動する形にする。スクリプトは LLM を使わないので、仕事が無いときの費用は 0 — 指揮は決まった手順の繰り返しで、仕事ごとに新しい会話で始めれば会話が積もらないため → 起動は tmux ではなく `claude --bg` に変更 (下の「agent-loop」)
+- [決定] 指揮は、launchd が 10 分おきにスクリプト (`agent-loop`) を動かし、スクリプトが `gh` で仕事を探して、仕事ごとに新しい Claude Code を tmux のウィンドウで起動する形にする。スクリプトは LLM を使わないので、仕事が無いときの費用は 0 — 指揮は決まった手順の繰り返しで、仕事ごとに新しい会話で始めれば会話が積もらないため → 起動は tmux ではなく `claude --bg` に変更 (下の「agent-loop」) → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 - [棄却] 24 時間動く 1 つの Claude Code がチーム機能で指揮をとる — 会話が積もって決まりや状態が抜け、待っている間も使用量を使うため
 - [決定] スクリプト、状態のラベルの定義、対象のリポジトリの一覧 (`repos.yaml`) は dotfiles に置く。リポジトリには、採点の点数の定義などプロジェクトごとに違う中身 (`docs/ISSUE_TRIAGE.md` の固有の部分と `AGENTS.md`) だけを置く — この仕組みは issue とラベルにだけ依存し、リポジトリによらないため → `docs/ISSUE_TRIAGE.md` は任意になった (下の「整理のスキル (dev-triage)」) → 対象の一覧は dotfiles の外に変更 (下の「agent-loop」)
 - [決定] 対象の issue は、作成者が org のメンバーか collaborator のもの (`author_association`) に限る — 公開のリポジトリで、外部の人が書いた本文が、権限の確認なしで動く Claude Code に読まれるのを防ぐため
@@ -171,9 +171,9 @@
 - [決定] origin に `issue-<N>` ブランチがある未整理の issue は、設計し直さずに `needs-human` に戻し、`ready` を付けるよう案内する — `/dev-impl` が止めた issue で人が `ready` を付け忘れると、設計済みの issue がもう一度設計されるため
 - [決定] 緊急枠の issue は本文の `## 優先度` に `緊急枠` と書き、`dev-feat-spec` はこれを先頭に並べる — 採点しないので、スコアの順では最後に回るため
 - [決定] 親として扱うのは sub-issue のある issue だけにし、子は親の `## 優先度` を写す — sub-issue の無い親は `/dev-impl` が close せず、人が作った子は単独で採点されてしまうため
-- [決定] `区分` は、変数 `PROJECT_OWNER` / `PROJECT_NUMBER` があり Project に項目があるときに dev-triage が設定する — `dev-project-setup` が項目を作るのに、設定する人がいなかったため
+- [決定] `区分` は、変数 `PROJECT_OWNER` / `PROJECT_NUMBER` があり Project に項目があるときに dev-triage が設定する — `dev-project-setup` が項目を作るのに、設定する人がいなかったため → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 - [決定] dev-triage は同時に 1 つだけ起動する前提にし、反映の直前にラベルと本文を取り直して、先に整理済みなら飛ばす — 起動が 10 分を超えたときに重ねて追記しないため
-- [保留] `agent-loop` の仕事の判定 — dev-triage の手順 1 の条件 (作成者と 10 分の条件を含む) をそのまま使う。dev-triage が GitHub に書き込めずに止まったときに、同じ失敗の起動を繰り返さない仕組み、dev-feat-spec の 1 回の起動の件数の上限 (1 件 13〜18 ドル相当) とあわせて、`agent-loop` の設計で決める → 解決 (下の「agent-loop」)
+- [保留] `agent-loop` の仕事の判定 — dev-triage の手順 1 の条件 (作成者と 10 分の条件を含む) をそのまま使う。dev-triage が GitHub に書き込めずに止まったときに、同じ失敗の起動を繰り返さない仕組み、dev-feat-spec の 1 回の起動の件数の上限 (1 件 13〜18 ドル相当) とあわせて、`agent-loop` の設計で決める → 解決 (下の「agent-loop」) → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 
 ## /dev-impl の着手順 (2026-11-11)
 
@@ -195,7 +195,7 @@
 
 ## agent-loop (2026-11-11)
 
-- [決定] `agent-loop` は Deno のスクリプト (`agents/scripts/agent-loop.ts`) にし、nix-darwin の launchd のユーザー用エージェント (`nix/modules/darwin/agent-loop.nix`、10 分おき) が動かす。どの仕事を起動するかの判定は純粋な関数にして、`gh` と `claude` を差し替えたテストで確かめる — dotfiles の他のスクリプトと同じ形で、`deno test agents/` で検証できるため → 間隔は 1 時間に変更 (下の「agent-loop の運用の調整」) → nix で配るのはやめた (下の「agent-loop を動かすマシン」)
+- [決定] `agent-loop` は Deno のスクリプト (`agents/scripts/agent-loop.ts`) にし、nix-darwin の launchd のユーザー用エージェント (`nix/modules/darwin/agent-loop.nix`、10 分おき) が動かす。どの仕事を起動するかの判定は純粋な関数にして、`gh` と `claude` を差し替えたテストで確かめる — dotfiles の他のスクリプトと同じ形で、`deno test agents/` で検証できるため → 間隔は 1 時間に変更 (下の「agent-loop の運用の調整」) → nix で配るのはやめた (下の「agent-loop を動かすマシン」) → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 - [決定] Claude Code は tmux ではなく `claude --bg --name <名前> --worktree <名前>` で起動し、終わったかは `claude agents --json --all` の `state` (`done`) で知る。動いている画面は `claude attach <名前>` で見る。終わったら `claude stop` と `claude rm` で片付け、worktree の作成で切られたブランチを消す — Claude Code 自身のバックグラウンドのセッションと worktree の仕組みを使えば、tmux の窓の管理と完了の検出を自分で作らずに済み、リポジトリの WorktreeCreate フック (依存の導入) もそのまま効くため。台帳の「tmux のウィンドウ」の理由 (動いている画面を見られる) は `claude attach` で満たす
 - [棄却] tmux のウィンドウで `claude -p` を動かし、終了で完了を知る — 完了の検出とログの表示を自分で作る必要があり、worktree も自分で作ると Claude Code の信頼済みのディレクトリにならないため (`claude --bg` は信頼済みでないディレクトリでは起動しない。2026-11-11 に確かめた)
 - [決定] 起動のたびに `--model opus --permission-mode bypassPermissions` を渡す。`bypassPermissions` は worktree の中に閉じた run に限る — 省くと普段の既定のモード (plan) を引き継いで読み取りだけで終わる。許可の一覧はリポジトリごとに違い、無人の run で許可を求めると止まるため (2026-11-11、ユーザーの判断)
@@ -214,13 +214,13 @@
 
 - [決定] 見回りの間隔は 1 時間にする — 急ぐときは人がスキルを手元で起動すれば足り、10 分おきに見回る理由が無いため (2026-11-11、ユーザーの判断) → 30 分に変更 (下の 2026-11-15 の決定)
 - [決定] `/dev-impl` は、issue の close を確かめたら `in-progress` を必ず外す — close しても作業中のラベルは自動で外れず、閉じた issue が作業中に見えるため (2026-11-11、ユーザーの指示)
-- [決定] `agent-loop` から起動された run が `needs-human` のコメントを書くときは、`claude attach <id>` の行を足し、ジョブのディレクトリ (`CLAUDE_JOB_DIR`) に印のファイル `needs-human` を置く。`agent-loop` は印のあるセッションを `done` でも消さず、会話と worktree を残す — 人があとから会話を開いて判断の経緯を読めるようにするため。消すとコメントの行から開けなくなるため (2026-11-11、ユーザーの指示。`CLAUDE_JOB_DIR` と `CLAUDE_CODE_SESSION_ATTENDED=0` が `claude --bg` のセッションの環境にあることを確かめた)
+- [決定] `agent-loop` から起動された run が `needs-human` のコメントを書くときは、`claude attach <id>` の行を足し、ジョブのディレクトリ (`CLAUDE_JOB_DIR`) に印のファイル `needs-human` を置く。`agent-loop` は印のあるセッションを `done` でも消さず、会話と worktree を残す — 人があとから会話を開いて判断の経緯を読めるようにするため。消すとコメントの行から開けなくなるため (2026-11-11、ユーザーの指示。`CLAUDE_JOB_DIR` と `CLAUDE_CODE_SESSION_ATTENDED=0` が `claude --bg` のセッションの環境にあることを確かめた) → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 - [決定] Project のボードには issue だけを載せる。組み込みの「Auto-add to project」の絞り込みを `is:issue` にし、載っている PR のカードは外す。設計 PR や実装の PR は issue から辿る — PR は `issue-state-sync.yml` の対象外で Status が付かず、「No Status」に溜まっていたため。PR も同期すると 1 つの仕事にカードが 2 枚並ぶため (2026-11-11、ユーザーの判断。既存のリポジトリで PR のカード 213 件を外した)
 - [棄却] 組み込みの「Item added to project」で、作成時に「未整理」に入れる — 組み込みはラベルの付け替えで動けず、Actions と 2 か所で Status を書くと、ラベル付きで作った子 issue が「未整理」に上書きされるため
 
 ## agent-loop を動かすマシン (2026-11-11)
 
-- [決定] agent-loop は 1 台の mac (Mac Studio) だけで動かし、nix では配らない。launchd の plist (Label `local.agent-loop`) は `agents/scripts/agent-loop-install.sh` がそのマシンにだけ書いて読み込む — nix-darwin の設定は username を key にした 1 つだけで、すべての mac に入るため。ホスト名で分ける例外は作らない (2026-11-11、ユーザーの判断)
+- [決定] agent-loop は 1 台の mac (Mac Studio) だけで動かし、nix では配らない。launchd の plist (Label `local.agent-loop`) は `agents/scripts/agent-loop-install.sh` がそのマシンにだけ書いて読み込む — nix-darwin の設定は username を key にした 1 つだけで、すべての mac に入るため。ホスト名で分ける例外は作らない (2026-11-11、ユーザーの判断) → 撤回 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 - [棄却] nix のモジュールのまま、`repos.yaml` の無いマシンでは何もしない — 動くマシンは限れるが、ほかの mac でも 1 時間おきに Deno が起動するため
 - [棄却] ホスト名で分けて、この mac にだけモジュールを入れる — 「ホスト名で設定を分けない」方針に例外を作るため
 - [決定] run が `done` 以外 (`blocked` / `failed` / `stopped` / `error`) で終わったときと、見回りが中断・停止したときは、`terminal-notifier` で mac に通知する。run の通知は、クリックで WezTerm を開いて `claude attach <id>` する — それまでは、ログと `claude agents` を自分で見に行かないと異常に気付けなかったため。この mac の前にいればすぐ気付ける (2026-11-11、ユーザーの判断)
@@ -230,7 +230,7 @@
 ## 手元での起動と承認ゲート (2026-11-11)
 
 - [決定] スキル (`/dev-triage` / `/dev-feat-spec` / `/dev-impl` / `/dev-spec`) は agent-loop に依存させず、人が手元で 1 つずつ起動できるままにする。同じリポジトリで同じスキルを手元と agent-loop で同時に動かさないことは、仕組みでは防がず CLAUDE.md に書く — agent-loop は自分が起動した run しか見ないため。手元で起動するのは急ぐときだけで、そのあいだ agent-loop を止めれば足りるため (2026-11-11、ユーザーの判断) → `/dev-impl` は担当の印で防ぐ形に変更 (下の 2026-11-15 の決定)
-- [決定] agent-loop に登録したリポジトリでは、`/dev-spec` が `ready` で作った子の issue を、次の見回りで `/dev-impl` が実装し始めてよい。承認ゲートは「`/dev-spec` のフェーズ 10 で issue の作成に同意する時点」とする — 作成の前にドラフトを人が確認しているため (2026-11-11、ユーザーの判断)
+- [決定] agent-loop に登録したリポジトリでは、`/dev-spec` が `ready` で作った子の issue を、次の見回りで `/dev-impl` が実装し始めてよい。承認ゲートは「`/dev-spec` のフェーズ 10 で issue の作成に同意する時点」とする — 作成の前にドラフトを人が確認しているため (2026-11-11、ユーザーの判断) → 変更 (下の「agent-loop と Project の廃止 (2026-11-28)」)
 - [棄却] `/dev-spec` が子の issue を `design-review` で作り、人が `ready` を付けるまで実装させない — 作成に同意したうえで、もう一度ラベルを付ける手間が増えるため
 
 ## PR と issue の紐づけ (2026-11-12)
@@ -315,3 +315,16 @@
 - [棄却] 設計書の「テスト方針」の箇条書きをキーワードで検査する — 仕様の表を 1 行ずつ確かめる正当な指示 (「表の全行で回す」) まで拾うため。記入基準で、同じ振る舞いを複数のレベルで確かめる指示と、入力を掛け合わせる指示の 2 つの形を禁じる
 - [棄却] 掛け合わせの機械的な検出を JS・TS だけにする — rstest の `#[values]` と Go のテーブル駆動テストにも定番の書き方があり、機械的に検出できるため (ユーザーの指摘)
 - [保留] 文面の変更で、実装者が書くテストの行が実際に減るかは、`/utility-harness-measure` でまだ測っていない
+
+
+## agent-loop と Project の廃止 (2026-11-28)
+
+- [決定] agent-loop (`agents/scripts/agent-loop*`) と、ラベル・Project・Actions を用意する `dev-project-setup` を廃止する。スキルはすべて人が手元で起動する — ユーザーの判断 (2026-11-28)
+- [決定] ラベルは使うスキルが前提の確認で用意する。`dev-triage` と `dev-feat-spec` は `dev-triage/scripts/setup-labels.sh` (状態の 6 つと種別の 4 つ) を、`/dev-spec` と `/dev-impl` は dev-spec の `issue-template.md`「ラベルの用意」を実行する。重なる 4 つの色と説明は両方で同じにする — セットアップのスキルが無くても、ラベルが無くて `gh issue edit` が失敗しないようにするため。どちらも `--force` で上書きするので、違うと実行のたびに書き換わるため
+- [決定] 設計 PR の merge 後は、人が `Design-for:` の issue に `ready` を付ける。設計 PR の本文の「承認したら」に、そのまま実行できるコマンドを載せる — ユーザーの判断 (2026-11-28)。修正方針の issue と同じ扱いになり、Actions と GitHub App の登録が要らなくなるため
+- [棄却] `/dev-impl` が、`Design-for:` の設計 PR が merge 済みの `design-review` の issue を `ready` に付け替えてから実装する — 人の作業は減るが、ユーザーが人の付与を選んだため
+- [棄却] `design-approved.yml` を `GITHUB_TOKEN` だけで動く形にして残し、`dev-feat-spec` が置く — リポジトリへの準備が残り、セットアップを無くす目的と合わないため
+- [決定] `dev-triage` は Project の `区分` を設定しない。`事業・運営` のラベルは作らず、リポジトリにあれば使う — Project が無くなり、事業・運営の issue を同じリポジトリに置くかはプロジェクトが決めるため
+- [決定] `needs-human` のコメントに `claude attach <id>` の行を足す決まりを外す — `claude --bg` の run を起動する agent-loop が無くなり、コメントを書くのは常に手元のセッションになるため
+- [決定] `/dev-impl` の担当の印と、`merge-pr.sh` が実行した場所を `REPO_DIR` として扱う動きは残す — 別の端末の `/dev-impl` や `claude --worktree` のセッションでも、二重実装と worktree の取り違えを防ぐため
+- [決定] 承認ゲートは、人が `/dev-impl` を起動する時点とする。`/dev-spec` が `ready` で作った子の issue も、`/dev-impl` を起動するまで実装しない — 定期起動が無くなり、実装を始めるのは常に人の起動になるため
