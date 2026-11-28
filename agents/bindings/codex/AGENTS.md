@@ -63,7 +63,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 | --- | --- |
 | `AskUserQuestion` | `request_user_input` |
 | `TodoWrite` / `TaskCreate` / `TaskUpdate` | `update_plan` |
-| `Agent` ツール | `spawn_agent` |
+| `Agent` ツール | `spawn_agent`。`fork_turns: "none"` を付ける (「読み替えで吸収できないもの」の `fork_turns` の項) |
 | `Skill` ツールでの呼び出し | 対応するスキルを `$<name>` で呼ぶ |
 | `Explore` (subagent 型) | 組み込みの `explorer` |
 | `general-purpose` (subagent 型) | 組み込みの `default` (codex 0.159.2 のバイナリにある `spawn_agent` の説明文が根拠で、実際に起動して確かめてはいない) |
@@ -86,6 +86,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 - **ツールの呼び出し方**: 正本はツールの呼び出し例 (引数つき) を載せず、何を聞くか・何を起動するかの意図だけを書く。引数は自分のツールのスキーマで組み立てる。本文に残るツール名は上の表で読み替え、スキルの frontmatter の `allowed-tools` は下の frontmatter の項、subagent の `tools` は「3 者で表現できない subagent の属性」節に従う
 - **選択式の質問の形**: `request_user_input` は 2〜3 択の単一選択で、複数選択の項目を持たない (codex 0.159.2 のバイナリに含まれる文字列が根拠で、公式のスキーマは未確認)。4 択以上や複数選択の質問は、選択肢を番号付きでメッセージに並べ、番号で答えてもらう
 - **非対話実行 (`codex exec`)**: `request_user_input` は使えない。`~/.claude/CLAUDE.md`「エスカレーション」の自律モード規定に従い、前提と選択の根拠を出力に明示して前進する
+- **`spawn_agent` の `fork_turns`**: 毎回 `"none"` を指定する。省くと `"all"` になり、subagent は親の会話をすべて引き継いで起動する。Claude Code の `Agent` ツールで起動した subagent は、親の会話を持たずに始まる。正本のスキルと subagent は、この前提で書かれている (例: 「fresh context で起動」)。親の会話を引き継いだ subagent は、親と同じ大きさの文脈をリクエストのたびに読み直す。並列に起動するほど利用枠の消費が増え、レビューの独立性も失われる。親の会話を渡すのは、正本が Claude Code の `subagent_type: "fork"` を指定したときだけにする。この規則は、文脈の圧縮の後も残るように、スキルではなくこのファイルに置く
 - **`spawn_agent` に渡す `model` / `subagent_type`**: subagent の生成物に表現手段が無く落ちるので、**親のモデルを継承する**。定義が無い名前を指している場合は組み込みの `explorer` / `default` で代替するか、同一セッション内で逐次実行して報告に明記する
 - **スキルの相互呼び出し**: `slide-plugin:*` / `document-skills:*` のような Claude 専用プラグインのスキルが指定されている場合は、その旨を伝えて代替手段を提案する
 - **`chrome-devtools` の MCP ツール**: サーバ名は共通だがツール名の記法が違う (`mcp__chrome-devtools__*` / `chrome-devtools:*` は Claude の記法)。綴りだけ Codex の記法に読み替える。サーバ自体は `agents/bindings/codex/config.toml` で配られている
@@ -101,7 +102,7 @@ readlink -f /etc/codex/config.toml     # dotfiles の agents/bindings/codex/conf
 
 - **`tools` (ツールの許可リスト)**: 表現手段が無い。制限が要るなら本文 (= `developer_instructions`) に禁止事項として書く
 - **`model`**: 生成物に書かないので、subagent は**親のモデルを継承する**。固定したいときは `dotfiles/agents/bindings/codex/config.toml` に `[agents] default_subagent_model` を 1 箇所書く (現状は未設定)
-- **`context: fork`**: 相当概念が無い
+- **`context: fork`**: 定義に書く属性としての相当物は無い。Codex では、親の会話を渡すかどうかを起動のたびに `fork_turns` で決める (「読み替えで吸収できないもの」の `fork_turns` の項)
 
 ## hooks は Codex には配られていない
 

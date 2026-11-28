@@ -772,6 +772,8 @@ PY
 | vitest 5 は実行元をエージェントと判定すると既定の reporter を `minimal` にし、pass したテストの出力を表示しない (`agents/guidelines/core/verification.md` の失敗 5 の前提) | 2026-11-28 (vitest 5.0.5) | `node_modules/vitest/dist/chunks/defaults.*.js` の `reporters` の既定値が `isAgent ? "minimal" : "default"` であることを見る |
 | Testing Library の `waitFor` は待つ間だけ act の環境を切り替え、vitest の `afterEach` は既定で登録の逆順に走る (`agents/guidelines/frontend/react/testing.md` の前提) | 2026-11-28 (@testing-library/react 16.3.3、vitest 5.0.5) | `@testing-library/react/dist/pure.js` の `setReactActEnvironment(false)` と、vitest の `sequence.hooks ??= "stack"` を見る |
 | Linux で herdr の SessionStart が失敗したとき、Claude Code がその失敗を表示するか | 未確認 | Linux で Claude Code を起動して見る |
+| Codex の `spawn_agent` は `fork_turns` を省くと `"all"` (親の会話をすべて引き継ぐ) になり、既定値を変える `[agents]` のキーは無い (`agents/bindings/codex/AGENTS.md` の `fork_turns` の項の前提) | 2026-11-28 (Codex 0.172.0) | セッションログの `spawn_agent` のスキーマにある `fork_turns` の説明を読む。バイナリの `[agents]` のキーは `max_threads` / `max_depth` / `default_subagent_model` / `default_subagent_reasoning_effort` / `job_max_runtime_seconds` / `interrupt_message` で、fork を決めるものは無い |
+| Codex の文脈の圧縮の後も `~/.codex/AGENTS.md` の本文は残り、スキルの本文は残らない (同じ項がこのファイルに規則を置く理由) | 2026-11-28 (Codex 0.172.0) | セッションログの `compacted` の `replacement_history` に、`AGENTS.md` の本文とスキルの本文が含まれるかを見る |
 | Codex の `request_user_input` は 2〜3 択の単一選択である | 未確認 | 根拠は codex 0.159.2 のバイナリに含まれる文字列で、公式のスキーマでは確かめていない |
 | OpenCode の `question` の選択肢の数と、複数選択の可否 | 未確認 | OpenCode の `question` ツールのスキーマを見る |
 
